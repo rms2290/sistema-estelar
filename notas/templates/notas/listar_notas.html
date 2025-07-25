@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Notas Fiscais{% endblock %}
+
+{% block content %}
+    <h2>Lista de Notas Fiscais</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Cliente</th> {# Agora este é um objeto Cliente #}
+                <th>Nota</th>
+                <th>Data</th>
+                <th>Fornecedor</th>
+                <th>Mercadoria</th>
+                <th>Quantidade</th>
+                <th>Peso</th>
+                <th>Valor</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for nota in notas %}
+            <tr>
+                <td>{{ nota.cliente.razao_social }}</td> {# <--- Altere esta linha para acessar a razão social #}
+                <td>{{ nota.nota }}</td>
+                <td>{{ nota.data }}</td>
+                <td>{{ nota.fornecedor }}</td>
+                <td>{{ nota.mercadoria }}</td>
+                <td>{{ nota.quantidade }}</td>
+                <td>{{ nota.peso }}</td>
+                <td>{{ nota.valor }}</td>
+                <td>
+                    <a href="{% url 'notas:editar_nota_fiscal' nota.pk %}">Editar</a> |
+                    <a href="{% url 'notas:excluir_nota_fiscal' nota.pk %}">Excluir</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="9">Nenhuma nota fiscal cadastrada.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

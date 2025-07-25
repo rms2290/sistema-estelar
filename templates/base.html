@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sistema de Notas Fiscais{% endblock %}</title>
+    <style>
+        /* ... seus estilos existentes ... */
+
+        /* Adicione ou ajuste os estilos para a navegação, se necessário */
+        nav {
+            background-color: #f0f0f0; /* Um cinza claro para o fundo da navegação */
+            padding: 10px;
+            text-align: center;
+        }
+
+        nav a {
+            display: inline-block; /* Para que os links fiquem lado a lado */
+            padding: 8px 15px;
+            text-decoration: none;
+            color: #333;
+            font-weight: bold;
+            border-radius: 4px; /* Cantos arredondados */
+            margin: 0 5px; /* Espaçamento entre os links */
+            transition: background-color 0.3s ease; /* Transição suave no hover */
+        }
+
+        nav a:hover {
+            background-color: #e0e0e0; /* Cor um pouco mais escura no hover */
+            color: #000;
+        }
+
+        hr {
+            border: 0;
+            height: 1px;
+            background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0));
+            margin: 20px 0;
+        }
+
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="{% url 'notas:listar_notas_fiscais' %}">Listar Notas</a>
+        <a href="{% url 'notas:adicionar_nota_fiscal' %}">Adicionar Nota</a>
+        <a href="{% url 'notas:listar_clientes' %}">Listar Clientes</a>
+        <a href="{% url 'notas:adicionar_cliente' %}">Adicionar Cliente</a>
+        <a href="{% url 'notas:listar_motoristas' %}">Listar Motoristas</a>
+        <a href="{% url 'notas:adicionar_motorista' %}">Adicionar Motorista</a>
+        <a href="{% url 'notas:listar_veiculos' %}">Listar Veículos</a>
+        <a href="{% url 'notas:adicionar_veiculo' %}">Adicionar Veículo</a>
+        <a href="{% url 'notas:listar_romaneios' %}">Listar Romaneios</a> {# NOVO LINK #}
+        <a href="{% url 'notas:adicionar_romaneio' %}">Emitir Romaneio</a> {# NOVO LINK #}
+    </nav>
+    <hr>
+    {% block content %}
+    {% endblock %}
+</body>
+</html>

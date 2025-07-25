@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar Nota Fiscal{% endblock %}
+
+{% block content %}
+    <h2>Editar Nota Fiscal #{{ nota.nota }}</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Atualizar Nota</button>
+    </form>
+{% endblock %}

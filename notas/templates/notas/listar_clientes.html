@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Clientes{% endblock %}
+
+{% block content %}
+    <h2>Lista de Clientes</h2>
+    <p><a href="{% url 'notas:adicionar_cliente' %}">Adicionar Novo Cliente</a></p>
+    <table>
+        <thead>
+            <tr>
+                <th>Razão Social</th>
+                <th>CNPJ</th>
+                <th>Endereço</th>
+                <th>Cidade/Estado</th>
+                <th>Contato</th>
+                <th>Telefone</th>
+                <th>Email</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cliente in clientes %}
+            <tr>
+                <td>{{ cliente.razao_social }}</td>
+                <td>{{ cliente.cnpj }}</td>
+                <td>{{ cliente.endereco }}, {{ cliente.numero }} - {{ cliente.bairro }}</td>
+                <td>{{ cliente.cidade }}/{{ cliente.estado }} - {{ cliente.cep }}</td>
+                <td>{{ cliente.contato }}</td>
+                <td>{{ cliente.telefone }}</td>
+                <td>{{ cliente.email }}</td>
+                <td>
+                    <a href="{% url 'notas:editar_cliente' cliente.pk %}">Editar</a> |
+                    <a href="{% url 'notas:excluir_cliente' cliente.pk %}">Excluir</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8">Nenhum cliente cadastrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block title %}Excluir Cliente{% endblock %}
+
+{% block content %}
+    <h2>Excluir Cliente</h2>
+    <p>Tem certeza que deseja excluir o cliente **{{ cliente.razao_social }}** (CNPJ: **{{ cliente.cnpj }}**)?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="danger">Confirmar Exclusão</button>
+        <a href="{% url 'notas:excluir_cliente' cliente.pk %}">Excluir</a>
+    </form>
+{% endblock %}

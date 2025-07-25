@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block title %}Excluir Nota Fiscal{% endblock %}
+
+{% block content %}
+    <h2>Excluir Nota Fiscal</h2>
+    <p>Tem certeza que deseja excluir a nota fiscal do cliente **{{ nota.cliente }}** (Nota: **{{ nota.nota }}**)?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="danger">Confirmar Exclusão</button>
+        <a href="{% url 'notas:listar_notas_fiscais' %}">Cancelar</a>
+    </form>
+{% endblock %}

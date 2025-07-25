@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>Editar Romaneio de Viagem</h2>
+    <form method="post">
+        {% csrf_token %}
+        
+        {# Erros gerais do formulário (não vinculados a um campo específico) #}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <p>Código do Romaneio: <strong>{{ romaneio.codigo }}</strong></p>
+
+        <div class="mb-3">
+            <label for="{{ form.cliente.id_for_label }}" class="form-label">Cliente:</label>
+            {{ form.cliente }}
+            {# CORRIGIDO: Referencia o campo "cliente" e fecha o div e o endif #}
+            {% if form.cliente.errors %}
+                <div class="text-danger">
+                    {% for error in form.cliente.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Notas Fiscais Associadas:</label>
+            <div id="notas_fiscais_checkboxes">
+                {# As checkboxes serão carregadas aqui via JavaScript #}
+                {% for checkbox in form.notas_fiscais %}
+                    <div>{{ checkbox }}</div>
+                {% empty %}
+                    <p>Selecione um cliente para carregar as notas fiscais.</p>
+                {% endfor %}
+            </div>
+            {# ADICIONADO: Erros específicos do campo notas_fiscais #}
+            {% if form.notas_fiscais.errors %}
+                <div class="text-danger">
+                    {% for error in form.notas_fiscais.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.motorista.id_for_label }}" class="form-label">Motorista:</label>
+            {{ form.motorista }}
+            {# CORRIGIDO: Referencia o campo "motorista" e fecha o div e o endif #}
+            {% if form.motorista.errors %}
+                <div class="text-danger">
+                    {% for error in form.motorista.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.veiculo.id_for_label }}" class="form-label">Veículo:</label>
+            {{ form.veiculo }}
+            {# CORRIGIDO: Referencia o campo "veiculo" e fecha o div e o endif #}
+            {% if form.veiculo.errors %}
+                <div class="text-danger">
+                    {% for error in form.veiculo.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.observacoes.id_for_label }}" class="form-label">Observações:</label>
+            {{ form.observacoes }}
+            {# CORRIGIDO: Referencia o campo "observacoes" e fecha o div e o endif #}
+            {% if form.observacoes.errors %}
+                <div class="text-danger">
+                    {% for error in form.observacoes.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-success">Salvar Alterações</button>
+        <a href="{% url 'notas:listar_romaneios' %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+
+    <script>
+        // Função JavaScript para carregar notas fiscais via AJAX
+        function loadNotasFiscais(clienteId, selectedNotas = []) {
+            const notasFiscaisDiv = document.getElementById('notas_fiscais_checkboxes');
+            notasFiscaisDiv.innerHTML = '<p>Carregando notas...</p>'; // Mensagem de carregamento
+
+            if (clienteId) {
+                fetch(`/notas/ajax/load-notas/?cliente_id=${clienteId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        notasFiscaisDiv.innerHTML = ''; // Limpa antes de adicionar
+                        if (data.length > 0) {
+                            data.forEach(nota => {
+                                const div = document.createElement('div');
+                                const input = document.createElement('input');
+                                input.type = 'checkbox';
+                                input.name = 'notas_fiscais';
+                                input.value = nota.id;
+                                input.id = `id_notas_fiscais_${nota.id}`;
+                                input.className = 'form-check-input';
+                                
+                                // Marcar as checkboxes se a nota já estiver selecionada
+                                if (selectedNotas.includes(nota.id)) {
+                                    input.checked = true;
+                                }
+                                
+                                const label = document.createElement('label');
+                                label.htmlFor = `id_notas_fiscais_${nota.id}`;
+                                label.textContent = nota.nota;
+                                label.className = 'form-check-label';
+
+                                div.appendChild(input);
+                                div.appendChild(label);
+                                div.className = 'form-check';
+                                notasFiscaisDiv.appendChild(div);
+                            });
+                        } else {
+                            notasFiscaisDiv.innerHTML = '<p>Nenhuma nota fiscal encontrada para este cliente.</p>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro ao carregar notas fiscais:', error);
+                        notasFiscaisDiv.innerHTML = '<p class="text-danger">Erro ao carregar notas fiscais. Tente novamente.</p>';
+                    });
+            } else {
+                notasFiscaisDiv.innerHTML = '<p>Selecione um cliente para carregar as notas fiscais.</p>';
+            }
+        }
+
+        // Chamar a função loadNotasFiscais quando o cliente for selecionado
+        document.addEventListener('DOMContentLoaded', function() {
+            const clienteSelect = document.getElementById('id_cliente');
+            const initialClienteId = clienteSelect ? clienteSelect.value : null;
+            
+            // Obter as IDs das notas fiscais já selecionadas para este romaneio
+            const selectedNotas = [];
+            {% for nota in romaneio.notas_fiscais.all %}
+                selectedNotas.push({{ nota.id }});
+            {% endfor %}
+
+            if (initialClienteId) {
+                loadNotasFiscais(initialClienteId, selectedNotas);
+            }
+
+            if (clienteSelect) {
+                clienteSelect.addEventListener('change', function() {
+                    loadNotasFiscais(this.value, selectedNotas);
+                });
+            }
+        });
+    </script>
+{% endblock %}

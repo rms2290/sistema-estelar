@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>Confirmar Exclusão de Motorista</h2>
+    <p>Você tem certeza que deseja excluir o motorista: <strong>{{ motorista.nome }} (CPF: {{ motorista.cpf }})</strong>?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Sim, Excluir</button>
+        <a href="{% url 'notas:listar_motoristas' %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+{% endblock %}

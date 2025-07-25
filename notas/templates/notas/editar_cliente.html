@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar Cliente{% endblock %}
+
+{% block content %}
+    <h2>Editar Cliente: {{ cliente.razao_social }}</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Atualizar Cliente</button>
+    </form>
+{% endblock %}
