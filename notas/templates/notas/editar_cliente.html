@@ -3,10 +3,27 @@
 {% block title %}Editar Cliente{% endblock %}
 
 {% block content %}
-    <h2>Editar Cliente: {{ cliente.razao_social }}</h2>
+<div class="container mt-4">
+    <h2>Editar Cliente</h2>
+
     <form method="post">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Atualizar Cliente</button>
+
+        {# Erros gerais do formulário #}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# Campos do formulário de cliente #}
+        {{ form.as_p }} 
+
+        <button type="submit" class="btn btn-success mt-3">Salvar Alterações</button>
+        {# MUDANÇA AQUI: Redirecionar para detalhes_cliente #}
+        <a href="{% url 'notas:detalhes_cliente' cliente.pk %}" class="btn btn-secondary mt-3">Cancelar</a>
     </form>
+</div>
 {% endblock %}

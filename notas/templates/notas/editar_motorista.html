@@ -22,15 +22,94 @@
         <div class="card card-body mb-4">
             <h3>Dados do Motorista</h3>
             <div class="row">
+                {# Renderiza os campos do MotoristaForm.as_p ou campo a campo #}
+                {# Ajuste a ordem de data_nascimento e numero_consulta no MotoristaForm.Meta.fields #}
                 {{ form.as_p }} 
             </div>
             <button type="submit" class="btn btn-success mt-3">Salvar Alterações</button>
-            {# MUDANÇA AQUI: Redirecionar para detalhes_motorista #}
-            <a href="{% url 'notas:detalhes_motorista' motorista.pk %}" class="btn btn-secondary mt-3">Cancelar</a>
+            <a href="{% url 'notas:listar_motoristas' %}" class="btn btn-secondary mt-3">Cancelar</a>
+        </div>
+
+        {# NOVO BLOCO: Histórico de Consultas #}
+        <div class="card card-body mt-4">
+            <h3>Histórico de Consultas de Risco (Últimas 5)</h3>
+            {# Botão que abre o modal - requer Bootstrap JS #}
+            <button type="button" class="btn btn-primary btn-sm mb-3" data-bs-toggle="modal" data-bs-target="#adicionarConsultaModal">Registrar Nova Consulta</button>
+            
+            {% if historico_consultas %}
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>Número da Consulta</th>
+                            <th>Data</th>
+                            <th>Status</th>
+                            <th>Observações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for consulta in historico_consultas %}
+                            <tr>
+                                <td>{{ consulta.numero_consulta }}</td>
+                                <td>{{ consulta.data_consulta|date:"d/m/Y" }}</td>
+                                <td>{{ consulta.get_status_consulta_display }}</td>
+                                <td>{{ consulta.observacoes|default:"N/A" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>Nenhuma consulta de risco registrada para este motorista.</p>
+            {% endif %}
         </div>
         
-        {# Removido: Histórico de Consultas e o Modal daqui, pois agora eles estão apenas em detalhes_motorista.html #}
-        {# Se você usava {{ form.as_p }} para exibir o formulário, certifique-se de que a ordem dos campos está no fields da Meta do MotoristaForm. #}
     </form>
-</div>
+
+    {# Modal para Adicionar Nova Consulta #}
+    <div class="modal fade" id="adicionarConsultaModal" tabindex="-1" aria-labelledby="adicionarConsultaModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="adicionarConsultaModalLabel">Registrar Nova Consulta de Risco</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                {# O FORMULÁRIO DENTRO DO MODAL PRECISA DE UM CAMPO OCULTO PARA O PK DO MOTORISTA #}
+                <form id="historicoConsultaForm" method="post" action="{% url 'notas:adicionar_historico_consulta' motorista.pk %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        {# Renderiza os campos do HistoricoConsultaForm (que o views.py não passou no GET para este modal) #}
+                        {# Renderiza os campos individualmente como no seu template #}
+                        <div class="mb-3">
+                            <label for="id_numero_consulta_modal" class="form-label">Número da Consulta:</label>
+                            <input type="text" class="form-control" id="id_numero_consulta_modal" name="numero_consulta" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_data_consulta_modal" class="form-label">Data da Consulta:</label>
+                            <input type="date" class="form-control" id="id_data_consulta_modal" name="data_consulta" value="{{ 'now'|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_status_consulta_modal" class="form-label">Status da Consulta:</label>
+                            <select class="form-control" id="id_status_consulta_modal" name="status_consulta" required>
+                                <option value="Apto">Apto</option>
+                                <option value="Inapto">Inapto</option>
+                                <option value="Pendente">Pendente</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_observacoes_modal" class="form-label">Observações:</label>
+                            <textarea class="form-control" id="id_observacoes_modal" name="observacoes" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                        <button type="submit" class="btn btn-primary">Salvar Consulta</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+{# Inclua os scripts do Bootstrap (se estiver usando) para o modal funcionar #}
+{# Certifique-se que você tem o Bootstrap CSS no head e o JS no final do body do seu base.html #}
+{# Exemplo no base.html: <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"> #}
+{# e no final do body: <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script> #}
 {% endblock %}

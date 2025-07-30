@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalhes do Cliente - {{ cliente.razao_social }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Detalhes do Cliente: {{ cliente.razao_social }}</h2>
+
+    {# Mensagens do Django #}
+    {% if messages %}
+        <ul class="messages list-unstyled">
+            {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    {# Dados do Cliente #}
+    <div class="card card-body mb-4">
+        <h3>Informações Cadastrais</h3>
+        <p><strong>Razão Social:</strong> {{ cliente.razao_social }}</p>
+        <p><strong>Nome Fantasia:</strong> {{ cliente.nome_fantasia|default:"N/A" }}</p>
+        <p><strong>CNPJ:</strong> {{ cliente.cnpj }}</p>
+        <p><strong>Inscrição Estadual:</strong> {{ cliente.inscricao_estadual|default:"N/A" }}</p>
+        <p><strong>Status:</strong> {{ cliente.get_status_display }}</p>
+    </div>
+
+    <div class="card card-body mb-4">
+        <h3>Contato e Endereço</h3>
+        <p><strong>Telefone:</strong> {{ cliente.telefone|default:"N/A" }}</p>
+        <p><strong>Email:</strong> {{ cliente.email|default:"N/A" }}</p>
+        <p><strong>Endereço:</strong> {{ cliente.endereco|default:"N/A" }}, {{ cliente.numero|default:"S/N" }}</p>
+        <p><strong>Complemento:</strong> {{ cliente.complemento|default:"N/A" }}</p>
+        <p><strong>Bairro:</strong> {{ cliente.bairro|default:"N/A" }}</p>
+        <p><strong>Cidade/Estado:</strong> {{ cliente.cidade|default:"N/A" }}/{{ cliente.estado|default:"N/A" }}</p>
+        <p><strong>CEP:</strong> {{ cliente.cep|default:"N/A" }}</p>
+    </div>
+
+    {# Botões de Ação: Editar e Excluir #}
+    <div class="mt-4">
+        <a href="{% url 'notas:editar_cliente' cliente.pk %}" class="btn btn-warning me-2">Editar Cliente</a>
+        <form action="{% url 'notas:excluir_cliente' cliente.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este cliente?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger me-2">Excluir Cliente</button>
+        </form>
+        <a href="{% url 'notas:listar_clientes' %}" class="btn btn-secondary">Voltar à Pesquisa</a>
+    </div>
+
+</div>
+{% endblock %}

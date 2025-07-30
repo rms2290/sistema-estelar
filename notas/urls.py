@@ -16,6 +16,7 @@ urlpatterns = [
     path('clientes/adicionar/', views.adicionar_cliente, name='adicionar_cliente'),
     path('clientes/editar/<int:pk>/', views.editar_cliente, name='editar_cliente'),
     path('clientes/excluir/<int:pk>/', views.excluir_cliente, name='excluir_cliente'),
+    path('clientes/<int:pk>/detalhes/', views.detalhes_cliente, name='detalhes_cliente'),
 
 # Novas URLs para Motoristas
     path('motoristas/', views.listar_motoristas, name='listar_motoristas'),
@@ -30,9 +31,9 @@ urlpatterns = [
     path('veiculos/adicionar/', views.adicionar_veiculo, name='adicionar_veiculo'),
     path('veiculos/editar/<int:pk>/', views.editar_veiculo, name='editar_veiculo'),
     path('veiculos/excluir/<int:pk>/', views.excluir_veiculo, name='excluir_veiculo'),
+    path('veiculos/<int:pk>/detalhes/', views.detalhes_veiculo, name='detalhes_veiculo'),
 
 # Novas URLs para Romaneio
-
     path('romaneios/', views.listar_romaneios, name='listar_romaneios'),
     path('romaneios/adicionar/', views.adicionar_romaneio, name='adicionar_romaneio'),
     path('romaneios/editar/<int:pk>/', views.editar_romaneio, name='editar_romaneio'),

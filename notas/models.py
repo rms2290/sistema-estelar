@@ -236,3 +236,31 @@ class HistoricoConsulta(models.Model):
 
     def __str__(self):
         return f"Consulta {self.numero_consulta} de {self.motorista.nome} em {self.data_consulta.strftime('%d/%m/%Y')}"
+    
+# --------------------------------------------------------------------------------------
+# NOVO MODELO: HistoricoConsulta (para registrar cada consulta de risco)
+# --------------------------------------------------------------------------------------
+class HistoricoConsulta(models.Model):
+    motorista = models.ForeignKey(
+        Motorista,
+        on_delete=models.CASCADE, # Se o motorista for excluído, o histórico de consulta também é
+        related_name='historico_consultas',
+        verbose_name="Motorista"
+    )
+    numero_consulta = models.CharField(max_length=50, unique=True, verbose_name="Número da Consulta")
+    data_consulta = models.DateField(default=timezone.now, verbose_name="Data da Consulta")
+    status_consulta = models.CharField(
+        max_length=20,
+        choices=[('Apto', 'Apto'), ('Inapto', 'Inapto'), ('Pendente', 'Pendente')],
+        default='Pendente',
+        verbose_name="Status da Consulta"
+    )
+    observacoes = models.TextField(blank=True, null=True, verbose_name="Observações da Consulta")
+
+    class Meta:
+        verbose_name = "Histórico de Consulta"
+        verbose_name_plural = "Históricos de Consultas"
+        ordering = ['-data_consulta', 'motorista']
+
+    def __str__(self):
+        return f"Consulta {self.numero_consulta} de {self.motorista.nome} em {self.data_consulta.strftime('%d/%m/%Y')}"

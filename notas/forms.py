@@ -1,8 +1,8 @@
 from django import forms
-from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta
+from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta 
 import re
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal     
 from validate_docbr import CNPJ, CPF
 
 ESTADOS_CHOICES = [
@@ -281,7 +281,7 @@ class RomaneioViagemForm(forms.ModelForm):
 class HistoricoConsultaForm(forms.ModelForm):
     class Meta:
         model = HistoricoConsulta
-        # O motorista será preenchido pela view
+        # O motorista será preenchido pela view, então não o colocamos aqui
         fields = ['numero_consulta', 'data_consulta', 'status_consulta', 'observacoes']
         widgets = {
             'numero_consulta': forms.TextInput(attrs={'class': 'form-control'}),
@@ -397,3 +397,57 @@ class MotoristaSearchForm(forms.Form):
         max_length=14, # 11 dígitos + pontos e traços
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000.000.000-00'})
     )
+
+# --------------------------------------------------------------------------------------
+# Formulário de Pesquisa para Veículos
+# --------------------------------------------------------------------------------------
+class VeiculoSearchForm(forms.Form):
+    # Campo para pesquisar por Placa
+    placa = forms.CharField(
+        label='Placa',
+        required=False,
+        max_length=8,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ABC-1234 ou ABC1D23'})
+    )
+    # Campo para pesquisar por Chassi
+    chassi = forms.CharField(
+        label='Chassi',
+        required=False,
+        max_length=20,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número do Chassi'})
+    )
+    # Campo para pesquisar por Nome do Proprietário
+    proprietario_nome = forms.CharField(
+        label='Nome do Proprietário',
+        required=False,
+        max_length=255,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome/Razão Social do Proprietário'})
+    )
+    # Campo para filtrar por Tipo de Unidade de Veículo (Carro, Van, Truck, etc.)
+    tipo_unidade = forms.ChoiceField(
+        label='Tipo de Unidade',
+        choices=[('', 'Todos')] + Veiculo.TIPO_UNIDADE_CHOICES, # Adiciona 'Todos' como opção inicial
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+# --------------------------------------------------------------------------------------
+# NOVO: Formulário para Histórico de Consulta
+# --------------------------------------------------------------------------------------
+class HistoricoConsultaForm(forms.ModelForm):
+    class Meta:
+        model = HistoricoConsulta
+        # O motorista será preenchido pela view, então não o colocamos aqui
+        fields = ['numero_consulta', 'data_consulta', 'status_consulta', 'observacoes']
+        widgets = {
+            'numero_consulta': forms.TextInput(attrs={'class': 'form-control'}),
+            'data_consulta': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'status_consulta': forms.Select(attrs={'class': 'form-control'}),
+            'observacoes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Preenche a data da consulta com a data atual por padrão
+        if self.instance.pk is None and not self.initial.get('data_consulta'):
+            self.fields['data_consulta'].initial = date.today()

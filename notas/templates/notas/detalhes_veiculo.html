@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalhes do Veículo - {{ veiculo.placa }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Detalhes do Veículo: {{ veiculo.placa }}</h2>
+
+    {# Mensagens do Django #}
+    {% if messages %}
+        <ul class="messages list-unstyled">
+            {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    {# Dados do Veículo #}
+    <div class="card card-body mb-4">
+        <h3>Informações da Unidade de Veículo</h3>
+        <p><strong>Tipo de Unidade:</strong> {{ veiculo.get_tipo_unidade_display }}</p>
+        <p><strong>Placa:</strong> {{ veiculo.placa }}</p>
+        <p><strong>Marca:</strong> {{ veiculo.marca|default:"N/A" }}</p>
+        <p><strong>Modelo:</strong> {{ veiculo.modelo|default:"N/A" }}</p>
+        <p><strong>Ano de Fabricação:</strong> {{ veiculo.ano_fabricacao|default:"N/A" }}</p>
+        <p><strong>País:</strong> {{ veiculo.pais|default:"N/A" }}</p>
+        <p><strong>Estado (UF):</strong> {{ veiculo.estado|default:"N/A" }}</p>
+        <p><strong>Cidade:</strong> {{ veiculo.cidade|default:"N/A" }}</p>
+        <p><strong>Chassi:</strong> {{ veiculo.chassi|default:"N/A" }}</p>
+        <p><strong>Renavam:</strong> {{ veiculo.renavam|default:"N/A" }}</p>
+        <p><strong>RNTRC:</strong> {{ veiculo.rntrc|default:"N/A" }}</p>
+        <p><strong>Capacidade (kg):</strong> {{ veiculo.capacidade_kg|default:"N/A" }}</p>
+    </div>
+
+    {# Dados do Proprietário #}
+    <div class="card card-body mb-4">
+        <h3>Dados do Proprietário</h3>
+        <p><strong>Nome/Razão Social:</strong> {{ veiculo.proprietario_nome_razao_social|default:"N/A" }}</p>
+        <p><strong>CPF/CNPJ:</strong> {{ veiculo.proprietario_cpf_cnpj|default:"N/A" }}</p>
+        <p><strong>RG/IE:</strong> {{ veiculo.proprietario_rg_ie|default:"N/A" }}</p>
+        <p><strong>Telefone:</strong> {{ veiculo.proprietario_telefone|default:"N/A" }}</p>
+        <p><strong>Endereço:</strong> {{ veiculo.proprietario_endereco|default:"N/A" }}, {{ veiculo.proprietario_numero|default:"S/N" }}</p>
+        <p><strong>Complemento:</strong> {{ veiculo.proprietario_complemento|default:"N/A" }}</p>
+        <p><strong>Bairro:</strong> {{ veiculo.proprietario_bairro|default:"N/A" }}</p>
+        <p><strong>Cidade/Estado:</strong> {{ veiculo.proprietario_cidade|default:"N/A" }}/{{ veiculo.proprietario_estado|default:"N/A" }}</p>
+        <p><strong>CEP:</strong> {{ veiculo.proprietario_cep|default:"N/A" }}</p>
+    </div>
+
+    {# Botões de Ação: Editar e Excluir #}
+    <div class="mt-4">
+        <a href="{% url 'notas:editar_veiculo' veiculo.pk %}" class="btn btn-warning me-2">Editar Veículo</a>
+        <form action="{% url 'notas:excluir_veiculo' veiculo.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este veículo?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger me-2">Excluir Veículo</button>
+        </form>
+        <a href="{% url 'notas:listar_veiculos' %}" class="btn btn-secondary">Voltar à Pesquisa</a>
+    </div>
+
+</div>
+{% endblock %}

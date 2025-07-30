@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>Confirmar Exclusão de Cliente</h2>
+    <p>Você tem certeza que deseja excluir o cliente: <strong>{{ cliente.razao_social }} (CNPJ: {{ cliente.cnpj }})</strong>?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Sim, Excluir</button>
+        {# MUDANÇA AQUI: Redirecionar para detalhes_cliente #}
+        <a href="{% url 'notas:detalhes_cliente' cliente.pk %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+{% endblock %}

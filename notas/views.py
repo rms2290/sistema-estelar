@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.db.models import Q, Max 
 from django.contrib import messages
-from django.utils import timezone # Para timezone.now()
+from django.utils import timezone
 
 # Importe todos os seus modelos
 from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta 
@@ -10,7 +10,8 @@ from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, His
 # Importe todos os seus formulários
 from .forms import (
     NotaFiscalForm, ClienteForm, MotoristaForm, VeiculoForm, RomaneioViagemForm,
-    NotaFiscalSearchForm, ClienteSearchForm, MotoristaSearchForm, HistoricoConsultaForm
+    NotaFiscalSearchForm, ClienteSearchForm, MotoristaSearchForm, HistoricoConsultaForm,
+    VeiculoSearchForm
 )
 
 # --------------------------------------------------------------------------------------
@@ -21,21 +22,18 @@ def get_next_romaneio_codigo():
     ano = timezone.now().year
     mes = timezone.now().month
     
-    # Encontra o último romaneio do mês e ano atual para determinar o próximo número sequencial
     last_romaneio = RomaneioViagem.objects.filter(
         data_emissao__year=ano,
         data_emissao__month=mes
-    ).order_by('-codigo').first() # Ordena por código para pegar o maior
+    ).order_by('-codigo').first()
 
     next_sequence = 1
     if last_romaneio and last_romaneio.codigo:
         try:
-            # Extrai o número sequencial do código (ex: ROM-2023-07-0001 -> 0001)
             parts = last_romaneio.codigo.split('-')
             if len(parts) == 4 and parts[0] == 'ROM' and int(parts[1]) == ano and int(parts[2]) == mes:
                 next_sequence = int(parts[3]) + 1
         except (ValueError, IndexError):
-            # Fallback se o formato for inválido
             pass
 
     return f"ROM-{ano:04d}-{mes:02d}-{next_sequence:04d}"
@@ -58,7 +56,7 @@ def adicionar_cliente(request):
 
 def listar_clientes(request):
     search_form = ClienteSearchForm(request.GET)
-    clientes = Cliente.objects.none() # Começa vazio
+    clientes = Cliente.objects.none()
     search_performed = bool(request.GET)
 
     if search_performed and search_form.is_valid():
@@ -174,7 +172,7 @@ def excluir_nota_fiscal(request, pk):
             romaneio.notas_fiscais.remove(nota)
         nota.delete()
         messages.success(request, 'Nota fiscal excluída com sucesso!')
-    return redirect('notas:listar_notas_fiscais')
+        return redirect('notas:listar_notas_fiscais')
     return render(request, 'notas/excluir_nota.html', {'nota': nota})
 
 # --------------------------------------------------------------------------------------
@@ -182,35 +180,25 @@ def excluir_nota_fiscal(request, pk):
 # --------------------------------------------------------------------------------------
 def listar_motoristas(request):
     search_form = MotoristaSearchForm(request.GET)
-    
-    # Começa com um queryset vazio. Os motoristas só serão carregados se uma busca for feita.
-    motoristas = Motorista.objects.none() 
-    
-    # Verifica se a requisição GET contém dados (ou seja, se uma busca foi realizada)
+    motoristas = Motorista.objects.none()
     search_performed = bool(request.GET)
 
     if search_performed and search_form.is_valid():
-        # Começa com todos os motoristas
         queryset = Motorista.objects.all()
-
-        # Pega os dados limpos do formulário
         nome = search_form.cleaned_data.get('nome')
         cpf = search_form.cleaned_data.get('cpf')
 
-        # Aplica os filtros condicionalmente
         if nome:
             queryset = queryset.filter(nome__icontains=nome)
-        
         if cpf:
-            queryset = queryset.filter(cpf__icontains=cpf) # icontains para busca parcial
+            queryset = queryset.filter(cpf__icontains=cpf)
         
-        # Atribui o queryset filtrado
         motoristas = queryset.order_by('nome')
-    
+
     context = {
-        'search_form': search_form, # Passa o formulário de busca para o template
-        'motoristas': motoristas, # Passa os motoristas filtrados
-        'search_performed': search_performed, # Indica se uma busca foi realizada (para exibir mensagem)
+        'motoristas': motoristas,
+        'search_form': search_form,
+        'search_performed': search_performed,
     }
     return render(request, 'notas/listar_motoristas.html', context)
 
@@ -230,7 +218,6 @@ def adicionar_motorista(request):
 def editar_motorista(request, pk):
     motorista = get_object_or_404(Motorista, pk=pk)
     
-    # Recupera os 5 últimos históricos de consulta para este motorista
     historico_consultas = HistoricoConsulta.objects.filter(motorista=motorista).order_by('-data_consulta')[:5]
 
     if request.method == 'POST':
@@ -247,17 +234,17 @@ def editar_motorista(request, pk):
     context = {
         'form': form,
         'motorista': motorista,
-        'historico_consultas': historico_consultas, # Passa o histórico para o template
+        'historico_consultas': historico_consultas,
     }
     return render(request, 'notas/editar_motorista.html', context)
 
-def adicionar_historico_consulta(request, pk): # pk é o ID do motorista
+def adicionar_historico_consulta(request, pk):
     motorista = get_object_or_404(Motorista, pk=pk)
     if request.method == 'POST':
         form = HistoricoConsultaForm(request.POST)
         if form.is_valid():
             historico = form.save(commit=False)
-            historico.motorista = motorista # Associa o histórico ao motorista
+            historico.motorista = motorista
             historico.save()
             messages.success(request, 'Consulta de risco registrada com sucesso!')
             return redirect('notas:editar_motorista', pk=motorista.pk)
@@ -270,7 +257,6 @@ def excluir_motorista(request, pk):
     motorista = get_object_or_404(Motorista, pk=pk)
     if request.method == 'POST':
         try:
-            # Ao excluir motorista, o histórico de consulta será excluído em cascata (CASCADE)
             motorista.delete()
             messages.success(request, 'Motorista excluído com sucesso!')
         except Exception as e:
@@ -282,11 +268,11 @@ def excluir_motorista(request, pk):
 # Views Veiculo (Unidades Individuais)
 # --------------------------------------------------------------------------------------
 def listar_veiculos(request):
-    # Usa o formulário de busca de veículo
-    search_form = MotoristaSearchForm(request.GET) # <<< AQUI ESTÁ ERRADO, DEVE SER VEICULOSEARCHFORM
-    veiculos = Veiculo.objects.all().order_by('placa') # Começa com todos
+    search_form = VeiculoSearchForm(request.GET) # <<< USE VeiculoSearchForm AQUI
+    
+    veiculos_query = Veiculo.objects.all().order_by('placa') # Começa com todos os veiculos por padrão
 
-    mostrou_resultados = False
+    filters_applied = False # Variável para verificar se algum filtro foi realmente aplicado
 
     if search_form.is_valid():
         placa = search_form.cleaned_data.get('placa')
@@ -295,20 +281,27 @@ def listar_veiculos(request):
         tipo_unidade = search_form.cleaned_data.get('tipo_unidade')
 
         if placa:
-            veiculos = veiculos.filter(placa__icontains=placa)
-        if chassi:
-            veiculos = veiculos.filter(chassi__icontains=chassi)
-        if proprietario_nome:
-            veiculos = veiculos.filter(proprietario_nome_razao_social__icontains=proprietario_nome)
-        if tipo_unidade:
-            veiculos = veiculos.filter(tipo_unidade=tipo_unidade)
+            veiculos_query = veiculos_query.filter(placa__icontains=placa)
+            filters_applied = True
         
-        mostrou_resultados = True
+        if chassi:
+            veiculos_query = veiculos_query.filter(chassi__icontains=chassi)
+            filters_applied = True
+        
+        if proprietario_nome:
+            veiculos_query = veiculos_query.filter(proprietario_nome_razao_social__icontains=proprietario_nome)
+            filters_applied = True
+        
+        if tipo_unidade:
+            veiculos_query = veiculos_query.filter(tipo_unidade=tipo_unidade)
+            filters_applied = True
+        
+    veiculos = veiculos_query.order_by('placa')
 
     context = {
         'veiculos': veiculos,
         'search_form': search_form,
-        'mostrou_resultados': mostrou_resultados,
+        'filters_applied': filters_applied,
     }
     return render(request, 'notas/listar_veiculos.html', context)
 
@@ -336,12 +329,26 @@ def editar_veiculo(request, pk):
         if form.is_valid():
             form.save()
             messages.success(request, 'Unidade de Veículo atualizada com sucesso!')
-            return redirect('notas:listar_veiculos')
+            # Após salvar com sucesso, redirecione para a TELA DE DETALHES do veículo
+            # para manter o fluxo de Visualizar -> Editar -> Visualizar
+            return redirect('notas:detalhes_veiculo', pk=veiculo.pk) 
         else:
             messages.error(request, 'Houve um erro ao atualizar a unidade de veículo. Verifique os campos.')
-    else:
+            # No caso de erro no POST, precisamos passar o veículo novamente para o template
+            # para que o link de cancelar continue funcionando.
+            context = {
+                'form': form,
+                'veiculo': veiculo, # <<< Passa o objeto veiculo mesmo no POST com erro
+            }
+            return render(request, 'notas/editar_veiculo.html', context)
+    else: # GET request
         form = VeiculoForm(instance=veiculo)
-    return render(request, 'notas/editar_veiculo.html', {'form': form})
+    
+        context = {
+        'form': form,
+        'veiculo': veiculo,
+    }
+    return render(request, 'notas/editar_veiculo.html', context)
 
 def excluir_veiculo(request, pk):
     veiculo = get_object_or_404(Veiculo, pk=pk)
@@ -510,21 +517,29 @@ def editar_romaneio(request, pk):
             form.fields['data_romaneio'].initial = romaneio.data_emissao.date()
 
         if romaneio.cliente:
-            form.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter
+            form.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
+                cliente=romaneio.cliente
+            ).filter(
+                Q(romaneios_vinculados=romaneio) | Q(status='Depósito')
+            ).order_by('nota')
+
+    context = {
+        'form': form,
+        'romaneio': romaneio,
+        'provisional_codigo': romaneio.codigo,
+    }
+    return render(request, 'notas/editar_romaneio.html', context)
 
 def excluir_romaneio(request, pk):
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
     if request.method == 'POST':
-        # Ao excluir romaneio, liberar as notas fiscais associadas e retornar status para Depósito
         for nota_fiscal in romaneio.notas_fiscais.all():
-            if not nota_fiscal.romaneios_vinculados.exclude(pk=romaneio.pk).exists(): # Verifica se a nota não está em NENHUM outro romaneio
-                nota_fiscal.status = 'Depósito'
-                nota_fiscal.save()
+            nota_fiscal.status = 'Depósito'
+            nota_fiscal.save()
         
         romaneio.delete()
         messages.success(request, 'Romaneio excluído com sucesso! Notas fiscais associadas retornaram ao status Depósito.')
         return redirect('notas:listar_romaneios')
-    # Renderiza o template de confirmação de exclusão
     return render(request, 'notas/confirmar_exclusao_romaneio.html', {'romaneio': romaneio})
 
 # --------------------------------------------------------------------------------------
@@ -568,7 +583,6 @@ def load_notas_fiscais_edicao(request):
 def detalhes_motorista(request, pk):
     motorista = get_object_or_404(Motorista, pk=pk)
     
-    # Recupera os 5 últimos históricos de consulta para este motorista
     historico_consultas = HistoricoConsulta.objects.filter(motorista=motorista).order_by('-data_consulta')[:5]
     
     context = {
@@ -587,3 +601,25 @@ def detalhes_nota_fiscal(request, pk):
         'nota': nota,
     }
     return render(request, 'notas/detalhes_nota_fiscal.html', context)
+
+# --------------------------------------------------------------------------------------
+# NOVA VIEW: Detalhes do Cliente
+# --------------------------------------------------------------------------------------
+def detalhes_cliente(request, pk):
+    cliente = get_object_or_404(Cliente, pk=pk)
+    
+    context = {
+        'cliente': cliente,
+    }
+    return render(request, 'notas/detalhes_cliente.html', context)
+
+# --------------------------------------------------------------------------------------
+# NOVA VIEW: Detalhes do Veículo
+# --------------------------------------------------------------------------------------
+def detalhes_veiculo(request, pk):
+    veiculo = get_object_or_404(Veiculo, pk=pk)
+    
+    context = {
+        'veiculo': veiculo,
+    }
+    return render(request, 'notas/detalhes_veiculo.html', context)

@@ -1,11 +1,29 @@
 {% extends 'base.html' %}
 
+{% block title %}Editar Veículo{% endblock %}
+
 {% block content %}
+<div class="container mt-4">
     <h2>Editar Veículo</h2>
+
     <form method="post">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-success">Salvar Alterações</button>
-        <a href="{% url 'notas:listar_veiculos' %}" class="btn btn-secondary">Cancelar</a>
+
+        {# Erros gerais do formulário #}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# Campos do formulário de veículo #}
+        {{ form.as_p }} 
+
+        <button type="submit" class="btn btn-success mt-3">Salvar Alterações</button>
+        {# MUDANÇA AQUI: Redirecionar para detalhes_veiculo #}
+        <a href="{% url 'notas:detalhes_veiculo' veiculo.pk %}" class="btn btn-secondary mt-3">Cancelar</a>
     </form>
+</div>
 {% endblock %}

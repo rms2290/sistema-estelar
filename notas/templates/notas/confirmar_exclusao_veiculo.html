@@ -2,10 +2,11 @@
 
 {% block content %}
     <h2>Confirmar Exclusão de Veículo</h2>
-    <p>Você tem certeza que deseja excluir o veículo: <strong>{{ veiculo.marca }} {{ veiculo.modelo }} (Placa: {{ veiculo.placa }})</strong>?</p>
+    <p>Você tem certeza que deseja excluir o veículo: <strong>{{ veiculo.placa }} ({{ veiculo.get_tipo_unidade_display }})</strong>?</p>
     <form method="post">
         {% csrf_token %}
         <button type="submit" class="btn btn-danger">Sim, Excluir</button>
-        <a href="{% url 'notas:listar_veiculos' %}" class="btn btn-secondary">Cancelar</a>
+        {# MUDANÇA AQUI: Redirecionar para detalhes_veiculo #}
+        <a href="{% url 'notas:detalhes_veiculo' veiculo.pk %}" class="btn btn-secondary">Cancelar</a>
     </form>
 {% endblock %}
