@@ -61,13 +61,14 @@
                             <td>{{ nota.nota }}</td>
                             <td>{{ nota.cliente.razao_social }}</td>
                             <td>{{ nota.data|date:"d/m/Y" }}</td>
-                            <td>{{ nota.peso|floatformat:"0" }}</td> {# Exibe o peso truncado #}
+                            <td>{{ nota.peso|floatformat:"0" }}</td>
                             <td>{{ nota.valor|floatformat:"2" }}</td>
                             <td>{{ nota.quantidade }}</td>
                             <td>{{ nota.get_status_display }}</td>
                             <td>
-                                <a href="{% url 'notas:editar_nota_fiscal' nota.pk %}" class="btn btn-sm btn-info">Editar</a>
-                                <a href="{% url 'notas:excluir_nota_fiscal' nota.pk %}" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja excluir esta nota fiscal?');">Excluir</a>
+                                {# MUDANÇA AQUI: Link para a tela de Detalhes #}
+                                <a href="{% url 'notas:detalhes_nota_fiscal' nota.pk %}" class="btn btn-sm btn-info">Visualizar</a>
+                                {# Botões de Editar e Excluir são movidos para a tela de Detalhes #}
                             </td>
                         </tr>
                     {% endfor %}
@@ -75,8 +76,7 @@
             </table>
         </div>
     {% else %}
-        {# Mensagem quando não há resultados OU a busca ainda não foi feita #}
-        {% if mostrou_resultados %}
+        {% if search_performed %}
             <p class="alert alert-info">Nenhuma nota fiscal encontrada com os filtros especificados.</p>
         {% else %}
             <p class="alert alert-info">Utilize os filtros acima para pesquisar notas fiscais.</p>

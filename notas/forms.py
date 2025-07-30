@@ -1,9 +1,9 @@
 from django import forms
-from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem
+from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta
 import re
 from datetime import date
 from decimal import Decimal
-from validate_docbr import CNPJ
+from validate_docbr import CNPJ, CPF
 
 ESTADOS_CHOICES = [
     ('AC', 'Acre'), ('AL', 'Alagoas'), ('AP', 'Amapá'), ('AM', 'Amazonas'),
@@ -92,28 +92,51 @@ class ClienteForm(forms.ModelForm):
 # Novo formulário para Motoristas
 # --------------------------------------------------------------------------------------
 class MotoristaForm(forms.ModelForm):
-    # Sobrescreve o campo 'estado' e 'uf_emissao_cnh'
-    estado = forms.ChoiceField(
-        label='Estado',
-        choices=[('', '---')] + ESTADOS_CHOICES,
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    uf_emissao_cnh = forms.ChoiceField(
-        label='UF de Emissão da CNH',
-        choices=[('', '---')] + ESTADOS_CHOICES,
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
     class Meta:
         model = Motorista
-        fields = '__all__'
+        fields = [
+            'nome', 'cpf', 'cnh',
+            'codigo_seguranca', 'vencimento_cnh', 'uf_emissao_cnh',
+            'telefone',
+            'endereco', 'numero', 'bairro', 'cidade', 'estado', 'cep',
+            'data_nascimento', # <<< POSICIONE AQUI, ANTES DE 'numero_consulta'
+            'numero_consulta' # <<< ESTE CAMPO AINDA ESTÁ NO MODELO MOTORISTA TEMPORARIAMENTE
+        ]
         widgets = {
-            # ... (outros widgets) ...
-            # Remova os widgets antigos de 'estado' e 'uf_emissao_cnh' se estiverem aqui
-            # 'estado': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 2, 'placeholder': 'UF'}),
-            # 'uf_emissao_cnh': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 2, 'placeholder': 'UF'}),
+            'nome': forms.TextInput(attrs={'class': 'form-control'}),
+            'cpf': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000.000.000-00'}),
+            'cnh': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '00000000000'}),
+            
+            'codigo_seguranca': forms.TextInput(attrs={'class': 'form-control'}),
+            'vencimento_cnh': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'uf_emissao_cnh': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 2, 'placeholder': 'UF'}),
+            
+            'telefone': forms.TextInput(attrs={'class': 'form-control'}),
+            
+            'endereco': forms.TextInput(attrs={'class': 'form-control'}),
+            'numero': forms.TextInput(attrs={'class': 'form-control'}),
+            'bairro': forms.TextInput(attrs={'class': 'form-control'}),
+            'cidade': forms.TextInput(attrs={'class': 'form-control'}),
+            'estado': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 2, 'placeholder': 'UF'}),
+            'cep': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '00000-000'}),
+            
+            'data_nascimento': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}), # <<< WIDGET PARA data_nascimento
+            'numero_consulta': forms.TextInput(attrs={'class': 'form-control'}), # Mantido por enquanto
         }
+
+    # MÉTODO CLEAN_CPF (NOVO)
+    def clean_cpf(self):
+        cpf = self.cleaned_data['cpf']
+        cpf_numeros = re.sub(r'[^0-9]', '', cpf)
+        if len(cpf_numeros) != 11:
+            raise forms.ValidationError("CPF deve conter 11 dígitos numéricos.")
+        
+        # >>> NOVO: Validação do dígito verificador usando validate_docbr <<<
+        cpf_validator = CPF() # Usa a classe CPF importada
+        if not cpf_validator.validate(cpf_numeros):
+            raise forms.ValidationError("CPF inválido. Verifique o número digitado.")
+
+        return cpf_numeros
 
     def clean_cpf(self):
         cpf = self.cleaned_data['cpf']
@@ -253,7 +276,28 @@ class RomaneioViagemForm(forms.ModelForm):
         }
 
 # --------------------------------------------------------------------------------------
-# Formulários de Pesquisa (mantenha no final do arquivo)
+# NOVO: Formulário para Histórico de Consulta
+# --------------------------------------------------------------------------------------
+class HistoricoConsultaForm(forms.ModelForm):
+    class Meta:
+        model = HistoricoConsulta
+        # O motorista será preenchido pela view
+        fields = ['numero_consulta', 'data_consulta', 'status_consulta', 'observacoes']
+        widgets = {
+            'numero_consulta': forms.TextInput(attrs={'class': 'form-control'}),
+            'data_consulta': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'status_consulta': forms.Select(attrs={'class': 'form-control'}),
+            'observacoes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Preenche a data da consulta com a data atual por padrão
+        if self.instance.pk is None and not self.initial.get('data_consulta'):
+            self.fields['data_consulta'].initial = date.today()
+
+# --------------------------------------------------------------------------------------
+# Formulários de Pesquisa de notas
 # --------------------------------------------------------------------------------------
 class NotaFiscalSearchForm(forms.Form):
     nota = forms.CharField(
@@ -305,5 +349,51 @@ class MotoristaSearchForm(forms.Form):
         label='CPF',
         required=False,
         max_length=14,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000.000.000-00'})
+    )
+
+# --------------------------------------------------------------------------------------
+# Formulário de Pesquisa para Clientes
+# --------------------------------------------------------------------------------------
+class ClienteSearchForm(forms.Form):
+    # Campo para pesquisar por Razão Social
+    razao_social = forms.CharField(
+        label='Razão Social',
+        required=False,
+        max_length=255,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Razão Social'})
+    )
+    # Campo para pesquisar por CNPJ
+    cnpj = forms.CharField(
+        label='CNPJ',
+        required=False,
+        max_length=18,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '00.000.000/0000-00'})
+    )
+    # Campo para filtrar por Status (Ativo/Inativo)
+    status = forms.ChoiceField(
+        label='Status',
+        # Adiciona 'Todos' como opção inicial, e depois as escolhas do modelo Cliente
+        choices=[('', 'Todos'),] + Cliente.STATUS_CHOICES, 
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+# --------------------------------------------------------------------------------------
+# Formulário de Pesquisa para Motoristas
+# --------------------------------------------------------------------------------------
+class MotoristaSearchForm(forms.Form):
+    # Campo para pesquisar por Nome do Motorista
+    nome = forms.CharField(
+        label='Nome do Motorista',
+        required=False,
+        max_length=255,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome do Motorista'})
+    )
+    # Campo para pesquisar por CPF
+    cpf = forms.CharField(
+        label='CPF',
+        required=False,
+        max_length=14, # 11 dígitos + pontos e traços
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000.000.000-00'})
     )

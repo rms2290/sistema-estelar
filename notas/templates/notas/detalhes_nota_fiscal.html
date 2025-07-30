@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalhes da Nota Fiscal - {{ nota.nota }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Detalhes da Nota Fiscal: {{ nota.nota }}</h2>
+
+    {# Mensagens do Django #}
+    {% if messages %}
+        <ul class="messages list-unstyled">
+            {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    {# Dados da Nota Fiscal #}
+    <div class="card card-body mb-4">
+        <h3>Informações da Nota</h3>
+        <p><strong>Número da NF:</strong> {{ nota.nota }}</p>
+        <p><strong>Cliente:</strong> {{ nota.cliente.razao_social }}</p>
+        <p><strong>Fornecedor:</strong> {{ nota.fornecedor }}</p>
+        <p><strong>Data de Emissão:</strong> {{ nota.data|date:"d/m/Y" }}</p>
+        <p><strong>Mercadoria:</strong> {{ nota.mercadoria }}</p>
+        <p><strong>Quantidade:</strong> {{ nota.quantidade }}</p>
+        <p><strong>Peso (kg):</strong> {{ nota.peso|floatformat:"0" }}</p>
+        <p><strong>Valor (R$):</strong> {{ nota.valor|floatformat:"2" }}</p>
+        <p><strong>Status:</strong> {{ nota.get_status_display }}</p>
+    </div>
+
+    {# Romaneios Vinculados (se houver) #}
+    {% if nota.romaneios_vinculados.all %}
+    <div class="card card-body mt-4">
+        <h3>Romaneios Vinculados</h3>
+        <table class="table table-striped table-sm">
+            <thead>
+                <tr>
+                    <th>Código do Romaneio</th>
+                    <th>Status Romaneio</th>
+                    <th>Motorista</th>
+                    <th>Veículo</th>
+                    <th>Data de Emissão</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for romaneio in nota.romaneios_vinculados.all %}
+                    <tr>
+                        <td>{{ romaneio.codigo }}</td>
+                        <td>{{ romaneio.get_status_display }}</td>
+                        <td>{{ romaneio.motorista.nome }}</td>
+                        <td>{{ romaneio.veiculo.placa }}</td>
+                        <td>{{ romaneio.data_emissao|date:"d/m/Y" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {# Botões de Ação: Editar e Excluir #}
+    <div class="mt-4">
+        <a href="{% url 'notas:editar_nota_fiscal' nota.pk %}" class="btn btn-warning me-2">Editar Nota</a>
+        <form action="{% url 'notas:excluir_nota_fiscal' nota.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir esta nota fiscal?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger me-2">Excluir Nota</button>
+        </form>
+        <a href="{% url 'notas:listar_notas_fiscais' %}" class="btn btn-secondary">Voltar à Pesquisa</a>
+    </div>
+
+</div>
+{% endblock %}

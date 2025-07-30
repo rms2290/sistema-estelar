@@ -1,5 +1,5 @@
 from django.db import models
-from django.utils import timezone # Para campos de data/hora automáticos
+from django.utils import timezone
 
 # --------------------------------------------------------------------------------------
 # Clientes
@@ -75,24 +75,28 @@ class NotaFiscal(models.Model):
 # --------------------------------------------------------------------------------------
 class Motorista(models.Model):
     nome = models.CharField(max_length=255, verbose_name="Nome Completo")
-    cpf = models.CharField(max_length=14, unique=True, verbose_name="CPF")
-    cnh = models.CharField(max_length=11, unique=True, blank=True, null=True, verbose_name="CNH") # CNH pode ser nulo
+    cpf = models.CharField(max_length=14, unique=True, verbose_name="CPF") # Ex: 000.000.000-00
+    cnh = models.CharField(max_length=11, unique=True, blank=True, null=True, verbose_name="CNH")
     codigo_seguranca = models.CharField(max_length=10, blank=True, null=True, verbose_name="Código de Segurança CNH")
     vencimento_cnh = models.DateField(blank=True, null=True, verbose_name="Vencimento CNH")
     uf_emissao_cnh = models.CharField(max_length=2, blank=True, null=True, verbose_name="UF Emissão CNH")
-
+    
     telefone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Telefone")
-
+    
     endereco = models.CharField(max_length=255, blank=True, null=True, verbose_name="Endereço")
     numero = models.CharField(max_length=10, blank=True, null=True, verbose_name="Número")
     bairro = models.CharField(max_length=100, blank=True, null=True, verbose_name="Bairro")
     cidade = models.CharField(max_length=100, blank=True, null=True, verbose_name="Cidade")
     estado = models.CharField(max_length=2, blank=True, null=True, verbose_name="Estado (UF)")
     cep = models.CharField(max_length=9, blank=True, null=True, verbose_name="CEP")
+    
+    # Campo data_nascimento deve estar aqui
+    data_nascimento = models.DateField(blank=True, null=True, verbose_name="Data de Nascimento") 
 
-    numero_consulta = models.CharField(max_length=50, blank=True, null=True, verbose_name="Número da Consulta")
+    # 'numero_consulta' será movido para HistoricoConsulta, mas manteremos o campo antigo no Motorista por agora
+    # para não quebrar migrações, depois ele será removido.
+    numero_consulta = models.CharField(max_length=50, blank=True, null=True, verbose_name="Número da Última Consulta")
 
-    data_nascimento = models.DateField(blank=True, null=True, verbose_name="Data de Nascimento") # Adicionado ao Motorista
 
     def __str__(self):
         return self.nome
@@ -204,3 +208,31 @@ class RomaneioViagem(models.Model):
         verbose_name = "Romaneio de Viagem"
         verbose_name_plural = "Romaneios de Viagem"
         ordering = ['-data_emissao', 'codigo']
+
+# --------------------------------------------------------------------------------------
+# NOVO MODELO: HistoricoConsulta (para registrar cada consulta de risco)
+# --------------------------------------------------------------------------------------
+class HistoricoConsulta(models.Model):
+    motorista = models.ForeignKey(
+        Motorista,
+        on_delete=models.CASCADE, # Se o motorista for excluído, o histórico de consulta também é
+        related_name='historico_consultas',
+        verbose_name="Motorista"
+    )
+    numero_consulta = models.CharField(max_length=50, unique=True, verbose_name="Número da Consulta")
+    data_consulta = models.DateField(default=timezone.now, verbose_name="Data da Consulta")
+    status_consulta = models.CharField(
+        max_length=20,
+        choices=[('Apto', 'Apto'), ('Inapto', 'Inapto'), ('Pendente', 'Pendente')],
+        default='Pendente',
+        verbose_name="Status da Consulta"
+    )
+    observacoes = models.TextField(blank=True, null=True, verbose_name="Observações da Consulta")
+
+    class Meta:
+        verbose_name = "Histórico de Consulta"
+        verbose_name_plural = "Históricos de Consultas"
+        ordering = ['-data_consulta', 'motorista']
+
+    def __str__(self):
+        return f"Consulta {self.numero_consulta} de {self.motorista.nome} em {self.data_consulta.strftime('%d/%m/%Y')}"

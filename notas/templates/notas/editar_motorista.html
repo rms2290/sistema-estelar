@@ -1,11 +1,36 @@
 {% extends 'base.html' %}
 
+{% block title %}Editar Motorista{% endblock %}
+
 {% block content %}
+<div class="container mt-4">
     <h2>Editar Motorista</h2>
+
     <form method="post">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-success">Salvar Alterações</button>
-        <a href="{% url 'notas:listar_motoristas' %}" class="btn btn-secondary">Cancelar</a>
+
+        {# Erros gerais do formulário #}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# Seção de Dados do Motorista #}
+        <div class="card card-body mb-4">
+            <h3>Dados do Motorista</h3>
+            <div class="row">
+                {{ form.as_p }} 
+            </div>
+            <button type="submit" class="btn btn-success mt-3">Salvar Alterações</button>
+            {# MUDANÇA AQUI: Redirecionar para detalhes_motorista #}
+            <a href="{% url 'notas:detalhes_motorista' motorista.pk %}" class="btn btn-secondary mt-3">Cancelar</a>
+        </div>
+        
+        {# Removido: Histórico de Consultas e o Modal daqui, pois agora eles estão apenas em detalhes_motorista.html #}
+        {# Se você usava {{ form.as_p }} para exibir o formulário, certifique-se de que a ordem dos campos está no fields da Meta do MotoristaForm. #}
     </form>
+</div>
 {% endblock %}

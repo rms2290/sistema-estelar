@@ -1,34 +1,77 @@
 {% extends 'base.html' %}
 
-{% block content %}
-    <h2>Lista de Motoristas</h2>
-    <a href="{% url 'notas:adicionar_motorista' %}" class="btn btn-primary mb-3">Adicionar Novo Motorista</a>
+{% block title %}Pesquisar Motoristas{% endblock %}
 
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Nome</th>
-                <th>CPF</th>
-                <th>Celular</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for motorista in motoristas %}
-                <tr>
-                    <td>{{ motorista.nome }}</td>
-                    <td>{{ motorista.cpf }}</td>
-                    <td>{{ motorista.celular }}</td>
-                    <td>
-                        <a href="{% url 'notas:editar_motorista' motorista.pk %}" class="btn btn-sm btn-info">Editar</a>
-                        <a href="{% url 'notas:excluir_motorista' motorista.pk %}" class="btn btn-sm btn-danger">Excluir</a>
-                    </td>
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="4">Nenhum motorista cadastrado.</td>
-                </tr>
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Pesquisar Motoristas</h2>
+        <a href="{% url 'notas:adicionar_motorista' %}" class="btn btn-primary">Adicionar Motorista</a>
+    </div>
+
+    <div class="card card-body mb-4">
+        <form method="get" class="form-row align-items-end">
+            <div class="col-md-5 mb-3">
+                {{ search_form.nome.label_tag }}
+                {{ search_form.nome }}
+            </div>
+            <div class="col-md-5 mb-3">
+                {{ search_form.cpf.label_tag }}
+                {{ search_form.cpf }}
+            </div>
+            <div class="col-md-2 mb-3">
+                <button type="submit" class="btn btn-info btn-block">Buscar</button>
+            </div>
+        </form>
+    </div>
+
+    {# Mensagens do Django #}
+    {% if messages %}
+        <ul class="messages list-unstyled">
+            {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
             {% endfor %}
-        </tbody>
-    </table>
+        </ul>
+    {% endif %}
+
+    {# Exibição dos resultados #}
+    {% if motoristas %}
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Nome</th>
+                        <th>CPF</th>
+                        <th>CNH</th>
+                        <th>Telefone</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for motorista in motoristas %}
+                        <tr>
+                            <td>{{ motorista.nome }}</td>
+                            <td>{{ motorista.cpf }}</td>
+                            <td>{{ motorista.cnh }}</td>
+                            <td>{{ motorista.telefone }}</td>
+                            <td>
+                                {# MUDANÇA AQUI: Link para a tela de Detalhes #}
+                                <a href="{% url 'notas:detalhes_motorista' motorista.pk %}" class="btn btn-sm btn-info">Visualizar</a>
+                                {# Botões de Editar e Excluir são movidos para a tela de Detalhes #}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        {% if search_performed %}
+            <p class="alert alert-info">Nenhum motorista encontrado com os filtros especificados.</p>
+        {% else %}
+            <p class="alert alert-info">Utilize os filtros acima para pesquisar motoristas.</p>
+        {% endif %}
+    {% endif %}
+
+    <a href="{% url 'notas:adicionar_motorista' %}" class="btn btn-success mt-3">Adicionar Novo Motorista</a>
+</div>
 {% endblock %}

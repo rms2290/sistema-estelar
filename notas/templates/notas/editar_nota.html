@@ -3,10 +3,27 @@
 {% block title %}Editar Nota Fiscal{% endblock %}
 
 {% block content %}
-    <h2>Editar Nota Fiscal #{{ nota.nota }}</h2>
+<div class="container mt-4">
+    <h2>Editar Nota Fiscal</h2>
+
     <form method="post">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Atualizar Nota</button>
+
+        {# Erros gerais do formulário #}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# Campos do formulário de nota fiscal #}
+        {{ form.as_p }} 
+
+        <button type="submit" class="btn btn-success mt-3">Salvar Alterações</button>
+        {# MUDANÇA AQUI: Redirecionar para detalhes_nota_fiscal #}
+        <a href="{% url 'notas:detalhes_nota_fiscal' nota.pk %}" class="btn btn-secondary mt-3">Cancelar</a>
     </form>
+</div>
 {% endblock %}

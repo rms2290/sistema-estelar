@@ -9,6 +9,7 @@ urlpatterns = [
     path('adicionar/', views.adicionar_nota_fiscal, name='adicionar_nota_fiscal'),
     path('editar/<int:pk>/', views.editar_nota_fiscal, name='editar_nota_fiscal'),
     path('excluir/<int:pk>/', views.excluir_nota_fiscal, name='excluir_nota_fiscal'),
+    path('notas/<int:pk>/detalhes/', views.detalhes_nota_fiscal, name='detalhes_nota_fiscal'),
 
     # Novas URLs para Clientes
     path('clientes/', views.listar_clientes, name='listar_clientes'),
@@ -21,6 +22,8 @@ urlpatterns = [
     path('motoristas/adicionar/', views.adicionar_motorista, name='adicionar_motorista'),
     path('motoristas/editar/<int:pk>/', views.editar_motorista, name='editar_motorista'),
     path('motoristas/excluir/<int:pk>/', views.excluir_motorista, name='excluir_motorista'),
+    path('motoristas/<int:pk>/adicionar-consulta/', views.adicionar_historico_consulta, name='adicionar_historico_consulta'),
+    path('motoristas/<int:pk>/detalhes/', views.detalhes_motorista, name='detalhes_motorista'),
 
 # Novas URLs para Veículo
     path('veiculos/', views.listar_veiculos, name='listar_veiculos'),

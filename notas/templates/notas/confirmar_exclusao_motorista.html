@@ -6,6 +6,7 @@
     <form method="post">
         {% csrf_token %}
         <button type="submit" class="btn btn-danger">Sim, Excluir</button>
-        <a href="{% url 'notas:listar_motoristas' %}" class="btn btn-secondary">Cancelar</a>
+        {# MUDANÇA AQUI: Redirecionar para detalhes_motorista #}
+        <a href="{% url 'notas:detalhes_motorista' motorista.pk %}" class="btn btn-secondary">Cancelar</a>
     </form>
 {% endblock %}
