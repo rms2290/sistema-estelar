@@ -41,16 +41,22 @@
 </head>
 <body>
     <nav>
-        <a href="{% url 'notas:listar_notas_fiscais' %}">Listar Notas</a>
         <a href="{% url 'notas:adicionar_nota_fiscal' %}">Adicionar Nota</a>
-        <a href="{% url 'notas:listar_clientes' %}">Listar Clientes</a>
+        <a href="{% url 'notas:listar_notas_fiscais' %}">Pesquisar Nota</a>
+        
         <a href="{% url 'notas:adicionar_cliente' %}">Adicionar Cliente</a>
-        <a href="{% url 'notas:listar_motoristas' %}">Listar Motoristas</a>
+        <a href="{% url 'notas:listar_clientes' %}">Pesquisar Clientes</a>
+        
         <a href="{% url 'notas:adicionar_motorista' %}">Adicionar Motorista</a>
-        <a href="{% url 'notas:listar_veiculos' %}">Listar Veículos</a>
-        <a href="{% url 'notas:adicionar_veiculo' %}">Adicionar Veículo</a>
-        <a href="{% url 'notas:listar_romaneios' %}">Listar Romaneios</a> {# NOVO LINK #}
-        <a href="{% url 'notas:adicionar_romaneio' %}">Emitir Romaneio</a> {# NOVO LINK #}
+        <a href="{% url 'notas:listar_motoristas' %}">Pesquisar Motoristas</a>
+        
+        {# O link 'Adicionar Veículo' apontará para adicionar UNIDADE DE VEÍCULO, não composição ainda #}
+        <a href="{% url 'notas:adicionar_veiculo' %}">Adicionar Veículo</a> 
+        <a href="{% url 'notas:listar_veiculos' %}">Pesquisar Veículo</a> 
+        
+        {# A função 'Cadastrar Composição' será o 'Preparar Romaneio' #}
+        <a href="{% url 'notas:adicionar_romaneio' %}">Preparar Romaneio</a> {# Antes era 'Emitir Romaneio' #}
+        <a href="{% url 'notas:listar_romaneios' %}">Pesquisar Romaneio</a> {# Antes era 'Listar Romaneios' #}
     </nav>
     <hr>
     {% block content %}

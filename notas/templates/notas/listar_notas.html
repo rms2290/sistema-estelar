@@ -1,44 +1,88 @@
 {% extends 'base.html' %}
 
-{% block title %}Notas Fiscais{% endblock %}
+{% block title %}Pesquisar Notas Fiscais{% endblock %}
 
 {% block content %}
-    <h2>Lista de Notas Fiscais</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Cliente</th> {# Agora este é um objeto Cliente #}
-                <th>Nota</th>
-                <th>Data</th>
-                <th>Fornecedor</th>
-                <th>Mercadoria</th>
-                <th>Quantidade</th>
-                <th>Peso</th>
-                <th>Valor</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for nota in notas %}
-            <tr>
-                <td>{{ nota.cliente.razao_social }}</td> {# <--- Altere esta linha para acessar a razão social #}
-                <td>{{ nota.nota }}</td>
-                <td>{{ nota.data }}</td>
-                <td>{{ nota.fornecedor }}</td>
-                <td>{{ nota.mercadoria }}</td>
-                <td>{{ nota.quantidade }}</td>
-                <td>{{ nota.peso }}</td>
-                <td>{{ nota.valor }}</td>
-                <td>
-                    <a href="{% url 'notas:editar_nota_fiscal' nota.pk %}">Editar</a> |
-                    <a href="{% url 'notas:excluir_nota_fiscal' nota.pk %}">Excluir</a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="9">Nenhuma nota fiscal cadastrada.</td>
-            </tr>
+<div class="container">
+    <h2 class="mt-4 mb-4">Pesquisar Notas Fiscais</h2>
+
+    {# Formulário de Busca #}
+    <form method="GET" class="mb-4">
+        <div class="row">
+            <div class="col-md-4">
+                {{ search_form.nota.label_tag }}
+                {{ search_form.nota }}
+            </div>
+            <div class="col-md-4">
+                {{ search_form.cliente.label_tag }}
+                {{ search_form.cliente }}
+            </div>
+            <div class="col-md-4">
+                {{ search_form.data.label_tag }}
+                {{ search_form.data }}
+            </div>
+        </div>
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary me-2">Buscar</button>
+            <a href="{% url 'notas:listar_notas_fiscais' %}" class="btn btn-secondary">Limpar Filtros</a>
+        </div>
+    </form>
+
+    <hr>
+
+    {# Mensagens do Django #}
+    {% if messages %}
+        <ul class="messages list-unstyled">
+            {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
             {% endfor %}
-        </tbody>
-    </table>
+        </ul>
+    {% endif %}
+
+    {# Exibição dos resultados #}
+    {% if notas_fiscais %}
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Número da NF</th>
+                        <th>Cliente</th>
+                        <th>Data de Emissão</th>
+                        <th>Peso (kg)</th>
+                        <th>Valor (R$)</th>
+                        <th>Quantidade</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for nota in notas_fiscais %}
+                        <tr>
+                            <td>{{ nota.nota }}</td>
+                            <td>{{ nota.cliente.razao_social }}</td>
+                            <td>{{ nota.data|date:"d/m/Y" }}</td>
+                            <td>{{ nota.peso|floatformat:"0" }}</td> {# Exibe o peso truncado #}
+                            <td>{{ nota.valor|floatformat:"2" }}</td>
+                            <td>{{ nota.quantidade }}</td>
+                            <td>{{ nota.get_status_display }}</td>
+                            <td>
+                                <a href="{% url 'notas:editar_nota_fiscal' nota.pk %}" class="btn btn-sm btn-info">Editar</a>
+                                <a href="{% url 'notas:excluir_nota_fiscal' nota.pk %}" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja excluir esta nota fiscal?');">Excluir</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        {# Mensagem quando não há resultados OU a busca ainda não foi feita #}
+        {% if mostrou_resultados %}
+            <p class="alert alert-info">Nenhuma nota fiscal encontrada com os filtros especificados.</p>
+        {% else %}
+            <p class="alert alert-info">Utilize os filtros acima para pesquisar notas fiscais.</p>
+        {% endif %}
+    {% endif %}
+
+    <a href="{% url 'notas:adicionar_nota_fiscal' %}" class="btn btn-success mt-3">Adicionar Nova Nota Fiscal</a>
+</div>
 {% endblock %}

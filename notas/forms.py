@@ -1,66 +1,118 @@
-# Novo formulário para Nota Fiscal
-
 from django import forms
 from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem
 import re
+from datetime import date
+from decimal import Decimal
+from validate_docbr import CNPJ
 
+ESTADOS_CHOICES = [
+    ('AC', 'Acre'), ('AL', 'Alagoas'), ('AP', 'Amapá'), ('AM', 'Amazonas'),
+    ('BA', 'Bahia'), ('CE', 'Ceará'), ('DF', 'Distrito Federal'), ('ES', 'Espírito Santo'),
+    ('GO', 'Goiás'), ('MA', 'Maranhão'), ('MT', 'Mato Grosso'), ('MS', 'Mato Grosso do Sul'),
+    ('MG', 'Minas Gerais'), ('PA', 'Pará'), ('PB', 'Paraíba'), ('PR', 'Paraná'),
+    ('PE', 'Pernambuco'), ('PI', 'Piauí'), ('RJ', 'Rio de Janeiro'), ('RN', 'Rio Grande do Norte'),
+    ('RS', 'Rio Grande do Sul'), ('RO', 'Rondônia'), ('RR', 'Roraima'), ('SC', 'Santa Catarina'),
+    ('SP', 'São Paulo'), ('SE', 'Sergipe'), ('TO', 'Tocantins'),
+]
+
+
+# --------------------------------------------------------------------------------------
+# Novo formulário para Nota Fiscal
+# --------------------------------------------------------------------------------------
 class NotaFiscalForm(forms.ModelForm):
+    cliente = forms.ModelChoiceField(
+        queryset=Cliente.objects.filter(status='Ativo').order_by('razao_social'),
+        label='Cliente',
+        empty_label="--- Selecione um cliente ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    data = forms.DateField(
+        label='Data',
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        required=True
+    )
+
     class Meta:
         model = NotaFiscal
-        fields = '__all__'
+        exclude = ['status', 'romaneios']
         widgets = {
-            'data': forms.DateInput(attrs={'type': 'date'}),
+            'data': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'peso': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'valor': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'quantidade': forms.NumberInput(attrs={'class': 'form-control', 'step': '1'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk is None and not self.initial.get('data'):
+            self.fields['data'].initial = date.today()
 
+    def clean_peso(self):
+        peso = self.cleaned_data.get('peso')
+        if peso is not None:
+            return int(peso)
+        return peso
+
+# --------------------------------------------------------------------------------------
 # Novo formulário para Cliente
-
+# --------------------------------------------------------------------------------------
 class ClienteForm(forms.ModelForm):
+    # Sobrescreve o campo 'estado'
+    estado = forms.ChoiceField(
+        label='Estado',
+        choices=[('', '---')] + ESTADOS_CHOICES, # Adiciona opção '---' para vazio
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
     class Meta:
         model = Cliente
-        fields = '__all__'
+        fields = '__all__' # Ou liste os campos que você quer que apareçam
+        widgets = {
+            # ... (outros widgets) ...
+            # Remova o widget antigo de 'estado' se ele estiver aqui
+            # 'estado': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 2, 'placeholder': 'UF'}),
+        }
 
-    def clean_cnpj(self): # Formatação CNPJ
+    def clean_cnpj(self):
         cnpj = self.cleaned_data['cnpj']
         cnpj_numeros = re.sub(r'[^0-9]', '', cnpj) # Remove tudo que não for número
 
+        # Validação de comprimento (básica)
         if len(cnpj_numeros) != 14:
             raise forms.ValidationError("CNPJ deve conter 14 dígitos numéricos.")
         
-        return cnpj_numeros # Retorna o CNPJ limpo (apenas números)
-    
-    def clean_telefone(self): # Formatação telefone
-        telefone = self.cleaned_data.get('telefone') # Use .get() para campos opcionais
-        if not telefone: # Se o campo for opcional e não preenchido, retorne None ou string vazia
-            return telefone
+        # >>> NOVO: Validação do dígito verificador usando validate_docbr <<<
+        cnpj_validator = CNPJ()
+        if not cnpj_validator.validate(cnpj_numeros):
+            raise forms.ValidationError("CNPJ inválido. Verifique o número digitado.")
 
-        telefone_numeros = re.sub(r'[^0-9]', '', telefone)
+        return cnpj_numeros
 
-        # Validações básicas:
-        # Pelo menos 10 dígitos (DDD + 8 ou 9 dígitos)
-        if not (10 <= len(telefone_numeros) <= 11):
-            raise forms.ValidationError("Telefone deve ter entre 10 e 11 dígitos (incluindo DDD).")
-
-        return telefone_numeros # Retorna o telefone limpo (apenas números)
-    
-    def clean_email(self): # Formatação email
-        email = self.cleaned_data.get('email')
-        if not email:
-            return email
-
-        # O EmailField do Django já faz a validação de formato
-        # Aqui, só padronizamos para minúsculas
-        return email.lower()
-
-
+# --------------------------------------------------------------------------------------
 # Novo formulário para Motoristas
-
+# --------------------------------------------------------------------------------------
 class MotoristaForm(forms.ModelForm):
+    # Sobrescreve o campo 'estado' e 'uf_emissao_cnh'
+    estado = forms.ChoiceField(
+        label='Estado',
+        choices=[('', '---')] + ESTADOS_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    uf_emissao_cnh = forms.ChoiceField(
+        label='UF de Emissão da CNH',
+        choices=[('', '---')] + ESTADOS_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
     class Meta:
         model = Motorista
         fields = '__all__'
         widgets = {
-            'data_nascimento': forms.DateInput(attrs={'type': 'date'}),
-            'cnh_vencimento': forms.DateInput(attrs={'type': 'date'}),
+            # ... (outros widgets) ...
+            # Remova os widgets antigos de 'estado' e 'uf_emissao_cnh' se estiverem aqui
+            # 'estado': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 2, 'placeholder': 'UF'}),
+            # 'uf_emissao_cnh': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 2, 'placeholder': 'UF'}),
         }
 
     def clean_cpf(self):
@@ -68,13 +120,11 @@ class MotoristaForm(forms.ModelForm):
         cpf_numeros = re.sub(r'[^0-9]', '', cpf)
         if len(cpf_numeros) != 11:
             raise forms.ValidationError("CPF deve conter 11 dígitos numéricos.")
-        # Opcional: Adicionar validação de dígito verificador de CPF aqui (mais complexo)
         return cpf_numeros
 
-    def clean_celular(self):
+    def clean_celular(self): # <<< ESTE ESTÁ AQUI, MAS LEMBRE-SE QUE O NOME NO MODELO É 'TELEFONE'
         celular = self.cleaned_data.get('celular')
-        if not celular:
-            return celular
+        if not celular: return celular
         celular_numeros = re.sub(r'[^0-9]', '', celular)
         if not (10 <= len(celular_numeros) <= 11):
             raise forms.ValidationError("Celular deve ter entre 10 e 11 dígitos (incluindo DDD).")
@@ -87,18 +137,39 @@ class MotoristaForm(forms.ModelForm):
             raise forms.ValidationError("CEP deve conter 8 dígitos numéricos.")
         return cep_numeros
 
+# --------------------------------------------------------------------------------------
+# Novo formulário para Veículos
+# --------------------------------------------------------------------------------------
 class VeiculoForm(forms.ModelForm):
+    # Campo 'pais' sobrescrito para garantir required=False
+    pais = forms.CharField(
+        label='País',
+        required=False,
+        max_length=50,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    # Sobrescreve o campo 'estado' do veículo
+    estado = forms.ChoiceField(
+        label='Estado (UF)',
+        choices=[('', '---')] + ESTADOS_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    # Sobrescreve o campo 'proprietario_estado'
+    proprietario_estado = forms.ChoiceField(
+        label='Estado do Proprietário (UF)',
+        choices=[('', '---')] + ESTADOS_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
     class Meta:
         model = Veiculo
-        # Lembre-se que 'proprietario' é um ForeignKey.
-        # Se você for criar o proprietário na mesma tela, você pode excluí-lo daqui
-        # e associá-lo na view. Se for selecionar um proprietário existente,
-        # 'fields = '__all__'' vai criar um dropdown automaticamente.
-        fields = '__all__' # Por enquanto, vamos manter '__all__' para ver o select box.
-                           # Se for implementar o cadastro na mesma tela, mude para:
-                           # exclude = ['proprietario']
+        fields = '__all__'
         widgets = {
-            'ano_fabricacao': forms.NumberInput(attrs={'min': 1900, 'max': 2100}), # Exemplo de widget
+            # ... (outros widgets) ...
+            # Remova os widgets antigos de 'estado' e 'proprietario_estado' se estiverem aqui
+            # 'estado': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 2, 'placeholder': 'UF'}),
+            # 'proprietario_estado': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 2, 'placeholder': 'UF'}),
         }
 
     def clean_placa(self):
@@ -129,44 +200,110 @@ class VeiculoForm(forms.ModelForm):
         # Opcional: Adicionar validação de dígito verificador de RENAVAM (complexo)
         return renavam_numeros
     
-
-# Novo formulário para Romaneios
-
+# --------------------------------------------------------------------------------------
+# Novo formulário para Romaneios (AGORA COM __INIT__ CONSOLIDADO)
+# --------------------------------------------------------------------------------------
 class RomaneioViagemForm(forms.ModelForm):
     notas_fiscais = forms.ModelMultipleChoiceField(
-        queryset=NotaFiscal.objects.none(), # Começa vazio. O JS ou a edição preencherá.
+        queryset=NotaFiscal.objects.none(),
         widget=forms.CheckboxSelectMultiple,
         required=True,
         label="Notas Fiscais Associadas"
     )
 
-    class Meta:
-        model = RomaneioViagem
-        fields = ['cliente', 'notas_fiscais', 'motorista', 'veiculo', 'observacoes']
+    data_romaneio = forms.DateField(
+        label='Data do Romaneio',
+        required=True,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Definir o queryset inicial para o campo cliente (todos os clientes)
+        if self.instance.pk is None and not self.initial.get('data_romaneio'):
+            self.fields['data_romaneio'].initial = date.today()
+        
         self.fields['cliente'].queryset = Cliente.objects.all().order_by('razao_social')
         self.fields['motorista'].queryset = Motorista.objects.all().order_by('nome')
         self.fields['veiculo'].queryset = Veiculo.objects.all().order_by('placa')
 
-        # Se estamos editando um Romaneio existente, pré-popular as notas fiscais
-        if self.instance and self.instance.pk: # Verifica se é uma instância existente e salva
-            # Popula o queryset de notas_fiscais com base no cliente já associado
-            self.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
-                cliente=self.instance.cliente
-            ).order_by('nota')
-            
-            # Se a instância já existe, preenche as notas_fiscais selecionadas
-            # Isso é necessário para que as checkboxes fiquem marcadas corretamente na edição
-            self.fields['notas_fiscais'].initial = self.instance.notas_fiscais.all()
+        # >>> AQUI: INDENTAÇÃO CORRIGIDA <<<
+        if self.instance and self.instance.pk: 
+            if self.instance.data_emissao:
+                 self.fields['data_romaneio'].initial = self.instance.data_emissao.date()
+
+            if self.instance.cliente:
+                self.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
+                    cliente=self.instance.cliente
+                ).order_by('nota')
+                self.fields['notas_fiscais'].initial = self.instance.notas_fiscais.all()
         
-        # Adicionar atributos HTML para facilitar a estilização com CSS (Bootstrap)
-        for field_name, field in self.fields.items():
+        # >>> AQUI: INDENTAÇÃO CORRIGIDA <<<
+        for field_name, field in self.fields.items(): 
             if field_name != 'notas_fiscais':
                 field.widget.attrs.update({'class': 'form-control'})
             if field_name == 'cliente':
-                 # Adiciona evento JS para carregar notas ao mudar o cliente
                  field.widget.attrs.update({'onchange': 'loadNotasFiscais(this.value);'})
+
+    class Meta:
+        model = RomaneioViagem
+        fields = ['cliente', 'notas_fiscais', 'motorista', 'veiculo', 'observacoes', 'data_romaneio']
+        widgets = {
+            # ... (widgets) ...
+        }
+
+# --------------------------------------------------------------------------------------
+# Formulários de Pesquisa (mantenha no final do arquivo)
+# --------------------------------------------------------------------------------------
+class NotaFiscalSearchForm(forms.Form):
+    nota = forms.CharField(
+        label='Número da Nota',
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número da Nota'})
+    )
+    cliente = forms.ModelChoiceField(
+        queryset=Cliente.objects.filter(status='Ativo').order_by('razao_social'),
+        label='Cliente',
+        required=False,
+        empty_label="--- Selecione um cliente ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    data = forms.DateField(
+        label='Data de Emissão',
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+
+class ClienteSearchForm(forms.Form):
+    razao_social = forms.CharField(
+        label='Razão Social',
+        required=False,
+        max_length=255,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Razão Social'})
+    )
+    cnpj = forms.CharField(
+        label='CNPJ',
+        required=False,
+        max_length=18,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '00.000.000/0000-00'})
+    )
+    status = forms.ChoiceField(
+        label='Status',
+        choices=[('', 'Todos'),] + Cliente.STATUS_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+class MotoristaSearchForm(forms.Form):
+    nome = forms.CharField(
+        label='Nome do Motorista',
+        required=False,
+        max_length=255,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome do Motorista'})
+    )
+    cpf = forms.CharField(
+        label='CPF',
+        required=False,
+        max_length=14,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000.000.000-00'})
+    )
