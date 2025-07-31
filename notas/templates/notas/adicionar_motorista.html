@@ -1,11 +1,172 @@
 {% extends 'base.html' %}
 
+{% block title %}Adicionar Motorista{% endblock %} {# Ou Editar Motorista #}
+
 {% block content %}
-    <h2>Adicionar Motorista</h2>
+<div class="container mt-4">
+    <h2>Adicionar Motorista</h2> {# Ou Editar Motorista #}
+
     <form method="post">
         {% csrf_token %}
-        {{ form.as_p }} {# Renderiza o formulário automaticamente #}
-        <button type="submit" class="btn btn-success">Salvar</button>
-        <a href="{% url 'notas:listar_motoristas' %}" class="btn btn-secondary">Cancelar</a>
+
+        {# Erros gerais do formulário #}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# Seção de Dados do Motorista #}
+        <div class="card card-body mb-4">
+            <h3>Dados do Motorista</h3>
+            <div class="row">
+                {# Renderiza os campos individualmente para controlar a ordem e a visibilidade #}
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.nome.id_for_label }}" class="form-label">{{ form.nome.label }}:</label>
+                    {{ form.nome }}
+                    {% if form.nome.errors %}<div class="text-danger">{{ form.nome.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.cpf.id_for_label }}" class="form-label">{{ form.cpf.label }}:</label>
+                    {{ form.cpf }}
+                    {% if form.cpf.errors %}<div class="text-danger">{{ form.cpf.errors }}</div>{% endif %}
+                </div>
+                {# ... (outros campos: cnh, codigo_seguranca, vencimento_cnh, uf_emissao_cnh, telefone) ... #}
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.cnh.id_for_label }}" class="form-label">{{ form.cnh.label }}:</label>
+                    {{ form.cnh }}
+                    {% if form.cnh.errors %}<div class="text-danger">{{ form.cnh.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.codigo_seguranca.id_for_label }}" class="form-label">{{ form.codigo_seguranca.label }}:</label>
+                    {{ form.codigo_seguranca }}
+                    {% if form.codigo_seguranca.errors %}<div class="text-danger">{{ form.codigo_seguranca.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.vencimento_cnh.id_for_label }}" class="form-label">{{ form.vencimento_cnh.label }}:</label>
+                    {{ form.vencimento_cnh }}
+                    {% if form.vencimento_cnh.errors %}<div class="text-danger">{{ form.vencimento_cnh.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.uf_emissao_cnh.id_for_label }}" class="form-label">{{ form.uf_emissao_cnh.label }}:</label>
+                    {{ form.uf_emissao_cnh }}
+                    {% if form.uf_emissao_cnh.errors %}<div class="text-danger">{{ form.uf_emissao_cnh.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.telefone.id_for_label }}" class="form-label">{{ form.telefone.label }}:</label>
+                    {{ form.telefone }}
+                    {% if form.telefone.errors %}<div class="text-danger">{{ form.telefone.errors }}</div>{% endif %}
+                </div>
+
+                <div class="col-12 mt-3 mb-2"><h4>Endereço</h4></div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.endereco.id_for_label }}" class="form-label">{{ form.endereco.label }}:</label>
+                    {{ form.endereco }}
+                    {% if form.endereco.errors %}<div class="text-danger">{{ form.endereco.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.numero.id_for_label }}" class="form-label">{{ form.numero.label }}:</label>
+                    {{ form.numero }}
+                    {% if form.numero.errors %}<div class="text-danger">{{ form.numero.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.bairro.id_for_label }}" class="form-label">{{ form.bairro.label }}:</label>
+                    {{ form.bairro }}
+                    {% if form.bairro.errors %}<div class="text-danger">{{ form.bairro.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.cidade.id_for_label }}" class="form-label">{{ form.cidade.label }}:</label>
+                    {{ form.cidade }}
+                    {% if form.cidade.errors %}<div class="text-danger">{{ form.cidade.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.estado.id_for_label }}" class="form-label">{{ form.estado.label }}:</label>
+                    {{ form.estado }}
+                    {% if form.estado.errors %}<div class="text-danger">{{ form.estado.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.cep.id_for_label }}" class="form-label">{{ form.cep.label }}:</label>
+                    {{ form.cep }}
+                    {% if form.cep.errors %}<div class="text-danger">{{ form.cep.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.data_nascimento.id_for_label }}" class="form-label">{{ form.data_nascimento.label }}:</label>
+                    {{ form.data_nascimento }}
+                    {% if form.data_nascimento.errors %}<div class="text-danger">{{ form.data_nascimento.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.numero_consulta.id_for_label }}" class="form-label">{{ form.numero_consulta.label }}:</label>
+                    {{ form.numero_consulta }}
+                    {% if form.numero_consulta.errors %}<div class="text-danger">{{ form.numero_consulta.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            {# NOVO BLOCO: Composição Veicular no cadastro do Motorista #}
+            <div class="col-12 mt-3 mb-2"><h3>Composição Veicular que Dirige</h3></div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.tipo_composicao_motorista.id_for_label }}" class="form-label">{{ form.tipo_composicao_motorista.label }}:</label>
+                    {{ form.tipo_composicao_motorista }}
+                    {% if form.tipo_composicao_motorista.errors %}<div class="text-danger">{{ form.tipo_composicao_motorista.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3" id="veiculo_principal_div">
+                    <label for="{{ form.veiculo_principal.id_for_label }}" class="form-label">{{ form.veiculo_principal.label }}:</label>
+                    {{ form.veiculo_principal }}
+                    {% if form.veiculo_principal.errors %}<div class="text-danger">{{ form.veiculo_principal.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3 d-none" id="reboque_1_div"> {# Inicialmente oculto #}
+                    <label for="{{ form.reboque_1.id_for_label }}" class="form-label">{{ form.reboque_1.label }}:</label>
+                    {{ form.reboque_1 }}
+                    {% if form.reboque_1.errors %}<div class="text-danger">{{ form.reboque_1.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3 d-none" id="reboque_2_div"> {# Inicialmente oculto #}
+                    <label for="{{ form.reboque_2.id_for_label }}" class="form-label">{{ form.reboque_2.label }}:</label>
+                    {{ form.reboque_2 }}
+                    {% if form.reboque_2.errors %}<div class="text-danger">{{ form.reboque_2.errors }}</div>{% endif %}
+                </div>
+            </div>
+            {# FIM DO NOVO BLOCO #}
+
+        </div> {# Fim do card-body de Dados do Motorista #}
+
+        <button type="submit" class="btn btn-success mt-3">Salvar</button>
+        <a href="{% url 'notas:listar_motoristas' %}" class="btn btn-secondary mt-3">Cancelar</a>
     </form>
+
+    {# JavaScript para mostrar/ocultar reboques baseado no tipo de composição #}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tipoComposicaoSelect = document.getElementById('id_tipo_composicao_motorista_select');
+            const veiculoPrincipalDiv = document.getElementById('veiculo_principal_div');
+            const reboque1Div = document.getElementById('reboque_1_div');
+            const reboque2Div = document.getElementById('reboque_2_div');
+
+            function toggleReboques() {
+                const selectedType = tipoComposicaoSelect.value;
+                
+                // Reset visibility for all reboque fields
+                reboque1Div.classList.add('d-none');
+                reboque2Div.classList.add('d-none');
+                
+                // Show/hide based on selected type
+                if (selectedType === 'Carreta') {
+                    reboque1Div.classList.remove('d-none');
+                } else if (selectedType === 'Bi-trem') {
+                    reboque1Div.classList.remove('d-none');
+                    reboque2Div.classList.remove('d-none');
+                }
+                // 'Simples', 'Carro', 'Van', 'Truck' show only veiculo_principal (default visible)
+            }
+
+            // Bind event listener
+            if (tipoComposicaoSelect) {
+                tipoComposicaoSelect.addEventListener('change', toggleReboques);
+                // Trigger on page load to set initial state
+                toggleReboques();
+            }
+        });
+    </script>
+</div>
 {% endblock %}

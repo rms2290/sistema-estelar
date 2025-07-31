@@ -1,12 +1,48 @@
 {% extends 'base.html' %}
 
-{% block title %}Adicionar Nota Fiscal{% endblock %}
+{% block title %}Adicionar Nova Nota Fiscal{% endblock %}
 
 {% block content %}
+<div class="container mt-4">
     <h2>Adicionar Nova Nota Fiscal</h2>
-    <form method="post">
+
+    <form method="post" id="notaFiscalForm"> {# Adicionado ID para o JS #}
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Salvar Nota</button>
+
+        {# Erros gerais do formulário #}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# Campos do formulário de nota fiscal #}
+        {{ form.as_p }} 
+
+        {# NOVOS BOTÕES #}
+        <button type="submit" name="salvar_e_sair" class="btn btn-success me-2">Salvar</button>
+        <button type="submit" name="salvar_e_adicionar" class="btn btn-info me-2">Salvar e Adicionar Outra</button>
+        <a href="{% url 'notas:listar_notas_fiscais' %}" class="btn btn-secondary">Cancelar</a>
     </form>
+
+    {# JavaScript para o comportamento da tecla Enter #}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const notaFiscalForm = document.getElementById('notaFiscalForm');
+            const salvarEAdicionarBtn = document.querySelector('button[name="salvar_e_adicionar"]');
+
+            if (notaFiscalForm && salvarEAdicionarBtn) {
+                notaFiscalForm.addEventListener('keydown', function(event) {
+                    // Verifica se a tecla Enter foi pressionada e não é em um textarea
+                    if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
+                        event.preventDefault(); // Impede o envio padrão do formulário (que seria o primeiro botão submit)
+                        salvarEAdicionarBtn.click(); // Simula o clique no botão "Salvar e Adicionar Outra"
+                    }
+                });
+            }
+        });
+    </script>
+</div>
 {% endblock %}

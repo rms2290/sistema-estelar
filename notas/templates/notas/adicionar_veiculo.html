@@ -1,11 +1,201 @@
 {% extends 'base.html' %}
 
+{% block title %}Adicionar Veículo{% endblock %}
+
 {% block content %}
-    <h2>Adicionar Veículo</h2>
+<div class="container mt-4">
+    <h2>Adicionar Unidade de Veículo</h2>
+
     <form method="post">
         {% csrf_token %}
-        {{ form.as_p }} {# Renderiza o formulário automaticamente #}
-        <button type="submit" class="btn btn-success">Salvar</button>
-        <a href="{% url 'notas:listar_veiculos' %}" class="btn btn-secondary">Cancelar</a>
+
+        {# Erros gerais do formulário #}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# Seção: Dados da Unidade de Veículo #}
+        <div class="card card-body mb-4">
+            <h3>Dados da Unidade de Veículo</h3>
+            <div class="row">
+                {# Renderiza os campos individualmente para controlar a ordem e visibilidade #}
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.tipo_unidade.id_for_label }}" class="form-label">{{ form.tipo_unidade.label }}:</label>
+                    {{ form.tipo_unidade }}
+                    {% if form.tipo_unidade.errors %}<div class="text-danger">{{ form.tipo_unidade.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.placa.id_for_label }}" class="form-label">{{ form.placa.label }}:</label>
+                    {{ form.placa }}
+                    {% if form.placa.errors %}<div class="text-danger">{{ form.placa.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.pais.id_for_label }}" class="form-label">{{ form.pais.label }}:</label>
+                    {{ form.pais }}
+                    {% if form.pais.errors %}<div class="text-danger">{{ form.pais.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.estado.id_for_label }}" class="form-label">{{ form.estado.label }}:</label>
+                    {{ form.estado }}
+                    {% if form.estado.errors %}<div class="text-danger">{{ form.estado.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.cidade.id_for_label }}" class="form-label">{{ form.cidade.label }}:</label>
+                    {{ form.cidade }}
+                    {% if form.cidade.errors %}<div class="text-danger">{{ form.cidade.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.chassi.id_for_label }}" class="form-label">{{ form.chassi.label }}:</label>
+                    {{ form.chassi }}
+                    {% if form.chassi.errors %}<div class="text-danger">{{ form.chassi.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.renavam.id_for_label }}" class="form-label">{{ form.renavam.label }}:</label>
+                    {{ form.renavam }}
+                    {% if form.renavam.errors %}<div class="text-danger">{{ form.renavam.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.rntrc.id_for_label }}" class="form-label">{{ form.rntrc.label }}:</label>
+                    {{ form.rntrc }}
+                    {% if form.rntrc.errors %}<div class="text-danger">{{ form.rntrc.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.ano_fabricacao.id_for_label }}" class="form-label">{{ form.ano_fabricacao.label }}:</label>
+                    {{ form.ano_fabricacao }}
+                    {% if form.ano_fabricacao.errors %}<div class="text-danger">{{ form.ano_fabricacao.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.marca.id_for_label }}" class="form-label">{{ form.marca.label }}:</label>
+                    {{ form.marca }}
+                    {% if form.marca.errors %}<div class="text-danger">{{ form.marca.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.modelo.id_for_label }}" class="form-label">{{ form.modelo.label }}:</label>
+                    {{ form.modelo }}
+                    {% if form.modelo.errors %}<div class="text-danger">{{ form.modelo.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            {# NOVO BLOCO: Medidas do Baú #}
+            <div class="col-12 mt-3 mb-2"><h3>Medidas do Baú (metros)</h3></div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.largura.id_for_label }}" class="form-label">{{ form.largura.label }}:</label>
+                    {{ form.largura }}
+                    {% if form.largura.errors %}<div class="text-danger">{{ form.largura.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.altura.id_for_label }}" class="form-label">{{ form.altura.label }}:</label>
+                    {{ form.altura }}
+                    {% if form.altura.errors %}<div class="text-danger">{{ form.altura.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.comprimento.id_for_label }}" class="form-label">{{ form.comprimento.label }}:</label>
+                    {{ form.comprimento }}
+                    {% if form.comprimento.errors %}<div class="text-danger">{{ form.comprimento.errors }}</div>{% endif %}
+                </div>
+                {# NOVO CAMPO: Cubagem #}
+                <div class="col-md-12 mt-3 mb-2"><h4>Cubagem Calculada</h4></div>
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.cubagem.id_for_label }}" class="form-label">{{ form.cubagem.label }}:</label>
+                    {{ form.cubagem }} {# Campo somente leitura #}
+                    {% if form.cubagem.errors %}<div class="text-danger">{{ form.cubagem.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            {# Seção: Dados do Proprietário #}
+            <div class="col-12 mt-3 mb-2"><h3>Dados do Proprietário</h3></div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.proprietario_nome_razao_social.id_for_label }}" class="form-label">{{ form.proprietario_nome_razao_social.label }}:</label>
+                    {{ form.proprietario_nome_razao_social }}
+                    {% if form.proprietario_nome_razao_social.errors %}<div class="text-danger">{{ form.proprietario_nome_razao_social.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.proprietario_cpf_cnpj.id_for_label }}" class="form-label">{{ form.proprietario_cpf_cnpj.label }}:</label>
+                    {{ form.proprietario_cpf_cnpj }}
+                    {% if form.proprietario_cpf_cnpj.errors %}<div class="text-danger">{{ form.proprietario_cpf_cnpj.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.proprietario_rg_ie.id_for_label }}" class="form-label">{{ form.proprietario_rg_ie.label }}:</label>
+                    {{ form.proprietario_rg_ie }}
+                    {% if form.proprietario_rg_ie.errors %}<div class="text-danger">{{ form.proprietario_rg_ie.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.proprietario_telefone.id_for_label }}" class="form-label">{{ form.proprietario_telefone.label }}:</label>
+                    {{ form.proprietario_telefone }}
+                    {% if form.proprietario_telefone.errors %}<div class="text-danger">{{ form.proprietario_telefone.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.proprietario_endereco.id_for_label }}" class="form-label">{{ form.proprietario_endereco.label }}:</label>
+                    {{ form.proprietario_endereco }}
+                    {% if form.proprietario_endereco.errors %}<div class="text-danger">{{ form.proprietario_endereco.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.proprietario_numero.id_for_label }}" class="form-label">{{ form.proprietario_numero.label }}:</label>
+                    {{ form.proprietario_numero }}
+                    {% if form.proprietario_numero.errors %}<div class="text-danger">{{ form.proprietario_numero.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.proprietario_bairro.id_for_label }}" class="form-label">{{ form.proprietario_bairro.label }}:</label>
+                    {{ form.proprietario_bairro }}
+                    {% if form.proprietario_bairro.errors %}<div class="text-danger">{{ form.proprietario_bairro.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.proprietario_cidade.id_for_label }}" class="form-label">{{ form.proprietario_cidade.label }}:</label>
+                    {{ form.proprietario_cidade }}
+                    {% if form.proprietario_cidade.errors %}<div class="text-danger">{{ form.proprietario_cidade.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.proprietario_estado.id_for_label }}" class="form-label">{{ form.proprietario_estado.label }}:</label>
+                    {{ form.proprietario_estado }}
+                    {% if form.proprietario_estado.errors %}<div class="text-danger">{{ form.proprietario_estado.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.proprietario_cep.id_for_label }}" class="form-label">{{ form.proprietario_cep.label }}:</label>
+                    {{ form.proprietario_cep }}
+                    {% if form.proprietario_cep.errors %}<div class="text-danger">{{ form.proprietario_cep.errors }}</div>{% endif %}
+                </div>
+            </div>
+        </div> {# Fim do card-body #}
+
+        <button type="submit" class="btn btn-success mt-3">Salvar</button>
+        <a href="{% url 'notas:listar_veiculos' %}" class="btn btn-secondary mt-3">Cancelar</a>
     </form>
+
+    {# JavaScript para cálculo da cubagem #}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const larguraInput = document.getElementById('id_largura');
+            const alturaInput = document.getElementById('id_altura');
+            const comprimentoInput = document.getElementById('id_comprimento');
+            const cubagemInput = document.getElementById('id_cubagem');
+
+            function calculateCubagem() {
+                const largura = parseFloat(larguraInput.value.replace(',', '.')) || 0;
+                const altura = parseFloat(alturaInput.value.replace(',', '.')) || 0;
+                const comprimento = parseFloat(comprimentoInput.value.replace(',', '.')) || 0;
+
+                if (largura > 0 && altura > 0 && comprimento > 0) {
+                    const cubagem = (largura * altura * comprimento).toFixed(2); // Arredonda para 2 casas
+                    cubagemInput.value = cubagem;
+                } else {
+                    cubagemInput.value = ''; // Limpa se as medidas não forem válidas
+                }
+            }
+
+            // Bind event listener
+            if (larguraInput) larguraInput.addEventListener('input', calculateCubagem);
+            if (alturaInput) alturaInput.addEventListener('input', calculateCubagem);
+            if (comprimentoInput) comprimentoInput.addEventListener('input', calculateCubagem);
+
+            // Chamar cálculo na carga inicial para preencher se houver dados de edição
+            calculateCubagem();
+        });
+    </script>
+</div>
 {% endblock %}

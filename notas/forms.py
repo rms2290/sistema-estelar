@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta 
 import re
 from datetime import date
@@ -52,6 +53,37 @@ class NotaFiscalForm(forms.ModelForm):
         if peso is not None:
             return int(peso)
         return peso
+    
+    # >>> NOVO MÉTODO CLEAN PARA VALIDAR UNICIDADE COMPOSTA E EXIBIR MENSAGEM <<<
+    def clean(self):
+        cleaned_data = super().clean() # Chama o clean original do ModelForm
+        nota = cleaned_data.get('nota')
+        cliente = cleaned_data.get('cliente')
+        mercadoria = cleaned_data.get('mercadoria')
+        quantidade = cleaned_data.get('quantidade')
+        peso = cleaned_data.get('peso')
+
+        # Se todos os campos chave estão presentes
+        if nota and cliente and mercadoria and quantidade is not None and peso is not None:
+            # Queryset para buscar notas que são "iguais" pela sua regra de negócio
+            qs = NotaFiscal.objects.filter(
+                nota=nota,
+                cliente=cliente,
+                mercadoria=mercadoria,
+                quantidade=quantidade,
+                peso=peso
+            )
+            # Se estamos editando uma nota, excluímos a nota atual da busca por duplicatas
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            
+            if qs.exists():
+                raise ValidationError(
+                    "Já existe uma nota fiscal com o mesmo Número, Cliente, Mercadoria, Quantidade e Peso.",
+                    code='duplicate_nota_fiscal'
+                )
+
+        return cleaned_data
 
 # --------------------------------------------------------------------------------------
 # Novo formulário para Cliente
@@ -92,26 +124,63 @@ class ClienteForm(forms.ModelForm):
 # Novo formulário para Motoristas
 # --------------------------------------------------------------------------------------
 class MotoristaForm(forms.ModelForm):
-    # Sobrescreve o campo veiculo_principal para ser um dropdown de Veiculos
+    # >>> SOBRESCRITA DOS CAMPOS ESTADO E UF_EMISSAO_CNH <<<
+    estado = forms.ChoiceField(
+        label='Estado',
+        choices=[('', '---')] + ESTADOS_CHOICES, # Adiciona opção '---' e as escolhas de estado
+        required=False, # Mantém como opcional
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    uf_emissao_cnh = forms.ChoiceField(
+        label='UF de Emissão da CNH',
+        choices=[('', '---')] + ESTADOS_CHOICES, # Adiciona opção '---' e as escolhas de estado
+        required=False, # Mantém como opcional
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    # >>> NOVOS CAMPOS NO FORMULARIO <<<
+    tipo_composicao_motorista = forms.ChoiceField(
+        label='Tipo de Composição que Dirige',
+        choices=Motorista.TIPO_COMPOSICAO_MOTORISTA_CHOICES, # Usar as escolhas do modelo
+        required=True, # É obrigatório para o motorista definir o tipo
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_tipo_composicao_motorista_select'}) # ID para JS
+    )
     veiculo_principal = forms.ModelChoiceField(
-        queryset=Veiculo.objects.all().order_by('placa'), # Puxa todos os veículos existentes
-        label='Veículo Principal',
-        required=False, # É opcional
-        empty_label="--- Selecione um veículo ---", # Opção para não selecionar
+        queryset=Veiculo.objects.all().order_by('placa'),
+        label='Veículo Principal (Placa 1)',
+        required=False,
+        empty_label="--- Selecione o Veículo Principal ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    reboque_1 = forms.ModelChoiceField(
+        queryset=Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa'), # Filtrar por tipo de unidade
+        label='Reboque 1 (Placa 2)',
+        required=False,
+        empty_label="--- Selecione o Reboque 1 ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    reboque_2 = forms.ModelChoiceField(
+        queryset=Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa'), # Filtrar por tipo de unidade
+        label='Reboque 2 (Placa 3)',
+        required=False,
+        empty_label="--- Selecione o Reboque 2 ---",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
 
     class Meta:
         model = Motorista
-        # AJUSTADO: Adicionado 'veiculo_principal'
+        # AJUSTADO: Adicionado os novos campos
         fields = [
             'nome', 'cpf', 'cnh',
             'codigo_seguranca', 'vencimento_cnh', 'uf_emissao_cnh',
             'telefone',
             'endereco', 'numero', 'bairro', 'cidade', 'estado', 'cep',
             'data_nascimento',
-            'numero_consulta', # Mantido por enquanto
-            'veiculo_principal' # <<< NOVO CAMPO NO FORMULÁRIO
+            'numero_consulta', # Manter por enquanto
+            'tipo_composicao_motorista', # <<< NOVO CAMPO
+            'veiculo_principal', # <<< NOVO CAMPO
+            'reboque_1', # <<< NOVO CAMPO
+            'reboque_2', # <<< NOVO CAMPO
         ]
         widgets = {
             'nome': forms.TextInput(attrs={'class': 'form-control'}),
@@ -120,7 +189,7 @@ class MotoristaForm(forms.ModelForm):
 
             'codigo_seguranca': forms.TextInput(attrs={'class': 'form-control'}),
             'vencimento_cnh': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'uf_emissao_cnh': forms.Select(attrs={'class': 'form-control'}), # Usar Select aqui
+            'uf_emissao_cnh': forms.Select(attrs={'class': 'form-control'}), 
             
             'telefone': forms.TextInput(attrs={'class': 'form-control'}),
             
@@ -128,12 +197,12 @@ class MotoristaForm(forms.ModelForm):
             'numero': forms.TextInput(attrs={'class': 'form-control'}),
             'bairro': forms.TextInput(attrs={'class': 'form-control'}),
             'cidade': forms.TextInput(attrs={'class': 'form-control'}),
-            'estado': forms.Select(attrs={'class': 'form-control'}), # Usar Select aqui
+            'estado': forms.Select(attrs={'class': 'form-control'}), 
             'cep': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '00000-000'}),
             
             'data_nascimento': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'numero_consulta': forms.TextInput(attrs={'class': 'form-control'}),
-            # 'veiculo_principal' não precisa de widget aqui, pois foi sobrescrito acima
+            # veiculo_principal, reboque_1, reboque_2 já tem widgets definidos acima
         }
 
     # MÉTODO CLEAN_CPF (VERSÃO ÚNICA E CORRETA)
@@ -233,6 +302,33 @@ class VeiculoForm(forms.ModelForm):
             raise forms.ValidationError("RENAVAM deve conter 11 dígitos numéricos.")
         # Opcional: Adicionar validação de dígito verificador de RENAVAM (complexo)
         return renavam_numeros
+    
+    # >>> NOVO MÉTODO CLEAN PARA CALCULAR CUBAGEM <<<
+    def clean(self):
+        cleaned_data = super().clean() # Chama o clean original do ModelForm
+        
+        largura = cleaned_data.get('largura')
+        altura = cleaned_data.get('altura')
+        comprimento = cleaned_data.get('comprimento')
+
+        # Se todos os campos de medida estão preenchidos, calcula a cubagem
+        if largura is not None and altura is not None and comprimento is not None:
+            try:
+                cubagem_calculada = largura * altura * comprimento
+                # A cubagem não é um campo do formulário, mas um campo do modelo
+                # Nós a salvamos no método save() do modelo.
+                # Aqui no clean, podemos apenas validar que a cubagem seria positiva, se quiser.
+                if cubagem_calculada <= 0:
+                    self.add_error(None, "A cubagem calculada deve ser um valor positivo.") # Erro geral
+            except TypeError: # Acontece se não forem números válidos
+                self.add_error(None, "Valores de largura, altura e comprimento devem ser números válidos.")
+        else:
+            # Se algum campo estiver vazio, garante que não há cálculo e pode adicionar um erro
+            # se quiser que sejam obrigatórios para o cálculo.
+            # No nosso save() do modelo, já tratamos o caso de ser None.
+            pass
+
+        return cleaned_data
     
 # --------------------------------------------------------------------------------------
 # Novo formulário para Romaneios (AGORA COM __INIT__ CONSOLIDADO)

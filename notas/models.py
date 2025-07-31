@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import UniqueConstraint
 from django.utils import timezone
 
 # --------------------------------------------------------------------------------------
@@ -40,7 +41,7 @@ class Cliente(models.Model):
 # --------------------------------------------------------------------------------------
 class NotaFiscal(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='notas_fiscais', verbose_name="Cliente")
-    nota = models.CharField(max_length=50, unique=True, verbose_name="Número da Nota")
+    nota = models.CharField(max_length=50, verbose_name="Número da Nota")
     data = models.DateField(verbose_name="Data de Emissão") # Nome 'data' mantido, era o que o Django esperava
     fornecedor = models.CharField(max_length=200, verbose_name="Fornecedor")
     mercadoria = models.CharField(max_length=200, verbose_name="Mercadoria")
@@ -69,7 +70,10 @@ class NotaFiscal(models.Model):
         verbose_name = "Nota Fiscal"
         verbose_name_plural = "Notas Fiscais"
         ordering = ['-data', 'nota']
-
+        constraints = [
+            UniqueConstraint(fields=['nota', 'cliente', 'mercadoria', 'quantidade', 'peso'], 
+                             name='unique_nota_fiscal_por_campos_chave')
+        ]
 # --------------------------------------------------------------------------------------
 # Motorista
 # --------------------------------------------------------------------------------------
@@ -80,9 +84,7 @@ class Motorista(models.Model):
     codigo_seguranca = models.CharField(max_length=10, blank=True, null=True, verbose_name="Código de Segurança CNH")
     vencimento_cnh = models.DateField(blank=True, null=True, verbose_name="Vencimento CNH")
     uf_emissao_cnh = models.CharField(max_length=2, blank=True, null=True, verbose_name="UF Emissão CNH")
-    
     telefone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Telefone")
-    
     endereco = models.CharField(max_length=255, blank=True, null=True, verbose_name="Endereço")
     numero = models.CharField(max_length=10, blank=True, null=True, verbose_name="Número")
     bairro = models.CharField(max_length=100, blank=True, null=True, verbose_name="Bairro")
@@ -92,14 +94,42 @@ class Motorista(models.Model):
     data_nascimento = models.DateField(blank=True, null=True, verbose_name="Data de Nascimento") 
     numero_consulta = models.CharField(max_length=50, blank=True, null=True, verbose_name="Número da Última Consulta")
 
-    # >>> NOVO CAMPO: Veículo Principal (ForeignKey para Veiculo) <<<
-    veiculo_principal = models.ForeignKey(
-        'Veiculo', # Aponta para o modelo Veiculo
-        on_delete=models.SET_NULL, # Se o veículo for excluído, o campo fica nulo
+    # >>> NOVOS CAMPOS PARA A COMPOSIÇÃO VEICULAR NO MOTORISTA <<<
+    TIPO_COMPOSICAO_MOTORISTA_CHOICES = [
+        ('Simples', 'Simples (Carro/Van/Truck)'),
+        ('Carreta', 'Carreta (Caminhão Trator + 1 Reboque/Semi-reboque)'),
+        ('Bi-trem', 'Bi-trem (Caminhão Trator + 2 Reboques/Semi-reboques)'),
+    ]
+    tipo_composicao_motorista = models.CharField(
+        max_length=50,
+        choices=TIPO_COMPOSICAO_MOTORISTA_CHOICES,
+        default='Simples',
+        verbose_name="Tipo de Composição que Dirige"
+    )
+
+    veiculo_principal = models.ForeignKey( # Caminhão Trator, Carro ou Van
+        'Veiculo',
+        on_delete=models.SET_NULL,
         blank=True,
         null=True,
-        related_name='motoristas_associados', # Nome reverso para acessar motoristas a partir do veículo
-        verbose_name="Veículo Principal"
+        related_name='motoristas_veiculo_principal',
+        verbose_name="Veículo Principal (Placa 1)"
+    )
+    reboque_1 = models.ForeignKey( # Primeiro Reboque/Semi-reboque (se Carreta ou Bi-trem)
+        'Veiculo',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='motoristas_reboque_1',
+        verbose_name="Reboque 1 (Placa 2)"
+    )
+    reboque_2 = models.ForeignKey( # Segundo Reboque/Semi-reboque (se Bi-trem)
+        'Veiculo',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='motoristas_reboque_2',
+        verbose_name="Reboque 2 (Placa 3)"
     )
 
     def __str__(self):
@@ -213,34 +243,6 @@ class RomaneioViagem(models.Model):
         verbose_name_plural = "Romaneios de Viagem"
         ordering = ['-data_emissao', 'codigo']
 
-# --------------------------------------------------------------------------------------
-# NOVO MODELO: HistoricoConsulta (para registrar cada consulta de risco)
-# --------------------------------------------------------------------------------------
-class HistoricoConsulta(models.Model):
-    motorista = models.ForeignKey(
-        Motorista,
-        on_delete=models.CASCADE, # Se o motorista for excluído, o histórico de consulta também é
-        related_name='historico_consultas',
-        verbose_name="Motorista"
-    )
-    numero_consulta = models.CharField(max_length=50, unique=True, verbose_name="Número da Consulta")
-    data_consulta = models.DateField(default=timezone.now, verbose_name="Data da Consulta")
-    status_consulta = models.CharField(
-        max_length=20,
-        choices=[('Apto', 'Apto'), ('Inapto', 'Inapto'), ('Pendente', 'Pendente')],
-        default='Pendente',
-        verbose_name="Status da Consulta"
-    )
-    observacoes = models.TextField(blank=True, null=True, verbose_name="Observações da Consulta")
-
-    class Meta:
-        verbose_name = "Histórico de Consulta"
-        verbose_name_plural = "Históricos de Consultas"
-        ordering = ['-data_consulta', 'motorista']
-
-    def __str__(self):
-        return f"Consulta {self.numero_consulta} de {self.motorista.nome} em {self.data_consulta.strftime('%d/%m/%Y')}"
-    
 # --------------------------------------------------------------------------------------
 # NOVO MODELO: HistoricoConsulta (para registrar cada consulta de risco)
 # --------------------------------------------------------------------------------------

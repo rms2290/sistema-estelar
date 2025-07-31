@@ -136,6 +136,33 @@ def listar_notas_fiscais(request):
     }
     return render(request, 'notas/listar_notas.html', context)
 
+def listar_notas_fiscais(request):
+    search_form = NotaFiscalSearchForm(request.GET)
+    notas_fiscais = NotaFiscal.objects.none()
+    search_performed = bool(request.GET)
+
+    if search_performed and search_form.is_valid():
+        numero_nota = search_form.cleaned_data.get('nota')
+        cliente_obj = search_form.cleaned_data.get('cliente')
+        data_emissao = search_form.cleaned_data.get('data')
+
+        queryset = NotaFiscal.objects.all()
+        if numero_nota:
+            queryset = queryset.filter(nota__icontains=numero_nota)
+        if cliente_obj:
+            queryset = queryset.filter(cliente=cliente_obj)
+        if data_emissao:
+            queryset = queryset.filter(data=data_emissao)
+        
+        notas_fiscais = queryset.order_by('-data', '-nota')
+    
+    context = {
+        'search_form': search_form,
+        'notas_fiscais': notas_fiscais,
+        'search_performed': search_performed,
+    }
+    return render(request, 'notas/listar_notas.html', context)
+
 def adicionar_nota_fiscal(request):
     if request.method == 'POST':
         form = NotaFiscalForm(request.POST)
@@ -143,13 +170,55 @@ def adicionar_nota_fiscal(request):
             nota_fiscal = form.save(commit=False)
             nota_fiscal.status = 'Depósito' 
             nota_fiscal.save()
-            messages.success(request, 'Nota fiscal adicionada com sucesso!')
-            return redirect('notas:listar_notas_fiscais')
+            messages.success(request, f'Nota Fiscal {nota_fiscal.nota} adicionada com sucesso!')
+
+            # >>> NOVA LÓGICA DE REDIRECIONAMENTO COM BASE NO BOTÃO CLICADO <<<
+            if 'salvar_e_adicionar' in request.POST:
+                return redirect('notas:adicionar_nota_fiscal') # Permanece na mesma página
+            else: # Padrão para 'salvar_e_sair' ou outro botão
+                return redirect('notas:detalhes_nota_fiscal', pk=nota_fiscal.pk) # Redireciona para detalhes
+
         else:
             messages.error(request, 'Houve um erro ao adicionar a nota fiscal. Verifique os campos.')
-    else:
+    else: # GET request
         form = NotaFiscalForm()
     return render(request, 'notas/adicionar_nota.html', {'form': form})
+
+def editar_nota_fiscal(request, pk):
+    nota = get_object_or_404(NotaFiscal, pk=pk)
+    if request.method == 'POST':
+        form = NotaFiscalForm(request.POST, instance=nota)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Nota fiscal atualizada com sucesso!')
+            return redirect('notas:detalhes_nota_fiscal', pk=nota.pk)
+        else:
+            messages.error(request, 'Houve um erro ao atualizar a nota fiscal. Verifique os campos.')
+    else:
+        form = NotaFiscalForm(instance=nota)
+    return render(request, 'notas/editar_nota.html', {'form': form, 'nota': nota})
+
+def excluir_nota_fiscal(request, pk):
+    nota = get_object_or_404(NotaFiscal, pk=pk)
+    if request.method == 'POST':
+        for romaneio in nota.romaneios_vinculados.all():
+            romaneio.notas_fiscais.remove(nota)
+        nota.delete()
+        messages.success(request, 'Nota fiscal excluída com sucesso!')
+        return redirect('notas:listar_notas_fiscais')
+    return render(request, 'notas/excluir_nota.html', {'nota': nota})
+
+def detalhes_nota_fiscal(request, pk):
+    nota = get_object_or_404(NotaFiscal, pk=pk)
+    
+    # Recupera romaneios vinculados, para exibição
+    romaneios_vinculados = nota.romaneios_vinculados.all().order_by('-data_emissao')
+
+    context = {
+        'nota': nota,
+        'romaneios_vinculados': romaneios_vinculados,
+    }
+    return render(request, 'notas/detalhes_nota_fiscal.html', context)
 
 def editar_nota_fiscal(request, pk):
     nota = get_object_or_404(NotaFiscal, pk=pk)
@@ -238,6 +307,26 @@ def editar_motorista(request, pk):
     }
     return render(request, 'notas/editar_motorista.html', context)
 
+# >>> NOVA VIEW: Adicionar Histórico de Consulta (via Modal) <<<
+def adicionar_historico_consulta(request, pk): # pk é o ID do motorista
+    motorista = get_object_or_404(Motorista, pk=pk)
+    if request.method == 'POST':
+        form = HistoricoConsultaForm(request.POST)
+        if form.is_valid():
+            historico = form.save(commit=False)
+            historico.motorista = motorista # Associa o histórico ao motorista
+            historico.save()
+            messages.success(request, 'Consulta de risco registrada com sucesso!')
+            # Redireciona de volta para a página de edição do motorista
+            return redirect('notas:editar_motorista', pk=motorista.pk)
+        else:
+            messages.error(request, 'Houve um erro ao registrar a consulta. Verifique os campos.')
+            # Se a validação falhar, você pode querer renderizar a página de edição com o modal,
+            # mas por simplicidade, vamos redirecionar e a mensagem de erro aparecerá.
+            return redirect('notas:editar_motorista', pk=motorista.pk)
+    # Não permitir GET direto para esta URL, redirecionar para edição
+    return redirect('notas:editar_motorista', pk=motorista.pk) 
+
 def adicionar_historico_consulta(request, pk):
     motorista = get_object_or_404(Motorista, pk=pk)
     if request.method == 'POST':
@@ -268,40 +357,38 @@ def excluir_motorista(request, pk):
 # Views Veiculo (Unidades Individuais)
 # --------------------------------------------------------------------------------------
 def listar_veiculos(request):
-    search_form = VeiculoSearchForm(request.GET) # <<< USE VeiculoSearchForm AQUI
+    search_form = VeiculoSearchForm(request.GET)
     
-    veiculos_query = Veiculo.objects.all().order_by('placa') # Começa com todos os veiculos por padrão
+    # >>> INICIALMENTE, A QUERYSET ESTÁ VAZIA <<<
+    veiculos = Veiculo.objects.none() 
 
-    filters_applied = False # Variável para verificar se algum filtro foi realmente aplicado
+    # 'search_performed' será True se houver qualquer parâmetro GET na URL
+    search_performed = bool(request.GET)
 
-    if search_form.is_valid():
+    if search_performed and search_form.is_valid():
+        # Se uma busca foi realizada e o formulário é válido, então buscamos os veículos
+        queryset = Veiculo.objects.all()
+
         placa = search_form.cleaned_data.get('placa')
         chassi = search_form.cleaned_data.get('chassi')
         proprietario_nome = search_form.cleaned_data.get('proprietario_nome')
         tipo_unidade = search_form.cleaned_data.get('tipo_unidade')
 
         if placa:
-            veiculos_query = veiculos_query.filter(placa__icontains=placa)
-            filters_applied = True
-        
+            queryset = queryset.filter(placa__icontains=placa)
         if chassi:
-            veiculos_query = veiculos_query.filter(chassi__icontains=chassi)
-            filters_applied = True
-        
+            queryset = queryset.filter(chassi__icontains=chassi)
         if proprietario_nome:
-            veiculos_query = veiculos_query.filter(proprietario_nome_razao_social__icontains=proprietario_nome)
-            filters_applied = True
-        
+            queryset = queryset.filter(proprietario_nome_razao_social__icontains=proprietario_nome)
         if tipo_unidade:
-            veiculos_query = veiculos_query.filter(tipo_unidade=tipo_unidade)
-            filters_applied = True
+            queryset = queryset.filter(tipo_unidade=tipo_unidade)
         
-    veiculos = veiculos_query.order_by('placa')
-
+        veiculos = queryset.order_by('placa')
+    
     context = {
-        'veiculos': veiculos,
         'search_form': search_form,
-        'filters_applied': filters_applied,
+        'veiculos': veiculos,
+        'search_performed': search_performed, # Passa a flag para o template
     }
     return render(request, 'notas/listar_veiculos.html', context)
 
