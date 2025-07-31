@@ -89,14 +89,18 @@ class Motorista(models.Model):
     cidade = models.CharField(max_length=100, blank=True, null=True, verbose_name="Cidade")
     estado = models.CharField(max_length=2, blank=True, null=True, verbose_name="Estado (UF)")
     cep = models.CharField(max_length=9, blank=True, null=True, verbose_name="CEP")
-    
-    # Campo data_nascimento deve estar aqui
     data_nascimento = models.DateField(blank=True, null=True, verbose_name="Data de Nascimento") 
-
-    # 'numero_consulta' será movido para HistoricoConsulta, mas manteremos o campo antigo no Motorista por agora
-    # para não quebrar migrações, depois ele será removido.
     numero_consulta = models.CharField(max_length=50, blank=True, null=True, verbose_name="Número da Última Consulta")
 
+    # >>> NOVO CAMPO: Veículo Principal (ForeignKey para Veiculo) <<<
+    veiculo_principal = models.ForeignKey(
+        'Veiculo', # Aponta para o modelo Veiculo
+        on_delete=models.SET_NULL, # Se o veículo for excluído, o campo fica nulo
+        blank=True,
+        null=True,
+        related_name='motoristas_associados', # Nome reverso para acessar motoristas a partir do veículo
+        verbose_name="Veículo Principal"
+    )
 
     def __str__(self):
         return self.nome
@@ -104,7 +108,7 @@ class Motorista(models.Model):
     class Meta:
         verbose_name = "Motorista"
         verbose_name_plural = "Motoristas"
-        ordering = ['nome']
+        ordering = ['nome']    
 
 # --------------------------------------------------------------------------------------
 # Veiculo

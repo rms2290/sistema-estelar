@@ -92,24 +92,35 @@ class ClienteForm(forms.ModelForm):
 # Novo formulário para Motoristas
 # --------------------------------------------------------------------------------------
 class MotoristaForm(forms.ModelForm):
+    # Sobrescreve o campo veiculo_principal para ser um dropdown de Veiculos
+    veiculo_principal = forms.ModelChoiceField(
+        queryset=Veiculo.objects.all().order_by('placa'), # Puxa todos os veículos existentes
+        label='Veículo Principal',
+        required=False, # É opcional
+        empty_label="--- Selecione um veículo ---", # Opção para não selecionar
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
     class Meta:
         model = Motorista
+        # AJUSTADO: Adicionado 'veiculo_principal'
         fields = [
             'nome', 'cpf', 'cnh',
             'codigo_seguranca', 'vencimento_cnh', 'uf_emissao_cnh',
             'telefone',
             'endereco', 'numero', 'bairro', 'cidade', 'estado', 'cep',
-            'data_nascimento', # <<< POSICIONE AQUI, ANTES DE 'numero_consulta'
-            'numero_consulta' # <<< ESTE CAMPO AINDA ESTÁ NO MODELO MOTORISTA TEMPORARIAMENTE
+            'data_nascimento',
+            'numero_consulta', # Mantido por enquanto
+            'veiculo_principal' # <<< NOVO CAMPO NO FORMULÁRIO
         ]
         widgets = {
             'nome': forms.TextInput(attrs={'class': 'form-control'}),
             'cpf': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000.000.000-00'}),
             'cnh': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '00000000000'}),
-            
+
             'codigo_seguranca': forms.TextInput(attrs={'class': 'form-control'}),
             'vencimento_cnh': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'uf_emissao_cnh': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 2, 'placeholder': 'UF'}),
+            'uf_emissao_cnh': forms.Select(attrs={'class': 'form-control'}), # Usar Select aqui
             
             'telefone': forms.TextInput(attrs={'class': 'form-control'}),
             
@@ -117,41 +128,41 @@ class MotoristaForm(forms.ModelForm):
             'numero': forms.TextInput(attrs={'class': 'form-control'}),
             'bairro': forms.TextInput(attrs={'class': 'form-control'}),
             'cidade': forms.TextInput(attrs={'class': 'form-control'}),
-            'estado': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 2, 'placeholder': 'UF'}),
+            'estado': forms.Select(attrs={'class': 'form-control'}), # Usar Select aqui
             'cep': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '00000-000'}),
             
-            'data_nascimento': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}), # <<< WIDGET PARA data_nascimento
-            'numero_consulta': forms.TextInput(attrs={'class': 'form-control'}), # Mantido por enquanto
+            'data_nascimento': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'numero_consulta': forms.TextInput(attrs={'class': 'form-control'}),
+            # 'veiculo_principal' não precisa de widget aqui, pois foi sobrescrito acima
         }
 
-    # MÉTODO CLEAN_CPF (NOVO)
+    # MÉTODO CLEAN_CPF (VERSÃO ÚNICA E CORRETA)
     def clean_cpf(self):
-        cpf = self.cleaned_data['cpf']
-        cpf_numeros = re.sub(r'[^0-9]', '', cpf)
+        cpf = self.cleaned_data.get('cpf') # Use .get() para pegar o valor do campo
+        
+        # Se o campo não for obrigatório e estiver vazio, retorne imediatamente
+        if not cpf:
+            return cpf
+
+        cpf_numeros = re.sub(r'[^0-9]', '', cpf) # Remove tudo que não for número
+
         if len(cpf_numeros) != 11:
             raise forms.ValidationError("CPF deve conter 11 dígitos numéricos.")
         
-        # >>> NOVO: Validação do dígito verificador usando validate_docbr <<<
-        cpf_validator = CPF() # Usa a classe CPF importada
-        if not cpf_validator.validate(cpf_numeros):
+        cpf_validator = CPF() # Instancia o validador de CPF
+        if not cpf_validator.validate(cpf_numeros): # Valida o CPF numérico
             raise forms.ValidationError("CPF inválido. Verifique o número digitado.")
 
         return cpf_numeros
 
-    def clean_cpf(self):
-        cpf = self.cleaned_data['cpf']
-        cpf_numeros = re.sub(r'[^0-9]', '', cpf)
-        if len(cpf_numeros) != 11:
-            raise forms.ValidationError("CPF deve conter 11 dígitos numéricos.")
-        return cpf_numeros
-
-    def clean_celular(self): # <<< ESTE ESTÁ AQUI, MAS LEMBRE-SE QUE O NOME NO MODELO É 'TELEFONE'
-        celular = self.cleaned_data.get('celular')
-        if not celular: return celular
-        celular_numeros = re.sub(r'[^0-9]', '', celular)
-        if not (10 <= len(celular_numeros) <= 11):
-            raise forms.ValidationError("Celular deve ter entre 10 e 11 dígitos (incluindo DDD).")
-        return celular_numeros
+    # clean_telefone (CORRIGIDO: renomeado de clean_celular)
+    def clean_telefone(self): 
+        telefone = self.cleaned_data.get('telefone') 
+        if not telefone: return telefone
+        telefone_numeros = re.sub(r'[^0-9]', '', telefone)
+        if not (10 <= len(telefone_numeros) <= 11):
+            raise forms.ValidationError("Telefone deve ter entre 10 e 11 dígitos (incluindo DDD).")
+        return telefone_numeros
 
     def clean_cep(self):
         cep = self.cleaned_data['cep']
