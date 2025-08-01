@@ -38,7 +38,9 @@ urlpatterns = [
     path('romaneios/adicionar/', views.adicionar_romaneio, name='adicionar_romaneio'),
     path('romaneios/editar/<int:pk>/', views.editar_romaneio, name='editar_romaneio'),
     path('romaneios/excluir/<int:pk>/', views.excluir_romaneio, name='excluir_romaneio'),
+    path('romaneios/<int:pk>/detalhes/', views.detalhes_romaneio, name='detalhes_romaneio'),
 
 # URL para carregar notas fiscais via AJAX
     path('ajax/load-notas/', views.load_notas_fiscais, name='ajax_load_notas'),
+    path('ajax/load-notas-edicao/', views.load_notas_fiscais_edicao, name='ajax_load_notas_edicao'),
 ]

@@ -197,7 +197,7 @@ class Veiculo(models.Model):
 class RomaneioViagem(models.Model):
     # Alterado para CharField para código sequencial tipo ROM-AAAA-MM-NNNN
     codigo = models.CharField(max_length=20, unique=True, verbose_name="Código do Romaneio") 
-
+    
     # Status do Romaneio
     STATUS_ROMANEIO_CHOICES = [
         ('Rascunho', 'Rascunho'),
@@ -208,32 +208,32 @@ class RomaneioViagem(models.Model):
     cliente = models.ForeignKey(
         Cliente,
         on_delete=models.PROTECT,
-        related_name='romaneios_cliente', # Ajustado related_name
+        related_name='romaneios_cliente',
         verbose_name="Cliente"
     )
-    # Apontando para Veiculo (unidade), já que ComposicaoVeicular foi removido
+    # Apontando para Veiculo (unidade)
     veiculo = models.ForeignKey( 
         Veiculo,
         on_delete=models.PROTECT,
-        related_name='romaneios_veiculo', # Ajustado related_name
+        related_name='romaneios_veiculo',
         verbose_name="Unidade de Veículo"
     )
     motorista = models.ForeignKey(
         Motorista,
         on_delete=models.PROTECT,
-        related_name='romaneios_motorista', # Ajustado related_name
+        related_name='romaneios_motorista',
         verbose_name="Motorista"
     )
     # ManyToManyField para Notas Fiscais
     notas_fiscais = models.ManyToManyField(
         NotaFiscal,
-        related_name='romaneios_vinculados', # Ajustado related_name
+        related_name='romaneios_vinculados',
         blank=True,
         verbose_name="Notas Fiscais"
     )
 
     data_emissao = models.DateTimeField(default=timezone.now, verbose_name="Data de Emissão")
-    observacoes = models.TextField(blank=True, null=True, verbose_name="Observações") # Mantido observacoes se for usar
+    observacoes = models.TextField(blank=True, null=True, verbose_name="Observações")
 
     def __str__(self):
         return f"Romaneio {self.codigo} - Cliente: {self.cliente.razao_social}"

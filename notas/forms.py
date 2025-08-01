@@ -1,4 +1,5 @@
 from django import forms
+from django.db.models import Q
 from django.core.exceptions import ValidationError
 from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta 
 import re
@@ -331,11 +332,11 @@ class VeiculoForm(forms.ModelForm):
         return cleaned_data
     
 # --------------------------------------------------------------------------------------
-# Novo formulário para Romaneios (AGORA COM __INIT__ CONSOLIDADO)
+# Novo formulário para Romaneios
 # --------------------------------------------------------------------------------------
 class RomaneioViagemForm(forms.ModelForm):
     notas_fiscais = forms.ModelMultipleChoiceField(
-        queryset=NotaFiscal.objects.none(),
+        queryset=NotaFiscal.objects.none(), # Começa vazio. O JS ou a edição preencherá.
         widget=forms.CheckboxSelectMultiple,
         required=True,
         label="Notas Fiscais Associadas"
@@ -347,41 +348,72 @@ class RomaneioViagemForm(forms.ModelForm):
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
     )
 
+    # Sobrescreve o campo 'cliente' para filtrar por status
+    cliente = forms.ModelChoiceField(
+        queryset=Cliente.objects.filter(status='Ativo').order_by('razao_social'),
+        label='Cliente',
+        required=True,
+        empty_label="--- Selecione um cliente ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    # Sobrescreve o campo 'motorista'
+    motorista = forms.ModelChoiceField(
+        queryset=Motorista.objects.all().order_by('nome'),
+        label='Motorista',
+        required=True,
+        empty_label="--- Selecione um motorista ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    # Sobrescreve o campo 'veiculo' para apontar para Veiculo (unidade)
+    veiculo = forms.ModelChoiceField(
+        queryset=Veiculo.objects.all().order_by('placa'),
+        label='Unidade de Veículo', # Ajustado o label
+        required=True,
+        empty_label="--- Selecione uma unidade ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         if self.instance.pk is None and not self.initial.get('data_romaneio'):
             self.fields['data_romaneio'].initial = date.today()
         
-        self.fields['cliente'].queryset = Cliente.objects.all().order_by('razao_social')
+        # Querysets para ModelChoiceFields
+        self.fields['cliente'].queryset = Cliente.objects.filter(status='Ativo').order_by('razao_social')
         self.fields['motorista'].queryset = Motorista.objects.all().order_by('nome')
         self.fields['veiculo'].queryset = Veiculo.objects.all().order_by('placa')
 
-        # >>> AQUI: INDENTAÇÃO CORRIGIDA <<<
-        if self.instance and self.instance.pk: 
+        # Lógica para edição (preencher notas_fiscais e data_romaneio)
+        if self.instance and self.instance.pk:
             if self.instance.data_emissao:
                  self.fields['data_romaneio'].initial = self.instance.data_emissao.date()
 
             if self.instance.cliente:
+                # Filtrar notas para edição: Notas do cliente OU já vinculadas a este romaneio E em status 'Depósito'
                 self.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
                     cliente=self.instance.cliente
+                ).filter(
+                    Q(romaneios_vinculados=self.instance) | Q(status='Depósito')
                 ).order_by('nota')
                 self.fields['notas_fiscais'].initial = self.instance.notas_fiscais.all()
         
-        # >>> AQUI: INDENTAÇÃO CORRIGIDA <<<
-        for field_name, field in self.fields.items(): 
-            if field_name != 'notas_fiscais':
-                field.widget.attrs.update({'class': 'form-control'})
-            if field_name == 'cliente':
+        # Adicionar atributos HTML para estilização
+        for field_name, field in self.fields.items():
+            if field_name != 'notas_fiscais': # CheckboxSelectMultiple é estilizado diferente
+                # Adicionar classes a campos que não são ModelChoiceField sobrescritos ou já tem widget
+                if not isinstance(field.widget, (forms.Select, forms.DateInput)):
+                    field.widget.attrs.update({'class': 'form-control'})
+            if field_name == 'cliente': # Adicionar onchange para o cliente
                  field.widget.attrs.update({'onchange': 'loadNotasFiscais(this.value);'})
 
     class Meta:
         model = RomaneioViagem
-        fields = ['cliente', 'notas_fiscais', 'motorista', 'veiculo', 'observacoes', 'data_romaneio']
-        widgets = {
-            # ... (widgets) ...
-        }
-
+        # 'codigo' e 'status' são controlados pela view e não aparecem no formulário
+        fields = ['data_romaneio', 'cliente', 'notas_fiscais', 'motorista', 'veiculo']
+        
 # --------------------------------------------------------------------------------------
 # NOVO: Formulário para Histórico de Consulta
 # --------------------------------------------------------------------------------------
