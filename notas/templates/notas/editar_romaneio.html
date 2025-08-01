@@ -39,7 +39,7 @@
         <div class="mb-3">
             <label class="form-label">Notas Fiscais Associadas:</label>
             {# Adicionado data-romaneio-id para o JS pegar o ID do romaneio #}
-            <div id="notas_fiscais_checkboxes" data-romaneio-id="{{ romaneio.pk }}"> 
+            <div id="notas_fiscais_checkboxes" class="notes-checkbox-container" data-romaneio-id="{{ romaneio.pk }}"> 
                 <p class="text-info">Carregando notas...</p> {# Mensagem inicial #}
             </div>
             {% if form.notas_fiscais.errors %}
@@ -62,7 +62,7 @@
         <div class="d-flex justify-content-end">
             <button type="submit" name="salvar" class="btn btn-secondary me-2">Salvar Rascunho</button>
             <button type="submit" name="emitir" class="btn btn-success">Emitir Romaneio</button>
-            <a href="{% url 'notas:listar_romaneios' %}" class="btn btn-danger">Cancelar</a>
+            <a href="{% url 'notas:detalhes_romaneio' romaneio.pk %}" class="btn btn-danger">Cancelar</a>
         </div>
     </form>
 
@@ -86,7 +86,7 @@
                 }
             }
 
-            // Bind event listener
+            // Bind event listener para a mudança de cliente
             if (clienteSelect) {
                 clienteSelect.addEventListener('change', function() {
                     loadNotasFiscaisEdicao(this.value, selectedNotas); // Passa selectedNotas para re-marcar

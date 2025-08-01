@@ -11,7 +11,7 @@ from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, His
 from .forms import (
     NotaFiscalForm, ClienteForm, MotoristaForm, VeiculoForm, RomaneioViagemForm,
     NotaFiscalSearchForm, ClienteSearchForm, MotoristaSearchForm, HistoricoConsultaForm,
-    VeiculoSearchForm
+    VeiculoSearchForm # Certifique-se que VeiculoSearchForm está importado
 )
 
 # --------------------------------------------------------------------------------------
@@ -106,36 +106,16 @@ def excluir_cliente(request, pk):
         return redirect('notas:listar_clientes')
     return render(request, 'notas/excluir_cliente.html', {'cliente': cliente})
 
+def detalhes_cliente(request, pk):
+    cliente = get_object_or_404(Cliente, pk=pk)
+    context = {
+        'cliente': cliente,
+    }
+    return render(request, 'notas/detalhes_cliente.html', context)
+
 # --------------------------------------------------------------------------------------
 # Views para Nota Fiscal
 # --------------------------------------------------------------------------------------
-def listar_notas_fiscais(request):
-    search_form = NotaFiscalSearchForm(request.GET)
-    notas_fiscais = NotaFiscal.objects.none()
-    search_performed = bool(request.GET)
-
-    if search_performed and search_form.is_valid():
-        numero_nota = search_form.cleaned_data.get('nota')
-        cliente_obj = search_form.cleaned_data.get('cliente')
-        data_emissao = search_form.cleaned_data.get('data')
-
-        queryset = NotaFiscal.objects.all()
-        if numero_nota:
-            queryset = queryset.filter(nota__icontains=numero_nota)
-        if cliente_obj:
-            queryset = queryset.filter(cliente=cliente_obj)
-        if data_emissao:
-            queryset = queryset.filter(data=data_emissao)
-        
-        notas_fiscais = queryset.order_by('-data', '-nota')
-    
-    context = {
-        'search_form': search_form,
-        'notas_fiscais': notas_fiscais,
-        'search_performed': search_performed,
-    }
-    return render(request, 'notas/listar_notas.html', context)
-
 def listar_notas_fiscais(request):
     search_form = NotaFiscalSearchForm(request.GET)
     notas_fiscais = NotaFiscal.objects.none()
@@ -172,15 +152,14 @@ def adicionar_nota_fiscal(request):
             nota_fiscal.save()
             messages.success(request, f'Nota Fiscal {nota_fiscal.nota} adicionada com sucesso!')
 
-            # >>> NOVA LÓGICA DE REDIRECIONAMENTO COM BASE NO BOTÃO CLICADO <<<
             if 'salvar_e_adicionar' in request.POST:
-                return redirect('notas:adicionar_nota_fiscal') # Permanece na mesma página
-            else: # Padrão para 'salvar_e_sair' ou outro botão
-                return redirect('notas:detalhes_nota_fiscal', pk=nota_fiscal.pk) # Redireciona para detalhes
+                return redirect('notas:adicionar_nota_fiscal')
+            else:
+                return redirect('notas:detalhes_nota_fiscal', pk=nota_fiscal.pk)
 
         else:
             messages.error(request, 'Houve um erro ao adicionar a nota fiscal. Verifique os campos.')
-    else: # GET request
+    else:
         form = NotaFiscalForm()
     return render(request, 'notas/adicionar_nota.html', {'form': form})
 
@@ -210,39 +189,12 @@ def excluir_nota_fiscal(request, pk):
 
 def detalhes_nota_fiscal(request, pk):
     nota = get_object_or_404(NotaFiscal, pk=pk)
-    
-    # Recupera romaneios vinculados, para exibição
     romaneios_vinculados = nota.romaneios_vinculados.all().order_by('-data_emissao')
-
     context = {
         'nota': nota,
         'romaneios_vinculados': romaneios_vinculados,
     }
     return render(request, 'notas/detalhes_nota_fiscal.html', context)
-
-def editar_nota_fiscal(request, pk):
-    nota = get_object_or_404(NotaFiscal, pk=pk)
-    if request.method == 'POST':
-        form = NotaFiscalForm(request.POST, instance=nota)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Nota fiscal atualizada com sucesso!')
-            return redirect('notas:listar_notas_fiscais')
-        else:
-            messages.error(request, 'Houve um erro ao atualizar a nota fiscal. Verifique os campos.')
-    else:
-        form = NotaFiscalForm(instance=nota)
-    return render(request, 'notas/editar_nota.html', {'form': form, 'nota': nota})
-
-def excluir_nota_fiscal(request, pk):
-    nota = get_object_or_404(NotaFiscal, pk=pk)
-    if request.method == 'POST':
-        for romaneio in nota.romaneios_vinculados.all():
-            romaneio.notas_fiscais.remove(nota)
-        nota.delete()
-        messages.success(request, 'Nota fiscal excluída com sucesso!')
-        return redirect('notas:listar_notas_fiscais')
-    return render(request, 'notas/excluir_nota.html', {'nota': nota})
 
 # --------------------------------------------------------------------------------------
 # Views Motorista
@@ -307,26 +259,6 @@ def editar_motorista(request, pk):
     }
     return render(request, 'notas/editar_motorista.html', context)
 
-# >>> NOVA VIEW: Adicionar Histórico de Consulta (via Modal) <<<
-def adicionar_historico_consulta(request, pk): # pk é o ID do motorista
-    motorista = get_object_or_404(Motorista, pk=pk)
-    if request.method == 'POST':
-        form = HistoricoConsultaForm(request.POST)
-        if form.is_valid():
-            historico = form.save(commit=False)
-            historico.motorista = motorista # Associa o histórico ao motorista
-            historico.save()
-            messages.success(request, 'Consulta de risco registrada com sucesso!')
-            # Redireciona de volta para a página de edição do motorista
-            return redirect('notas:editar_motorista', pk=motorista.pk)
-        else:
-            messages.error(request, 'Houve um erro ao registrar a consulta. Verifique os campos.')
-            # Se a validação falhar, você pode querer renderizar a página de edição com o modal,
-            # mas por simplicidade, vamos redirecionar e a mensagem de erro aparecerá.
-            return redirect('notas:editar_motorista', pk=motorista.pk)
-    # Não permitir GET direto para esta URL, redirecionar para edição
-    return redirect('notas:editar_motorista', pk=motorista.pk) 
-
 def adicionar_historico_consulta(request, pk):
     motorista = get_object_or_404(Motorista, pk=pk)
     if request.method == 'POST':
@@ -353,42 +285,53 @@ def excluir_motorista(request, pk):
         return redirect('notas:listar_motoristas')
     return render(request, 'notas/confirmar_exclusao_motorista.html', {'motorista': motorista})
 
+def detalhes_motorista(request, pk):
+    motorista = get_object_or_404(Motorista, pk=pk)
+    historico_consultas = HistoricoConsulta.objects.filter(motorista=motorista).order_by('-data_consulta')[:5]
+    context = {
+        'motorista': motorista,
+        'historico_consultas': historico_consultas,
+    }
+    return render(request, 'notas/detalhes_motorista.html', context)
+
 # --------------------------------------------------------------------------------------
 # Views Veiculo (Unidades Individuais)
 # --------------------------------------------------------------------------------------
 def listar_veiculos(request):
     search_form = VeiculoSearchForm(request.GET)
     
-    # >>> INICIALMENTE, A QUERYSET ESTÁ VAZIA <<<
-    veiculos = Veiculo.objects.none() 
+    veiculos_query = Veiculo.objects.all().order_by('placa') # Começa com todos os veiculos por padrão
 
-    # 'search_performed' será True se houver qualquer parâmetro GET na URL
-    search_performed = bool(request.GET)
+    filters_applied = False # Variável para verificar se algum filtro foi realmente aplicado
 
-    if search_performed and search_form.is_valid():
-        # Se uma busca foi realizada e o formulário é válido, então buscamos os veículos
-        queryset = Veiculo.objects.all()
-
+    if search_form.is_valid():
         placa = search_form.cleaned_data.get('placa')
         chassi = search_form.cleaned_data.get('chassi')
         proprietario_nome = search_form.cleaned_data.get('proprietario_nome')
         tipo_unidade = search_form.cleaned_data.get('tipo_unidade')
 
         if placa:
-            queryset = queryset.filter(placa__icontains=placa)
-        if chassi:
-            queryset = queryset.filter(chassi__icontains=chassi)
-        if proprietario_nome:
-            queryset = queryset.filter(proprietario_nome_razao_social__icontains=proprietario_nome)
-        if tipo_unidade:
-            queryset = queryset.filter(tipo_unidade=tipo_unidade)
+            veiculos_query = veiculos_query.filter(placa__icontains=placa)
+            filters_applied = True
         
-        veiculos = queryset.order_by('placa')
-    
+        if chassi:
+            veiculos_query = veiculos_query.filter(chassi__icontains=chassi)
+            filters_applied = True
+        
+        if proprietario_nome:
+            veiculos_query = veiculos_query.filter(proprietario_nome_razao_social__icontains=proprietario_nome)
+            filters_applied = True
+        
+        if tipo_unidade:
+            veiculos_query = veiculos_query.filter(tipo_unidade=tipo_unidade)
+            filters_applied = True
+        
+    veiculos = veiculos_query.order_by('placa')
+
     context = {
-        'search_form': search_form,
         'veiculos': veiculos,
-        'search_performed': search_performed, # Passa a flag para o template
+        'search_form': search_form,
+        'filters_applied': filters_applied,
     }
     return render(request, 'notas/listar_veiculos.html', context)
 
@@ -416,41 +359,33 @@ def editar_veiculo(request, pk):
         if form.is_valid():
             form.save()
             messages.success(request, 'Unidade de Veículo atualizada com sucesso!')
-            # Após salvar com sucesso, redirecione para a TELA DE DETALHES do veículo
-            # para manter o fluxo de Visualizar -> Editar -> Visualizar
-            return redirect('notas:detalhes_veiculo', pk=veiculo.pk) 
+            return redirect('notas:detalhes_veiculo', pk=veiculo.pk)
         else:
             messages.error(request, 'Houve um erro ao atualizar a unidade de veículo. Verifique os campos.')
-            # No caso de erro no POST, precisamos passar o veículo novamente para o template
-            # para que o link de cancelar continue funcionando.
-            context = {
-                'form': form,
-                'veiculo': veiculo, # <<< Passa o objeto veiculo mesmo no POST com erro
-            }
-            return render(request, 'notas/editar_veiculo.html', context)
-    else: # GET request
+    else:
         form = VeiculoForm(instance=veiculo)
-    
-        context = {
-        'form': form,
-        'veiculo': veiculo,
-    }
-    return render(request, 'notas/editar_veiculo.html', context)
+    return render(request, 'notas/editar_veiculo.html', {'form': form, 'veiculo': veiculo})
 
 def excluir_veiculo(request, pk):
     veiculo = get_object_or_404(Veiculo, pk=pk)
     if request.method == 'POST':
         try:
-            # Ao excluir veículo, desassociar de romaneios (se estiver associado)
-            for romaneio in veiculo.romaneios_veiculo.all(): # related_name de RomaneioViagem
-                romaneio.veiculo = None # Desvincula o veículo do romaneio
-                romaneio.save() # Salva a alteração no romaneio
+            for romaneio in veiculo.romaneios_veiculo.all():
+                romaneio.veiculo = None
+                romaneio.save()
             veiculo.delete()
             messages.success(request, 'Unidade de Veículo excluída com sucesso!')
         except Exception as e:
             messages.error(request, f'Não foi possível excluir o veículo: {e}')
         return redirect('notas:listar_veiculos')
     return render(request, 'notas/confirmar_exclusao_veiculo.html', {'veiculo': veiculo})
+
+def detalhes_veiculo(request, pk):
+    veiculo = get_object_or_404(Veiculo, pk=pk)
+    context = {
+        'veiculo': veiculo,
+    }
+    return render(request, 'notas/detalhes_veiculo.html', context)
 
 # --------------------------------------------------------------------------------------
 # Views Romaneio
@@ -459,40 +394,16 @@ def listar_romaneios(request):
     romaneios = RomaneioViagem.objects.all().order_by('-data_emissao', '-codigo')
     return render(request, 'notas/listar_romaneios.html', {'romaneios': romaneios})
 
-# Função auxiliar para gerar o próximo código sequencial do romaneio
-def get_next_romaneio_codigo():
-    """Gera o próximo código sequencial de romaneio no formato ROM-AAAA-MM-NNNN."""
-    ano = timezone.now().year
-    mes = timezone.now().month
-    
-    last_romaneio = RomaneioViagem.objects.filter(
-        data_emissao__year=ano,
-        data_emissao__month=mes
-    ).order_by('-codigo').first()
-
-    next_sequence = 1
-    if last_romaneio and last_romaneio.codigo:
-        try:
-            parts = last_romaneio.codigo.split('-')
-            if len(parts) == 4 and parts[0] == 'ROM' and int(parts[1]) == ano and int(parts[2]) == mes:
-                next_sequence = int(parts[3]) + 1
-        except (ValueError, IndexError):
-            pass
-
-    return f"ROM-{ano:04d}-{mes:02d}-{next_sequence:04d}"
-
 def adicionar_romaneio(request):
     if request.method == 'POST':
         form = RomaneioViagemForm(request.POST)
         
-        # Lógica de filtragem de notas no POST
         cliente_id = request.POST.get('cliente')
         if cliente_id:
             try:
                 cliente_obj = Cliente.objects.get(pk=cliente_id)
-                # Filtra notas no status Depósito para o cliente
                 form.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
-                    cliente=cliente_obj, status='Depósito' 
+                    cliente=cliente_obj, status='Depósito'
                 ).order_by('nota')
             except Cliente.DoesNotExist:
                 form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
@@ -505,21 +416,18 @@ def adicionar_romaneio(request):
             romaneio.codigo = get_next_romaneio_codigo()
             romaneio.data_emissao = form.cleaned_data['data_romaneio']
             
-            # --- Lógica de Status Baseada no Botão Clicado ---
             if 'emitir' in request.POST:
                 romaneio.status = 'Emitido'
-            else: # Clicou em 'salvar' ou outro botão
+            else:
                 romaneio.status = 'Rascunho'
 
             romaneio.save()
-            form.save_m2m() # Salva a relação ManyToMany (notas_fiscais)
+            form.save_m2m()
 
-            # Atualizar o status das notas fiscais associadas
             for nota_fiscal in romaneio.notas_fiscais.all():
                 if romaneio.status == 'Emitido':
                     nota_fiscal.status = 'Enviada'
                 else:
-                    # Se o romaneio está em rascunho, a nota associada permanece como Depósito
                     nota_fiscal.status = 'Depósito'
                 nota_fiscal.save()
 
@@ -527,11 +435,10 @@ def adicionar_romaneio(request):
             return redirect('notas:listar_romaneios')
         else:
             messages.error(request, 'Houve um erro ao emitir/salvar o romaneio. Verifique os campos.')
-    else: # GET request
+    else:
         form = RomaneioViagemForm()
         provisional_codigo = get_next_romaneio_codigo()
         
-        # Garante que os querysets dos campos Select estejam populados
         form.fields['veiculo'].queryset = Veiculo.objects.all().order_by('placa')
         form.fields['motorista'].queryset = Motorista.objects.all().order_by('nome')
         form.fields['cliente'].queryset = Cliente.objects.filter(status='Ativo').order_by('razao_social')
@@ -549,7 +456,6 @@ def editar_romaneio(request, pk):
     if request.method == 'POST':
         form = RomaneioViagemForm(request.POST, instance=romaneio)
         
-        # Lógica de filtragem de notas no POST (precisa ser consistente com o GET)
         cliente_id = request.POST.get('cliente')
         if not cliente_id:
             cliente_id = romaneio.cliente.pk
@@ -557,7 +463,6 @@ def editar_romaneio(request, pk):
         if cliente_id:
             try:
                 cliente_obj = Cliente.objects.get(pk=cliente_id)
-                # Inclui notas que já estão neste romaneio OU notas 'Depósito' do mesmo cliente
                 form.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
                     cliente=cliente_obj
                 ).filter(
@@ -578,7 +483,7 @@ def editar_romaneio(request, pk):
             elif 'salvar' in request.POST:
                 romaneio.status = 'Rascunho'
             
-            form.save() # Salva o romaneio e as relações ManyToMany AUTOMATICAMENTE
+            form.save()
             
             notas_depois_salvar = set(romaneio.notas_fiscais.all())
 
@@ -601,7 +506,6 @@ def editar_romaneio(request, pk):
     else: # GET request para edição
         form = RomaneioViagemForm(instance=romaneio)
         
-        # Garante que os querysets dos campos Select estejam corretos no GET
         form.fields['veiculo'].queryset = Veiculo.objects.all().order_by('placa')
         form.fields['motorista'].queryset = Motorista.objects.all().order_by('nome')
         form.fields['cliente'].queryset = Cliente.objects.filter(status='Ativo').order_by('razao_social')
@@ -609,25 +513,17 @@ def editar_romaneio(request, pk):
         if romaneio.data_emissao:
             form.fields['data_romaneio'].initial = romaneio.data_emissao.date()
 
-        # >>> ESTE É O BLOCO CRÍTICO PARA CARREGAR AS NOTAS NA EDIÇÃO (GET) <<<
         if romaneio.cliente:
-            print(f"AJAX_EDICAO: Carregando notas para romaneio {romaneio.pk}, cliente {romaneio.cliente.id} no GET.") # DEBUG
             form.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
                 cliente=romaneio.cliente
             ).filter(
-                # Notas em status 'Depósito' OU que já estão vinculadas a ESTE romaneio
-                Q(status='Depósito') | Q(romaneios_vinculados=romaneio) 
+                Q(status='Depósito') | Q(romaneios_vinculados=romaneio)
             ).order_by('nota')
-            print(f"AJAX_EDICAO: Queryset notas: {form.fields['notas_fiscais'].queryset.count()}") # DEBUG
-
-        else:
-            print(f"AJAX_EDICAO: Romaneio {romaneio.pk} sem cliente associado no GET.") # DEBUG
-            form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
 
     context = {
         'form': form,
         'romaneio': romaneio,
-        'provisional_codigo': romaneio.codigo, # Usa o código existente para exibição
+        'provisional_codigo': romaneio.codigo,
     }
     return render(request, 'notas/editar_romaneio.html', context)
 
@@ -635,7 +531,7 @@ def excluir_romaneio(request, pk):
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
     if request.method == 'POST':
         for nota_fiscal in romaneio.notas_fiscais.all():
-            nota_fiscal.status = 'Depósito' # Ao excluir, notas voltam para Depósito
+            nota_fiscal.status = 'Depósito'
             nota_fiscal.save()
         
         romaneio.delete()
@@ -646,8 +542,6 @@ def excluir_romaneio(request, pk):
 def detalhes_romaneio(request, pk):
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
     
-    # Você pode passar mais contexto aqui se precisar de dados relacionados na tela de detalhes
-    # Por exemplo, as notas fiscais associadas:
     notas_romaneadas = romaneio.notas_fiscais.all().order_by('nota')
 
     context = {
@@ -659,7 +553,7 @@ def detalhes_romaneio(request, pk):
 # --------------------------------------------------------------------------------------
 # Nova View para carregar notas fiscais via AJAX
 # --------------------------------------------------------------------------------------
-def load_notas_fiscais(request): # Para adicionar Romaneio
+def load_notas_fiscais(request):
     cliente_id = request.GET.get('cliente_id')
     print(f"AJAX: load_notas_fiscais (Adicionar Romaneio) chamada. cliente_id={cliente_id}")
 
@@ -668,24 +562,26 @@ def load_notas_fiscais(request): # Para adicionar Romaneio
         return JsonResponse([], safe=False)
 
     try:
-        # Certifique-se de que o cliente existe
         cliente_obj = Cliente.objects.get(pk=cliente_id)
         
         notas = NotaFiscal.objects.filter(
             cliente=cliente_obj,
-            status='Depósito' # Notas disponíveis para serem romaneadas (status Depósito)
+            status='Depósito'
         ).order_by('nota')
-
+        
         print(f"AJAX: Encontradas {notas.count()} notas 'Depósito' para cliente {cliente_obj.razao_social}.")
-        if notas.count() == 0:
-            print(f"AJAX: Nenhuma nota 'Depósito' para cliente {cliente_obj.razao_social}. Verificando todos os status...")
-            all_client_notes = NotaFiscal.objects.filter(cliente=cliente_obj).order_by('nota')
-            for note in all_client_notes:
-                print(f"  - Nota: {note.nota}, Status: {note.get_status_display()}, Romaneios Vinculados: {note.romaneios_vinculados.count()}")
 
-        # Formatação da string 'nota' no dicionário 'data'
-        # Usando 'nota.valor|floatformat:'2'' para garantir 2 casas decimais no valor
-        data = [{'id': nota.id, 'nota': f"{nota.nota} | Forn: {nota.fornecedor} | Qtd: {nota.quantidade} | Peso: {nota.peso} kg | Valor: R$ {nota.valor:.2f}"} for nota in notas]
+        data = [{
+            'id': nota.id,
+            'nota_numero': nota.nota,
+            'fornecedor': nota.fornecedor,
+            'quantidade': str(nota.quantidade), 
+            'peso': str(nota.peso) if nota.peso is not None else '', 
+            'valor': f"{nota.valor:.2f}", 
+            'mercadoria': nota.mercadoria, 
+            'data_emissao': nota.data.strftime("%d/%m/%Y"), 
+            'status_nf': nota.get_status_display(), 
+        } for nota in notas]
         print(f"AJAX: Dados JSON sendo enviados: {data}")
         
         return JsonResponse(data, safe=False)
@@ -694,11 +590,10 @@ def load_notas_fiscais(request): # Para adicionar Romaneio
         return JsonResponse([], safe=False)
     except Exception as e:
         print(f"AJAX: Erro inesperado na view load_notas_fiscais: {e}")
-        # Retorna o erro para o frontend para ajudar na depuração
-        return JsonResponse({'error': str(e), 'message': 'Erro interno ao carregar notas fiscais.'}, status=500)
+        return JsonResponse({'error': str(e)}, status=500)
 
 
-def load_notas_fiscais_edicao(request): # Para editar Romaneio
+def load_notas_fiscais_edicao(request):
     cliente_id = request.GET.get('cliente_id')
     romaneio_id = request.GET.get('romaneio_id')
     print(f"AJAX: load_notas_fiscais_edicao (Editar Romaneio) chamada. cliente_id={cliente_id}, romaneio_id={romaneio_id}")
@@ -710,33 +605,39 @@ def load_notas_fiscais_edicao(request): # Para editar Romaneio
     try:
         cliente_obj = Cliente.objects.get(pk=cliente_id)
         
-        notas_query = NotaFiscal.objects.filter(cliente=cliente_obj) # Inicia filtrando pelo cliente
+        notas_query = NotaFiscal.objects.filter(cliente=cliente_obj)
         
-        # Se um romaneio_id é fornecido (estamos editando), inclui as notas já vinculadas a ele
         if romaneio_id:
-            # Filtra notas com status 'Depósito' OU notas já vinculadas a este romaneio
             notas_query = notas_query.filter(
                 Q(status='Depósito') | Q(romaneios_vinculados__pk=romaneio_id)
             )
-        else: # Se romaneio_id não é fornecido (não deveria acontecer na edição), apenas Depósito
+        else:
             notas_query = notas_query.filter(status='Depósito')
 
         notas = notas_query.order_by('nota')
         print(f"AJAX: Encontradas {notas.count()} notas para cliente {cliente_obj.razao_social} (para edição).")
         
-        # Formatação da string 'nota' no dicionário 'data'
-        data = [{'id': nota.id, 'nota': f"{nota.nota} | Forn: {nota.fornecedor} | Qtd: {nota.quantidade} | Peso: {nota.peso} kg | Valor: R$ {nota.valor:.2f}"} for nota in notas]
+        data = [{
+            'id': nota.id,
+            'nota_numero': nota.nota,
+            'fornecedor': nota.fornecedor,
+            'quantidade': str(nota.quantidade), 
+            'peso': str(nota.peso) if nota.peso is not None else '', 
+            'valor': f"{nota.valor:.2f}", 
+            'mercadoria': nota.mercadoria, 
+            'data_emissao': nota.data.strftime("%d/%m/%Y"), 
+            'status_nf': nota.get_status_display(), 
+        } for nota in notas]
         return JsonResponse(data, safe=False)
     except Cliente.DoesNotExist:
         print(f"AJAX: Cliente com ID {cliente_id} não encontrado (em edição).")
         return JsonResponse([], safe=False)
     except Exception as e:
         print(f"AJAX: Erro inesperado na view load_notas_fiscais_edicao: {e}")
-        # Retorna o erro para o frontend para ajudar na depuração
-        return JsonResponse({'error': str(e), 'message': 'Erro interno ao carregar notas fiscais para edição.'}, status=500)
+        return JsonResponse({'error': str(e)}, status=500)
 
 # --------------------------------------------------------------------------------------
-# NOVA VIEW: Detalhes do Motorista
+# Detalhes Views (já implementadas)
 # --------------------------------------------------------------------------------------
 def detalhes_motorista(request, pk):
     motorista = get_object_or_404(Motorista, pk=pk)
@@ -765,39 +666,6 @@ def detalhes_cliente(request, pk):
 
 def detalhes_veiculo(request, pk):
     veiculo = get_object_or_404(Veiculo, pk=pk)
-    context = {
-        'veiculo': veiculo,
-    }
-    return render(request, 'notas/detalhes_veiculo.html', context)
-
-# --------------------------------------------------------------------------------------
-# NOVA VIEW: Detalhes da Nota Fiscal
-# --------------------------------------------------------------------------------------
-def detalhes_nota_fiscal(request, pk):
-    nota = get_object_or_404(NotaFiscal, pk=pk)
-    
-    context = {
-        'nota': nota,
-    }
-    return render(request, 'notas/detalhes_nota_fiscal.html', context)
-
-# --------------------------------------------------------------------------------------
-# NOVA VIEW: Detalhes do Cliente
-# --------------------------------------------------------------------------------------
-def detalhes_cliente(request, pk):
-    cliente = get_object_or_404(Cliente, pk=pk)
-    
-    context = {
-        'cliente': cliente,
-    }
-    return render(request, 'notas/detalhes_cliente.html', context)
-
-# --------------------------------------------------------------------------------------
-# NOVA VIEW: Detalhes do Veículo
-# --------------------------------------------------------------------------------------
-def detalhes_veiculo(request, pk):
-    veiculo = get_object_or_404(Veiculo, pk=pk)
-    
     context = {
         'veiculo': veiculo,
     }

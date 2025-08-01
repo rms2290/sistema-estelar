@@ -232,3 +232,112 @@ body {
 .alert-danger { background-color: #dc3545; border-color: #c82333; color: #fff; }
 .alert-info { background-color: #17a2b8; border-color: #138496; color: #fff; }
 .alert-warning { background-color: #ffc107; border-color: #e0a800; color: #212529; } /* Texto escuro para warning */
+
+/* --- Ajustes Específicos para Checkboxes de Notas Fiscais no Romaneio --- */
+.notes-checkbox-container {
+    padding: 10px;
+    background-color: var(--dark-card-bg);
+    border: 1px solid var(--dark-border-color);
+    border-radius: 5px;
+    max-height: 400px; /* Aumenta a altura máxima para mais notas */
+    overflow-y: auto; /* Adiciona scroll se muitas notas */
+    color: var(--dark-secondary-text-color); /* Cor de texto padrão para o container */
+}
+
+/* Cabeçalho das "colunas" das notas dentro do container de checkboxes */
+.notes-checkbox-container .notes-header-row {
+    display: flex;
+    font-weight: bold;
+    color: var(--dark-text-color); /* Cor mais clara para o cabeçalho */
+    border-bottom: 1px solid var(--dark-border-color);
+    padding-bottom: 8px; /* Aumenta o padding inferior */
+    margin-bottom: 8px; /* Espaçamento maior entre o cabeçalho e a primeira nota */
+    padding-left: 35px; /* Ajuste para alinhar com o conteúdo após o checkbox (input de 20px + margin) */
+    width: 100%; /* Garante que o cabeçalho ocupe 100% da largura disponível */
+}
+.notes-checkbox-container .notes-header-row > div {
+    /* Larguras são definidas abaixo nas classes note-col-*, aqui apenas alinhamento geral */
+    text-align: center; 
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Centraliza horizontalmente */
+    padding: 0 5px; /* Remove padding padrão de colunas e adiciona 5px */
+}
+
+.notes-checkbox-container .form-check {
+    padding-left: 0 !important; /* FORÇA REMOVER PADDING PADRÃO BOOTSTRAP */
+    margin-bottom: 8px; /* Espaçamento entre as notas */
+    border-bottom: 1px dashed var(--dark-border-color); /* Linha divisória sutil */
+    padding-bottom: 8px; /* Padding antes da linha divisória */
+    display: flex; /* Usar flexbox para alinhar input e label */
+    align-items: flex-start; /* Alinha o checkbox no topo da linha */
+    cursor: pointer;
+    width: 100%; /* Garante que cada item ocupe a largura total */
+}
+.notes-checkbox-container .form-check:hover {
+    background-color: rgba(0, 123, 255, 0.1); /* Um leve highlight no hover */
+    border-radius: 4px;
+}
+
+.notes-checkbox-container .form-check:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.notes-checkbox-container .form-check-input {
+    flex-shrink: 0;
+    margin-top: 0.35rem; 
+    margin-left: 10px; 
+    margin-right: 10px; 
+    cursor: pointer;
+}
+
+.notes-checkbox-container .form-check-label {
+    flex-grow: 1; 
+    cursor: pointer;
+    padding-top: 0 !important; /* FORÇA REMOVER PADDING PADRÃO */
+    padding-bottom: 0 !important; /* FORÇA REMOVER PADDING PADRÃO */
+    display: flex; /* Torna o label um container flexível */
+    align-items: center; 
+    min-height: 20px; 
+    width: calc(100% - 35px); /* Ajusta a largura para compensar o input e sua margem */
+    /* text-align: left; */ /* Padrão, mas pode ser sobrescrito pelas colunas internas */
+}
+
+.notes-checkbox-container .note-info-row {
+    flex-grow: 1; 
+    display: flex; /* Garante que os divs internos sejam tratados como colunas */
+    align-items: center;
+    margin: 0 !important; /* REMOVER MARGEM PADRÃO DA ROW DO BOOTSTRAP */
+    width: 100%; /* Ocupa 100% da largura do label */
+    /* flex-wrap: nowrap; */ /* Evita quebra de linha dos itens, pode causar overflow */
+}
+
+.notes-checkbox-container .note-info-row > div {
+    padding: 0 5px; /* Padding interno para o conteúdo da célula */
+    word-break: break-word; 
+    font-size: 1em; 
+    color: var(--dark-secondary-text-color);
+    display: flex; 
+    align-items: center;
+    min-height: 20px; 
+    /* Remover text-align individual, usar nas classes de coluna */
+}
+.notes-checkbox-container .note-info-row > div strong {
+    color: var(--dark-text-color);
+    font-size: 1.1em; 
+}
+
+/* Ajustes de largura das "colunas" - OS % DEVEM SOMAR 100% DO ESPAÇO DISPONÍVEL APÓS O CHECKBOX */
+/* E o text-align é por coluna aqui para controle fino */
+.notes-checkbox-container .note-col-nf { width: 10%; text-align: left; } 
+.notes-checkbox-container .note-col-fornecedor { width: 25%; text-align: left; }
+.notes-checkbox-container .note-col-mercadoria { width: 18%; text-align: left; } 
+.notes-checkbox-container .note-col-qtd { width: 7%; text-align: center; }
+.notes-checkbox-container .note-col-peso { width: 7%; text-align: center; } 
+.notes-checkbox-container .note-col-valor { width: 15%; text-align: right; }
+.notes-checkbox-container .note-col-data { width: 15%; text-align: right; } /* Data e Valor à direita */
