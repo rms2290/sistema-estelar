@@ -1,0 +1,234 @@
+/* F:\ESTELAR - PYTHON\sistema_estelar\static\css\style.css */
+
+/* Cores do Tema Escuro */
+:root {
+    --dark-bg-color: #212529; /* Cor de fundo principal escura */
+    --dark-sidebar-bg: #343a40; /* Cor de fundo da sidebar */
+    --dark-header-bg: #212529; /* Cor de fundo do cabeçalho */
+    --dark-text-color: #f8f9fa; /* Cor do texto claro */
+    --dark-secondary-text-color: #adb5bd; /* Cor do texto secundário */
+    --dark-border-color: #495057; /* Cor da borda para divisões */
+    --dark-card-bg: #343a40; /* Cor de fundo dos cards no tema escuro */
+    --dark-card-header-bg: #495057; /* Cor de fundo do cabeçalho do card */
+    --primary-color: #007bff; /* Cor primária do Bootstrap */
+    --accent-color: #28a745; /* Cor de destaque (verde) */
+}
+
+body {
+    background-color: var(--dark-bg-color);
+    color: var(--dark-text-color);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    display: flex; /* Usar flexbox para o layout principal */
+    min-height: 100vh; /* Garante que o corpo ocupa toda a altura da tela */
+    flex-direction: column; /* Conteúdo principal será coluna se a sidebar não for fixa */
+}
+
+/* Layout Principal: Sidebar e Conteúdo */
+.main-wrapper {
+    display: flex;
+    flex-grow: 1; /* Permite que o wrapper ocupe o espaço restante */
+}
+
+/* Sidebar */
+.sidebar {
+    width: 250px; /* Largura fixa da sidebar */
+    background-color: var(--dark-sidebar-bg);
+    padding: 20px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    color: var(--dark-text-color);
+    position: sticky; /* Sidebar fixa ao rolar */
+    top: 0;
+    height: 100vh; /* Ocupa toda a altura da viewport */
+    overflow-y: auto; /* Adiciona scroll se o conteúdo for muito longo */
+}
+
+.sidebar h3 {
+    color: var(--primary-color);
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.sidebar-nav ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar-nav li {
+    margin-bottom: 10px;
+}
+
+.sidebar-nav a {
+    display: block;
+    padding: 10px 15px;
+    color: var(--dark-text-color);
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.sidebar-nav a:hover {
+    background-color: var(--dark-card-header-bg);
+    color: var(--primary-color);
+}
+
+/* Main Content Area */
+.main-content {
+    flex-grow: 1;
+    padding: 20px;
+    background-color: var(--dark-bg-color);
+    overflow-x: hidden; /* Evita scroll horizontal indesejado */
+}
+
+/* Top Bar (Header) */
+.top-bar {
+    background-color: var(--dark-header-bg);
+    color: var(--dark-text-color);
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    min-height: 60px; /* Altura mínima do cabeçalho */
+}
+
+.top-bar .logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.top-bar .user-info {
+    font-size: 0.9rem;
+    color: var(--dark-secondary-text-color);
+}
+
+/* Estilos de Cartões (Cards) */
+.card {
+    background-color: var(--dark-card-bg);
+    border: 1px solid var(--dark-border-color);
+    color: var(--dark-text-color);
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card-header {
+    background-color: var(--dark-card-header-bg);
+    color: var(--dark-text-color);
+    border-bottom: 1px solid var(--dark-border-color);
+    padding: 1rem 1.25rem;
+    font-weight: bold;
+    border-radius: calc(8px - 1px) calc(8px - 1px) 0 0;
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+/* Estilos de Formulário (ajustes para tema escuro) */
+.form-control, .form-select, .btn {
+    background-color: var(--dark-sidebar-bg);
+    color: var(--dark-text-color);
+    border-color: var(--dark-border-color);
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--dark-sidebar-bg);
+    color: var(--dark-text-color);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25); /* Sombra do foco Bootstrap */
+}
+
+.form-label {
+    color: var(--dark-secondary-text-color);
+    font-weight: normal;
+}
+
+/* Estilos para botões Bootstrap */
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+.btn-primary:hover {
+    background-color: #0056b3; /* Um tom mais escuro */
+    border-color: #0056b3;
+}
+.btn-secondary {
+    background-color: var(--dark-card-header-bg);
+    border-color: var(--dark-border-color);
+    color: var(--dark-text-color);
+}
+.btn-secondary:hover {
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+.btn-info { /* Para o botão 'Visualizar' */
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+}
+.btn-info:hover {
+    background-color: #138496;
+    border-color: #138496;
+}
+.btn-warning { /* Para o botão 'Editar' */
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #212529; /* Texto escuro */
+}
+.btn-warning:hover {
+    background-color: #e0a800;
+    border-color: #e0a800;
+}
+.btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+.btn-danger:hover {
+    background-color: #c82333;
+    border-color: #c82333;
+}
+.btn-success {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+.btn-success:hover {
+    background-color: #218838;
+    border-color: #218838;
+}
+
+
+/* Estilos para a Tabela */
+.table {
+    color: var(--dark-text-color);
+    background-color: var(--dark-card-bg); /* Fundo da tabela */
+    border-color: var(--dark-border-color);
+}
+.table thead th {
+    background-color: var(--dark-card-header-bg);
+    color: var(--dark-text-color);
+    border-color: var(--dark-border-color);
+}
+.table tbody tr {
+    background-color: var(--dark-card-bg);
+}
+.table tbody tr:hover {
+    background-color: var(--dark-card-header-bg); /* Fundo um pouco mais claro no hover */
+}
+.table td, .table th {
+    border-color: var(--dark-border-color); /* Bordas das células */
+}
+
+
+/* Estilos para mensagens do Django (usando classes Bootstrap alert) */
+.messages .alert {
+    margin-bottom: 1rem;
+}
+.alert-success { background-color: #28a745; border-color: #218838; color: #fff; }
+.alert-danger { background-color: #dc3545; border-color: #c82333; color: #fff; }
+.alert-info { background-color: #17a2b8; border-color: #138496; color: #fff; }
+.alert-warning { background-color: #ffc107; border-color: #e0a800; color: #212529; } /* Texto escuro para warning */
