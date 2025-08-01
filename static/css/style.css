@@ -361,3 +361,125 @@ body {
     font-weight: bold; /* Deixa o texto em negrito */
     margin-top: 0.25rem; /* Espaçamento com o label */
 }
+
+/* --- Estilos para a Página de Visualização/Impressão do Romaneio --- */
+.romaneio-print-container {
+    background-color: #fff;
+    color: #333;
+    padding: 20px; /* Reduzir um pouco o padding geral */
+    border: 1px solid #ddd;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    max-width: 900px;
+    margin: 15px auto; /* Reduzir margem superior/inferior */
+    font-size: 0.85em; /* Reduzir a fonte base do container */
+}
+
+.romaneio-print-container h1 {
+    font-size: 1.6em; /* Reduzir tamanho do H1 */
+}
+.romaneio-print-container h4 {
+    font-size: 1.0em; /* Reduzir tamanho do H4 */
+}
+
+.romaneio-print-container p {
+    margin-bottom: 3px; /* Reduzir ainda mais o espaçamento entre parágrafos */
+    line-height: 1.3; /* Ajustar line-height para maior compactação */
+}
+
+.print-header {
+    padding-bottom: 10px; /* Reduzir padding */
+    margin-bottom: 15px; /* Reduzir margem */
+}
+.print-header h1 {
+    font-size: 1.5em; /* Ajuste para o título da empresa */
+}
+.print-header p {
+    font-size: 0.75em; /* Ajuste para informações de contato da empresa */
+}
+
+.print-section-top {
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+.print-section-top p {
+    font-size: 0.8em; /* Fonte menor para detalhes de cliente/motorista/veículo */
+}
+.print-section-top strong {
+    font-size: 1em; /* Manter strong legível */
+}
+
+
+.notes-print-section table th, .notes-print-section table td {
+    padding: 5px 8px; /* Reduzir padding das células da tabela de notas */
+    font-size: 0.8em; /* Reduzir fonte da tabela de notas */
+}
+.notes-print-section th {
+    font-size: 0.85em; /* Fonte um pouco maior para cabeçalhos da tabela */
+}
+
+.print-footer {
+    font-size: 0.75em; /* Reduzir fonte do rodapé */
+    padding-top: 15px;
+    margin-top: 20px;
+}
+.print-footer p {
+    line-height: 1.3;
+}
+.print-footer strong {
+    font-size: 1em;
+}
+
+/* --- Media Query para Impressão (Estilos para quando for imprimir) --- */
+@media print {
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: #fff !important;
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
+    }
+    .print-actions-buttons {
+        display: none !important;
+    }
+    .romaneio-print-container {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+    }
+    .romaneio-print-container, 
+    .romaneio-print-container p, 
+    .romaneio-print-container h1, 
+    .romaneio-print-container h4,
+    .notes-print-section th, .notes-print-section td {
+        color: #000 !important;
+    }
+    .print-header h1 {
+        color: #0056b3 !important;
+    }
+    .print-header, .print-section-top, .notes-print-section, .print-footer {
+        border-color: #bbb !important;
+    }
+
+    /* Ajustes específicos de fonte e espaçamento para impressão real */
+    .romaneio-print-container {
+        font-size: 0.75em !important; /* Fonte base ainda menor na impressão */
+    }
+    .romaneio-print-container p {
+        margin-bottom: 2px !important; /* Espaço mínimo entre parágrafos */
+    }
+    .notes-print-section table th, .notes-print-section table td {
+        padding: 3px 6px !important; /* Padding ainda menor na tabela para mais linhas */
+    }
+    .notes-print-section th {
+        font-size: 0.8em !important; /* Cabeçalho da tabela de notas */
+    }
+    .notes-print-section td {
+        font-size: 0.75em !important; /* Conteúdo da tabela de notas */
+    }
+    .notes-print-section table {
+        margin-top: 5px !important; /* Margem menor para a tabela */
+    }
+}
