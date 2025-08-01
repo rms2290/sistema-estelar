@@ -38,13 +38,24 @@
 
         <div class="mb-3">
             <label class="form-label">Notas Fiscais Associadas:</label>
-            {# Adicionado data-romaneio-id para o JS pegar o ID do romaneio #}
             <div id="notas_fiscais_checkboxes" class="notes-checkbox-container" data-romaneio-id="{{ romaneio.pk }}"> 
                 <p class="text-info">Carregando notas...</p> {# Mensagem inicial #}
             </div>
             {% if form.notas_fiscais.errors %}
                 <div class="text-danger">{{ form.notas_fiscais.errors }}</div>
             {% endif %}
+        </div>
+
+        {# NOVOS CAMPOS: Peso Total e Valor Total #}
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label">Peso Total (kg):</label>
+                <span id="peso_total_romaneio" class="form-control-plaintext">0,00 kg</span>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Valor Total (R$):</label>
+                <span id="valor_total_romaneio" class="form-control-plaintext">R$ 0,00</span>
+            </div>
         </div>
 
         <div class="mb-3">
@@ -68,31 +79,36 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            var clienteSelect = document.getElementById('id_cliente');
-            var notasFiscaisDiv = document.getElementById('notas_fiscais_checkboxes');
-            
+            const clienteSelect = document.getElementById('id_cliente');
+            const notasFiscaisDiv = document.getElementById('notas_fiscais_checkboxes');
+            const pesoTotalSpan = document.getElementById('peso_total_romaneio');
+            const valorTotalSpan = document.getElementById('valor_total_romaneio');
+
+            // allLoadedNotesData é global (definido em base.html)
+            // updateTotals, loadNotasFiscais, loadNotasFiscaisEdicao são globais (definidos em base.html)
+
             // Obter as IDs das notas fiscais já selecionadas para este romaneio (passadas do contexto Django)
-            const selectedNotas = [];
+            const initialSelectedNotasFromDjango = [];
             {% for nota in romaneio.notas_fiscais.all %}
-                selectedNotas.push({{ nota.id }});
+                initialSelectedNotasFromDjango.push({{ nota.id }});
             {% endfor %}
-            console.log("Notas selecionadas inicialmente (edição):", selectedNotas);
+            console.log("Notas selecionadas inicialmente (edição):", initialSelectedNotasFromDjango);
 
-            function initializeNotasEdicao() {
-                if (clienteSelect.value) {
-                    loadNotasFiscaisEdicao(clienteSelect.value, selectedNotas); // Chama a função global
-                } else {
-                    notasFiscaisDiv.innerHTML = '<p class="text-info">Selecione um cliente para carregar as notas fiscais.</p>';
-                }
-            }
-
-            // Bind event listener para a mudança de cliente
+            // Listener para o select do cliente
             if (clienteSelect) {
                 clienteSelect.addEventListener('change', function() {
-                    loadNotasFiscaisEdicao(this.value, selectedNotas); // Passa selectedNotas para re-marcar
+                    // Ao mudar o cliente, chamamos loadNotasFiscaisEdicao passando os elementos
+                    // Passamos um array vazio para selectedNotas ao mudar o cliente, pois a seleção antiga não se aplica
+                    loadNotasFiscaisEdicao(this.value, [], notasFiscaisDiv, pesoTotalSpan, valorTotalSpan); 
                 });
                 // Chamar na carga inicial da página
-                initializeNotasEdicao();
+                if (clienteSelect.value) {
+                    loadNotasFiscaisEdicao(clienteSelect.value, initialSelectedNotasFromDjango, notasFiscaisDiv, pesoTotalSpan, valorTotalSpan); 
+                } else {
+                    // Inicializa os totais como zero se nenhum cliente selecionado
+                    if (pesoTotalSpan) pesoTotalSpan.textContent = '0,00 kg';
+                    if (valorTotalSpan) valorTotalSpan.textContent = 'R$ 0,00';
+                }
             }
         });
     </script>

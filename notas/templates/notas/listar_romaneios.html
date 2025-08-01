@@ -1,39 +1,61 @@
 {% extends 'base.html' %}
 
-{% block content %}
-    <h2>Lista de Romaneios de Viagem</h2>
-    <a href="{% url 'notas:adicionar_romaneio' %}" class="btn btn-primary mb-3">Emitir Novo Romaneio</a>
+{% block title %}Pesquisar Romaneios{% endblock %}
 
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Código</th>
-                <th>Cliente</th>
-                <th>Motorista</th>
-                <th>Veículo</th>
-                <th>Data de Emissão</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for romaneio in romaneios %}
-                <tr>
-                    <td>{{ romaneio.codigo }}</td>
-                    <td>{{ romaneio.cliente.razao_social }}</td>
-                    <td>{{ romaneio.motorista.nome }}</td>
-                    <td>{{ romaneio.veiculo.placa }}</td>
-                    <td>{{ romaneio.data_emissao|date:"d/m/Y H:i" }}</td>
-                    <td>
-                        <a href="{% url 'notas:editar_romaneio' romaneio.pk %}" class="btn btn-sm btn-info">Editar</a>
-                        <a href="{% url 'notas:excluir_romaneio' romaneio.pk %}" class="btn btn-sm btn-danger">Excluir</a>
-                        {# Futuramente: link para imprimir/visualizar o romaneio completo #}
-                    </td>
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="6">Nenhum romaneio de viagem emitido.</td>
-                </tr>
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Pesquisar Romaneios</h2>
+        <a href="{% url 'notas:adicionar_romaneio' %}" class="btn btn-primary">Preparar Novo Romaneio</a>
+    </div>
+
+    {# Mensagens do Django #}
+    {% if messages %}
+        <ul class="messages list-unstyled">
+            {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
             {% endfor %}
-        </tbody>
-    </table>
+        </ul>
+    {% endif %}
+
+    {# Exibição dos resultados #}
+    {% if romaneios %}
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Código</th>
+                        <th>Cliente</th>
+                        <th>Motorista</th>
+                        <th>Veículo</th>
+                        <th>Data Emissão</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for romaneio in romaneios %}
+                        <tr>
+                            <td>{{ romaneio.codigo }}</td>
+                            <td>{{ romaneio.cliente.razao_social }}</td>
+                            <td>{{ romaneio.motorista.nome }}</td>
+                            <td>{{ romaneio.veiculo.placa }}</td>
+                            <td>{{ romaneio.data_emissao|date:"d/m/Y H:i" }}</td>
+                            <td>{{ romaneio.get_status_display }}</td>
+                            <td>
+                                {# MUDANÇA AQUI: Link para a tela de Detalhes #}
+                                <a href="{% url 'notas:detalhes_romaneio' romaneio.pk %}" class="btn btn-sm btn-info">Visualizar</a>
+                                {# Botões de Editar e Excluir são movidos para a tela de Detalhes #}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="alert alert-info">Nenhum romaneio cadastrado no momento. Utilize o botão "Preparar Novo Romaneio" para adicionar.</p>
+    {% endif %}
+
+    <a href="{% url 'notas:adicionar_romaneio' %}" class="btn btn-success mt-3">Preparar Novo Romaneio</a>
+</div>
 {% endblock %}

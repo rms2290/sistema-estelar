@@ -35,20 +35,24 @@
             <thead>
                 <tr>
                     <th>NF</th>
-                    <th>Cliente</th>
-                    <th>Data</th>
-                    <th>Valor</th>
-                    <th>Status NF</th>
+                    <th>Fornecedor</th>
+                    <th>Mercadoria</th>
+                    <th>Qtd</th>
+                    <th>Peso (kg)</th>
+                    <th>Valor (R$)</th>
+                    <th>Data Emissão</th>
                 </tr>
             </thead>
             <tbody>
                 {% for nota in notas_romaneadas %}
                     <tr>
                         <td>{{ nota.nota }}</td>
-                        <td>{{ nota.cliente.razao_social }}</td>
-                        <td>{{ nota.data|date:"d/m/Y" }}</td>
+                        <td>{{ nota.fornecedor }}</td>
+                        <td>{{ nota.mercadoria }}</td>
+                        <td>{{ nota.quantidade }}</td>
+                        <td>{{ nota.peso|floatformat:"0" }}</td>
                         <td>{{ nota.valor|floatformat:"2" }}</td>
-                        <td>{{ nota.get_status_display }}</td>
+                        <td>{{ nota.data|date:"d/m/Y" }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -58,13 +62,20 @@
         <p>Nenhuma nota fiscal vinculada a este romaneio.</p>
     {% endif %}
 
-    {# Botões de Ação: Editar e Excluir #}
+    {# Botões de Ação: Imprimir, Editar, Excluir e Voltar #}
     <div class="mt-4">
+        {% if romaneio.status == 'Emitido' %}
+            {# Botão Imprimir, aparece APENAS se o status for 'Emitido' #}
+            <a href="{% url 'notas:visualizar_romaneio_para_impressao' romaneio.pk %}" target="_blank" class="btn btn-primary me-2">Imprimir Romaneio</a>
+        {% endif %}
+        
         <a href="{% url 'notas:editar_romaneio' romaneio.pk %}" class="btn btn-warning me-2">Editar Romaneio</a>
+        
         <form action="{% url 'notas:excluir_romaneio' romaneio.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este romaneio?');">
             {% csrf_token %}
             <button type="submit" class="btn btn-danger me-2">Excluir Romaneio</button>
         </form>
+        
         <a href="{% url 'notas:listar_romaneios' %}" class="btn btn-secondary">Voltar à Pesquisa</a>
     </div>
 

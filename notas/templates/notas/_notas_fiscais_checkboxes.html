@@ -1,0 +1,33 @@
+{# notas/templates/notas/_notas_fiscais_checkboxes.html #}
+
+<div class="notes-checkbox-container">
+    <div class="notes-header-row row g-0"> {# g-0 remove o gutter #}
+        <div class="col-md-1"></div> {# Para o checkbox #}
+        <div class="col-md-2"><strong>NF</strong></div>
+        <div class="col-md-3"><strong>Cliente</strong></div>
+        <div class="col-md-2"><strong>Data</strong></div>
+        <div class="col-md-2"><strong>Valor</strong></div>
+        <div class="col-md-2"><strong>Status</strong></div>
+    </div>
+
+    {% if notas_fiscais %}
+        {% for nota in notas_fiscais %}
+            <div class="note-info-row row g-0 align-items-center"> {# g-0 remove o gutter #}
+                <div class="col-md-1">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="notas_fiscais" value="{{ nota.pk }}" id="nota_{{ nota.pk }}"
+                               {% if nota.pk in selected_notas_ids %}checked{% endif %}>
+                        <label class="form-check-label" for="nota_{{ nota.pk }}"></label>
+                    </div>
+                </div>
+                <div class="col-md-2">{{ nota.nota }}</div>
+                <div class="col-md-3">{{ nota.cliente.razao_social }}</div>
+                <div class="col-md-2">{{ nota.data|date:"d/m/Y" }}</div>
+                <div class="col-md-2">{{ nota.valor|floatformat:"2" }}</div>
+                <div class="col-md-2">{{ nota.get_status_display }}</div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p class="mt-3">Nenhuma nota fiscal disponível para este cliente.</p>
+    {% endif %}
+</div>

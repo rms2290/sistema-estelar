@@ -403,7 +403,7 @@ def adicionar_romaneio(request):
             try:
                 cliente_obj = Cliente.objects.get(pk=cliente_id)
                 form.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
-                    cliente=cliente_obj, status='Depósito'
+                    cliente=cliente_obj, status='Depósito' 
                 ).order_by('nota')
             except Cliente.DoesNotExist:
                 form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
@@ -418,12 +418,13 @@ def adicionar_romaneio(request):
             
             if 'emitir' in request.POST:
                 romaneio.status = 'Emitido'
-            else:
+            else: # Clicou em 'salvar' ou outro botão
                 romaneio.status = 'Rascunho'
 
             romaneio.save()
-            form.save_m2m()
+            form.save_m2m() # Salva a relação ManyToMany
 
+            # Atualizar o status das notas fiscais associadas
             for nota_fiscal in romaneio.notas_fiscais.all():
                 if romaneio.status == 'Emitido':
                     nota_fiscal.status = 'Enviada'
@@ -432,23 +433,26 @@ def adicionar_romaneio(request):
                 nota_fiscal.save()
 
             messages.success(request, f'Romaneio {romaneio.codigo} ({romaneio.status}) salvo com sucesso!')
-            return redirect('notas:listar_romaneios')
+            
+            # >>> MUDANÇA AQUI: Redirecionar para a tela de visualização se Emitido <<<
+            if romaneio.status == 'Emitido':
+                return redirect('notas:visualizar_romaneio_para_impressao', pk=romaneio.pk)
+            else: # Rascunho
+                # Redirecionar para detalhes (para poder continuar editando) ou para listar
+                return redirect('notas:detalhes_romaneio', pk=romaneio.pk) # Sugiro detalhes para rascunho
         else:
             messages.error(request, 'Houve um erro ao emitir/salvar o romaneio. Verifique os campos.')
     else:
         form = RomaneioViagemForm()
         provisional_codigo = get_next_romaneio_codigo()
         
-        form.fields['veiculo'].queryset = Veiculo.objects.all().order_by('placa')
-        form.fields['motorista'].queryset = Motorista.objects.all().order_by('nome')
-        form.fields['cliente'].queryset = Cliente.objects.filter(status='Ativo').order_by('razao_social')
+        # ... (querysets) ...
 
     context = {
         'form': form,
         'provisional_codigo': provisional_codigo,
     }
     return render(request, 'notas/adicionar_romaneio.html', context)
-
 
 def editar_romaneio(request, pk):
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
@@ -478,6 +482,7 @@ def editar_romaneio(request, pk):
             
             romaneio.data_emissao = form.cleaned_data['data_romaneio']
             
+            # --- Lógica de Status Baseada no Botão Clicado ---
             if 'emitir' in request.POST:
                 romaneio.status = 'Emitido'
             elif 'salvar' in request.POST:
@@ -488,7 +493,7 @@ def editar_romaneio(request, pk):
             notas_depois_salvar = set(romaneio.notas_fiscais.all())
 
             for nota_fiscal_removida in (notas_antes_salvar - notas_depois_salvar):
-                if not nota_fiscal_removida.romaneios_vinculados.exclude(pk=romaneio.pk).exists(): # Verifica se não está em NENHUM outro romaneio
+                if not nota_fiscal_removida.romaneios_vinculados.exclude(pk=romaneio.pk).exists():
                     nota_fiscal_removida.status = 'Depósito'
                     nota_fiscal_removida.save()
             
@@ -500,25 +505,18 @@ def editar_romaneio(request, pk):
                 nota_fiscal_atualizada.save()
 
             messages.success(request, f'Romaneio {romaneio.codigo} ({romaneio.status}) atualizado com sucesso!')
-            return redirect('notas:listar_romaneios')
+            
+            # >>> MUDANÇA AQUI: Redirecionar para a tela de visualização se Emitido <<<
+            if romaneio.status == 'Emitido':
+                return redirect('notas:visualizar_romaneio_para_impressao', pk=romaneio.pk)
+            else: # Rascunho
+                return redirect('notas:detalhes_romaneio', pk=romaneio.pk) # Volta para os detalhes do romaneio
         else:
             messages.error(request, 'Houve um erro ao atualizar o romaneio. Verifique os campos.')
     else: # GET request para edição
         form = RomaneioViagemForm(instance=romaneio)
         
-        form.fields['veiculo'].queryset = Veiculo.objects.all().order_by('placa')
-        form.fields['motorista'].queryset = Motorista.objects.all().order_by('nome')
-        form.fields['cliente'].queryset = Cliente.objects.filter(status='Ativo').order_by('razao_social')
-
-        if romaneio.data_emissao:
-            form.fields['data_romaneio'].initial = romaneio.data_emissao.date()
-
-        if romaneio.cliente:
-            form.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
-                cliente=romaneio.cliente
-            ).filter(
-                Q(status='Depósito') | Q(romaneios_vinculados=romaneio)
-            ).order_by('nota')
+        # ... (querysets e data_emissao) ...
 
     context = {
         'form': form,
@@ -635,6 +633,40 @@ def load_notas_fiscais_edicao(request):
     except Exception as e:
         print(f"AJAX: Erro inesperado na view load_notas_fiscais_edicao: {e}")
         return JsonResponse({'error': str(e)}, status=500)
+    
+def load_notas_fiscais_para_romaneio(request):
+    cliente_id = request.GET.get('cliente_id')
+    romaneio_id = request.GET.get('romaneio_id') # Pode ser None para adicionar novo romaneio
+
+    notas_fiscais = NotaFiscal.objects.none()
+    selected_notas_ids = []
+
+    if cliente_id:
+        # Notas do cliente com status 'Depósito'
+        notas_deposito = NotaFiscal.objects.filter(cliente_id=cliente_id, status='Depósito')
+
+        # Se for um romaneio existente, incluir as notas já vinculadas a ele
+        if romaneio_id:
+            try:
+                romaneio_existente = RomaneioViagem.objects.get(pk=romaneio_id)
+                notas_vinculadas = romaneio_existente.notas_fiscais.all()
+                selected_notas_ids = list(notas_vinculadas.values_list('pk', flat=True))
+                
+                # Combine as notas em depósito com as já vinculadas (evitando duplicatas)
+                notas_fiscais = (notas_deposito | notas_vinculadas).distinct().order_by('data', 'nota')
+            except RomaneioViagem.DoesNotExist:
+                pass # Romaneio não encontrado, apenas notas em depósito
+        else:
+            # Se for um novo romaneio, apenas notas em depósito
+            notas_fiscais = notas_deposito.order_by('data', 'nota')
+            
+    # Renderiza o template parcial com as notas e as IDs das selecionadas
+    html = render(request, 'notas/_notas_fiscais_checkboxes.html', {
+        'notas_fiscais': notas_fiscais,
+        'selected_notas_ids': selected_notas_ids, # Passa as IDs das notas já selecionadas
+    }).content.decode('utf-8')
+    
+    return JsonResponse({'html': html})
 
 # --------------------------------------------------------------------------------------
 # Detalhes Views (já implementadas)
@@ -670,3 +702,15 @@ def detalhes_veiculo(request, pk):
         'veiculo': veiculo,
     }
     return render(request, 'notas/detalhes_veiculo.html', context)
+# --------------------------------------------------------------------------------------
+# NOVA VIEW: Visualizar Romaneio para Impressão
+# --------------------------------------------------------------------------------------
+def visualizar_romaneio_para_impressao(request, pk):
+    romaneio = get_object_or_404(RomaneioViagem, pk=pk)
+    notas_romaneadas = romaneio.notas_fiscais.all().order_by('nota') # Pegar notas associadas
+
+    context = {
+        'romaneio': romaneio,
+        'notas_romaneadas': notas_romaneadas,
+    }
+    return render(request, 'notas/visualizar_romaneio_para_impressao.html', context)

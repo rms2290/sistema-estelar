@@ -1,0 +1,173 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Romaneio de Viagem - {{ romaneio.codigo }}</title>
+    {# Incluir Bootstrap CSS para impressão #}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    
+    {# Estilos customizados para impressão #}
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20mm; /* Margens para impressão */
+            color: #333;
+            background-color: #fff; /* Fundo branco para impressão */
+        }
+        .romaneio-container {
+            width: 100%;
+            max-width: 800px; /* Largura máxima do documento */
+            margin: 0 auto;
+            border: 1px solid #ccc;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            background-color: #fff;
+        }
+        .header-section, .client-section, .driver-vehicle-section, .notes-section, .footer-section {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #eee;
+        }
+        .header-section h1 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+        .header-section p {
+            text-align: center;
+            font-size: 0.9em;
+            color: #555;
+        }
+        .section-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            color: #333;
+        }
+        .footer-section {
+            text-align: right;
+            font-weight: bold;
+            border-bottom: none;
+        }
+        .print-button-container {
+            text-align: center;
+            margin-top: 30px;
+        }
+        /* Media Query para impressão */
+        @media print {
+            .print-button-container {
+                display: none; /* Oculta o botão de imprimir na versão impressa */
+            }
+            body {
+                margin: 0; /* Remove margens extras na impressão */
+            }
+            .romaneio-container {
+                border: none; /* Remove a borda para um visual mais limpo na impressão */
+                box-shadow: none;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="romaneio-container">
+        <div class="header-section">
+            <h1>Romaneio de Viagem</h1>
+            <p><strong>Código:</strong> {{ romaneio.codigo }} | <strong>Status:</strong> {{ romaneio.get_status_display }}</p>
+            <p>Data de Emissão: {{ romaneio.data_emissao|date:"d/m/Y H:i" }}</p>
+            {# Adicione informações da sua empresa aqui #}
+            <p>Agencia Estelar | CNPJ: XX.XXX.XXX/XXXX-XX | Endereço: Sua Rua, Seu Número</p>
+        </div>
+
+        <div class="client-section">
+            <div class="section-title">Dados do Cliente</div>
+            <p><strong>Razão Social:</strong> {{ romaneio.cliente.razao_social }}</p>
+            <p><strong>CNPJ:</strong> {{ romaneio.cliente.cnpj|default:"N/A" }}</p>
+            <p><strong>Telefone:</strong> {{ romaneio.cliente.telefone|default:"N/A" }}</p>
+            <p><strong>Endereço:</strong> {{ romaneio.cliente.endereco|default:"N/A" }}, {{ romaneio.cliente.numero|default:"S/N" }} - {{ romaneio.cliente.bairro|default:"N/A" }}</p>
+            <p><strong>Cidade/Estado:</strong> {{ romaneio.cliente.cidade|default:"N/A" }}/{{ romaneio.cliente.estado|default:"N/A" }} - CEP: {{ romaneio.cliente.cep|default:"N/A" }}</p>
+        </div>
+
+        <div class="driver-vehicle-section">
+            <div class="section-title">Dados do Motorista e Veículo</div>
+            <p><strong>Motorista:</strong> {{ romaneio.motorista.nome }} (CPF: {{ romaneio.motorista.cpf }})</p>
+            <p><strong>CNH:</strong> {{ romaneio.motorista.cnh|default:"N/A" }} | <strong>Telefone:</strong> {{ romaneio.motorista.telefone|default:"N/A" }}</p>
+            <p><strong>Veículo:</strong> {{ romaneio.veiculo.placa }} ({{ romaneio.veiculo.get_tipo_unidade_display }})</p>
+            <p><strong>Chassi:</strong> {{ romaneio.veiculo.chassi|default:"N/A" }} | <strong>RNTRC:</strong> {{ romaneio.veiculo.rntrc|default:"N/A" }}</p>
+            {# Adicionar informações de reboques aqui se o motorista tiver #}
+            {% if romaneio.motorista.reboque_1 %}
+                <p><strong>Reboque 1:</strong> {{ romaneio.motorista.reboque_1.placa }} ({{ romaneio.motorista.reboque_1.get_tipo_unidade_display }})</p>
+            {% endif %}
+            {% if romaneio.motorista.reboque_2 %}
+                <p><strong>Reboque 2:</strong> {{ romaneio.motorista.reboque_2.placa }} ({{ romaneio.motorista.reboque_2.get_tipo_unidade_display }})</p>
+            {% endif %}
+            <p><strong>Observações do Romaneio:</strong> {{ romaneio.observacoes|default:"N/A" }}</p>
+        </div>
+
+        <div class="notes-section">
+            <div class="section-title">Notas Fiscais Vinculadas</div>
+            {% if notas_romaneadas %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>NF</th>
+                            <th>Fornecedor</th>
+                            <th>Mercadoria</th>
+                            <th>Qtd</th>
+                            <th>Peso (kg)</th>
+                            <th>Valor (R$)</th>
+                            <th>Data Emissão</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for nota in notas_romaneadas %}
+                            <tr>
+                                <td>{{ nota.nota }}</td>
+                                <td>{{ nota.fornecedor }}</td>
+                                <td>{{ nota.mercadoria }}</td>
+                                <td>{{ nota.quantidade }}</td>
+                                <td>{{ nota.peso|floatformat:"0" }}</td>
+                                <td>{{ nota.valor|floatformat:"2" }}</td>
+                                <td>{{ nota.data|date:"d/m/Y" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>Nenhuma nota fiscal vinculada a este romaneio.</p>
+            {% endif %}
+        </div>
+
+        <div class="footer-section">
+            <p>Total de Notas: {{ notas_romaneadas.count }}</p>
+            {# Você pode adicionar um total de peso ou valor aqui se precisar #}
+        </div>
+    </div>
+
+    <div class="print-button-container">
+        <button onclick="window.print()" class="btn btn-primary">Imprimir Romaneio</button>
+        <a href="{% url 'notas:detalhes_romaneio' romaneio.pk %}" class="btn btn-secondary ms-2">Voltar</a>
+    </div>
+
+    {# Incluir Bootstrap JS (não estritamente necessário para impressão, mas para o botão Voltar) #}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

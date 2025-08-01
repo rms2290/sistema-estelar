@@ -78,9 +78,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
     {# >>> JAVASCRIPT GLOBAL PARA CARREGAMENTO DE NOTAS (MOVIDO PARA AQUI) <<< #}
-    <script>
-        // Funções para renderizar e carregar notas
-        function renderNotasCheckboxes(notasData, notasFiscaisDiv, selectedNotes = []) {
+     <script>
+        // Funções para renderizar e carregar notas - AGORA RECEBEM ELEMENTOS COMO ARGUMENTOS
+        function renderNotasCheckboxes(notasData, notasFiscaisDiv, selectedNotes = [], pesoTotalSpan = null, valorTotalSpan = null) {
             notasFiscaisDiv.innerHTML = ''; // Limpa antes de adicionar
 
             if (notasData.length > 0) {
@@ -111,6 +111,10 @@
                     if (selectedNotes.includes(nota.id)) {
                         input.checked = true;
                     }
+                    // Adiciona listener para update de totais SOMENTE se os spans de total foram passados
+                    if (pesoTotalSpan && valorTotalSpan) {
+                        input.addEventListener('change', () => updateTotals(notasFiscaisDiv, pesoTotalSpan, valorTotalSpan)); 
+                    }
                     
                     const label = document.createElement('label');
                     label.className = 'form-check-label';
@@ -119,8 +123,8 @@
                     label.innerHTML = `
                         <div class="note-info-row">
                             <div class="note-col-nf text-truncate" title="Número: ${nota.nota_numero}"><strong>${nota.nota_numero}</strong></div>
-                            <div class="note-col-fornecedor text-truncate" title="Fornecedor: ${nota.fornecedor}">${nota.fornecedor}</div>
-                            <div class="note-col-mercadoria text-truncate" title="Mercadoria: ${nota.mercadoria}">${nota.mercadoria}</div>
+                            <div class="note-col-fornecedor text-truncate" title="Forn: ${nota.fornecedor}">${nota.fornecedor}</div>
+                            <div class="note-col-mercadoria text-truncate" title="Merc: ${nota.mercadoria}">${nota.mercadoria}</div>
                             <div class="note-col-qtd text-truncate" title="Qtd: ${nota.quantidade}">${nota.quantidade}</div>
                             <div class="note-col-peso text-truncate" title="Peso: ${nota.peso} kg">${nota.peso} kg</div>
                             <div class="note-col-valor text-truncate" title="Valor: R$ ${nota.valor}">R$ ${nota.valor}</div>
@@ -132,13 +136,48 @@
                     divContainer.appendChild(label);
                     notasFiscaisDiv.appendChild(divContainer);
                 });
+                // Calcula totais iniciais após carregar, SOMENTE se os spans de total foram passados
+                if (pesoTotalSpan && valorTotalSpan) {
+                    updateTotals(notasFiscaisDiv, pesoTotalSpan, valorTotalSpan); 
+                }
             } else {
                 notasFiscaisDiv.innerHTML = '<p class="text-info">Nenhuma nota fiscal disponível no status "Depósito" para este cliente.</p>';
+                // Zera totais se não há notas, SOMENTE se os spans de total foram passados
+                if (pesoTotalSpan && valorTotalSpan) {
+                    updateTotals(notasFiscaisDiv, pesoTotalSpan, valorTotalSpan); 
+                }
             }
         }
 
-        function loadNotasFiscais(clienteId) {
-            const notasFiscaisDiv = document.getElementById('notas_fiscais_checkboxes');
+        // NOVO: Função para calcular e atualizar os totais - AGORA RECEBE ELEMENTOS COMO ARGUMENTOS
+        function updateTotals(notasFiscaisDiv, pesoTotalSpan, valorTotalSpan) {
+            let currentPesoTotal = 0;
+            let currentValorTotal = 0;
+            
+            const checkboxes = notasFiscaisDiv.querySelectorAll('input[name="notas_fiscais"]');
+            checkboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    // allLoadedNotesData deve estar disponível globalmente ou ser passado/obtido de forma diferente
+                    // Para simplificar, faremos uma busca por ID em um array global ou no DOM.
+                    // Assumimos que allLoadedNotesData é um array global que renderNotasCheckboxes popula.
+                    const notaData = allLoadedNotesData.find(note => String(note.id) === checkbox.value);
+                    if (notaData) {
+                        currentPesoTotal += parseFloat(notaData.peso.replace(',', '.')) || 0;
+                        currentValorTotal += parseFloat(notaData.valor.replace(',', '.')) || 0;
+                    }
+                }
+            });
+
+            pesoTotalSpan.textContent = `${currentPesoTotal.toFixed(2).replace('.', ',')} kg`;
+            valorTotalSpan.textContent = `R$ ${currentValorTotal.toFixed(2).replace('.', ',')}`;
+        }
+
+        // Variável global para armazenar os dados das notas carregadas
+        let allLoadedNotesData = []; 
+
+        // --- loadNotasFiscais (para Adicionar Romaneio) ---
+        // AGORA RECEBE OS ELEMENTOS DOS SPANS DE TOTAL COMO ARGUMENTOS
+        function loadNotasFiscais(clienteId, notasFiscaisDiv, pesoTotalSpan, valorTotalSpan) {
             notasFiscaisDiv.innerHTML = '<p>Carregando notas...</p>';
             if (clienteId) {
                 fetch(`/notas/ajax/load-notas/?cliente_id=${clienteId}`)
@@ -147,19 +186,23 @@
                         return response.json();
                     })
                     .then(data => {
-                        renderNotasCheckboxes(data, notasFiscaisDiv);
+                        allLoadedNotesData = data; // Armazena dados brutos globalmente
+                        renderNotasCheckboxes(data, notasFiscaisDiv, [], pesoTotalSpan, valorTotalSpan); // Passa spans para render
                     })
                     .catch(error => {
                         console.error('Erro ao carregar notas fiscais (Frontend):', error);
                         notasFiscaisDiv.innerHTML = '<p class="text-danger">Erro ao carregar notas fiscais. Tente novamente.</p>';
+                        if (pesoTotalSpan && valorTotalSpan) updateTotals(notasFiscaisDiv, pesoTotalSpan, valorTotalSpan); // Zera totais
                     });
             } else {
                 notasFiscaisDiv.innerHTML = '<p class="text-info">Selecione um cliente para carregar as notas fiscais.</p>';
+                if (pesoTotalSpan && valorTotalSpan) updateTotals(notasFiscaisDiv, pesoTotalSpan, valorTotalSpan); // Zera totais
             }
         }
 
-        function loadNotasFiscaisEdicao(clienteId, initialSelectedNotas = []) {
-            const notasFiscaisDiv = document.getElementById('notas_fiscais_checkboxes');
+        // --- loadNotasFiscaisEdicao (para Editar Romaneio) ---
+        // AGORA RECEBE OS ELEMENTOS DOS SPANS DE TOTAL COMO ARGUMENTOS
+        function loadNotasFiscaisEdicao(clienteId, initialSelectedNotas = [], notasFiscaisDiv, pesoTotalSpan, valorTotalSpan) {
             notasFiscaisDiv.innerHTML = '<p>Carregando notas...</p>';
 
             if (clienteId) {
@@ -170,14 +213,17 @@
                         return response.json();
                     })
                     .then(data => {
-                        renderNotasCheckboxes(data, notasFiscaisDiv, initialSelectedNotas);
+                        allLoadedNotesData = data; // Armazena dados brutos globalmente
+                        renderNotasCheckboxes(data, notasFiscaisDiv, initialSelectedNotas, pesoTotalSpan, valorTotalSpan); // Passa spans
                     })
                     .catch(error => {
                         console.error('Erro ao carregar notas fiscais (Frontend Edição):', error);
                         notasFiscaisDiv.innerHTML = '<p class="text-danger">Erro ao carregar notas fiscais. Tente novamente.</p>';
+                        if (pesoTotalSpan && valorTotalSpan) updateTotals(notasFiscaisDiv, pesoTotalSpan, valorTotalSpan); // Zera totais
                     });
             } else {
                 notasFiscaisDiv.innerHTML = '<p class="text-info">Selecione um cliente para ver as notas fiscais disponíveis.</p>';
+                if (pesoTotalSpan && valorTotalSpan) updateTotals(notasFiscaisDiv, pesoTotalSpan, valorTotalSpan); // Zera totais
             }
         }
     </script>
