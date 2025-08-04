@@ -124,6 +124,96 @@ class ClienteForm(forms.ModelForm):
         required=False,
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+    
+    # Sobrescreve campos para adicionar placeholders e estilos consistentes
+    razao_social = forms.CharField(
+        label='Razão Social',
+        max_length=255,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Razão Social da Empresa'})
+    )
+    
+    cnpj = forms.CharField(
+        label='CNPJ',
+        max_length=18,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '00.000.000/0000-00'})
+    )
+    
+    nome_fantasia = forms.CharField(
+        label='Nome Fantasia',
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome Fantasia (opcional)'})
+    )
+    
+    inscricao_estadual = forms.CharField(
+        label='Inscrição Estadual',
+        max_length=20,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Inscrição Estadual'})
+    )
+    
+    endereco = forms.CharField(
+        label='Endereço',
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Endereço Completo'})
+    )
+    
+    numero = forms.CharField(
+        label='Número',
+        max_length=10,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número'})
+    )
+    
+    complemento = forms.CharField(
+        label='Complemento',
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Complemento (opcional)'})
+    )
+    
+    bairro = forms.CharField(
+        label='Bairro',
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Bairro'})
+    )
+    
+    cidade = forms.CharField(
+        label='Cidade',
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Cidade'})
+    )
+    
+    cep = forms.CharField(
+        label='CEP',
+        max_length=9,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '00000-000'})
+    )
+    
+    telefone = forms.CharField(
+        label='Telefone',
+        max_length=20,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(00) 00000-0000'})
+    )
+    
+    email = forms.EmailField(
+        label='Email',
+        required=False,
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@exemplo.com'})
+    )
+    
+    status = forms.ChoiceField(
+        label='Status',
+        choices=Cliente.STATUS_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
     class Meta:
         model = Cliente
         fields = '__all__' # Ou liste os campos que você quer que apareçam

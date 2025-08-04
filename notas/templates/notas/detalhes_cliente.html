@@ -16,34 +16,68 @@
     {% endif %}
 
     {# Dados do Cliente #}
-    <div class="card card-body mb-4">
-        <h3>Informações Cadastrais</h3>
-        <p><strong>Razão Social:</strong> {{ cliente.razao_social }}</p>
-        <p><strong>Nome Fantasia:</strong> {{ cliente.nome_fantasia|default:"N/A" }}</p>
-        <p><strong>CNPJ:</strong> {{ cliente.cnpj }}</p>
-        <p><strong>Inscrição Estadual:</strong> {{ cliente.inscricao_estadual|default:"N/A" }}</p>
-        <p><strong>Status:</strong> {{ cliente.get_status_display }}</p>
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title mb-0">
+                <i class="fas fa-building"></i> Informações Cadastrais
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Razão Social:</strong> {{ cliente.razao_social }}</p>
+                    <p><strong>Nome Fantasia:</strong> {{ cliente.nome_fantasia|default:"N/A" }}</p>
+                    <p><strong>CNPJ:</strong> {{ cliente.cnpj }}</p>
+                    <p><strong>Inscrição Estadual:</strong> {{ cliente.inscricao_estadual|default:"N/A" }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Status:</strong> 
+                        <span class="badge {% if cliente.status == 'Ativo' %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ cliente.get_status_display }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="card card-body mb-4">
-        <h3>Contato e Endereço</h3>
-        <p><strong>Telefone:</strong> {{ cliente.telefone|default:"N/A" }}</p>
-        <p><strong>Email:</strong> {{ cliente.email|default:"N/A" }}</p>
-        <p><strong>Endereço:</strong> {{ cliente.endereco|default:"N/A" }}, {{ cliente.numero|default:"S/N" }}</p>
-        <p><strong>Complemento:</strong> {{ cliente.complemento|default:"N/A" }}</p>
-        <p><strong>Bairro:</strong> {{ cliente.bairro|default:"N/A" }}</p>
-        <p><strong>Cidade/Estado:</strong> {{ cliente.cidade|default:"N/A" }}/{{ cliente.estado|default:"N/A" }}</p>
-        <p><strong>CEP:</strong> {{ cliente.cep|default:"N/A" }}</p>
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title mb-0">
+                <i class="fas fa-map-marker-alt"></i> Contato e Endereço
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Telefone:</strong> {{ cliente.telefone|default:"N/A" }}</p>
+                    <p><strong>Email:</strong> {{ cliente.email|default:"N/A" }}</p>
+                    <p><strong>Endereço:</strong> {{ cliente.endereco|default:"N/A" }}, {{ cliente.numero|default:"S/N" }}</p>
+                    <p><strong>Complemento:</strong> {{ cliente.complemento|default:"N/A" }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Bairro:</strong> {{ cliente.bairro|default:"N/A" }}</p>
+                    <p><strong>Cidade/Estado:</strong> {{ cliente.cidade|default:"N/A" }}/{{ cliente.estado|default:"N/A" }}</p>
+                    <p><strong>CEP:</strong> {{ cliente.cep|default:"N/A" }}</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     {# Botões de Ação: Editar e Excluir #}
     <div class="mt-4">
-        <a href="{% url 'notas:editar_cliente' cliente.pk %}" class="btn btn-warning me-2">Editar Cliente</a>
+        <a href="{% url 'notas:editar_cliente' cliente.pk %}" class="btn btn-warning me-2">
+            <i class="fas fa-edit"></i> Editar Cliente
+        </a>
         <form action="{% url 'notas:excluir_cliente' cliente.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este cliente?');">
             {% csrf_token %}
-            <button type="submit" class="btn btn-danger me-2">Excluir Cliente</button>
+            <button type="submit" class="btn btn-danger me-2">
+                <i class="fas fa-trash"></i> Excluir Cliente
+            </button>
         </form>
-        <a href="{% url 'notas:listar_clientes' %}" class="btn btn-secondary">Voltar à Pesquisa</a>
+        <a href="{% url 'notas:listar_clientes' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Voltar à Pesquisa
+        </a>
     </div>
 
 </div>

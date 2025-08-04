@@ -9,20 +9,36 @@
         <a href="{% url 'notas:adicionar_motorista' %}" class="btn btn-primary">Adicionar Motorista</a>
     </div>
 
-    <div class="card card-body mb-4">
-        <form method="get" class="form-row align-items-end">
-            <div class="col-md-5 mb-3">
-                {{ search_form.nome.label_tag }}
-                {{ search_form.nome }}
-            </div>
-            <div class="col-md-5 mb-3">
-                {{ search_form.cpf.label_tag }}
-                {{ search_form.cpf }}
-            </div>
-            <div class="col-md-2 mb-3">
-                <button type="submit" class="btn btn-info btn-block">Buscar</button>
-            </div>
-        </form>
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-search"></i> Filtros de Pesquisa
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="get">
+                <div class="row">
+                    <div class="col-md-5 mb-3">
+                        <label for="{{ search_form.nome.id_for_label }}" class="form-label">
+                            <i class="fas fa-user"></i> {{ search_form.nome.label }}
+                        </label>
+                        {{ search_form.nome }}
+                    </div>
+                    <div class="col-md-5 mb-3">
+                        <label for="{{ search_form.cpf.id_for_label }}" class="form-label">
+                            <i class="fas fa-id-card"></i> {{ search_form.cpf.label }}
+                        </label>
+                        {{ search_form.cpf }}
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="submit" class="btn btn-primary btn-block">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 
     {# Mensagens do Django #}
@@ -37,8 +53,8 @@
     {# Exibição dos resultados #}
     {% if motoristas %}
         <div class="table-responsive">
-            <table class="table table-striped table-bordered">
-                <thead class="table-dark">
+            <table class="table table-striped table-hover">
+                <thead>
                     <tr>
                         <th>Nome</th>
                         <th>CPF</th>
@@ -50,14 +66,14 @@
                 <tbody>
                     {% for motorista in motoristas %}
                         <tr>
-                            <td>{{ motorista.nome }}</td>
+                            <td><strong>{{ motorista.nome }}</strong></td>
                             <td>{{ motorista.cpf }}</td>
-                            <td>{{ motorista.cnh }}</td>
-                            <td>{{ motorista.telefone }}</td>
+                            <td>{{ motorista.cnh|default:"-" }}</td>
+                            <td>{{ motorista.telefone|default:"-" }}</td>
                             <td>
-                                {# MUDANÇA AQUI: Link para a tela de Detalhes #}
-                                <a href="{% url 'notas:detalhes_motorista' motorista.pk %}" class="btn btn-sm btn-info">Visualizar</a>
-                                {# Botões de Editar e Excluir são movidos para a tela de Detalhes #}
+                                <a href="{% url 'notas:detalhes_motorista' motorista.pk %}" class="btn btn-info btn-sm" title="Ver Detalhes">
+                                    <i class="fas fa-eye"></i>
+                                </a>
                             </td>
                         </tr>
                     {% endfor %}

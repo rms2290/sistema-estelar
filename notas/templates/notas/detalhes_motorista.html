@@ -16,68 +16,149 @@
     {% endif %}
 
     {# Dados do Motorista #}
-    <div class="card card-body mb-4">
-        <h3>Informações Pessoais e CNH</h3>
-        <p><strong>Nome Completo:</strong> {{ motorista.nome }}</p>
-        <p><strong>CPF:</strong> {{ motorista.cpf }}</p>
-        <p><strong>CNH:</strong> {{ motorista.cnh|default:"N/A" }}</p>
-        <p><strong>Código de Segurança CNH:</strong> {{ motorista.codigo_seguranca|default:"N/A" }}</p>
-        <p><strong>Vencimento CNH:</strong> {{ motorista.vencimento_cnh|date:"d/m/Y"|default:"N/A" }}</p>
-        <p><strong>UF de Emissão CNH:</strong> {{ motorista.uf_emissao_cnh|default:"N/A" }}</p>
-        <p><strong>Data de Nascimento:</strong> {{ motorista.data_nascimento|date:"d/m/Y"|default:"N/A" }}</p>
-        <p><strong>Telefone:</strong> {{ motorista.telefone|default:"N/A" }}</p>
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title mb-0">
+                <i class="fas fa-user"></i> Informações Pessoais e CNH
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Nome Completo:</strong> {{ motorista.nome }}</p>
+                    <p><strong>CPF:</strong> {{ motorista.cpf }}</p>
+                    <p><strong>CNH:</strong> {{ motorista.cnh|default:"N/A" }}</p>
+                    <p><strong>Código de Segurança CNH:</strong> {{ motorista.codigo_seguranca|default:"N/A" }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Vencimento CNH:</strong> {{ motorista.vencimento_cnh|date:"d/m/Y"|default:"N/A" }}</p>
+                    <p><strong>UF de Emissão CNH:</strong> {{ motorista.uf_emissao_cnh|default:"N/A" }}</p>
+                    <p><strong>Data de Nascimento:</strong> {{ motorista.data_nascimento|date:"d/m/Y"|default:"N/A" }}</p>
+                    <p><strong>Telefone:</strong> {{ motorista.telefone|default:"N/A" }}</p>
+                </div>
+            </div>
+        </div>
     </div>
 
-    {# NOVO BLOCO: Composição Veicular do Motorista #}
-    <div class="card card-body mb-4">
-        <h3>Composição Veicular que Dirige</h3>
-        <p><strong>Tipo de Composição:</strong> {{ motorista.get_tipo_composicao_motorista_display }}</p>
-        {% if motorista.veiculo_principal %}
-            <p><strong>Veículo Principal (Placa 1):</strong> <a href="{% url 'notas:detalhes_veiculo' motorista.veiculo_principal.pk %}">{{ motorista.veiculo_principal.placa }} ({{ motorista.veiculo_principal.get_tipo_unidade_display }})</a></p>
-        {% else %}
-            <p>Nenhum veículo principal associado.</p>
-        {% endif %}
-        {% if motorista.reboque_1 %}
-            <p><strong>Reboque 1 (Placa 2):</strong> <a href="{% url 'notas:detalhes_veiculo' motorista.reboque_1.pk %}">{{ motorista.reboque_1.placa }} ({{ motorista.reboque_1.get_tipo_unidade_display }})</a></p>
-        {% endif %}
-        {% if motorista.reboque_2 %}
-            <p><strong>Reboque 2 (Placa 3):</strong> <a href="{% url 'notas:detalhes_veiculo' motorista.reboque_2.pk %}">{{ motorista.reboque_2.placa }} ({{ motorista.reboque_2.get_tipo_unidade_display }})</a></p>
-        {% endif %}
-        {% if not motorista.veiculo_principal and not motorista.reboque_1 and not motorista.reboque_2 %}
-            <p>Nenhuma unidade de veículo associada a esta composição.</p>
-        {% endif %}
+    {# Composição Veicular do Motorista #}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title mb-0">
+                <i class="fas fa-truck"></i> Composição Veicular que Dirige
+            </h3>
+        </div>
+        <div class="card-body">
+            <p><strong>Tipo de Composição:</strong> 
+                <span class="badge bg-info">{{ motorista.get_tipo_composicao_motorista_display }}</span>
+            </p>
+            {% if motorista.veiculo_principal %}
+                <p><strong>Veículo Principal (Placa 1):</strong> 
+                    <a href="{% url 'notas:detalhes_veiculo' motorista.veiculo_principal.pk %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-truck"></i> {{ motorista.veiculo_principal.placa }} ({{ motorista.veiculo_principal.get_tipo_unidade_display }})
+                    </a>
+                </p>
+            {% else %}
+                <p class="text-muted">Nenhum veículo principal associado.</p>
+            {% endif %}
+            {% if motorista.reboque_1 %}
+                <p><strong>Reboque 1 (Placa 2):</strong> 
+                    <a href="{% url 'notas:detalhes_veiculo' motorista.reboque_1.pk %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-truck"></i> {{ motorista.reboque_1.placa }} ({{ motorista.reboque_1.get_tipo_unidade_display }})
+                    </a>
+                </p>
+            {% endif %}
+            {% if motorista.reboque_2 %}
+                <p><strong>Reboque 2 (Placa 3):</strong> 
+                    <a href="{% url 'notas:detalhes_veiculo' motorista.reboque_2.pk %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-truck"></i> {{ motorista.reboque_2.placa }} ({{ motorista.reboque_2.get_tipo_unidade_display }})
+                    </a>
+                </p>
+            {% endif %}
+            {% if not motorista.veiculo_principal and not motorista.reboque_1 and not motorista.reboque_2 %}
+                <p class="text-muted">Nenhuma unidade de veículo associada a esta composição.</p>
+            {% endif %}
+        </div>
     </div>
 
-    <div class="card card-body mb-4">
-        <h3>Endereço</h3>
-        <p><strong>Endereço:</strong> {{ motorista.endereco|default:"N/A" }}, {{ motorista.numero|default:"S/N" }}</p>
-        <p><strong>Complemento:</strong> {{ motorista.complemento|default:"N/A" }}</p>
-        <p><strong>Bairro:</strong> {{ motorista.bairro|default:"N/A" }}</p>
-        <p><strong>Cidade/Estado:</strong> {{ motorista.cidade|default:"N/A" }}/{{ motorista.estado|default:"N/A" }}</p>
-        <p><strong>CEP:</strong> {{ motorista.cep|default:"N/A" }}</p>
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title mb-0">
+                <i class="fas fa-map-marker-alt"></i> Endereço
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Endereço:</strong> {{ motorista.endereco|default:"N/A" }}, {{ motorista.numero|default:"S/N" }}</p>
+                    <p><strong>Complemento:</strong> {{ motorista.complemento|default:"N/A" }}</p>
+                    <p><strong>Bairro:</strong> {{ motorista.bairro|default:"N/A" }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Cidade/Estado:</strong> {{ motorista.cidade|default:"N/A" }}/{{ motorista.estado|default:"N/A" }}</p>
+                    <p><strong>CEP:</strong> {{ motorista.cep|default:"N/A" }}</p>
+                </div>
+            </div>
+        </div>
     </div>
     
-    {# Histórico de Consultas (mantenha como está) #}
-    <div class="card card-body mt-4">
-        <h3>Histórico de Consultas de Risco (Últimas 5)</h3>
-        <button type="button" class="btn btn-primary btn-sm mb-3" data-bs-toggle="modal" data-bs-target="#adicionarConsultaModal">Registrar Nova Consulta</button>
+    {# Histórico de Consultas #}
+    <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="card-title mb-0">
+                <i class="fas fa-history"></i> Histórico de Consultas de Risco (Últimas 5)
+            </h3>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#adicionarConsultaModal">
+                <i class="fas fa-plus"></i> Registrar Nova Consulta
+            </button>
+        </div>
+        <div class="card-body">
         
         {% if historico_consultas %}
-            <table class="table table-striped table-sm">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Data da Consulta</th>
+                            <th>Número da Consulta</th>
+                            <th>Resultado</th>
+                            <th>Observações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for consulta in historico_consultas %}
+                            <tr>
+                                <td>{{ consulta.data_consulta|date:"d/m/Y H:i" }}</td>
+                                <td>{{ consulta.numero_consulta }}</td>
+                                <td>
+                                    <span class="badge {% if consulta.resultado == 'Aprovado' %}bg-success{% elif consulta.resultado == 'Reprovado' %}bg-danger{% else %}bg-warning{% endif %}">
+                                        {{ consulta.get_resultado_display }}
+                                    </span>
+                                </td>
+                                <td>{{ consulta.observacoes|default:"-" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
                 </table>
+            </div>
         {% else %}
-            <p>Nenhuma consulta de risco registrada para este motorista.</p>
+            <p class="text-muted">Nenhuma consulta de risco registrada para este motorista.</p>
         {% endif %}
     </div>
 
-    {# Botões de Ação (mantenha como está) #}
+    {# Botões de Ação #}
     <div class="mt-4">
-        <a href="{% url 'notas:editar_motorista' motorista.pk %}" class="btn btn-warning me-2">Editar Motorista</a>
+        <a href="{% url 'notas:editar_motorista' motorista.pk %}" class="btn btn-warning me-2">
+            <i class="fas fa-edit"></i> Editar Motorista
+        </a>
         <form action="{% url 'notas:excluir_motorista' motorista.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este motorista?');">
             {% csrf_token %}
-            <button type="submit" class="btn btn-danger me-2">Excluir Motorista</button>
+            <button type="submit" class="btn btn-danger me-2">
+                <i class="fas fa-trash"></i> Excluir Motorista
+            </button>
         </form>
-        <a href="{% url 'notas:listar_motoristas' %}" class="btn btn-secondary">Voltar à Pesquisa</a>
+        <a href="{% url 'notas:listar_motoristas' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Voltar à Pesquisa
+        </a>
     </div>
 
     {# Modal (mantenha como está) #}

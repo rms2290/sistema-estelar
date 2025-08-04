@@ -6,7 +6,7 @@
 <div class="container mt-4">
     <h2>Adicionar Cliente</h2>
 
-    <form method="post">
+    <form method="post" id="clienteForm">
         {% csrf_token %}
 
         {# Erros gerais do formulário #}
@@ -26,6 +26,11 @@
                     <label for="{{ form.razao_social.id_for_label }}" class="form-label">{{ form.razao_social.label }}:</label>
                     {{ form.razao_social }}
                     {% if form.razao_social.errors %}<div class="text-danger">{{ form.razao_social.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.nome_fantasia.id_for_label }}" class="form-label">{{ form.nome_fantasia.label }}:</label>
+                    {{ form.nome_fantasia }}
+                    {% if form.nome_fantasia.errors %}<div class="text-danger">{{ form.nome_fantasia.errors }}</div>{% endif %}
                 </div>
                 <div class="col-md-6 mb-3">
                     <label for="{{ form.cnpj.id_for_label }}" class="form-label">{{ form.cnpj.label }}:</label>
@@ -52,8 +57,13 @@
                     {{ form.status }}
                     {% if form.status.errors %}<div class="text-danger">{{ form.status.errors }}</div>{% endif %}
                 </div>
+            </div>
+        </div>
 
-                <div class="col-12 mt-3 mb-2"><h4>Endereço</h4></div>
+        {# Seção de Endereço #}
+        <div class="card card-body mb-4">
+            <h3>Endereço</h3>
+            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="{{ form.endereco.id_for_label }}" class="form-label">{{ form.endereco.label }}:</label>
                     {{ form.endereco }}
@@ -92,8 +102,28 @@
             </div>
         </div>
 
-        <button type="submit" class="btn btn-success mt-3">Salvar Cliente</button>
-        <a href="{% url 'notas:listar_clientes' %}" class="btn btn-secondary mt-3">Cancelar</a>
+        {# Botões de ação #}
+        <button type="submit" name="salvar_e_sair" class="btn btn-success me-2">Salvar</button>
+        <button type="submit" name="salvar_e_adicionar" class="btn btn-info me-2">Salvar e Adicionar Outra</button>
+        <a href="{% url 'notas:listar_clientes' %}" class="btn btn-secondary">Cancelar</a>
     </form>
+
+    {# JavaScript para o comportamento da tecla Enter #}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const clienteForm = document.getElementById('clienteForm');
+            const salvarEAdicionarBtn = document.querySelector('button[name="salvar_e_adicionar"]');
+
+            if (clienteForm && salvarEAdicionarBtn) {
+                clienteForm.addEventListener('keydown', function(event) {
+                    // Verifica se a tecla Enter foi pressionada e não é em um textarea
+                    if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
+                        event.preventDefault(); // Impede o envio padrão do formulário (que seria o primeiro botão submit)
+                        salvarEAdicionarBtn.click(); // Simula o clique no botão "Salvar e Adicionar Outra"
+                    }
+                });
+            }
+        });
+    </script>
 </div>
 {% endblock %}
