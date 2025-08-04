@@ -25,10 +25,12 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles'
-    'notas'
-    'clientes',
+    'django.contrib.staticfiles',
+    'notas',
 ]
+
+# Configuração do modelo de usuário customizado
+AUTH_USER_MODEL = 'notas.Usuario'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -38,6 +40,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'notas.middleware.AuthenticationMiddleware',  # Nosso middleware customizado
 ]
 
 ROOT_URLCONF = 'sistema_estelar.urls'

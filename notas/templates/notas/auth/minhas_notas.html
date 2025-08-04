@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Minhas Notas Fiscais - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-file-invoice"></i> Minhas Notas Fiscais
+                    </h3>
+                    {% if user.cliente %}
+                    <p class="text-muted mb-0">Cliente: {{ user.cliente.razao_social }}</p>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if notas_fiscais %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 
+                            Você possui <strong>{{ notas_fiscais.count }}</strong> nota(s) fiscal(is).
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Nº Nota</th>
+                                        <th>Data</th>
+                                        <th>Fornecedor</th>
+                                        <th>Mercadoria</th>
+                                        <th>Quantidade</th>
+                                        <th>Peso (kg)</th>
+                                        <th>Valor (R$)</th>
+                                        <th>Status</th>
+                                        <th>Romaneio</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for nota in notas_fiscais %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ nota.nota }}</strong>
+                                            </td>
+                                            <td>{{ nota.data|date:"d/m/Y" }}</td>
+                                            <td>{{ nota.fornecedor }}</td>
+                                            <td>{{ nota.mercadoria }}</td>
+                                            <td>{{ nota.quantidade }}</td>
+                                            <td>{{ nota.peso|floatformat:"0" }}</td>
+                                            <td>{{ nota.valor|floatformat:"2" }}</td>
+                                            <td>
+                                                <span class="badge {% if nota.status == 'Depósito' %}bg-warning{% else %}bg-success{% endif %}">
+                                                    {{ nota.get_status_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if nota.romaneios_vinculados.all %}
+                                                    {% for romaneio in nota.romaneios_vinculados.all %}
+                                                        <a href="{% url 'notas:detalhes_romaneio' romaneio.pk %}" class="badge bg-info">
+                                                            {{ romaneio.codigo }}
+                                                        </a>{% if not forloop.last %}<br>{% endif %}
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <span class="text-muted">N/A</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'notas:detalhes_nota_fiscal' nota.pk %}" 
+                                                   class="btn btn-info btn-sm" title="Ver Detalhes">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            Nenhuma nota fiscal encontrada para seu cliente.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

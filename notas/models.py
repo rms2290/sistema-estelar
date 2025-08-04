@@ -276,3 +276,95 @@ class HistoricoConsulta(models.Model):
 
     def __str__(self):
         return f"Consulta {self.numero_consulta} de {self.motorista.nome} em {self.data_consulta.strftime('%d/%m/%Y')}"
+
+# --------------------------------------------------------------------------------------
+# Modelo de Usuário do Sistema
+# --------------------------------------------------------------------------------------
+class Usuario(models.Model):
+    TIPO_USUARIO_CHOICES = [
+        ('admin', 'Administrador'),
+        ('funcionario', 'Funcionário'),
+        ('cliente', 'Cliente'),
+    ]
+    
+    # Campos básicos
+    username = models.CharField(max_length=150, unique=True, verbose_name="Nome de Usuário")
+    email = models.EmailField(unique=True, verbose_name="E-mail")
+    first_name = models.CharField(max_length=30, verbose_name="Nome")
+    last_name = models.CharField(max_length=30, verbose_name="Sobrenome")
+    is_active = models.BooleanField(default=True, verbose_name="Ativo")
+    is_staff = models.BooleanField(default=False, verbose_name="Staff")
+    date_joined = models.DateTimeField(auto_now_add=True, verbose_name="Data de Cadastro")
+    
+    # Campo de senha (será gerenciado pelo Django)
+    password = models.CharField(max_length=128, verbose_name="Senha")
+    
+    # Tipo de usuário
+    tipo_usuario = models.CharField(
+        max_length=20, 
+        choices=TIPO_USUARIO_CHOICES,
+        default='funcionario',
+        verbose_name="Tipo de Usuário"
+    )
+    
+    # Relacionamento com Cliente (apenas para usuários do tipo 'cliente')
+    cliente = models.ForeignKey(
+        Cliente, 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True,
+        verbose_name="Cliente Vinculado"
+    )
+    
+    # Campos adicionais
+    telefone = models.CharField(max_length=20, blank=True, verbose_name="Telefone")
+    ultimo_acesso = models.DateTimeField(null=True, blank=True, verbose_name="Último Acesso")
+    
+    class Meta:
+        verbose_name = "Usuário"
+        verbose_name_plural = "Usuários"
+        ordering = ['username']
+    
+    def __str__(self):
+        return f"{self.username} ({self.get_tipo_usuario_display()})"
+    
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}".strip()
+    
+    def get_short_name(self):
+        return self.first_name
+    
+    @property
+    def is_admin(self):
+        return self.tipo_usuario == 'admin'
+    
+    @property
+    def is_funcionario(self):
+        return self.tipo_usuario == 'funcionario'
+    
+    @property
+    def is_cliente(self):
+        return self.tipo_usuario == 'cliente'
+    
+    def can_access_all(self):
+        """Administradores têm acesso a tudo"""
+        return self.is_admin
+    
+    def can_access_funcionalidades(self):
+        """Funcionários têm acesso às funcionalidades principais"""
+        return self.is_admin or self.is_funcionario
+    
+    def can_access_client_data(self):
+        """Clientes só podem acessar seus próprios dados"""
+        return self.is_admin or self.is_funcionario or self.is_cliente
+    
+    def set_password(self, raw_password):
+        """Define a senha do usuário (hash)"""
+        from django.contrib.auth.hashers import make_password
+        self.password = make_password(raw_password)
+        self._password = raw_password
+    
+    def check_password(self, raw_password):
+        """Verifica se a senha está correta"""
+        from django.contrib.auth.hashers import check_password
+        return check_password(raw_password, self.password)

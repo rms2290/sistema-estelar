@@ -1,10 +1,10 @@
 from django import forms
 from django.db.models import Q
 from django.core.exceptions import ValidationError
-from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta 
+from django.utils import timezone
+from datetime import datetime, timedelta
 import re
-from datetime import date
-from decimal import Decimal     
+from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, Usuario
 from validate_docbr import CNPJ, CPF
 
 ESTADOS_CHOICES = [
@@ -74,7 +74,7 @@ class NotaFiscalForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance.pk is None and not self.initial.get('data'):
-            self.fields['data'].initial = date.today()
+            self.fields['data'].initial = datetime.now().date()
 
     def clean_peso(self):
         peso = self.cleaned_data.get('peso')
@@ -531,7 +531,7 @@ class RomaneioViagemForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if self.instance.pk is None and not self.initial.get('data_romaneio'):
-            self.fields['data_romaneio'].initial = date.today()
+            self.fields['data_romaneio'].initial = datetime.now().date()
         
         # Querysets para ModelChoiceFields
         self.fields['cliente'].queryset = Cliente.objects.filter(status='Ativo').order_by('razao_social')
@@ -585,7 +585,7 @@ class HistoricoConsultaForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Preenche a data da consulta com a data atual por padrão
         if self.instance.pk is None and not self.initial.get('data_consulta'):
-            self.fields['data_consulta'].initial = date.today()
+            self.fields['data_consulta'].initial = datetime.now().date()
 
 # --------------------------------------------------------------------------------------
 # Formulários de Pesquisa de notas
@@ -741,7 +741,7 @@ class HistoricoConsultaForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Preenche a data da consulta com a data atual por padrão
         if self.instance.pk is None and not self.initial.get('data_consulta'):
-            self.fields['data_consulta'].initial = date.today()
+            self.fields['data_consulta'].initial = datetime.now().date()
 
 # --------------------------------------------------------------------------------------
 # Formulário de Pesquisa para Mercadorias no Depósito
@@ -776,3 +776,114 @@ class MercadoriaDepositoSearchForm(forms.Form):
         required=False,
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
     )
+
+# --------------------------------------------------------------------------------------
+# Formulários de Autenticação
+# --------------------------------------------------------------------------------------
+class LoginForm(forms.Form):
+    username = forms.CharField(
+        label='Nome de Usuário',
+        max_length=150,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Digite seu nome de usuário'
+        })
+    )
+    password = forms.CharField(
+        label='Senha',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Digite sua senha'
+        })
+    )
+
+class CadastroUsuarioForm(forms.ModelForm):
+    password1 = forms.CharField(
+        label='Senha',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Digite sua senha'
+        })
+    )
+    password2 = forms.CharField(
+        label='Confirmar Senha',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Confirme sua senha'
+        })
+    )
+    
+    class Meta:
+        model = Usuario
+        fields = ['username', 'email', 'first_name', 'last_name', 'tipo_usuario', 'cliente', 'telefone']
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome de usuário'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'seu@email.com'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Sobrenome'}),
+            'tipo_usuario': forms.Select(attrs={'class': 'form-control'}),
+            'cliente': forms.Select(attrs={'class': 'form-control'}),
+            'telefone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(00) 00000-0000'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filtrar apenas clientes ativos para o campo cliente
+        self.fields['cliente'].queryset = Cliente.objects.filter(status='Ativo').order_by('razao_social')
+        self.fields['cliente'].empty_label = "--- Selecione um cliente ---"
+    
+    def clean_password2(self):
+        password1 = self.cleaned_data.get("password1")
+        password2 = self.cleaned_data.get("password2")
+        if password1 and password2 and password1 != password2:
+            raise forms.ValidationError("As senhas não coincidem.")
+        return password2
+    
+    def clean_tipo_usuario(self):
+        tipo_usuario = self.cleaned_data.get('tipo_usuario')
+        cliente = self.cleaned_data.get('cliente')
+        
+        if tipo_usuario == 'cliente' and not cliente:
+            raise forms.ValidationError("Usuários do tipo 'Cliente' devem estar vinculados a um cliente.")
+        
+        if tipo_usuario != 'cliente' and cliente:
+            raise forms.ValidationError("Apenas usuários do tipo 'Cliente' podem estar vinculados a um cliente.")
+        
+        return tipo_usuario
+    
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.set_password(self.cleaned_data["password1"])
+        if commit:
+            user.save()
+        return user
+
+class AlterarSenhaForm(forms.Form):
+    senha_atual = forms.CharField(
+        label='Senha Atual',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Digite sua senha atual'
+        })
+    )
+    nova_senha = forms.CharField(
+        label='Nova Senha',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Digite sua nova senha'
+        })
+    )
+    confirmar_nova_senha = forms.CharField(
+        label='Confirmar Nova Senha',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Confirme sua nova senha'
+        })
+    )
+    
+    def clean_confirmar_nova_senha(self):
+        nova_senha = self.cleaned_data.get("nova_senha")
+        confirmar_nova_senha = self.cleaned_data.get("confirmar_nova_senha")
+        if nova_senha and confirmar_nova_senha and nova_senha != confirmar_nova_senha:
+            raise forms.ValidationError("As senhas não coincidem.")
+        return confirmar_nova_senha

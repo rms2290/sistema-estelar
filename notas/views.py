@@ -768,3 +768,111 @@ def visualizar_romaneio_para_impressao(request, pk):
         'notas_romaneadas': notas_romaneadas,
     }
     return render(request, 'notas/visualizar_romaneio_para_impressao.html', context)
+
+# --------------------------------------------------------------------------------------
+# Views de Autenticação
+# --------------------------------------------------------------------------------------
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.utils import timezone
+from .forms import LoginForm, CadastroUsuarioForm, AlterarSenhaForm
+
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('notas:home')
+    
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
+            user = authenticate(request, username=username, password=password)
+            
+            if user is not None and user.is_active:
+                login(request, user)
+                # Atualizar último acesso
+                user.ultimo_acesso = timezone.now()
+                user.save()
+                
+                messages.success(request, f'Bem-vindo, {user.get_full_name()}!')
+                return redirect('notas:home')
+            else:
+                messages.error(request, 'Nome de usuário ou senha inválidos.')
+    else:
+        form = LoginForm()
+    
+    return render(request, 'notas/auth/login.html', {'form': form})
+
+def logout_view(request):
+    logout(request)
+    messages.info(request, 'Você foi desconectado com sucesso.')
+    return redirect('notas:login')
+
+@login_required
+def alterar_senha(request):
+    if request.method == 'POST':
+        form = AlterarSenhaForm(request.POST)
+        if form.is_valid():
+            senha_atual = form.cleaned_data['senha_atual']
+            nova_senha = form.cleaned_data['nova_senha']
+            
+            # Verificar senha atual
+            if not request.user.check_password(senha_atual):
+                messages.error(request, 'Senha atual incorreta.')
+            else:
+                # Alterar senha
+                request.user.set_password(nova_senha)
+                request.user.save()
+                messages.success(request, 'Senha alterada com sucesso!')
+                return redirect('notas:home')
+    else:
+        form = AlterarSenhaForm()
+    
+    return render(request, 'notas/auth/alterar_senha.html', {'form': form})
+
+@login_required
+def perfil_usuario(request):
+    return render(request, 'notas/auth/perfil.html')
+
+# Decorators para verificar permissões
+def is_admin(user):
+    return user.is_authenticated and user.is_admin
+
+def is_funcionario(user):
+    return user.is_authenticated and (user.is_admin or user.is_funcionario)
+
+def is_cliente(user):
+    return user.is_authenticated and (user.is_admin or user.is_funcionario or user.is_cliente)
+
+# View para clientes verem apenas suas notas fiscais
+@login_required
+@user_passes_test(is_cliente)
+def minhas_notas_fiscais(request):
+    if request.user.is_cliente and request.user.cliente:
+        # Cliente vê apenas suas notas
+        notas_fiscais = NotaFiscal.objects.filter(cliente=request.user.cliente).order_by('-data')
+    else:
+        # Admin e funcionários veem todas as notas
+        notas_fiscais = NotaFiscal.objects.all().order_by('-data')
+    
+    return render(request, 'notas/auth/minhas_notas.html', {
+        'notas_fiscais': notas_fiscais
+    })
+
+@login_required
+@user_passes_test(is_cliente)
+def meus_romaneios(request):
+    if request.user.is_cliente and request.user.cliente:
+        # Cliente vê apenas romaneios de suas notas
+        romaneios = RomaneioViagem.objects.filter(
+            notas_fiscais__cliente=request.user.cliente
+        ).distinct().order_by('-data_emissao')
+    else:
+        # Admin e funcionários veem todos os romaneios
+        romaneios = RomaneioViagem.objects.all().order_by('-data_emissao')
+    
+    return render(request, 'notas/auth/meus_romaneios.html', {
+        'romaneios': romaneios
+    })

@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Meu Perfil - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-user"></i> Meu Perfil
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Informações Pessoais</h5>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Nome:</strong></td>
+                                    <td>{{ user.get_full_name }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Nome de Usuário:</strong></td>
+                                    <td>{{ user.username }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>E-mail:</strong></td>
+                                    <td>{{ user.email }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Tipo de Usuário:</strong></td>
+                                    <td>{{ user.get_tipo_usuario_display }}</td>
+                                </tr>
+                                {% if user.cliente %}
+                                <tr>
+                                    <td><strong>Cliente Vinculado:</strong></td>
+                                    <td>{{ user.cliente.razao_social }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td><strong>Telefone:</strong></td>
+                                    <td>{{ user.telefone|default:"Não informado" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Data de Cadastro:</strong></td>
+                                    <td>{{ user.date_joined|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                                {% if user.ultimo_acesso %}
+                                <tr>
+                                    <td><strong>Último Acesso:</strong></td>
+                                    <td>{{ user.ultimo_acesso|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Ações</h5>
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'notas:alterar_senha' %}" class="btn btn-warning">
+                                    <i class="fas fa-key"></i> Alterar Senha
+                                </a>
+                                
+                                {% if user.is_cliente %}
+                                <a href="{% url 'notas:minhas_notas_fiscais' %}" class="btn btn-info">
+                                    <i class="fas fa-file-invoice"></i> Minhas Notas Fiscais
+                                </a>
+                                <a href="{% url 'notas:meus_romaneios' %}" class="btn btn-success">
+                                    <i class="fas fa-truck"></i> Meus Romaneios
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -47,4 +47,12 @@ urlpatterns = [
 
 # Nova URL para pesquisar mercadorias no depósito
     path('mercadorias-deposito/', views.pesquisar_mercadorias_deposito, name='pesquisar_mercadorias_deposito'),
+
+    # URLs de Autenticação
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    path('perfil/', views.perfil_usuario, name='perfil'),
+    path('alterar-senha/', views.alterar_senha, name='alterar_senha'),
+    path('minhas-notas/', views.minhas_notas_fiscais, name='minhas_notas_fiscais'),
+    path('meus-romaneios/', views.meus_romaneios, name='meus_romaneios'),
 ]
