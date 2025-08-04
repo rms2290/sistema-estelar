@@ -80,7 +80,7 @@
                 </div>
             </div>
 
-            {# NOVO BLOCO: Medidas do Baú #}
+            {# Seção: Medidas do Baú #}
             <div class="col-12 mt-3 mb-2"><h3>Medidas do Baú (metros)</h3></div>
             <div class="row">
                 <div class="col-md-4 mb-3">
@@ -97,6 +97,17 @@
                     <label for="{{ form.comprimento.id_for_label }}" class="form-label">{{ form.comprimento.label }}:</label>
                     {{ form.comprimento }}
                     {% if form.comprimento.errors %}<div class="text-danger">{{ form.comprimento.errors }}</div>{% endif %}
+                </div>
+            </div>
+            
+            {# Seção: Cubagem Calculada #}
+            <div class="col-12 mt-3 mb-2"><h4>Cubagem Calculada</h4></div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.cubagem.id_for_label }}" class="form-label">{{ form.cubagem.label }}:</label>
+                    {{ form.cubagem }}
+                    {% if form.cubagem.errors %}<div class="text-danger">{{ form.cubagem.errors }}</div>{% endif %}
+                    <small class="form-text text-muted">Calculada automaticamente: Largura × Altura × Comprimento</small>
                 </div>
             </div>
 
@@ -159,5 +170,39 @@
         <button type="submit" class="btn btn-success mt-3">Salvar Alterações</button>
         <a href="{% url 'notas:detalhes_veiculo' veiculo.pk %}" class="btn btn-secondary mt-3">Cancelar</a>
     </form>
+
+    {# JavaScript para cálculo da cubagem #}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const larguraInput = document.getElementById('id_largura');
+            const alturaInput = document.getElementById('id_altura');
+            const comprimentoInput = document.getElementById('id_comprimento');
+            const cubagemInput = document.getElementById('id_cubagem');
+
+            function calculateCubagem() {
+                const largura = parseFloat(larguraInput.value.replace(',', '.')) || 0;
+                const altura = parseFloat(alturaInput.value.replace(',', '.')) || 0;
+                const comprimento = parseFloat(comprimentoInput.value.replace(',', '.')) || 0;
+
+                // Calcula a cubagem se todas as medidas forem válidas e maiores que zero
+                if (largura > 0 && altura > 0 && comprimento > 0) {
+                    const cubagem = (largura * altura * comprimento).toFixed(2);
+                    cubagemInput.value = cubagem;
+                    cubagemInput.style.backgroundColor = '#e8f5e8'; // Verde claro para indicar cálculo válido
+                } else {
+                    cubagemInput.value = '';
+                    cubagemInput.style.backgroundColor = '#fff'; // Cor padrão
+                }
+            }
+
+            // Bind event listeners para todos os campos de medida
+            if (larguraInput) larguraInput.addEventListener('input', calculateCubagem);
+            if (alturaInput) alturaInput.addEventListener('input', calculateCubagem);
+            if (comprimentoInput) comprimentoInput.addEventListener('input', calculateCubagem);
+
+            // Chamar cálculo na carga inicial para preencher se houver dados de edição
+            calculateCubagem();
+        });
+    </script>
 </div>
 {% endblock %}

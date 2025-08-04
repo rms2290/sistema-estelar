@@ -22,16 +22,43 @@ ESTADOS_CHOICES = [
 # Novo formulário para Nota Fiscal
 # --------------------------------------------------------------------------------------
 class NotaFiscalForm(forms.ModelForm):
+    # Campo número da nota
+    nota = forms.CharField(
+        label='Número da Nota',
+        required=True,
+        max_length=50,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número da Nota Fiscal'})
+    )
+    
+    # Campo cliente
     cliente = forms.ModelChoiceField(
         queryset=Cliente.objects.filter(status='Ativo').order_by('razao_social'),
         label='Cliente',
         empty_label="--- Selecione um cliente ---",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+    
+    # Campo data
     data = forms.DateField(
         label='Data',
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
         required=True
+    )
+    
+    # Campo fornecedor
+    fornecedor = forms.CharField(
+        label='Fornecedor',
+        required=True,
+        max_length=200,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome do Fornecedor'})
+    )
+    
+    # Campo mercadoria
+    mercadoria = forms.CharField(
+        label='Mercadoria',
+        required=True,
+        max_length=200,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome da Mercadoria'})
     )
 
     class Meta:
@@ -245,12 +272,30 @@ class MotoristaForm(forms.ModelForm):
 # Novo formulário para Veículos
 # --------------------------------------------------------------------------------------
 class VeiculoForm(forms.ModelForm):
-    # Campo 'pais' sobrescrito para garantir required=False
-    pais = forms.CharField(
+    # Lista de países comuns
+    PAISES_CHOICES = [
+        ('', '---'),
+        ('Brasil', 'Brasil'),
+        ('Argentina', 'Argentina'),
+        ('Paraguai', 'Paraguai'),
+        ('Uruguai', 'Uruguai'),
+        ('Bolívia', 'Bolívia'),
+        ('Chile', 'Chile'),
+        ('Peru', 'Peru'),
+        ('Colômbia', 'Colômbia'),
+        ('Venezuela', 'Venezuela'),
+        ('Equador', 'Equador'),
+        ('Guiana', 'Guiana'),
+        ('Suriname', 'Suriname'),
+        ('Guiana Francesa', 'Guiana Francesa'),
+    ]
+    
+    # Campo 'pais' sobrescrito para usar dropdown
+    pais = forms.ChoiceField(
         label='País',
+        choices=PAISES_CHOICES,
         required=False,
-        max_length=50,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-control'})
     )
     # Sobrescreve o campo 'estado' do veículo
     estado = forms.ChoiceField(
@@ -266,6 +311,100 @@ class VeiculoForm(forms.ModelForm):
         required=False,
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+    
+    # Lista de marcas comuns de veículos
+    MARCAS_CHOICES = [
+        ('', '---'),
+        ('FORD', 'FORD'),
+        ('CHEVROLET', 'CHEVROLET'),
+        ('VOLKSWAGEN', 'VOLKSWAGEN'),
+        ('FIAT', 'FIAT'),
+        ('MERCEDES-BENZ', 'MERCEDES-BENZ'),
+        ('SCANIA', 'SCANIA'),
+        ('VOLVO', 'VOLVO'),
+        ('IVECO', 'IVECO'),
+        ('MAN', 'MAN'),
+        ('DAF', 'DAF'),
+        ('RENAULT', 'RENAULT'),
+        ('PEUGEOT', 'PEUGEOT'),
+        ('CITROEN', 'CITROEN'),
+        ('HYUNDAI', 'HYUNDAI'),
+        ('TOYOTA', 'TOYOTA'),
+        ('NISSAN', 'NISSAN'),
+        ('HONDA', 'HONDA'),
+        ('MITSUBISHI', 'MITSUBISHI'),
+        ('MAZDA', 'MAZDA'),
+        ('SUBARU', 'SUBARU'),
+        ('AUDI', 'AUDI'),
+        ('BMW', 'BMW'),
+        ('OUTROS', 'OUTROS'),
+    ]
+    
+    # Sobrescreve o campo 'marca' para usar dropdown
+    marca = forms.ChoiceField(
+        label='Marca',
+        choices=MARCAS_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    # Campo 'modelo' mantido como texto livre para maior flexibilidade
+    modelo = forms.CharField(
+        label='Modelo',
+        required=False,
+        max_length=100,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: F-4000, FH-460, etc.'})
+    )
+    
+    # Lista de anos de fabricação (últimos 30 anos + próximos 5 anos)
+    ANOS_CHOICES = [('', '---')] + [(str(ano), str(ano)) for ano in range(2029, 1999, -1)]
+    
+    # Sobrescreve o campo 'ano_fabricacao' para usar dropdown
+    ano_fabricacao = forms.ChoiceField(
+        label='Ano de Fabricação',
+        choices=ANOS_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    # Campo RNTRC com placeholder para formatação
+    rntrc = forms.CharField(
+        label='RNTRC',
+        required=False,
+        max_length=12,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000000000000'})
+    )
+    
+    # Campos de medidas com widgets específicos
+    largura = forms.DecimalField(
+        label='Largura (m)',
+        required=False,
+        max_digits=6,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'})
+    )
+    altura = forms.DecimalField(
+        label='Altura (m)',
+        required=False,
+        max_digits=6,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'})
+    )
+    comprimento = forms.DecimalField(
+        label='Comprimento (m)',
+        required=False,
+        max_digits=6,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'})
+    )
+    cubagem = forms.DecimalField(
+        label='Cubagem (m³)',
+        required=False,
+        max_digits=10,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'readonly': 'readonly'})
+    )
+    
     class Meta:
         model = Veiculo
         fields = '__all__'
@@ -304,7 +443,21 @@ class VeiculoForm(forms.ModelForm):
         # Opcional: Adicionar validação de dígito verificador de RENAVAM (complexo)
         return renavam_numeros
     
-    # >>> NOVO MÉTODO CLEAN PARA CALCULAR CUBAGEM <<<
+    def clean_rntrc(self):
+        rntrc = self.cleaned_data.get('rntrc')
+        if not rntrc:
+            return rntrc
+        
+        # Remove caracteres não numéricos
+        rntrc_numeros = re.sub(r'[^0-9]', '', rntrc)
+        
+        # Verifica se tem 12 dígitos
+        if len(rntrc_numeros) != 12:
+            raise forms.ValidationError("RNTRC deve conter 12 dígitos numéricos.")
+        
+        return rntrc_numeros
+    
+    # >>> MÉTODO CLEAN PARA CALCULAR CUBAGEM <<<
     def clean(self):
         cleaned_data = super().clean() # Chama o clean original do ModelForm
         
@@ -316,18 +469,17 @@ class VeiculoForm(forms.ModelForm):
         if largura is not None and altura is not None and comprimento is not None:
             try:
                 cubagem_calculada = largura * altura * comprimento
-                # A cubagem não é um campo do formulário, mas um campo do modelo
-                # Nós a salvamos no método save() do modelo.
-                # Aqui no clean, podemos apenas validar que a cubagem seria positiva, se quiser.
+                # Atualiza o campo cubagem no cleaned_data
+                cleaned_data['cubagem'] = cubagem_calculada
+                
+                # Validação: cubagem deve ser positiva
                 if cubagem_calculada <= 0:
-                    self.add_error(None, "A cubagem calculada deve ser um valor positivo.") # Erro geral
+                    self.add_error(None, "A cubagem calculada deve ser um valor positivo.")
             except TypeError: # Acontece se não forem números válidos
                 self.add_error(None, "Valores de largura, altura e comprimento devem ser números válidos.")
         else:
-            # Se algum campo estiver vazio, garante que não há cálculo e pode adicionar um erro
-            # se quiser que sejam obrigatórios para o cálculo.
-            # No nosso save() do modelo, já tratamos o caso de ser None.
-            pass
+            # Se algum campo estiver vazio, limpa a cubagem
+            cleaned_data['cubagem'] = None
 
         return cleaned_data
     

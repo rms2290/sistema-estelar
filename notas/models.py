@@ -170,6 +170,12 @@ class Veiculo(models.Model):
     marca = models.CharField(max_length=100, blank=True, null=True, verbose_name="Marca")
     modelo = models.CharField(max_length=100, blank=True, null=True, verbose_name="Modelo")
 
+    # Campos de Medidas do Baú
+    largura = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, verbose_name="Largura (m)")
+    altura = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, verbose_name="Altura (m)")
+    comprimento = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, verbose_name="Comprimento (m)")
+    cubagem = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Cubagem (m³)")
+
     # Campos do Proprietário (diretamente no Veiculo)
     proprietario_cpf_cnpj = models.CharField(max_length=18, blank=True, null=True, verbose_name="CPF/CNPJ do Proprietário")
     proprietario_nome_razao_social = models.CharField(max_length=255, blank=True, null=True, verbose_name="Nome/Razão Social do Proprietário")

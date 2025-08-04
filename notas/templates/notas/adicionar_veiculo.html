@@ -80,7 +80,7 @@
                 </div>
             </div>
 
-            {# NOVO BLOCO: Medidas do Baú #}
+            {# Seção: Medidas do Baú #}
             <div class="col-12 mt-3 mb-2"><h3>Medidas do Baú (metros)</h3></div>
             <div class="row">
                 <div class="col-md-4 mb-3">
@@ -98,12 +98,16 @@
                     {{ form.comprimento }}
                     {% if form.comprimento.errors %}<div class="text-danger">{{ form.comprimento.errors }}</div>{% endif %}
                 </div>
-                {# NOVO CAMPO: Cubagem #}
-                <div class="col-md-12 mt-3 mb-2"><h4>Cubagem Calculada</h4></div>
+            </div>
+            
+            {# Seção: Cubagem Calculada #}
+            <div class="col-12 mt-3 mb-2"><h4>Cubagem Calculada</h4></div>
+            <div class="row">
                 <div class="col-md-4 mb-3">
                     <label for="{{ form.cubagem.id_for_label }}" class="form-label">{{ form.cubagem.label }}:</label>
-                    {{ form.cubagem }} {# Campo somente leitura #}
+                    {{ form.cubagem }}
                     {% if form.cubagem.errors %}<div class="text-danger">{{ form.cubagem.errors }}</div>{% endif %}
+                    <small class="form-text text-muted">Calculada automaticamente: Largura × Altura × Comprimento</small>
                 </div>
             </div>
 
@@ -180,15 +184,18 @@
                 const altura = parseFloat(alturaInput.value.replace(',', '.')) || 0;
                 const comprimento = parseFloat(comprimentoInput.value.replace(',', '.')) || 0;
 
+                // Calcula a cubagem se todas as medidas forem válidas e maiores que zero
                 if (largura > 0 && altura > 0 && comprimento > 0) {
-                    const cubagem = (largura * altura * comprimento).toFixed(2); // Arredonda para 2 casas
+                    const cubagem = (largura * altura * comprimento).toFixed(2);
                     cubagemInput.value = cubagem;
+                    cubagemInput.style.backgroundColor = '#e8f5e8'; // Verde claro para indicar cálculo válido
                 } else {
-                    cubagemInput.value = ''; // Limpa se as medidas não forem válidas
+                    cubagemInput.value = '';
+                    cubagemInput.style.backgroundColor = '#fff'; // Cor padrão
                 }
             }
 
-            // Bind event listener
+            // Bind event listeners para todos os campos de medida
             if (larguraInput) larguraInput.addEventListener('input', calculateCubagem);
             if (alturaInput) alturaInput.addEventListener('input', calculateCubagem);
             if (comprimentoInput) comprimentoInput.addEventListener('input', calculateCubagem);
