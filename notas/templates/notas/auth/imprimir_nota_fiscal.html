@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Imprimir Nota Fiscal - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">
+                        <i class="fas fa-print"></i> Imprimir Nota Fiscal
+                    </h3>
+                    <div class="print-actions-buttons">
+                        <button onclick="window.print()" class="btn btn-primary">
+                            <i class="fas fa-print"></i> Imprimir
+                        </button>
+                        <a href="{% url 'notas:minhas_notas_fiscais' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Voltar
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="nota-fiscal-print-container">
+                        <!-- Cabeçalho da Nota -->
+                        <div class="print-header">
+                            <div class="row">
+                                <div class="col-6">
+                                    <h1>NOTA FISCAL</h1>
+                                    <p><strong>Número:</strong> {{ nota.nota }}</p>
+                                    <p><strong>Data de Emissão:</strong> {{ nota.data|date:"d/m/Y" }}</p>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <h4>Agência Estelar</h4>
+                                    <p>Sistema de Gestão de Notas Fiscais</p>
+                                    <p>Data de Impressão: {% now "d/m/Y H:i" %}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Informações do Cliente -->
+                        <div class="print-section-top">
+                            <h4>Informações do Cliente</h4>
+                            <p><strong>Razão Social:</strong> {{ nota.cliente.razao_social }}</p>
+                            <p><strong>CNPJ:</strong> {{ nota.cliente.cnpj }}</p>
+                            <p><strong>Endereço:</strong> {{ nota.cliente.endereco }}, {{ nota.cliente.cidade }} - {{ nota.cliente.estado }}</p>
+                            <p><strong>CEP:</strong> {{ nota.cliente.cep }}</p>
+                        </div>
+
+                        <!-- Detalhes da Nota -->
+                        <div class="print-section-top">
+                            <h4>Detalhes da Nota Fiscal</h4>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Fornecedor:</strong> {{ nota.fornecedor }}</p>
+                                    <p><strong>Mercadoria:</strong> {{ nota.mercadoria }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Quantidade:</strong> {{ nota.quantidade }}</p>
+                                    <p><strong>Peso:</strong> {{ nota.peso|floatformat:"0" }} kg</p>
+                                    <p><strong>Valor:</strong> R$ {{ nota.valor|floatformat:"2" }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status e Romaneios -->
+                        <div class="print-section-top">
+                            <h4>Status e Romaneios</h4>
+                            <p><strong>Status:</strong> 
+                                <span class="badge {% if nota.status == 'Depósito' %}bg-warning{% else %}bg-success{% endif %}">
+                                    {{ nota.get_status_display }}
+                                </span>
+                            </p>
+                            {% if nota.romaneios_vinculados.all %}
+                                <p><strong>Romaneios Vinculados:</strong></p>
+                                <ul>
+                                    {% for romaneio in nota.romaneios_vinculados.all %}
+                                        <li>{{ romaneio.codigo }} - {{ romaneio.data_emissao|date:"d/m/Y" }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p><strong>Romaneios Vinculados:</strong> Nenhum</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Observações -->
+                        {% if nota.observacoes %}
+                        <div class="print-section-top">
+                            <h4>Observações</h4>
+                            <p>{{ nota.observacoes }}</p>
+                        </div>
+                        {% endif %}
+
+                        <!-- Rodapé -->
+                        <div class="print-footer">
+                            <hr>
+                            <p><strong>Documento gerado automaticamente pelo Sistema Estelar</strong></p>
+                            <p>Usuário: {{ user.get_full_name|default:user.username }} | Data: {% now "d/m/Y H:i" %}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .print-actions-buttons {
+        display: none !important;
+    }
+    
+    .nota-fiscal-print-container {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .card-header {
+        display: none !important;
+    }
+    
+    .card-body {
+        padding: 0 !important;
+    }
+}
+
+.nota-fiscal-print-container {
+    background-color: #fff;
+    color: #333;
+    padding: 20px;
+    border: 1px solid #ddd;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    max-width: 800px;
+    margin: 0 auto;
+    font-size: 14px;
+}
+
+.print-header h1 {
+    color: #0056b3;
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.print-header h4 {
+    color: #333;
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.print-section-top {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.print-section-top h4 {
+    color: #0056b3;
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+.print-section-top p {
+    margin-bottom: 5px;
+    line-height: 1.4;
+}
+
+.print-footer {
+    margin-top: 30px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    font-size: 12px;
+    color: #666;
+}
+
+.badge {
+    font-size: 12px;
+    padding: 4px 8px;
+}
+
+ul {
+    margin-bottom: 10px;
+}
+
+li {
+    margin-bottom: 2px;
+}
+</style>
+{% endblock %} 

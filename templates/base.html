@@ -58,7 +58,6 @@
             <h3>Menu</h3>
             <nav class="sidebar-nav">
                 <ul>
-                    <li><a href="{% url 'notas:listar_notas_fiscais' %}">Pesquisar Notas</a></li>
                     {% if user.can_access_funcionalidades %}
                     <li><a href="{% url 'notas:adicionar_nota_fiscal' %}">Adicionar Nota</a></li>
                     {% endif %}
@@ -85,6 +84,15 @@
                     
                     {% if user.can_access_funcionalidades %}
                     <li><a href="{% url 'notas:pesquisar_mercadorias_deposito' %}">Mercadorias no Depósito</a></li>
+                    {% endif %}
+                    
+                    {% if user.is_cliente %}
+                    <li><a href="{% url 'notas:minhas_notas_fiscais' %}">Minhas Notas</a></li>
+                    <li><a href="{% url 'notas:meus_romaneios' %}">Meus Romaneios</a></li>
+                    {% endif %}
+                    
+                    {% if user.is_admin %}
+                    <li><a href="{% url 'notas:listar_usuarios' %}">Gerenciar Usuários</a></li>
                     {% endif %}
                 </ul>
             </nav>

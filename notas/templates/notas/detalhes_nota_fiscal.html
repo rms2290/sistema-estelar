@@ -58,14 +58,27 @@
     </div>
     {% endif %}
 
-    {# Botões de Ação: Editar e Excluir #}
+    {# Botões de Ação #}
     <div class="mt-4">
-        <a href="{% url 'notas:editar_nota_fiscal' nota.pk %}" class="btn btn-warning me-2">Editar Nota</a>
-        <form action="{% url 'notas:excluir_nota_fiscal' nota.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir esta nota fiscal?');">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-danger me-2">Excluir Nota</button>
-        </form>
-        <a href="{% url 'notas:listar_notas_fiscais' %}" class="btn btn-secondary">Voltar à Pesquisa</a>
+        <a href="{% url 'notas:imprimir_nota_fiscal' nota.pk %}" class="btn btn-secondary me-2" target="_blank">
+            <i class="fas fa-print"></i> Imprimir Nota
+        </a>
+        {% if user.is_admin or user.is_funcionario %}
+            <a href="{% url 'notas:editar_nota_fiscal' nota.pk %}" class="btn btn-warning me-2">
+                <i class="fas fa-edit"></i> Editar Nota
+            </a>
+            <form action="{% url 'notas:excluir_nota_fiscal' nota.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir esta nota fiscal?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger me-2">
+                    <i class="fas fa-trash"></i> Excluir Nota
+                </button>
+            </form>
+        {% endif %}
+        {% if user.is_cliente %}
+            <a href="{% url 'notas:minhas_notas_fiscais' %}" class="btn btn-secondary">Voltar às Minhas Notas</a>
+        {% else %}
+            <a href="{% url 'notas:listar_notas_fiscais' %}" class="btn btn-secondary">Voltar à Pesquisa</a>
+        {% endif %}
     </div>
 
 </div>

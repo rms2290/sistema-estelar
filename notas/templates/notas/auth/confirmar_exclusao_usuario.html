@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Confirmar Exclusão - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title text-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Confirmar Exclusão
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Atenção!</h5>
+                        <p>Você está prestes a excluir o usuário <strong>{{ usuario.username }}</strong>.</p>
+                        <p>Esta ação não pode ser desfeita.</p>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">Informações do Usuário</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Nome de Usuário:</strong></td>
+                                    <td>{{ usuario.username }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Nome Completo:</strong></td>
+                                    <td>{{ usuario.get_full_name }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>E-mail:</strong></td>
+                                    <td>{{ usuario.email }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Tipo:</strong></td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if usuario.tipo_usuario == 'admin' %}bg-danger
+                                            {% elif usuario.tipo_usuario == 'funcionario' %}bg-primary
+                                            {% else %}bg-success{% endif %}">
+                                            {{ usuario.get_tipo_usuario_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% if usuario.cliente %}
+                                <tr>
+                                    <td><strong>Cliente Vinculado:</strong></td>
+                                    <td>{{ usuario.cliente.razao_social }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td><strong>Data de Cadastro:</strong></td>
+                                    <td>{{ usuario.date_joined|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'notas:listar_usuarios' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Confirmar Exclusão
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

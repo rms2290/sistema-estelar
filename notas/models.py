@@ -1,6 +1,31 @@
 from django.db import models
 from django.db.models import UniqueConstraint
 from django.utils import timezone
+from django.contrib.auth.models import BaseUserManager
+
+# Manager customizado para o modelo Usuario
+class UsuarioManager(BaseUserManager):
+    def create_user(self, username, email, password=None, **extra_fields):
+        if not username:
+            raise ValueError('O nome de usuário é obrigatório')
+        if not email:
+            raise ValueError('O email é obrigatório')
+        
+        email = self.normalize_email(email)
+        user = self.model(username=username, email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+    
+    def create_superuser(self, username, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_active', True)
+        extra_fields.setdefault('tipo_usuario', 'admin')
+        
+        return self.create_user(username, email, password, **extra_fields)
+    
+    def get_by_natural_key(self, username):
+        return self.get(username=username)
 
 # --------------------------------------------------------------------------------------
 # Clientes
@@ -320,6 +345,15 @@ class Usuario(models.Model):
     telefone = models.CharField(max_length=20, blank=True, verbose_name="Telefone")
     ultimo_acesso = models.DateTimeField(null=True, blank=True, verbose_name="Último Acesso")
     
+    # Atributos obrigatórios para modelo de usuário customizado
+    REQUIRED_FIELDS = ['email', 'first_name', 'last_name']
+    USERNAME_FIELD = 'username'
+    is_authenticated = True
+    is_anonymous = False
+    
+    # Manager customizado
+    objects = UsuarioManager()
+    
     class Meta:
         verbose_name = "Usuário"
         verbose_name_plural = "Usuários"
@@ -368,3 +402,21 @@ class Usuario(models.Model):
         """Verifica se a senha está correta"""
         from django.contrib.auth.hashers import check_password
         return check_password(raw_password, self.password)
+    
+    def get_username(self):
+        """Retorna o nome de usuário"""
+        return self.username
+    
+    def natural_key(self):
+        """Chave natural para o usuário"""
+        return (self.username,)
+    
+    @property
+    def is_anonymous(self):
+        """Verifica se o usuário é anônimo"""
+        return False
+    
+    @property
+    def is_authenticated(self):
+        """Verifica se o usuário está autenticado"""
+        return True

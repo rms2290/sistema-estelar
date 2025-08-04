@@ -4,14 +4,14 @@ from . import views
 app_name = 'notas'
 
 urlpatterns = [
-    # URLs para Notas Fiscais
+# URLs para Notas Fiscais
     path('', views.listar_notas_fiscais, name='listar_notas_fiscais'),
     path('adicionar/', views.adicionar_nota_fiscal, name='adicionar_nota_fiscal'),
     path('editar/<int:pk>/', views.editar_nota_fiscal, name='editar_nota_fiscal'),
     path('excluir/<int:pk>/', views.excluir_nota_fiscal, name='excluir_nota_fiscal'),
     path('notas/<int:pk>/detalhes/', views.detalhes_nota_fiscal, name='detalhes_nota_fiscal'),
 
-    # Novas URLs para Clientes
+# Novas URLs para Clientes
     path('clientes/', views.listar_clientes, name='listar_clientes'),
     path('clientes/adicionar/', views.adicionar_cliente, name='adicionar_cliente'),
     path('clientes/editar/<int:pk>/', views.editar_cliente, name='editar_cliente'),
@@ -54,5 +54,12 @@ urlpatterns = [
     path('perfil/', views.perfil_usuario, name='perfil'),
     path('alterar-senha/', views.alterar_senha, name='alterar_senha'),
     path('minhas-notas/', views.minhas_notas_fiscais, name='minhas_notas_fiscais'),
+    path('minhas-notas/<int:pk>/imprimir/', views.imprimir_nota_fiscal, name='imprimir_nota_fiscal'),
     path('meus-romaneios/', views.meus_romaneios, name='meus_romaneios'),
+    
+    # URLs para Gerenciamento de Usuários (apenas administradores)
+    path('usuarios/', views.listar_usuarios, name='listar_usuarios'),
+    path('usuarios/cadastrar/', views.cadastrar_usuario, name='cadastrar_usuario'),
+    path('usuarios/editar/<int:pk>/', views.editar_usuario, name='editar_usuario'),
+    path('usuarios/excluir/<int:pk>/', views.excluir_usuario, name='excluir_usuario'),
 ]

@@ -839,6 +839,23 @@ class CadastroUsuarioForm(forms.ModelForm):
             raise forms.ValidationError("As senhas não coincidem.")
         return password2
     
+    def clean(self):
+        cleaned_data = super().clean()
+        password1 = cleaned_data.get("password1")
+        password2 = cleaned_data.get("password2")
+        
+        # Se é uma instância existente (edição) e nenhuma senha foi fornecida, não validar
+        if self.instance and self.instance.pk and not password1 and not password2:
+            return cleaned_data
+        
+        # Se é um novo usuário ou senhas foram fornecidas, validar
+        if not password1:
+            raise forms.ValidationError("A senha é obrigatória para novos usuários.")
+        if not password2:
+            raise forms.ValidationError("A confirmação de senha é obrigatória para novos usuários.")
+        
+        return cleaned_data
+    
     def clean_tipo_usuario(self):
         tipo_usuario = self.cleaned_data.get('tipo_usuario')
         cliente = self.cleaned_data.get('cliente')
@@ -853,7 +870,11 @@ class CadastroUsuarioForm(forms.ModelForm):
     
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.set_password(self.cleaned_data["password1"])
+        
+        # Só definir a senha se foi fornecida
+        if self.cleaned_data.get("password1"):
+            user.set_password(self.cleaned_data["password1"])
+        
         if commit:
             user.save()
         return user

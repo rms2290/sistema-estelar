@@ -17,11 +17,34 @@
                     {% endif %}
                 </div>
                 <div class="card-body">
-                    {% if notas_fiscais %}
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i> 
-                            Você possui <strong>{{ notas_fiscais.count }}</strong> nota(s) fiscal(is).
+                    <!-- Filtros -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'notas:minhas_notas_fiscais' %}" 
+                                   class="btn btn-outline-primary {% if not status_filter %}active{% endif %}">
+                                    <i class="fas fa-list"></i> Todas
+                                </a>
+                                <a href="{% url 'notas:minhas_notas_fiscais' %}?status=deposito" 
+                                   class="btn btn-outline-warning {% if status_filter == 'deposito' %}active{% endif %}">
+                                    <i class="fas fa-warehouse"></i> Em Depósito
+                                </a>
+                                <a href="{% url 'notas:minhas_notas_fiscais' %}?status=enviada" 
+                                   class="btn btn-outline-success {% if status_filter == 'enviada' %}active{% endif %}">
+                                    <i class="fas fa-truck"></i> Enviadas
+                                </a>
+                            </div>
                         </div>
+                        <div class="col-md-6 text-end">
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-info-circle"></i> 
+                                Você possui <strong>{{ notas_fiscais.count }}</strong> nota(s) fiscal(is)
+                                {% if status_filter == 'deposito' %}em depósito{% elif status_filter == 'enviada' %}enviadas{% endif %}.
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if notas_fiscais %}
 
                         <div class="table-responsive">
                             <table class="table table-striped table-hover">
@@ -68,10 +91,26 @@
                                                 {% endif %}
                                             </td>
                                             <td>
-                                                <a href="{% url 'notas:detalhes_nota_fiscal' nota.pk %}" 
-                                                   class="btn btn-info btn-sm" title="Ver Detalhes">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{% url 'notas:detalhes_nota_fiscal' nota.pk %}" 
+                                                       class="btn btn-info btn-sm" title="Ver Detalhes">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a href="{% url 'notas:imprimir_nota_fiscal' nota.pk %}" 
+                                                       class="btn btn-secondary btn-sm" title="Imprimir" target="_blank">
+                                                        <i class="fas fa-print"></i>
+                                                    </a>
+                                                    {% if user.is_admin or user.is_funcionario %}
+                                                        <a href="{% url 'notas:editar_nota_fiscal' nota.pk %}" 
+                                                           class="btn btn-warning btn-sm" title="Editar">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                        <a href="{% url 'notas:excluir_nota_fiscal' nota.pk %}" 
+                                                           class="btn btn-danger btn-sm" title="Excluir">
+                                                            <i class="fas fa-trash"></i>
+                                                        </a>
+                                                    {% endif %}
+                                                </div>
                                             </td>
                                         </tr>
                                     {% endfor %}

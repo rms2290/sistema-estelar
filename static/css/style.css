@@ -106,6 +106,21 @@ body {
 .top-bar .user-info {
     font-size: 0.9rem;
     color: var(--dark-secondary-text-color);
+    margin-left: auto; /* Empurra para a direita */
+}
+
+.top-bar .dropdown-menu {
+    background-color: var(--dark-card-bg);
+    border-color: var(--dark-border-color);
+}
+
+.top-bar .dropdown-item {
+    color: var(--dark-text-color);
+}
+
+.top-bar .dropdown-item:hover {
+    background-color: var(--dark-card-header-bg);
+    color: var(--primary-color);
 }
 
 /* Estilos de Cartões (Cards) */

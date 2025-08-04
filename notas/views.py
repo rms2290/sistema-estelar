@@ -540,6 +540,13 @@ def excluir_romaneio(request, pk):
 def detalhes_romaneio(request, pk):
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
     
+    # Verificar se o usuário tem permissão para ver este romaneio
+    if request.user.is_cliente and request.user.cliente:
+        # Cliente só pode ver romaneios que contêm suas notas fiscais
+        if not romaneio.notas_fiscais.filter(cliente=request.user.cliente).exists():
+            messages.error(request, 'Você não tem permissão para acessar este romaneio.')
+            return redirect('notas:meus_romaneios')
+    
     notas_romaneadas = romaneio.notas_fiscais.all().order_by('nota')
 
     context = {
@@ -761,6 +768,14 @@ def pesquisar_mercadorias_deposito(request):
 # --------------------------------------------------------------------------------------
 def visualizar_romaneio_para_impressao(request, pk):
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
+    
+    # Verificar se o usuário tem permissão para imprimir este romaneio
+    if request.user.is_cliente and request.user.cliente:
+        # Cliente só pode imprimir romaneios que contêm suas notas fiscais
+        if not romaneio.notas_fiscais.filter(cliente=request.user.cliente).exists():
+            messages.error(request, 'Você não tem permissão para imprimir este romaneio.')
+            return redirect('notas:meus_romaneios')
+    
     notas_romaneadas = romaneio.notas_fiscais.all().order_by('nota') # Pegar notas associadas
 
     context = {
@@ -778,10 +793,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.utils import timezone
 from .forms import LoginForm, CadastroUsuarioForm, AlterarSenhaForm
+from .models import Usuario # Adicionado import para o modelo Usuario
 
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('notas:home')
+        return redirect('notas:listar_notas_fiscais')
     
     if request.method == 'POST':
         form = LoginForm(request.POST)
@@ -797,7 +813,7 @@ def login_view(request):
                 user.save()
                 
                 messages.success(request, f'Bem-vindo, {user.get_full_name()}!')
-                return redirect('notas:home')
+                return redirect('notas:listar_notas_fiscais')
             else:
                 messages.error(request, 'Nome de usuário ou senha inválidos.')
     else:
@@ -826,7 +842,7 @@ def alterar_senha(request):
                 request.user.set_password(nova_senha)
                 request.user.save()
                 messages.success(request, 'Senha alterada com sucesso!')
-                return redirect('notas:home')
+                return redirect('notas:listar_notas_fiscais')
     else:
         form = AlterarSenhaForm()
     
@@ -850,15 +866,43 @@ def is_cliente(user):
 @login_required
 @user_passes_test(is_cliente)
 def minhas_notas_fiscais(request):
+    # Obter parâmetro de filtro
+    status_filter = request.GET.get('status', '')
+    
     if request.user.is_cliente and request.user.cliente:
         # Cliente vê apenas suas notas
-        notas_fiscais = NotaFiscal.objects.filter(cliente=request.user.cliente).order_by('-data')
+        notas_fiscais = NotaFiscal.objects.filter(cliente=request.user.cliente)
     else:
         # Admin e funcionários veem todas as notas
-        notas_fiscais = NotaFiscal.objects.all().order_by('-data')
+        notas_fiscais = NotaFiscal.objects.all()
+    
+    # Aplicar filtro por status se especificado
+    if status_filter:
+        if status_filter == 'deposito':
+            notas_fiscais = notas_fiscais.filter(status='Depósito')
+        elif status_filter == 'enviada':
+            notas_fiscais = notas_fiscais.filter(status='Enviada')
+    
+    # Ordenar por data mais recente
+    notas_fiscais = notas_fiscais.order_by('-data')
     
     return render(request, 'notas/auth/minhas_notas.html', {
-        'notas_fiscais': notas_fiscais
+        'notas_fiscais': notas_fiscais,
+        'status_filter': status_filter
+    })
+
+@login_required
+@user_passes_test(is_cliente)
+def imprimir_nota_fiscal(request, pk):
+    nota = get_object_or_404(NotaFiscal, pk=pk)
+    
+    # Verificar se o usuário tem permissão para ver esta nota
+    if request.user.is_cliente and request.user.cliente != nota.cliente:
+        messages.error(request, 'Você não tem permissão para acessar esta nota fiscal.')
+        return redirect('notas:minhas_notas_fiscais')
+    
+    return render(request, 'notas/auth/imprimir_nota_fiscal.html', {
+        'nota': nota
     })
 
 @login_required
@@ -876,3 +920,67 @@ def meus_romaneios(request):
     return render(request, 'notas/auth/meus_romaneios.html', {
         'romaneios': romaneios
     })
+
+# View para administradores cadastrarem novos usuários
+@login_required
+@user_passes_test(is_admin)
+def cadastrar_usuario(request):
+    if request.method == 'POST':
+        form = CadastroUsuarioForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            messages.success(request, f'Usuário {user.username} cadastrado com sucesso!')
+            return redirect('notas:listar_usuarios')
+        else:
+            messages.error(request, 'Houve um erro ao cadastrar o usuário. Verifique os campos.')
+    else:
+        form = CadastroUsuarioForm()
+    
+    return render(request, 'notas/auth/cadastrar_usuario.html', {'form': form})
+
+@login_required
+@user_passes_test(is_admin)
+def listar_usuarios(request):
+    usuarios = Usuario.objects.all().order_by('username')
+    return render(request, 'notas/auth/listar_usuarios.html', {'usuarios': usuarios})
+
+@login_required
+@user_passes_test(is_admin)
+def editar_usuario(request, pk):
+    usuario = get_object_or_404(Usuario, pk=pk)
+    if request.method == 'POST':
+        form = CadastroUsuarioForm(request.POST, instance=usuario)
+        if form.is_valid():
+            # Se a senha foi alterada, hash ela
+            if form.cleaned_data.get('password1'):
+                usuario.set_password(form.cleaned_data['password1'])
+            form.save()
+            messages.success(request, f'Usuário {usuario.username} atualizado com sucesso!')
+            return redirect('notas:listar_usuarios')
+        else:
+            messages.error(request, 'Houve um erro ao atualizar o usuário. Verifique os campos.')
+    else:
+        form = CadastroUsuarioForm(instance=usuario)
+    
+    return render(request, 'notas/auth/editar_usuario.html', {'form': form, 'usuario': usuario})
+
+@login_required
+@user_passes_test(is_admin)
+def excluir_usuario(request, pk):
+    usuario = get_object_or_404(Usuario, pk=pk)
+    
+    # Não permitir excluir o próprio usuário
+    if usuario == request.user:
+        messages.error(request, 'Você não pode excluir seu próprio usuário.')
+        return redirect('notas:listar_usuarios')
+    
+    if request.method == 'POST':
+        try:
+            username = usuario.username
+            usuario.delete()
+            messages.success(request, f'Usuário {username} excluído com sucesso!')
+        except Exception as e:
+            messages.error(request, f'Não foi possível excluir o usuário: {e}')
+        return redirect('notas:listar_usuarios')
+    
+    return render(request, 'notas/auth/confirmar_exclusao_usuario.html', {'usuario': usuario})
