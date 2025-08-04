@@ -12,6 +12,7 @@
     --dark-card-header-bg: #495057; /* Cor de fundo do cabeçalho do card */
     --primary-color: #007bff; /* Cor primária do Bootstrap */
     --accent-color: #28a745; /* Cor de destaque (verde) */
+    --light-card-text: #212529; /* Cor do texto para cards com fundo claro */
 }
 
 body {
@@ -233,6 +234,23 @@ body {
 .alert-info { background-color: #17a2b8; border-color: #138496; color: #fff; }
 .alert-warning { background-color: #ffc107; border-color: #e0a800; color: #212529; } /* Texto escuro para warning */
 
+/* Estilos para cards com fundo claro no tema escuro */
+.card.bg-light {
+    background-color: #f8f9fa !important;
+    color: var(--light-card-text) !important;
+}
+
+.card.bg-light .card-title,
+.card.bg-light .card-text {
+    color: var(--light-card-text) !important;
+}
+
+.card.bg-light h6,
+.card.bg-light h4,
+.card.bg-light p {
+    color: var(--light-card-text) !important;
+}
+
 /* --- Ajustes Específicos para Checkboxes de Notas Fiscais no Romaneio --- */
 .notes-checkbox-container {
     padding: 10px;
@@ -340,12 +358,11 @@ body {
 /* Ajustes de largura e alinhamento das "colunas" - OS % DEVEM SOMAR 100% DO ESPAÇO DISPONÍVEL APÓS O CHECKBOX */
 /* E o text-align é por coluna aqui para controle fino */
 .notes-checkbox-container .note-col-nf { width: 10%; text-align: left; } 
-.notes-checkbox-container .note-col-fornecedor { width: 20%; text-align: left; }
-.notes-checkbox-container .note-col-mercadoria { width: 18%; text-align: left; } 
-.notes-checkbox-container .note-col-qtd { width: 7%; justify-content: center; } 
-.notes-checkbox-container .note-col-peso { width: 7%; justify-content: center; } 
-.notes-checkbox-container .note-col-valor { width: 15%; justify-content: flex-end; } 
-.notes-checkbox-container .note-col-data { width: 15%; justify-content: flex-end; }
+.notes-checkbox-container .note-col-fornecedor { width: 25%; text-align: left; }
+.notes-checkbox-container .note-col-mercadoria { width: 20%; text-align: left; } 
+.notes-checkbox-container .note-col-qtd { width: 8%; justify-content: center; } 
+.notes-checkbox-container .note-col-peso { width: 8%; justify-content: center; } 
+.notes-checkbox-container .note-col-valor { width: 19%; justify-content: flex-end; } 
 
 /* Estilos para os campos de Total (Peso e Valor) */
 .form-control-plaintext {
@@ -366,35 +383,38 @@ body {
 .romaneio-print-container {
     background-color: #fff;
     color: #333;
-    padding: 20px; /* Reduzir um pouco o padding geral */
+    padding: 20px;
     border: 1px solid #ddd;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
     max-width: 900px;
-    margin: 15px auto; /* Reduzir margem superior/inferior */
-    font-size: 0.85em; /* Reduzir a fonte base do container */
+    margin: 15px auto;
+    font-size: 0.75em; /* Fonte base do container diminuída */
 }
 
 .romaneio-print-container h1 {
-    font-size: 1.6em; /* Reduzir tamanho do H1 */
+    font-size: 1.5em; /* Diminuído de 1.6em */
 }
 .romaneio-print-container h4 {
-    font-size: 1.0em; /* Reduzir tamanho do H4 */
+    font-size: 0.9em; /* Diminuído de 1.0em */
 }
 
 .romaneio-print-container p {
-    margin-bottom: 3px; /* Reduzir ainda mais o espaçamento entre parágrafos */
-    line-height: 1.3; /* Ajustar line-height para maior compactação */
+    margin-bottom: 3px;
+    line-height: 1.3;
+}
+.romaneio-print-container p strong {
+    font-size: 0.95em; /* Ligeiramente menor */
 }
 
 .print-header {
-    padding-bottom: 10px; /* Reduzir padding */
-    margin-bottom: 15px; /* Reduzir margem */
+    padding-bottom: 10px;
+    margin-bottom: 15px;
 }
 .print-header h1 {
-    font-size: 1.5em; /* Ajuste para o título da empresa */
+    font-size: 1.2em; /* Diminuído ainda mais */
 }
 .print-header p {
-    font-size: 0.75em; /* Ajuste para informações de contato da empresa */
+    font-size: 0.6em; /* Diminuído ainda mais */
 }
 
 .print-section-top {
@@ -402,23 +422,32 @@ body {
     margin-bottom: 10px;
 }
 .print-section-top p {
-    font-size: 0.8em; /* Fonte menor para detalhes de cliente/motorista/veículo */
+    font-size: 0.65em; /* Diminuído ainda mais para as seções circuladas */
 }
 .print-section-top strong {
-    font-size: 1em; /* Manter strong legível */
+    font-size: 0.75em; /* Diminuído o strong também */
 }
 
 
 .notes-print-section table th, .notes-print-section table td {
-    padding: 5px 8px; /* Reduzir padding das células da tabela de notas */
-    font-size: 0.8em; /* Reduzir fonte da tabela de notas */
+    padding: 4px 7px; /* Reduzido padding das células */
+    font-size: 0.65em; /* Diminuído ainda mais */
 }
 .notes-print-section th {
-    font-size: 0.85em; /* Fonte um pouco maior para cabeçalhos da tabela */
+    font-size: 0.7em; /* Diminuído ainda mais */
+}
+
+.total-row {
+    font-weight: bold;
+    margin-top: 15px;
+    color: #333;
+}
+.total-row div {
+    padding: 3px 10px;
 }
 
 .print-footer {
-    font-size: 0.75em; /* Reduzir fonte do rodapé */
+    font-size: 0.6em; /* Diminuído ainda mais */
     padding-top: 15px;
     margin-top: 20px;
 }
@@ -426,7 +455,7 @@ body {
     line-height: 1.3;
 }
 .print-footer strong {
-    font-size: 1em;
+    font-size: 0.9em;
 }
 
 /* --- Media Query para Impressão (Estilos para quando for imprimir) --- */
@@ -465,21 +494,22 @@ body {
 
     /* Ajustes específicos de fonte e espaçamento para impressão real */
     .romaneio-print-container {
-        font-size: 0.75em !important; /* Fonte base ainda menor na impressão */
+        font-size: 0.6em !important; /* Fonte base ainda menor na impressão */
     }
     .romaneio-print-container p {
-        margin-bottom: 2px !important; /* Espaço mínimo entre parágrafos */
+        margin-bottom: 1px !important; /* Espaço mínimo entre parágrafos */
+        line-height: 1.1 !important; /* Reduzir line height */
     }
     .notes-print-section table th, .notes-print-section table td {
-        padding: 3px 6px !important; /* Padding ainda menor na tabela para mais linhas */
+        padding: 2px 5px !important; /* Padding ainda menor na tabela para mais linhas */
     }
     .notes-print-section th {
-        font-size: 0.8em !important; /* Cabeçalho da tabela de notas */
+        font-size: 0.6em !important; /* Cabeçalho da tabela de notas */
     }
     .notes-print-section td {
-        font-size: 0.75em !important; /* Conteúdo da tabela de notas */
+        font-size: 0.6em !important; /* Conteúdo da tabela de notas */
     }
     .notes-print-section table {
-        margin-top: 5px !important; /* Margem menor para a tabela */
+        margin-top: 2px !important; /* Margem menor para a tabela */
     }
 }

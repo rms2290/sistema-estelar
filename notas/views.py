@@ -11,7 +11,7 @@ from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, His
 from .forms import (
     NotaFiscalForm, ClienteForm, MotoristaForm, VeiculoForm, RomaneioViagemForm,
     NotaFiscalSearchForm, ClienteSearchForm, MotoristaSearchForm, HistoricoConsultaForm,
-    VeiculoSearchForm # Certifique-se que VeiculoSearchForm está importado
+    VeiculoSearchForm, MercadoriaDepositoSearchForm # Adicionado o novo formulário
 )
 
 # --------------------------------------------------------------------------------------
@@ -702,6 +702,60 @@ def detalhes_veiculo(request, pk):
         'veiculo': veiculo,
     }
     return render(request, 'notas/detalhes_veiculo.html', context)
+# --------------------------------------------------------------------------------------
+# NOVA VIEW: Pesquisar Mercadorias no Depósito por Cliente
+# --------------------------------------------------------------------------------------
+def pesquisar_mercadorias_deposito(request):
+    search_form = MercadoriaDepositoSearchForm(request.GET)
+    mercadorias = NotaFiscal.objects.none()
+    search_performed = False
+    total_peso = 0
+    total_valor = 0
+
+    if request.GET and search_form.is_valid():
+        search_performed = True
+        
+        # Filtrar apenas notas com status 'Depósito'
+        queryset = NotaFiscal.objects.filter(status='Depósito')
+        
+        # Aplicar filtros do formulário
+        cliente = search_form.cleaned_data.get('cliente')
+        mercadoria = search_form.cleaned_data.get('mercadoria')
+        fornecedor = search_form.cleaned_data.get('fornecedor')
+        data_inicio = search_form.cleaned_data.get('data_inicio')
+        data_fim = search_form.cleaned_data.get('data_fim')
+        
+        if cliente:
+            queryset = queryset.filter(cliente=cliente)
+        
+        if mercadoria:
+            queryset = queryset.filter(mercadoria__icontains=mercadoria)
+        
+        if fornecedor:
+            queryset = queryset.filter(fornecedor__icontains=fornecedor)
+        
+        if data_inicio:
+            queryset = queryset.filter(data__gte=data_inicio)
+        
+        if data_fim:
+            queryset = queryset.filter(data__lte=data_fim)
+        
+        # Ordenar por data de emissão (mais recente primeiro) e depois por número da nota
+        mercadorias = queryset.order_by('-data', 'nota')
+        
+        # Calcular totais
+        total_peso = sum(mercadoria.peso for mercadoria in mercadorias if mercadoria.peso)
+        total_valor = sum(mercadoria.valor for mercadoria in mercadorias if mercadoria.valor)
+    
+    context = {
+        'search_form': search_form,
+        'mercadorias': mercadorias,
+        'search_performed': search_performed,
+        'total_peso': total_peso,
+        'total_valor': total_valor,
+    }
+    return render(request, 'notas/pesquisar_mercadorias_deposito.html', context)
+
 # --------------------------------------------------------------------------------------
 # NOVA VIEW: Visualizar Romaneio para Impressão
 # --------------------------------------------------------------------------------------

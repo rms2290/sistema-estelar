@@ -18,11 +18,59 @@
             </div>
         {% endif %}
 
-        {# Campos do formulário de nota fiscal #}
-        {{ form.as_p }} 
+        {# Seção de Dados da Nota Fiscal #}
+        <div class="card card-body mb-4">
+            <h3>Dados da Nota Fiscal</h3>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.nota.id_for_label }}" class="form-label">{{ form.nota.label }}:</label>
+                    {{ form.nota }}
+                    {% if form.nota.errors %}<div class="text-danger">{{ form.nota.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.data.id_for_label }}" class="form-label">{{ form.data.label }}:</label>
+                    {{ form.data }}
+                    {% if form.data.errors %}<div class="text-danger">{{ form.data.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.cliente.id_for_label }}" class="form-label">{{ form.cliente.label }}:</label>
+                    {{ form.cliente }}
+                    {% if form.cliente.errors %}<div class="text-danger">{{ form.cliente.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.fornecedor.id_for_label }}" class="form-label">{{ form.fornecedor.label }}:</label>
+                    {{ form.fornecedor }}
+                    {% if form.fornecedor.errors %}<div class="text-danger">{{ form.fornecedor.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.mercadoria.id_for_label }}" class="form-label">{{ form.mercadoria.label }}:</label>
+                    {{ form.mercadoria }}
+                    {% if form.mercadoria.errors %}<div class="text-danger">{{ form.mercadoria.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.quantidade.id_for_label }}" class="form-label">{{ form.quantidade.label }}:</label>
+                    {{ form.quantidade }}
+                    {% if form.quantidade.errors %}<div class="text-danger">{{ form.quantidade.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.peso.id_for_label }}" class="form-label">{{ form.peso.label }}:</label>
+                    {{ form.peso }}
+                    {% if form.peso.errors %}<div class="text-danger">{{ form.peso.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.valor.id_for_label }}" class="form-label">{{ form.valor.label }}:</label>
+                    {{ form.valor }}
+                    {% if form.valor.errors %}<div class="text-danger">{{ form.valor.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }}:</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}<div class="text-danger">{{ form.status.errors }}</div>{% endif %}
+                </div>
+            </div>
+        </div>
 
         <button type="submit" class="btn btn-success mt-3">Salvar Alterações</button>
-        {# MUDANÇA AQUI: Redirecionar para detalhes_nota_fiscal #}
         <a href="{% url 'notas:detalhes_nota_fiscal' nota.pk %}" class="btn btn-secondary mt-3">Cancelar</a>
     </form>
 </div>

@@ -15,7 +15,7 @@
     <div class="romaneio-print-container">
         {# Cabeçalho da Empresa #}
         <div class="print-header mb-4 text-center">
-            <h1 class="mb-0">AGENCIA DE CARGAS ESTELAR LTDA</h1>
+            <h1 class="mb-0">AGENCIA DE CARGAS ESTELAR</h1>
             <p class="mb-0">RUA MAUÁ, 898 - Fone: (55)11 32273798 | 32270396</p>
             <p class="mb-0">www.agenciaestelar.com.br / agenciaestelar@agenciaestelar.com.br</p>
         </div>
@@ -23,7 +23,7 @@
         {# Informações do Romaneio (primeira linha do cabeçalho) #}
         <div class="row mb-3 print-section-top">
             <div class="col-6">
-                <p class="mb-1"><strong>CNPJ/MF:</strong> {{ romaneio.cliente.cnpj|default:"N/A" }}</p>
+                <p class="mb-1"><strong>CNPJ:</strong> {{ romaneio.cliente.cnpj|default:"N/A" }}</p>
                 <p class="mb-1"><strong>INSCR. EST:</strong> {{ romaneio.cliente.inscricao_estadual|default:"N/A" }}</p>
                 <p class="mb-1"><strong>COMP. C/C:</strong> {{ romaneio.cliente.telefone|default:"N/A" }}</p>
                 <p class="mb-1"><strong>DESTINATÁRIO:</strong> {{ romaneio.cliente.razao_social }}</p>
@@ -58,7 +58,7 @@
                             <th>QTD</th>
                             <th>PESO (KG)</th>
                             <th>VALOR (R$)</th>
-                            <th>DATA EMISSÃO</th>
+                            {# REMOVIDO: <th>Data Emissão</th> #}
                         </tr>
                     </thead>
                     <tbody>
@@ -70,20 +70,19 @@
                                 <td>{{ nota.quantidade }}</td>
                                 <td>{{ nota.peso|floatformat:"0" }}</td>
                                 <td>{{ nota.valor|floatformat:"2" }}</td>
-                                <td>{{ nota.data|date:"d/m/Y" }}</td>
+                                {# REMOVIDO: <td>{{ nota.data|date:"d/m/Y" }}</td> #}
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
                 <div class="row total-row">
-                    <div class="col-6 text-end"><strong>Total de Notas:</strong></div>
-                    <div class="col-6 text-start">{{ notas_romaneadas.count }}</div>
-                    {# Calcular peso e valor total das notas romaneadas #}
                     {% with total_peso=0 total_valor=0 %}
                         {% for nota in notas_romaneadas %}
                             {% with total_peso=total_peso|add:nota.peso total_valor=total_valor|add:nota.valor %}
                             {% endwith %}
                         {% endfor %}
+                        <div class="col-6 text-end"><strong>Total de Notas:</strong></div>
+                        <div class="col-6 text-start">{{ notas_romaneadas.count }}</div>
                         <div class="col-6 text-end"><strong>Peso Total (KG):</strong></div>
                         <div class="col-6 text-start">{{ total_peso|floatformat:"0" }}</div>
                         <div class="col-6 text-end"><strong>Valor Total (R$):</strong></div>

@@ -44,4 +44,7 @@ urlpatterns = [
 # URL para carregar notas fiscais via AJAX
     path('ajax/load-notas/', views.load_notas_fiscais, name='ajax_load_notas'),
     path('ajax/load-notas-edicao/', views.load_notas_fiscais_edicao, name='ajax_load_notas_edicao'),
+
+# Nova URL para pesquisar mercadorias no depósito
+    path('mercadorias-deposito/', views.pesquisar_mercadorias_deposito, name='pesquisar_mercadorias_deposito'),
 ]

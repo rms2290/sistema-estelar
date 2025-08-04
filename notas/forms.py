@@ -590,3 +590,37 @@ class HistoricoConsultaForm(forms.ModelForm):
         # Preenche a data da consulta com a data atual por padrão
         if self.instance.pk is None and not self.initial.get('data_consulta'):
             self.fields['data_consulta'].initial = date.today()
+
+# --------------------------------------------------------------------------------------
+# Formulário de Pesquisa para Mercadorias no Depósito
+# --------------------------------------------------------------------------------------
+class MercadoriaDepositoSearchForm(forms.Form):
+    cliente = forms.ModelChoiceField(
+        queryset=Cliente.objects.filter(status='Ativo').order_by('razao_social'),
+        label='Cliente',
+        required=True,
+        empty_label="--- Selecione um cliente ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    mercadoria = forms.CharField(
+        label='Mercadoria',
+        required=False,
+        max_length=200,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome da mercadoria'})
+    )
+    fornecedor = forms.CharField(
+        label='Fornecedor',
+        required=False,
+        max_length=200,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome do fornecedor'})
+    )
+    data_inicio = forms.DateField(
+        label='Data de Emissão (Início)',
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    data_fim = forms.DateField(
+        label='Data de Emissão (Fim)',
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
