@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load format_filters %}
 
 {% block title %}Minhas Notas Fiscais - Sistema Estelar{% endblock %}
 
@@ -71,9 +72,9 @@
                                             <td>{{ nota.data|date:"d/m/Y" }}</td>
                                             <td>{{ nota.fornecedor }}</td>
                                             <td>{{ nota.mercadoria }}</td>
-                                            <td>{{ nota.quantidade }}</td>
-                                            <td>{{ nota.peso|floatformat:"0" }}</td>
-                                            <td>{{ nota.valor|floatformat:"2" }}</td>
+                                            <td>{{ nota.quantidade|format_brazilian_quantity }}</td>
+                                            <td>{{ nota.peso|format_brazilian_weight }}</td>
+                                            <td>{{ nota.valor|format_brazilian_currency }}</td>
                                             <td>
                                                 <span class="badge {% if nota.status == 'Depósito' %}bg-warning{% else %}bg-success{% endif %}">
                                                     {{ nota.get_status_display }}

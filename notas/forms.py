@@ -992,7 +992,7 @@ class MercadoriaDepositoSearchForm(forms.Form):
     cliente = forms.ModelChoiceField(
         queryset=Cliente.objects.filter(status='Ativo').order_by('razao_social'),
         label='Cliente',
-        required=True,
+        required=False,
         empty_label="--- Selecione um cliente ---",
         widget=forms.Select(attrs={'class': 'form-control'})
     )

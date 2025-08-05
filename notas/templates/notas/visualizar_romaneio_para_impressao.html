@@ -1,4 +1,5 @@
 {% load static %}
+{% load format_filters %}
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -67,9 +68,9 @@
                                 <td>{{ nota.nota }}</td>
                                 <td>{{ nota.fornecedor }}</td>
                                 <td>{{ nota.mercadoria }}</td>
-                                <td>{{ nota.quantidade }}</td>
-                                <td>{{ nota.peso|floatformat:"0" }}</td>
-                                <td>{{ nota.valor|floatformat:"2" }}</td>
+                                <td>{{ nota.quantidade|format_brazilian_quantity }}</td>
+                                <td>{{ nota.peso|format_brazilian_weight }}</td>
+                                <td>{{ nota.valor|format_brazilian_currency }}</td>
                                 {# REMOVIDO: <td>{{ nota.data|date:"d/m/Y" }}</td> #}
                             </tr>
                         {% endfor %}
@@ -84,9 +85,9 @@
                         <div class="col-6 text-end"><strong>Total de Notas:</strong></div>
                         <div class="col-6 text-start">{{ notas_romaneadas.count }}</div>
                         <div class="col-6 text-end"><strong>Peso Total (KG):</strong></div>
-                        <div class="col-6 text-start">{{ total_peso|floatformat:"0" }}</div>
+                        <div class="col-6 text-start">{{ total_peso|format_brazilian_weight }}</div>
                         <div class="col-6 text-end"><strong>Valor Total (R$):</strong></div>
-                        <div class="col-6 text-start">R$ {{ total_valor|floatformat:"2" }}</div>
+                        <div class="col-6 text-start">{{ total_valor|format_brazilian_currency }}</div>
                     {% endwith %}
                 </div>
             {% else %}

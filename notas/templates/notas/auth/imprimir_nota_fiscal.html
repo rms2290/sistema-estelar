@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load format_filters %}
 
 {% block title %}Imprimir Nota Fiscal - Sistema Estelar{% endblock %}
 
@@ -57,9 +58,9 @@
                                     <p><strong>Mercadoria:</strong> {{ nota.mercadoria }}</p>
                                 </div>
                                 <div class="col-md-6">
-                                    <p><strong>Quantidade:</strong> {{ nota.quantidade }}</p>
-                                    <p><strong>Peso:</strong> {{ nota.peso|floatformat:"0" }} kg</p>
-                                    <p><strong>Valor:</strong> R$ {{ nota.valor|floatformat:"2" }}</p>
+                                    <p><strong>Quantidade:</strong> {{ nota.quantidade|format_brazilian_quantity }}</p>
+                                    <p><strong>Peso:</strong> {{ nota.peso|format_brazilian_weight }}</p>
+                                    <p><strong>Valor:</strong> {{ nota.valor|format_brazilian_currency }}</p>
                                 </div>
                             </div>
                         </div>

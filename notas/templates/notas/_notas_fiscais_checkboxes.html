@@ -1,4 +1,5 @@
 {# notas/templates/notas/_notas_fiscais_checkboxes.html #}
+{% load format_filters %}
 
 <div class="notes-checkbox-container">
     <div class="notes-header-row row g-0"> {# g-0 remove o gutter #}
@@ -23,7 +24,7 @@
                 <div class="col-md-2">{{ nota.nota }}</div>
                 <div class="col-md-3">{{ nota.cliente.razao_social }}</div>
                 <div class="col-md-2">{{ nota.data|date:"d/m/Y" }}</div>
-                <div class="col-md-2">{{ nota.valor|floatformat:"2" }}</div>
+                <div class="col-md-2">{{ nota.valor|format_brazilian_currency }}</div>
                 <div class="col-md-2">{{ nota.get_status_display }}</div>
             </div>
         {% endfor %}

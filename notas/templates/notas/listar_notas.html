@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load format_filters %}
 
 {% block title %}Pesquisar Notas Fiscais{% endblock %}
 
@@ -7,11 +8,13 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
+            <h2><i class="fas fa-search"></i> Pesquisar Notas Fiscais</h2>
+            
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-search"></i> Pesquisar Notas Fiscais
-                    </h3>
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-filter"></i> Filtros de Pesquisa
+                    </h5>
                 </div>
                 <div class="card-body">
                     <!-- Formulário de Pesquisa -->
@@ -102,9 +105,9 @@
                                                 <td>{{ nota.data|date:"d/m/Y" }}</td>
                                                 <td>{{ nota.fornecedor }}</td>
                                                 <td>{{ nota.mercadoria }}</td>
-                                                <td>{{ nota.quantidade }}</td>
-                                                <td>{{ nota.peso|floatformat:"0" }}</td>
-                                                <td>{{ nota.valor|floatformat:"2" }}</td>
+                                                <td>{{ nota.quantidade|format_brazilian_quantity }}</td>
+                                                <td>{{ nota.peso|format_brazilian_weight }}</td>
+                                                <td>{{ nota.valor|format_brazilian_currency }}</td>
                                                 <td>{{ nota.status }}</td>
                                                 <td>
                                                     {% if nota.romaneios.all %}

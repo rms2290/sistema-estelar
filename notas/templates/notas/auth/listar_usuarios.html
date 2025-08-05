@@ -7,14 +7,18 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-users"></i> Gerenciar Usuários</h2>
+                <a href="{% url 'notas:cadastrar_usuario' %}" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i> Cadastrar Novo Usuário
+                </a>
+            </div>
+            
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="card-title">
-                        <i class="fas fa-users"></i> Gerenciar Usuários
-                    </h3>
-                    <a href="{% url 'notas:cadastrar_usuario' %}" class="btn btn-primary">
-                        <i class="fas fa-user-plus"></i> Cadastrar Novo Usuário
-                    </a>
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-list"></i> Lista de Usuários
+                    </h5>
                 </div>
                 <div class="card-body">
                     {% if messages %}

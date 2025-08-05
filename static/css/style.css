@@ -24,6 +24,7 @@ body {
     display: flex; /* Usar flexbox para o layout principal */
     min-height: 100vh; /* Garante que o corpo ocupa toda a altura da tela */
     flex-direction: column; /* Conteúdo principal será coluna se a sidebar não for fixa */
+    font-size: 14px; /* Reduzindo o tamanho base da fonte */
 }
 
 /* Layout Principal: Sidebar e Conteúdo */
@@ -34,9 +35,9 @@ body {
 
 /* Sidebar */
 .sidebar {
-    width: 250px; /* Largura fixa da sidebar */
+    width: 220px; /* Reduzindo a largura da sidebar */
     background-color: var(--dark-sidebar-bg);
-    padding: 20px;
+    padding: 15px; /* Reduzindo o padding */
     box-shadow: 2px 0 5px rgba(0,0,0,0.2);
     display: flex;
     flex-direction: column;
@@ -49,8 +50,9 @@ body {
 
 .sidebar h3 {
     color: var(--primary-color);
-    margin-bottom: 30px;
+    margin-bottom: 20px; /* Reduzindo o margin */
     text-align: center;
+    font-size: 1.2rem; /* Reduzindo o tamanho da fonte */
 }
 
 .sidebar-nav ul {
@@ -59,16 +61,17 @@ body {
 }
 
 .sidebar-nav li {
-    margin-bottom: 10px;
+    margin-bottom: 8px; /* Reduzindo o margin */
 }
 
 .sidebar-nav a {
     display: block;
-    padding: 10px 15px;
+    padding: 8px 12px; /* Reduzindo o padding */
     color: var(--dark-text-color);
     text-decoration: none;
     border-radius: 5px;
     transition: background-color 0.3s ease;
+    font-size: 0.9rem; /* Reduzindo o tamanho da fonte */
 }
 
 .sidebar-nav a:hover {
@@ -79,7 +82,7 @@ body {
 /* Main Content Area */
 .main-content {
     flex-grow: 1;
-    padding: 20px;
+    padding: 15px; /* Reduzindo o padding */
     background-color: var(--dark-bg-color);
     overflow-x: hidden; /* Evita scroll horizontal indesejado */
 }
@@ -88,25 +91,33 @@ body {
 .top-bar {
     background-color: var(--dark-header-bg);
     color: var(--dark-text-color);
-    padding: 15px 20px;
+    padding: 10px 15px; /* Reduzindo o padding */
     display: flex;
     justify-content: space-between;
     align-items: center;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    min-height: 60px; /* Altura mínima do cabeçalho */
+    min-height: 50px; /* Reduzindo a altura mínima */
+    position: relative; /* Para posicionamento absoluto do user-info */
 }
 
 .top-bar .logo {
-    font-size: 1.5rem;
+    font-size: 1.3rem; /* Reduzindo o tamanho da fonte */
     font-weight: bold;
     color: var(--primary-color);
     text-decoration: none;
+    position: absolute; /* Posicionamento absoluto */
+    left: 15px; /* Distância da esquerda */
+    top: 50%; /* Centraliza verticalmente */
+    transform: translateY(-50%); /* Centraliza verticalmente */
 }
 
 .top-bar .user-info {
     font-size: 0.9rem;
     color: var(--dark-secondary-text-color);
-    margin-left: auto; /* Empurra para a direita */
+    position: absolute; /* Posicionamento absoluto */
+    top: 10px; /* Distância do topo */
+    right: 15px; /* Distância da direita */
+    z-index: 1000; /* Garante que fique acima de outros elementos */
 }
 
 .top-bar .dropdown-menu {
@@ -128,8 +139,8 @@ body {
     background-color: var(--dark-card-bg);
     border: 1px solid var(--dark-border-color);
     color: var(--dark-text-color);
-    margin-bottom: 20px;
-    border-radius: 8px;
+    margin-bottom: 15px; /* Reduzindo margin */
+    border-radius: 6px; /* Reduzindo border-radius */
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
@@ -137,13 +148,14 @@ body {
     background-color: var(--dark-card-header-bg);
     color: var(--dark-text-color);
     border-bottom: 1px solid var(--dark-border-color);
-    padding: 1rem 1.25rem;
+    padding: 12px 15px; /* Reduzindo padding */
     font-weight: bold;
     border-radius: calc(8px - 1px) calc(8px - 1px) 0 0;
+    font-size: 1rem; /* Reduzindo tamanho da fonte */
 }
 
 .card-body {
-    padding: 1.25rem;
+    padding: 12px 15px; /* Reduzindo padding */
 }
 
 /* Estilos de Formulário (ajustes para tema escuro) */
@@ -166,6 +178,10 @@ body {
     background-color: var(--dark-sidebar-bg);
     color: var(--dark-text-color);
     border-color: var(--dark-border-color);
+    padding: 6px 10px; /* Reduzindo padding */
+    font-size: 0.9rem; /* Reduzindo tamanho da fonte */
+    height: auto; /* Permitindo altura automática */
+    min-height: 32px; /* Definindo altura mínima menor */
 }
 
 .form-control:focus, .form-select:focus {
@@ -177,7 +193,9 @@ body {
 
 .form-label {
     color: var(--dark-secondary-text-color);
-    font-weight: normal;
+    font-weight: 500;
+    font-size: 0.9rem; /* Reduzindo tamanho da fonte */
+    margin-bottom: 5px; /* Reduzindo margin */
 }
 
 /* Estilos para botões Bootstrap */
@@ -239,11 +257,15 @@ body {
     color: var(--dark-text-color);
     background-color: var(--dark-card-bg); /* Fundo da tabela */
     border-color: var(--dark-border-color);
+    font-size: 0.85rem; /* Reduzindo tamanho da fonte */
 }
 .table thead th {
     background-color: var(--dark-card-header-bg);
     color: var(--dark-text-color);
     border-color: var(--dark-border-color);
+    padding: 8px 10px; /* Reduzindo padding */
+    font-size: 0.9rem; /* Reduzindo tamanho da fonte */
+    font-weight: 600;
 }
 .table tbody tr {
     background-color: var(--dark-card-bg);
@@ -253,6 +275,10 @@ body {
 }
 .table td, .table th {
     border-color: var(--dark-border-color); /* Bordas das células */
+}
+.table tbody td {
+    padding: 6px 10px; /* Reduzindo padding */
+    vertical-align: middle;
 }
 
 /* Estilos específicos para tabelas sem bordas (table-borderless) */
@@ -290,7 +316,7 @@ body {
 
 /* Estilos para mensagens do Django (usando classes Bootstrap alert) */
 .messages .alert {
-    margin-bottom: 1rem;
+    margin-bottom: 10px; /* Reduzindo margin */
 }
 .alert-success { background-color: #28a745; border-color: #218838; color: #fff; }
 .alert-danger { background-color: #dc3545; border-color: #c82333; color: #fff; }
@@ -591,8 +617,199 @@ body {
     }
 }
 
+/* AJUSTES PARA REDUZIR TAMANHOS E PROPORÇÕES */
+/* Reduzindo tamanhos de fontes em geral */
+h1 { font-size: 1.8rem !important; }
+h2 { font-size: 1.5rem !important; }
+h3 { font-size: 1.3rem !important; }
+h4 { font-size: 1.1rem !important; }
+h5 { font-size: 1rem !important; }
+h6 { font-size: 0.9rem !important; }
+
+/* Reduzindo tamanhos de cards e containers */
+.card {
+    margin-bottom: 15px; /* Reduzindo margin */
+    border-radius: 6px; /* Reduzindo border-radius */
+}
+
+.card-header {
+    padding: 12px 15px; /* Reduzindo padding */
+    font-size: 1rem; /* Reduzindo tamanho da fonte */
+}
+
+.card-body {
+    padding: 12px 15px; /* Reduzindo padding */
+}
+
+/* Reduzindo tamanhos de formulários */
+.form-control, .form-select {
+    padding: 6px 10px; /* Reduzindo padding */
+    font-size: 0.9rem; /* Reduzindo tamanho da fonte */
+    height: auto; /* Permitindo altura automática */
+    min-height: 32px; /* Definindo altura mínima menor */
+}
+
+.form-label {
+    font-size: 0.9rem; /* Reduzindo tamanho da fonte */
+    margin-bottom: 5px; /* Reduzindo margin */
+    font-weight: 500;
+}
+
+/* Reduzindo tamanhos de botões */
+.btn {
+    padding: 6px 12px; /* Reduzindo padding */
+    font-size: 0.85rem; /* Reduzindo tamanho da fonte */
+    border-radius: 4px; /* Reduzindo border-radius */
+}
+
+.btn-sm {
+    padding: 4px 8px; /* Reduzindo ainda mais para botões pequenos */
+    font-size: 0.8rem;
+}
+
+/* Reduzindo tamanhos de tabelas */
+.table {
+    font-size: 0.85rem; /* Reduzindo tamanho da fonte */
+}
+
+.table thead th {
+    padding: 8px 10px; /* Reduzindo padding */
+    font-size: 0.9rem; /* Reduzindo tamanho da fonte */
+    font-weight: 600;
+}
+
+.table tbody td {
+    padding: 6px 10px; /* Reduzindo padding */
+    vertical-align: middle;
+}
+
+/* Reduzindo tamanhos de badges */
+.badge {
+    font-size: 0.75rem; /* Reduzindo tamanho da fonte */
+    padding: 3px 6px; /* Reduzindo padding */
+}
+
+/* Reduzindo espaçamentos em geral */
+.mb-4 { margin-bottom: 1rem !important; }
+.mb-3 { margin-bottom: 0.75rem !important; }
+.mb-2 { margin-bottom: 0.5rem !important; }
+.mt-4 { margin-top: 1rem !important; }
+.mt-3 { margin-top: 0.75rem !important; }
+.mt-2 { margin-top: 0.5rem !important; }
+
+.p-4 { padding: 1rem !important; }
+.p-3 { padding: 0.75rem !important; }
+.p-2 { padding: 0.5rem !important; }
+
+/* Reduzindo tamanhos de containers */
+.container {
+    padding-left: 10px; /* Reduzindo padding */
+    padding-right: 10px; /* Reduzindo padding */
+}
+
+/* Reduzindo tamanhos de modais */
+.modal-header {
+    padding: 12px 15px; /* Reduzindo padding */
+}
+
+.modal-body {
+    padding: 12px 15px; /* Reduzindo padding */
+}
+
+.modal-footer {
+    padding: 10px 15px; /* Reduzindo padding */
+}
+
+/* Reduzindo tamanhos de alerts */
+.alert {
+    padding: 8px 12px; /* Reduzindo padding */
+    font-size: 0.85rem; /* Reduzindo tamanho da fonte */
+    margin-bottom: 10px; /* Reduzindo margin */
+}
+
+/* Reduzindo tamanhos de dropdowns */
+.dropdown-menu {
+    font-size: 0.85rem; /* Reduzindo tamanho da fonte */
+    padding: 5px 0; /* Reduzindo padding */
+}
+
+.dropdown-item {
+    padding: 5px 15px; /* Reduzindo padding */
+    font-size: 0.85rem; /* Reduzindo tamanho da fonte */
+}
+
+/* Reduzindo tamanhos de navegação */
+.navbar {
+    padding: 8px 15px; /* Reduzindo padding */
+}
+
+.navbar-brand {
+    font-size: 1.2rem; /* Reduzindo tamanho da fonte */
+}
+
+.nav-link {
+    font-size: 0.9rem; /* Reduzindo tamanho da fonte */
+    padding: 6px 10px; /* Reduzindo padding */
+}
+
+/* Reduzindo tamanhos de listas */
+.list-group-item {
+    padding: 8px 12px; /* Reduzindo padding */
+    font-size: 0.85rem; /* Reduzindo tamanho da fonte */
+}
+
+/* Reduzindo tamanhos de tooltips */
+.tooltip {
+    font-size: 0.8rem; /* Reduzindo tamanho da fonte */
+}
+
+/* Reduzindo tamanhos de popovers */
+.popover {
+    font-size: 0.85rem; /* Reduzindo tamanho da fonte */
+}
+
+.popover-header {
+    padding: 8px 12px; /* Reduzindo padding */
+    font-size: 0.9rem; /* Reduzindo tamanho da fonte */
+}
+
+.popover-body {
+    padding: 8px 12px; /* Reduzindo padding */
+    font-size: 0.85rem; /* Reduzindo tamanho da fonte */
+}
+
+/* Ajustes específicos para o sistema */
+.main-content h2 {
+    font-size: 1.4rem !important; /* Reduzindo título principal */
+    margin-bottom: 15px; /* Reduzindo margin */
+}
+
+.card-title {
+    font-size: 1.1rem !important; /* Reduzindo título dos cards */
+    margin-bottom: 10px; /* Reduzindo margin */
+}
+
+/* Reduzindo tamanhos de ícones */
+.fas, .far, .fab {
+    font-size: 0.9em; /* Reduzindo tamanho dos ícones */
+}
+
+/* Ajustes para responsividade */
+@media (max-width: 768px) {
+    body {
+        font-size: 13px; /* Reduzindo ainda mais em telas menores */
+    }
+    
+    .sidebar {
+        width: 200px; /* Reduzindo largura da sidebar */
+        padding: 10px; /* Reduzindo padding */
+    }
+    
+    .main-content {
+        padding: 10px; /* Reduzindo padding */
+    }
+}
+
 #id_placa.form-control {
-    background-color: var(--dark-sidebar-bg) !important;
-    color: var(--dark-text-color) !important;
-    border-color: var(--dark-border-color) !important;
+    text-transform: uppercase;
 }

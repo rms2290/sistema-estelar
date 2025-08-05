@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load format_filters %}
 
 {% block title %}Detalhes da Nota Fiscal - {{ nota.nota }}{% endblock %}
 
@@ -23,9 +24,9 @@
         <p><strong>Fornecedor:</strong> {{ nota.fornecedor }}</p>
         <p><strong>Data de Emissão:</strong> {{ nota.data|date:"d/m/Y" }}</p>
         <p><strong>Mercadoria:</strong> {{ nota.mercadoria }}</p>
-        <p><strong>Quantidade:</strong> {{ nota.quantidade }}</p>
-        <p><strong>Peso (kg):</strong> {{ nota.peso|floatformat:"0" }}</p>
-        <p><strong>Valor (R$):</strong> {{ nota.valor|floatformat:"2" }}</p>
+        <p><strong>Quantidade:</strong> {{ nota.quantidade|format_brazilian_quantity }}</p>
+        <p><strong>Peso (kg):</strong> {{ nota.peso|format_brazilian_weight }}</p>
+        <p><strong>Valor (R$):</strong> {{ nota.valor|format_brazilian_currency }}</p>
         <p><strong>Status:</strong> {{ nota.get_status_display }}</p>
     </div>
 

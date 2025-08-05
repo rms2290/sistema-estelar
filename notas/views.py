@@ -4,6 +4,7 @@ from django.db.models import Q, Max
 from django.contrib import messages
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required, user_passes_test
+import locale
 
 # Importe todos os seus modelos
 from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta 
@@ -14,6 +15,47 @@ from .forms import (
     NotaFiscalSearchForm, ClienteSearchForm, MotoristaSearchForm, HistoricoConsultaForm,
     VeiculoSearchForm, RomaneioSearchForm, MercadoriaDepositoSearchForm # Adicionado o novo formulário
 )
+
+def formatar_valor_brasileiro(valor, tipo='numero'):
+    """
+    Formata um valor decimal como número brasileiro (1.250,00)
+    """
+    if valor is None:
+        return ''
+    
+    try:
+        # Configurar locale para português brasileiro
+        locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+    except locale.Error:
+        # Fallback se o locale não estiver disponível
+        pass
+    
+    try:
+        # Converter para float e formatar
+        float_value = float(valor)
+        if float_value == 0:
+            return '0' if tipo == 'numero' else 'R$ 0,00'
+        
+        # Formatar com separador de milhares e vírgula decimal
+        if tipo == 'numero':
+            formatted = f"{float_value:,.0f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+        else:  # moeda
+            formatted = f"{float_value:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+            formatted = f"R$ {formatted}"
+        
+        return formatted
+    except (ValueError, TypeError):
+        return str(valor)
+
+def formatar_peso_brasileiro(valor):
+    """
+    Formata um valor de peso como número brasileiro com unidade kg (1.250,00 kg)
+    """
+    if valor is None:
+        return ''
+    
+    peso_formatado = formatar_valor_brasileiro(valor, 'numero')
+    return f"{peso_formatado} kg"
 
 # --------------------------------------------------------------------------------------
 # Funções Auxiliares
@@ -679,9 +721,9 @@ def load_notas_fiscais(request):
             'id': nota.id,
             'nota_numero': nota.nota,
             'fornecedor': nota.fornecedor,
-            'quantidade': str(nota.quantidade), 
-            'peso': str(nota.peso) if nota.peso is not None else '', 
-            'valor': f"{nota.valor:.2f}", 
+            'quantidade': formatar_valor_brasileiro(nota.quantidade, 'numero'), 
+            'peso': formatar_peso_brasileiro(nota.peso), 
+            'valor': formatar_valor_brasileiro(nota.valor, 'moeda'), 
             'mercadoria': nota.mercadoria, 
             'data_emissao': nota.data.strftime("%d/%m/%Y"), 
             'status_nf': nota.get_status_display(), 
@@ -725,9 +767,9 @@ def load_notas_fiscais_edicao(request):
             'id': nota.id,
             'nota_numero': nota.nota,
             'fornecedor': nota.fornecedor,
-            'quantidade': str(nota.quantidade), 
-            'peso': str(nota.peso) if nota.peso is not None else '', 
-            'valor': f"{nota.valor:.2f}", 
+            'quantidade': formatar_valor_brasileiro(nota.quantidade, 'numero'), 
+            'peso': formatar_peso_brasileiro(nota.peso), 
+            'valor': formatar_valor_brasileiro(nota.valor, 'moeda'), 
             'mercadoria': nota.mercadoria, 
             'data_emissao': nota.data.strftime("%d/%m/%Y"), 
             'status_nf': nota.get_status_display(), 
@@ -808,40 +850,47 @@ def pesquisar_mercadorias_deposito(request):
     total_peso = 0
     total_valor = 0
 
-    if request.GET and search_form.is_valid():
-        search_performed = True
-        
-        # Filtrar apenas notas com status 'Depósito'
-        queryset = NotaFiscal.objects.filter(status='Depósito')
-        
-        # Aplicar filtros do formulário
-        cliente = search_form.cleaned_data.get('cliente')
-        mercadoria = search_form.cleaned_data.get('mercadoria')
-        fornecedor = search_form.cleaned_data.get('fornecedor')
-        data_inicio = search_form.cleaned_data.get('data_inicio')
-        data_fim = search_form.cleaned_data.get('data_fim')
-        
-        if cliente:
-            queryset = queryset.filter(cliente=cliente)
-        
-        if mercadoria:
-            queryset = queryset.filter(mercadoria__icontains=mercadoria)
-        
-        if fornecedor:
-            queryset = queryset.filter(fornecedor__icontains=fornecedor)
-        
-        if data_inicio:
-            queryset = queryset.filter(data__gte=data_inicio)
-        
-        if data_fim:
-            queryset = queryset.filter(data__lte=data_fim)
-        
-        # Ordenar por data de emissão (mais recente primeiro) e depois por número da nota
-        mercadorias = queryset.order_by('-data', 'nota')
-        
-        # Calcular totais
-        total_peso = sum(mercadoria.peso for mercadoria in mercadorias if mercadoria.peso)
-        total_valor = sum(mercadoria.valor for mercadoria in mercadorias if mercadoria.valor)
+    if request.GET:
+        # Validar se o formulário foi submetido e se o cliente foi selecionado
+        if search_form.is_valid():
+            cliente = search_form.cleaned_data.get('cliente')
+            
+            # Se o formulário foi submetido mas não há cliente selecionado, adicionar erro
+            if not cliente:
+                search_form.add_error('cliente', 'Este campo é obrigatório para realizar a pesquisa.')
+            else:
+                search_performed = True
+                
+                # Filtrar apenas notas com status 'Depósito'
+                queryset = NotaFiscal.objects.filter(status='Depósito')
+                
+                # Aplicar filtros do formulário
+                mercadoria = search_form.cleaned_data.get('mercadoria')
+                fornecedor = search_form.cleaned_data.get('fornecedor')
+                data_inicio = search_form.cleaned_data.get('data_inicio')
+                data_fim = search_form.cleaned_data.get('data_fim')
+                
+                if cliente:
+                    queryset = queryset.filter(cliente=cliente)
+                
+                if mercadoria:
+                    queryset = queryset.filter(mercadoria__icontains=mercadoria)
+                
+                if fornecedor:
+                    queryset = queryset.filter(fornecedor__icontains=fornecedor)
+                
+                if data_inicio:
+                    queryset = queryset.filter(data__gte=data_inicio)
+                
+                if data_fim:
+                    queryset = queryset.filter(data__lte=data_fim)
+                
+                # Ordenar por data de emissão (mais recente primeiro) e depois por número da nota
+                mercadorias = queryset.order_by('-data', 'nota')
+                
+                # Calcular totais
+                total_peso = sum(mercadoria.peso for mercadoria in mercadorias if mercadoria.peso)
+                total_valor = sum(mercadoria.valor for mercadoria in mercadorias if mercadoria.valor)
     
     context = {
         'search_form': search_form,

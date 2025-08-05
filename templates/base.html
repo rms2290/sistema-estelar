@@ -122,6 +122,32 @@
     
     <!-- Scripts específicos para romaneios -->
     <script>
+        // Função para formatar valores no padrão brasileiro
+        function formatarValorBrasileiro(valor, tipo = 'numero') {
+            if (valor === null || valor === undefined || isNaN(valor)) {
+                return tipo === 'moeda' ? 'R$ 0,00' : '0';
+            }
+            
+            const numero = parseFloat(valor);
+            if (numero === 0) {
+                return tipo === 'moeda' ? 'R$ 0,00' : '0';
+            }
+            
+            // Formatar com separador de milhares e vírgula decimal
+            const formatado = numero.toLocaleString('pt-BR', {
+                minimumFractionDigits: tipo === 'moeda' ? 2 : 0,
+                maximumFractionDigits: tipo === 'moeda' ? 2 : 0
+            });
+            
+            return tipo === 'moeda' ? `R$ ${formatado}` : formatado;
+        }
+        
+        // Função para formatar peso com unidade
+        function formatarPesoBrasileiro(valor) {
+            const pesoFormatado = formatarValorBrasileiro(valor, 'numero');
+            return `${pesoFormatado} kg`;
+        }
+        
         // NOVO: Função para calcular e atualizar os totais - AGORA RECEBE ELEMENTOS COMO ARGUMENTOS
         function calcularEAtualizarTotais(notasContainer, totalPesoElement, totalValorElement) {
             const notas = notasContainer.querySelectorAll('.form-check-input:checked');
@@ -134,16 +160,16 @@
                 const valorText = notaRow.querySelector('.note-col-valor').textContent;
                 
                 // Extrair números dos textos (remover "kg" e "R$")
-                const peso = parseFloat(pesoText.replace(' kg', '').replace(',', '.'));
-                const valor = parseFloat(valorText.replace('R$ ', '').replace(',', '.'));
+                const peso = parseFloat(pesoText.replace(' kg', '').replace(/\./g, '').replace(',', '.'));
+                const valor = parseFloat(valorText.replace('R$ ', '').replace(/\./g, '').replace(',', '.'));
                 
                 if (!isNaN(peso)) totalPeso += peso;
                 if (!isNaN(valor)) totalValor += valor;
             });
             
-            // Atualizar os elementos de total
-            if (totalPesoElement) totalPesoElement.textContent = totalPeso.toFixed(0);
-            if (totalValorElement) totalValorElement.textContent = `R$ ${totalValor.toFixed(2)}`;
+            // Atualizar os elementos de total com formatação brasileira
+            if (totalPesoElement) totalPesoElement.textContent = formatarPesoBrasileiro(totalPeso);
+            if (totalValorElement) totalValorElement.textContent = formatarValorBrasileiro(totalValor, 'moeda');
         }
 
         // Função para carregar notas fiscais via AJAX
@@ -173,9 +199,9 @@
                                     <div class="note-col-nf text-truncate" title="Número: ${nota.nota_numero}"><strong>${nota.nota_numero}</strong></div>
                                     <div class="note-col-fornecedor text-truncate" title="Forn: ${nota.fornecedor}">${nota.fornecedor}</div>
                                     <div class="note-col-mercadoria text-truncate" title="Merc: ${nota.mercadoria}">${nota.mercadoria}</div>
-                                    <div class="note-col-qtd text-truncate" title="Qtd: ${nota.quantidade}">${nota.quantidade}</div>
-                                    <div class="note-col-peso text-truncate" title="Peso: ${nota.peso} kg">${nota.peso} kg</div>
-                                    <div class="note-col-valor text-truncate" title="Valor: R$ ${nota.valor}">R$ ${nota.valor}</div>
+                                    <div class="note-col-qtd text-truncate" title="Qtd: ${nota.quantidade}">${formatarValorBrasileiro(nota.quantidade)}</div>
+                                    <div class="note-col-peso text-truncate" title="Peso: ${nota.peso} kg">${formatarPesoBrasileiro(nota.peso)}</div>
+                                    <div class="note-col-valor text-truncate" title="Valor: R$ ${nota.valor}">${formatarValorBrasileiro(nota.valor, 'moeda')}</div>
                                     <div class="note-col-data text-truncate" title="Data: ${nota.data_emissao}">${nota.data_emissao}</div>
                                 </div>
                             </label>
@@ -229,9 +255,9 @@
                                     <div class="note-col-nf text-truncate" title="Número: ${nota.nota_numero}"><strong>${nota.nota_numero}</strong></div>
                                     <div class="note-col-fornecedor text-truncate" title="Forn: ${nota.fornecedor}">${nota.fornecedor}</div>
                                     <div class="note-col-mercadoria text-truncate" title="Merc: ${nota.mercadoria}">${nota.mercadoria}</div>
-                                    <div class="note-col-qtd text-truncate" title="Qtd: ${nota.quantidade}">${nota.quantidade}</div>
-                                    <div class="note-col-peso text-truncate" title="Peso: ${nota.peso} kg">${nota.peso} kg</div>
-                                    <div class="note-col-valor text-truncate" title="Valor: R$ ${nota.valor}">R$ ${nota.valor}</div>
+                                    <div class="note-col-qtd text-truncate" title="Qtd: ${nota.quantidade}">${formatarValorBrasileiro(nota.quantidade)}</div>
+                                    <div class="note-col-peso text-truncate" title="Peso: ${nota.peso} kg">${formatarPesoBrasileiro(nota.peso)}</div>
+                                    <div class="note-col-valor text-truncate" title="Valor: R$ ${nota.valor}">${formatarValorBrasileiro(nota.valor, 'moeda')}</div>
                                     <div class="note-col-data text-truncate" title="Data: ${nota.data_emissao}">${nota.data_emissao}</div>
                                 </div>
                             </label>
