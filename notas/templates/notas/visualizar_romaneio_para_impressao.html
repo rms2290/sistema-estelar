@@ -77,18 +77,12 @@
                     </tbody>
                 </table>
                 <div class="row total-row">
-                    {% with total_peso=0 total_valor=0 %}
-                        {% for nota in notas_romaneadas %}
-                            {% with total_peso=total_peso|add:nota.peso total_valor=total_valor|add:nota.valor %}
-                            {% endwith %}
-                        {% endfor %}
-                        <div class="col-6 text-end"><strong>Total de Notas:</strong></div>
-                        <div class="col-6 text-start">{{ notas_romaneadas.count }}</div>
-                        <div class="col-6 text-end"><strong>Peso Total (KG):</strong></div>
-                        <div class="col-6 text-start">{{ total_peso|format_brazilian_weight }}</div>
-                        <div class="col-6 text-end"><strong>Valor Total (R$):</strong></div>
-                        <div class="col-6 text-start">{{ total_valor|format_brazilian_currency }}</div>
-                    {% endwith %}
+                    <div class="col-6 text-end"><strong>Total de Notas:</strong></div>
+                    <div class="col-6 text-start">{{ notas_romaneadas.count }}</div>
+                    <div class="col-6 text-end"><strong>Peso Total (KG):</strong></div>
+                    <div class="col-6 text-start">{{ total_peso|format_brazilian_weight }}</div>
+                    <div class="col-6 text-end"><strong>Valor Total (R$):</strong></div>
+                    <div class="col-6 text-start">{{ total_valor|format_brazilian_currency }}</div>
                 </div>
             {% else %}
                 <p class="text-center">Nenhuma nota fiscal vinculada a este romaneio.</p>

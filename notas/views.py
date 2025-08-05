@@ -942,12 +942,45 @@ def visualizar_romaneio_para_impressao(request, pk):
             return redirect('notas:meus_romaneios')
     
     notas_romaneadas = romaneio.notas_fiscais.all().order_by('nota') # Pegar notas associadas
+    
+    # Calcular totais
+    total_peso = sum(nota.peso for nota in notas_romaneadas)
+    total_valor = sum(nota.valor for nota in notas_romaneadas)
 
     context = {
         'romaneio': romaneio,
         'notas_romaneadas': notas_romaneadas,
+        'total_peso': total_peso,
+        'total_valor': total_valor,
     }
     return render(request, 'notas/visualizar_romaneio_para_impressao.html', context)
+
+# --------------------------------------------------------------------------------------
+# NOVA VIEW: Visualizar Romaneio para Impressão em Formato Paisagem
+# --------------------------------------------------------------------------------------
+def visualizar_romaneio_paisagem(request, pk):
+    romaneio = get_object_or_404(RomaneioViagem, pk=pk)
+    
+    # Verificar se o usuário tem permissão para imprimir este romaneio
+    if request.user.is_cliente and request.user.cliente:
+        # Cliente só pode imprimir romaneios que contêm suas notas fiscais
+        if not romaneio.notas_fiscais.filter(cliente=request.user.cliente).exists():
+            messages.error(request, 'Você não tem permissão para imprimir este romaneio.')
+            return redirect('notas:meus_romaneios')
+    
+    notas_romaneadas = romaneio.notas_fiscais.all().order_by('nota') # Pegar notas associadas
+    
+    # Calcular totais
+    total_peso = sum(nota.peso for nota in notas_romaneadas)
+    total_valor = sum(nota.valor for nota in notas_romaneadas)
+
+    context = {
+        'romaneio': romaneio,
+        'notas_romaneadas': notas_romaneadas,
+        'total_peso': total_peso,
+        'total_valor': total_valor,
+    }
+    return render(request, 'notas/romaneio_impressao_paisagem.html', context)
 
 # --------------------------------------------------------------------------------------
 # Views de Autenticação

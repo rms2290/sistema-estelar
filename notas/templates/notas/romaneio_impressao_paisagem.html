@@ -1,0 +1,355 @@
+{% load static %}
+{% load format_filters %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Romaneio de Viagem - {{ romaneio.codigo }}</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 1cm;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            line-height: 1.2;
+            color: #000;
+            background: #fff;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .romaneio-container {
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Cabeçalho da Empresa */
+        .empresa-header {
+            text-align: center;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .empresa-header h1 {
+            font-size: 22px;
+            font-weight: bold;
+            margin: 0;
+            color: #000;
+        }
+        
+        .empresa-header p {
+            font-size: 10px;
+            margin: 2px 0;
+        }
+        
+        /* Layout principal em duas colunas */
+        .main-content {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        /* Coluna esquerda - Dados do Destinatário */
+        .destinatario-section {
+            width: 45%;
+            padding: 8px;
+            background-color: #f9f9f9;
+        }
+        
+        .destinatario-section h3 {
+            font-size: 12px;
+            font-weight: bold;
+            margin: 0 0 8px 0;
+            text-align: center;
+            padding-bottom: 3px;
+        }
+        
+        .destinatario-info {
+            font-size: 9px;
+            line-height: 1.3;
+        }
+        
+        .destinatario-info p {
+            margin: 2px 0;
+        }
+        
+        .destinatario-info strong {
+            font-weight: bold;
+        }
+        
+        /* Coluna direita - Dados do Romaneio */
+        .romaneio-info {
+            width: 45%;
+            padding: 8px;
+            background-color: #f9f9f9;
+        }
+        
+        .romaneio-info h3 {
+            font-size: 12px;
+            font-weight: bold;
+            margin: 0 0 8px 0;
+            text-align: center;
+            padding-bottom: 3px;
+        }
+        
+        .romaneio-info p {
+            font-size: 9px;
+            margin: 2px 0;
+        }
+        
+        .romaneio-info strong {
+            font-weight: bold;
+        }
+        
+        /* Tabela de Notas Fiscais */
+        .notas-section {
+            margin-top: 5px;
+        }
+        
+        .notas-section h3 {
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            margin: 0 0 8px 0;
+            padding-bottom: 3px;
+        }
+        
+        .notas-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8px;
+        }
+        
+        .notas-table th,
+        .notas-table td {
+            border: 1px solid #000;
+            padding: 3px 5px;
+            text-align: left;
+        }
+        
+        .notas-table th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .notas-table td {
+            vertical-align: top;
+        }
+        
+        /* Totais */
+        .totais-section {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .totais-item {
+            font-size: 9px;
+            font-weight: bold;
+        }
+        
+        /* Rodapé */
+        .footer-section {
+            margin-top: 20px;
+            border-top: 1px solid #000;
+            padding-top: 10px;
+        }
+        
+        .footer-section p {
+            font-size: 8px;
+            margin: 3px 0;
+        }
+        
+        .assinaturas {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+        
+        .assinatura-box {
+            width: 45%;
+            padding: 8px;
+            text-align: center;
+        }
+        
+        .assinatura-box h4 {
+            font-size: 10px;
+            font-weight: bold;
+            margin: 0 0 5px 0;
+        }
+        
+        .assinatura-box p {
+            font-size: 8px;
+            margin: 2px 0;
+        }
+        
+        .linha-assinatura {
+            border-top: 1px solid #000;
+            margin-top: 20px;
+            padding-top: 5px;
+        }
+        
+        /* Impressão */
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            
+            .print-actions {
+                display: none;
+            }
+        }
+        
+        /* Botões de ação (apenas na tela) */
+        .print-actions {
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+        }
+        
+        .print-actions button,
+        .print-actions a {
+            margin: 0 5px;
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="romaneio-container">
+        <!-- Cabeçalho da Empresa -->
+        <div class="empresa-header">
+            <h1>AGÊNCIA ESTELAR</h1>
+            <p>RUA MAUÁ, 898 - Fone: (55)11 32273798 | 32270396</p>
+            <p>www.agenciaestelar.com.br / agenciaestelar@agenciaestelar.com.br</p>
+        </div>
+        
+        <!-- Conteúdo Principal -->
+        <div class="main-content">
+            <!-- Coluna Esquerda - Dados do Destinatário -->
+            <div class="destinatario-section">
+                <h3>DESTINATÁRIO</h3>
+                <div class="destinatario-info">
+                    <p style="margin-left: 15px;"><strong>Nome:</strong> {{ romaneio.cliente.razao_social }}</p>
+                    <p><strong>Endereço:</strong> {{ romaneio.cliente.endereco|default:"N/A" }}, {{ romaneio.cliente.numero|default:"S/N" }}</p>
+                    <p style="margin-left: 20px;">{{ romaneio.cliente.bairro|default:"N/A" }}, {{ romaneio.cliente.cidade|default:"N/A" }}-{{ romaneio.cliente.estado|default:"N/A" }}</p>
+                    <p><strong>Telefone:</strong> {{ romaneio.cliente.telefone|default:"N/A" }}</p>
+                </div>
+            </div>
+            
+            <!-- Coluna Direita - Dados do Romaneio -->
+            <div class="romaneio-info">
+                <h3>ROMANEIO DE VIAGEM</h3>
+                <div class="destinatario-info">
+                    <p style="margin-left: 15px;"><strong>Código:</strong> {{ romaneio.codigo }}</p>
+                    <p><strong>Data:</strong> {{ romaneio.data_emissao|date:"d/m/Y H:i" }}</p>
+                    <p><strong>Motorista:</strong> {{ romaneio.motorista.nome }}</p>
+                    <p><strong>CNH:</strong> {{ romaneio.motorista.cnh|default:"N/A" }}</p>
+                    <p><strong>CPF:</strong> {{ romaneio.motorista.cpf }}</p>
+                    <p><strong>Cidade - Estado:</strong> {{ romaneio.motorista.cidade|default:"N/A" }} - {{ romaneio.motorista.estado|default:"N/A" }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tabela de Notas Fiscais -->
+        <div class="notas-section">
+            <h3>NOTAS FISCAIS</h3>
+            {% if notas_romaneadas %}
+                <table class="notas-table">
+                    <thead>
+                        <tr>
+                            <th width="12%">Nº NOTA</th>
+                            <th width="28%">FORNECEDOR</th>
+                            <th width="28%">MERCADORIA</th>
+                            <th width="10%">QTD</th>
+                            <th width="10%">PESO (KG)</th>
+                            <th width="12%">VALOR (R$)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for nota in notas_romaneadas %}
+                            <tr>
+                                <td>{{ nota.nota }}</td>
+                                <td>{{ nota.fornecedor }}</td>
+                                <td>{{ nota.mercadoria }}</td>
+                                <td style="text-align: center;">{{ nota.quantidade|format_brazilian_quantity }}</td>
+                                <td style="text-align: center;">{{ nota.peso|format_brazilian_weight }}</td>
+                                <td style="text-align: right;">{{ nota.valor|format_brazilian_currency }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                <!-- Totais -->
+                <div class="totais-section">
+                    <div class="totais-item">
+                        <strong>Total de Notas:</strong> {{ notas_romaneadas.count }}
+                    </div>
+                    <div class="totais-item">
+                        <strong>Peso Total:</strong> {{ total_peso|format_brazilian_weight }}
+                    </div>
+                    <div class="totais-item">
+                        <strong>Valor Total:</strong> {{ total_valor|format_brazilian_currency }}
+                    </div>
+                </div>
+            {% else %}
+                <p style="text-align: center; font-style: italic;">Nenhuma nota fiscal vinculada a este romaneio.</p>
+            {% endif %}
+        </div>
+        
+        <!-- Observações -->
+        {% if romaneio.observacoes %}
+            <div class="notas-section">
+                <h3>OBSERVAÇÕES</h3>
+                <p style="font-size: 9px; margin: 5px 0;">{{ romaneio.observacoes }}</p>
+            </div>
+        {% endif %}
+        
+        <!-- Rodapé -->
+        <div class="footer-section">
+            <p style="text-align: center; font-weight: bold; font-size: 9px;">
+                NÃO NOS RESPONSABILIZAMOS POR PERDA OU AVARIA DE MERCADORIA SAÍDA DE NOSSO ARMAZÉM.
+            </p>
+            
+            <div class="assinaturas">
+                <div class="assinatura-box">
+                    <h4>MOTORISTA</h4>
+                    <p><strong>Nome:</strong> {{ romaneio.motorista.nome }}</p>
+                    <div style="margin: 10px 0; padding: 5px; background-color: #f0f0f0; border-radius: 3px;">
+                        <p style="margin: 2px 0;"><strong>RG:</strong> {{ romaneio.motorista.rg|default:"N/A" }}</p>
+                        <p style="margin: 2px 0;"><strong>CPF:</strong> {{ romaneio.motorista.cpf }}</p>
+                    </div>
+                    <div class="linha-assinatura">
+                        <p style="text-align: center; font-size: 8px;">Assinatura do Motorista</p>
+                    </div>
+                </div>
+                
+                <div class="assinatura-box">
+                    <h4>DECLARAÇÃO</h4>
+                    <p style="font-size: 7px; text-align: justify;">
+                        Declaro ter recebido em perfeitas condições os volumes desta ordem, cujo carregamento foi por mim presenciado, não cabendo nenhuma responsabilidade à agência por falta de volumes em viagem. Obrigo-me ainda, a fazer as entregas em seu destino exato.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Botões de Ação (apenas na tela) -->
+    <div class="print-actions">
+        <button onclick="window.print()" style="background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            🖨️ Imprimir Romaneio
+        </button>
+        <a href="{% url 'notas:detalhes_romaneio' romaneio.pk %}" style="background-color: #6c757d; color: white; text-decoration: none; padding: 8px 16px; border-radius: 4px; margin-left: 10px;">
+            ← Voltar
+        </a>
+    </div>
+</body>
+</html> 
