@@ -443,7 +443,7 @@ class VeiculoForm(forms.ModelForm):
         label='Modelo',
         required=False,
         max_length=100,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: F-4000, FH-460, etc.'})
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
     )
     
     # Lista de anos de fabricação (últimos 30 anos + próximos 5 anos)
@@ -463,6 +463,46 @@ class VeiculoForm(forms.ModelForm):
         required=False,
         max_length=12,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000000000000'})
+    )
+    
+    # Sobrescreve o campo 'placa' para padronizar
+    placa = forms.CharField(
+        label='Placa',
+        required=False,
+        max_length=8,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
+    )
+    
+    # Sobrescreve o campo 'tipo_unidade' para padronizar
+    tipo_unidade = forms.ChoiceField(
+        label='Tipo da Unidade de Veículo',
+        choices=Veiculo.TIPO_UNIDADE_CHOICES,
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    # Sobrescreve o campo 'renavam' para padronizar
+    renavam = forms.CharField(
+        label='Renavam',
+        required=False,
+        max_length=11,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
+    )
+    
+    # Sobrescreve o campo 'chassi' para padronizar
+    chassi = forms.CharField(
+        label='Chassi',
+        required=False,
+        max_length=17,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
+    )
+    
+    # Sobrescreve o campo 'cidade' para padronizar
+    cidade = forms.CharField(
+        label='Cidade',
+        required=False,
+        max_length=100,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
     )
     
     # Campos de medidas com widgets específicos
@@ -495,6 +535,68 @@ class VeiculoForm(forms.ModelForm):
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'readonly': 'readonly'})
     )
     
+    # Sobrescreve os campos do proprietário para padronizar estilo e placeholder
+    proprietario_nome_razao_social = forms.CharField(
+        label='Nome/Razão Social do Proprietário',
+        required=False,
+        max_length=255,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
+    )
+    proprietario_cpf_cnpj = forms.CharField(
+        label='CPF/CNPJ do Proprietário',
+        required=False,
+        max_length=18,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
+    )
+    proprietario_rg_ie = forms.CharField(
+        label='RG/IE do Proprietário',
+        required=False,
+        max_length=20,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
+    )
+    proprietario_endereco = forms.CharField(
+        label='Endereço do Proprietário',
+        required=False,
+        max_length=255,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
+    )
+    proprietario_bairro = forms.CharField(
+        label='Bairro do Proprietário',
+        required=False,
+        max_length=100,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
+    )
+    proprietario_numero = forms.CharField(
+        label='Número do Proprietário',
+        required=False,
+        max_length=10,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
+    )
+    proprietario_cep = forms.CharField(
+        label='CEP do Proprietário',
+        required=False,
+        max_length=9,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
+    )
+    proprietario_telefone = forms.CharField(
+        label='Telefone do Proprietário',
+        required=False,
+        max_length=20,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
+    )
+    proprietario_placa = forms.CharField(
+        label='Placa do Proprietário',
+        required=False,
+        max_length=8,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
+    )
+    proprietario_cidade = forms.CharField(
+        label='Cidade do Proprietário',
+        required=False,
+        max_length=100,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
+    )
+
     class Meta:
         model = Veiculo
         fields = '__all__'
@@ -788,7 +890,7 @@ class VeiculoSearchForm(forms.Form):
         label='Placa',
         required=False,
         max_length=8,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ABC-1234 ou ABC1D23'})
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
     )
     # Campo para pesquisar por Chassi
     chassi = forms.CharField(
@@ -810,6 +912,54 @@ class VeiculoSearchForm(forms.Form):
         choices=[('', 'Todos')] + Veiculo.TIPO_UNIDADE_CHOICES, # Adiciona 'Todos' como opção inicial
         required=False,
         widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+# --------------------------------------------------------------------------------------
+# Formulário de Pesquisa para Romaneios
+# --------------------------------------------------------------------------------------
+class RomaneioSearchForm(forms.Form):
+    codigo = forms.CharField(
+        label='Código do Romaneio',
+        required=False,
+        max_length=20,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ROM-AAAA-MM-NNNN'})
+    )
+    cliente = forms.ModelChoiceField(
+        queryset=Cliente.objects.filter(status='Ativo').order_by('razao_social'),
+        label='Cliente',
+        required=False,
+        empty_label="--- Selecione um cliente ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    motorista = forms.ModelChoiceField(
+        queryset=Motorista.objects.all().order_by('nome'),
+        label='Motorista',
+        required=False,
+        empty_label="--- Selecione um motorista ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    veiculo = forms.ModelChoiceField(
+        queryset=Veiculo.objects.all().order_by('placa'),
+        label='Veículo',
+        required=False,
+        empty_label="--- Selecione um veículo ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    status = forms.ChoiceField(
+        label='Status',
+        choices=[('', 'Todos')] + RomaneioViagem.STATUS_ROMANEIO_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    data_inicio = forms.DateField(
+        label='Data de Emissão (Início)',
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    data_fim = forms.DateField(
+        label='Data de Emissão (Fim)',
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
     )
 
 # --------------------------------------------------------------------------------------

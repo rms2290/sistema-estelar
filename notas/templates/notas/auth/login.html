@@ -37,7 +37,7 @@
 
                         <div class="mb-3">
                             <label for="{{ form.username.id_for_label }}" class="form-label">
-                                {{ form.username.label }}
+                                <i class="fas fa-user"></i> {{ form.username.label }}
                             </label>
                             {{ form.username }}
                             {% if form.username.errors %}
@@ -47,7 +47,7 @@
 
                         <div class="mb-3">
                             <label for="{{ form.password.id_for_label }}" class="form-label">
-                                {{ form.password.label }}
+                                <i class="fas fa-lock"></i> {{ form.password.label }}
                             </label>
                             {{ form.password }}
                             {% if form.password.errors %}

@@ -160,6 +160,21 @@ body {
     box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25); /* Sombra do foco Bootstrap */
 }
 
+/* Estilos de Formulário - Padrão do tema escuro */
+/* Campos de formulário seguem o padrão da tela de adicionar notas */
+.form-control, .form-select {
+    background-color: var(--dark-sidebar-bg);
+    color: var(--dark-text-color);
+    border-color: var(--dark-border-color);
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--dark-sidebar-bg);
+    color: var(--dark-text-color);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+}
+
 .form-label {
     color: var(--dark-secondary-text-color);
     font-weight: normal;
@@ -542,4 +557,10 @@ body {
     .notes-print-section table {
         margin-top: 2px !important; /* Margem menor para a tabela */
     }
+}
+
+#id_placa.form-control {
+    background-color: var(--dark-sidebar-bg) !important;
+    color: var(--dark-text-color) !important;
+    border-color: var(--dark-border-color) !important;
 }

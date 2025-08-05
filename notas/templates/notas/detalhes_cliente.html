@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2>Detalhes do Cliente: {{ cliente.razao_social }}</h2>
+    <h2><i class="fas fa-user"></i> Detalhes do Cliente: {{ cliente.razao_social }}</h2>
 
     {# Mensagens do Django #}
     {% if messages %}
@@ -25,13 +25,13 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-6">
-                    <p><strong>Razão Social:</strong> {{ cliente.razao_social }}</p>
-                    <p><strong>Nome Fantasia:</strong> {{ cliente.nome_fantasia|default:"N/A" }}</p>
-                    <p><strong>CNPJ:</strong> {{ cliente.cnpj }}</p>
-                    <p><strong>Inscrição Estadual:</strong> {{ cliente.inscricao_estadual|default:"N/A" }}</p>
+                    <p><strong><i class="fas fa-building"></i> Razão Social:</strong> {{ cliente.razao_social }}</p>
+                    <p><strong><i class="fas fa-tag"></i> Nome Fantasia:</strong> {{ cliente.nome_fantasia|default:"N/A" }}</p>
+                    <p><strong><i class="fas fa-id-card"></i> CNPJ:</strong> {{ cliente.cnpj }}</p>
+                    <p><strong><i class="fas fa-file-contract"></i> Inscrição Estadual:</strong> {{ cliente.inscricao_estadual|default:"N/A" }}</p>
                 </div>
                 <div class="col-md-6">
-                    <p><strong>Status:</strong> 
+                    <p><strong><i class="fas fa-toggle-on"></i> Status:</strong> 
                         <span class="badge {% if cliente.status == 'Ativo' %}bg-success{% else %}bg-danger{% endif %}">
                             {{ cliente.get_status_display }}
                         </span>
@@ -50,15 +50,15 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-6">
-                    <p><strong>Telefone:</strong> {{ cliente.telefone|default:"N/A" }}</p>
-                    <p><strong>Email:</strong> {{ cliente.email|default:"N/A" }}</p>
-                    <p><strong>Endereço:</strong> {{ cliente.endereco|default:"N/A" }}, {{ cliente.numero|default:"S/N" }}</p>
-                    <p><strong>Complemento:</strong> {{ cliente.complemento|default:"N/A" }}</p>
+                    <p><strong><i class="fas fa-phone"></i> Telefone:</strong> {{ cliente.telefone|default:"N/A" }}</p>
+                    <p><strong><i class="fas fa-envelope"></i> Email:</strong> {{ cliente.email|default:"N/A" }}</p>
+                    <p><strong><i class="fas fa-map"></i> Endereço:</strong> {{ cliente.endereco|default:"N/A" }}, {{ cliente.numero|default:"S/N" }}</p>
+                    <p><strong><i class="fas fa-info-circle"></i> Complemento:</strong> {{ cliente.complemento|default:"N/A" }}</p>
                 </div>
                 <div class="col-md-6">
-                    <p><strong>Bairro:</strong> {{ cliente.bairro|default:"N/A" }}</p>
-                    <p><strong>Cidade/Estado:</strong> {{ cliente.cidade|default:"N/A" }}/{{ cliente.estado|default:"N/A" }}</p>
-                    <p><strong>CEP:</strong> {{ cliente.cep|default:"N/A" }}</p>
+                    <p><strong><i class="fas fa-map-pin"></i> Bairro:</strong> {{ cliente.bairro|default:"N/A" }}</p>
+                    <p><strong><i class="fas fa-city"></i> Cidade/Estado:</strong> {{ cliente.cidade|default:"N/A" }}/{{ cliente.estado|default:"N/A" }}</p>
+                    <p><strong><i class="fas fa-mail-bulk"></i> CEP:</strong> {{ cliente.cep|default:"N/A" }}</p>
                 </div>
             </div>
         </div>

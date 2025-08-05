@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.db.models import Q, Max 
 from django.contrib import messages
 from django.utils import timezone
+from django.contrib.auth.decorators import login_required, user_passes_test
 
 # Importe todos os seus modelos
 from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta 
@@ -11,7 +12,7 @@ from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, His
 from .forms import (
     NotaFiscalForm, ClienteForm, MotoristaForm, VeiculoForm, RomaneioViagemForm,
     NotaFiscalSearchForm, ClienteSearchForm, MotoristaSearchForm, HistoricoConsultaForm,
-    VeiculoSearchForm, MercadoriaDepositoSearchForm # Adicionado o novo formulário
+    VeiculoSearchForm, RomaneioSearchForm, MercadoriaDepositoSearchForm # Adicionado o novo formulário
 )
 
 # --------------------------------------------------------------------------------------
@@ -300,9 +301,8 @@ def detalhes_motorista(request, pk):
 def listar_veiculos(request):
     search_form = VeiculoSearchForm(request.GET)
     
-    veiculos_query = Veiculo.objects.all().order_by('placa') # Começa com todos os veiculos por padrão
-
-    filters_applied = False # Variável para verificar se algum filtro foi realmente aplicado
+    veiculos = []  # Inicia com lista vazia
+    filters_applied = False  # Variável para verificar se algum filtro foi realmente aplicado
 
     if search_form.is_valid():
         placa = search_form.cleaned_data.get('placa')
@@ -310,23 +310,27 @@ def listar_veiculos(request):
         proprietario_nome = search_form.cleaned_data.get('proprietario_nome')
         tipo_unidade = search_form.cleaned_data.get('tipo_unidade')
 
-        if placa:
-            veiculos_query = veiculos_query.filter(placa__icontains=placa)
-            filters_applied = True
-        
-        if chassi:
-            veiculos_query = veiculos_query.filter(chassi__icontains=chassi)
-            filters_applied = True
-        
-        if proprietario_nome:
-            veiculos_query = veiculos_query.filter(proprietario_nome_razao_social__icontains=proprietario_nome)
-            filters_applied = True
-        
-        if tipo_unidade:
-            veiculos_query = veiculos_query.filter(tipo_unidade=tipo_unidade)
-            filters_applied = True
-        
-    veiculos = veiculos_query.order_by('placa')
+        # Só executa a busca se pelo menos um filtro foi aplicado
+        if placa or chassi or proprietario_nome or tipo_unidade:
+            veiculos_query = Veiculo.objects.all().order_by('placa')
+            
+            if placa:
+                veiculos_query = veiculos_query.filter(placa__icontains=placa)
+                filters_applied = True
+            
+            if chassi:
+                veiculos_query = veiculos_query.filter(chassi__icontains=chassi)
+                filters_applied = True
+            
+            if proprietario_nome:
+                veiculos_query = veiculos_query.filter(proprietario_nome_razao_social__icontains=proprietario_nome)
+                filters_applied = True
+            
+            if tipo_unidade:
+                veiculos_query = veiculos_query.filter(tipo_unidade=tipo_unidade)
+                filters_applied = True
+            
+            veiculos = veiculos_query.order_by('placa')
 
     context = {
         'veiculos': veiculos,
@@ -391,8 +395,60 @@ def detalhes_veiculo(request, pk):
 # Views Romaneio
 # --------------------------------------------------------------------------------------
 def listar_romaneios(request):
-    romaneios = RomaneioViagem.objects.all().order_by('-data_emissao', '-codigo')
-    return render(request, 'notas/listar_romaneios.html', {'romaneios': romaneios})
+    search_form = RomaneioSearchForm(request.GET)
+    
+    romaneios = []  # Inicia com lista vazia
+    filters_applied = False  # Variável para verificar se algum filtro foi realmente aplicado
+
+    if search_form.is_valid():
+        codigo = search_form.cleaned_data.get('codigo')
+        cliente = search_form.cleaned_data.get('cliente')
+        motorista = search_form.cleaned_data.get('motorista')
+        veiculo = search_form.cleaned_data.get('veiculo')
+        status = search_form.cleaned_data.get('status')
+        data_inicio = search_form.cleaned_data.get('data_inicio')
+        data_fim = search_form.cleaned_data.get('data_fim')
+
+        # Só executa a busca se pelo menos um filtro foi aplicado
+        if codigo or cliente or motorista or veiculo or status or data_inicio or data_fim:
+            romaneios_query = RomaneioViagem.objects.all().order_by('-data_emissao', '-codigo')
+            
+            if codigo:
+                romaneios_query = romaneios_query.filter(codigo__icontains=codigo)
+                filters_applied = True
+            
+            if cliente:
+                romaneios_query = romaneios_query.filter(cliente=cliente)
+                filters_applied = True
+            
+            if motorista:
+                romaneios_query = romaneios_query.filter(motorista=motorista)
+                filters_applied = True
+            
+            if veiculo:
+                romaneios_query = romaneios_query.filter(veiculo=veiculo)
+                filters_applied = True
+            
+            if status:
+                romaneios_query = romaneios_query.filter(status=status)
+                filters_applied = True
+            
+            if data_inicio:
+                romaneios_query = romaneios_query.filter(data_emissao__gte=data_inicio)
+                filters_applied = True
+            
+            if data_fim:
+                romaneios_query = romaneios_query.filter(data_emissao__lte=data_fim)
+                filters_applied = True
+            
+            romaneios = romaneios_query.order_by('-data_emissao', '-codigo')
+
+    context = {
+        'romaneios': romaneios,
+        'search_form': search_form,
+        'filters_applied': filters_applied,
+    }
+    return render(request, 'notas/listar_romaneios.html', context)
 
 def adicionar_romaneio(request):
     if request.method == 'POST':
@@ -788,10 +844,6 @@ def visualizar_romaneio_para_impressao(request, pk):
 # Views de Autenticação
 # --------------------------------------------------------------------------------------
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.utils import timezone
 from .forms import LoginForm, CadastroUsuarioForm, AlterarSenhaForm
 from .models import Usuario # Adicionado import para o modelo Usuario
 
