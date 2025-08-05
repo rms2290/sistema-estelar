@@ -1,7 +1,7 @@
 from django.db import models
 from django.db.models import UniqueConstraint
 from django.utils import timezone
-from django.contrib.auth.models import BaseUserManager
+from django.contrib.auth.models import BaseUserManager, AbstractUser
 
 # Custom save method mixin for uppercase text fields
 class UpperCaseMixin:
@@ -333,24 +333,15 @@ class HistoricoConsulta(UpperCaseMixin, models.Model):
 # --------------------------------------------------------------------------------------
 # Modelo de Usuário do Sistema
 # --------------------------------------------------------------------------------------
-class Usuario(UpperCaseMixin, models.Model):
+class Usuario(UpperCaseMixin, AbstractUser):
     TIPO_USUARIO_CHOICES = [
         ('admin', 'Administrador'),
         ('funcionario', 'Funcionário'),
         ('cliente', 'Cliente'),
     ]
     
-    # Campos básicos
-    username = models.CharField(max_length=150, unique=True, verbose_name="Nome de Usuário")
-    email = models.EmailField(unique=True, verbose_name="E-mail")
-    first_name = models.CharField(max_length=30, verbose_name="Nome")
-    last_name = models.CharField(max_length=30, verbose_name="Sobrenome")
-    is_active = models.BooleanField(default=True, verbose_name="Ativo")
-    is_staff = models.BooleanField(default=False, verbose_name="Staff")
-    date_joined = models.DateTimeField(auto_now_add=True, verbose_name="Data de Cadastro")
-    
-    # Campo de senha (será gerenciado pelo Django)
-    password = models.CharField(max_length=128, verbose_name="Senha")
+    # Campos básicos já existem no AbstractUser
+    # username, email, first_name, last_name, is_active, is_staff, date_joined, password
     
     # Tipo de usuário
     tipo_usuario = models.CharField(
@@ -420,34 +411,8 @@ class Usuario(UpperCaseMixin, models.Model):
         """Clientes só podem acessar seus próprios dados"""
         return self.is_admin or self.is_funcionario or self.is_cliente
     
-    def set_password(self, raw_password):
-        """Define a senha do usuário (hash)"""
-        from django.contrib.auth.hashers import make_password
-        self.password = make_password(raw_password)
-        self._password = raw_password
-    
-    def check_password(self, raw_password):
-        """Verifica se a senha está correta"""
-        from django.contrib.auth.hashers import check_password
-        return check_password(raw_password, self.password)
-    
-    def get_username(self):
-        """Retorna o nome de usuário"""
-        return self.username
-    
-    def natural_key(self):
-        """Chave natural para o usuário"""
-        return (self.username,)
-    
-    @property
-    def is_anonymous(self):
-        """Verifica se o usuário é anônimo"""
-        return False
-    
-    @property
-    def is_authenticated(self):
-        """Verifica se o usuário está autenticado"""
-        return True
+    # Métodos de autenticação já existem no AbstractUser
+    # set_password, check_password, get_username, natural_key, is_anonymous, is_authenticated
 
 # --------------------------------------------------------------------------------------
 # Tabela de Seguros
