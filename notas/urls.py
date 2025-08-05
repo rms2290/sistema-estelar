@@ -63,4 +63,12 @@ urlpatterns = [
     path('usuarios/cadastrar/', views.cadastrar_usuario, name='cadastrar_usuario'),
     path('usuarios/editar/<int:pk>/', views.editar_usuario, name='editar_usuario'),
     path('usuarios/excluir/<int:pk>/', views.excluir_usuario, name='excluir_usuario'),
+    
+    # URLs para Tabela de Seguros
+    path('tabela-seguros/', views.listar_tabela_seguros, name='listar_tabela_seguros'),
+    path('tabela-seguros/editar/<int:pk>/', views.editar_tabela_seguro, name='editar_tabela_seguro'),
+    path('tabela-seguros/atualizar/<int:pk>/ajax/', views.atualizar_tabela_seguro_ajax, name='atualizar_tabela_seguro_ajax'),
+    
+    # URL para Totalizador por Estado
+    path('totalizador-por-estado/', views.totalizador_por_estado, name='totalizador_por_estado'),
 ]

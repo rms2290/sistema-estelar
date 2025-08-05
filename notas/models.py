@@ -3,6 +3,32 @@ from django.db.models import UniqueConstraint
 from django.utils import timezone
 from django.contrib.auth.models import BaseUserManager
 
+# Custom save method mixin for uppercase text fields
+class UpperCaseMixin:
+    def save(self, *args, **kwargs):
+        # List of fields that should be converted to uppercase
+        uppercase_fields = [
+            'razao_social', 'nome_fantasia', 'inscricao_estadual', 'endereco', 
+            'complemento', 'bairro', 'cidade',
+            'nome', 'codigo_seguranca', 'endereco', 'complemento', 'bairro', 'cidade',
+            'numero_consulta',
+            'fornecedor', 'mercadoria',
+            'marca', 'modelo', 'cidade',
+            'proprietario_nome_razao_social', 'proprietario_rg_ie', 'proprietario_endereco',
+            'proprietario_bairro', 'proprietario_cidade',
+            'first_name', 'last_name',
+            'numero_consulta', 'gerenciadora',
+        ]
+        
+        # Convert text fields to uppercase
+        for field_name in uppercase_fields:
+            if hasattr(self, field_name) and getattr(self, field_name):
+                current_value = getattr(self, field_name)
+                if isinstance(current_value, str):
+                    setattr(self, field_name, current_value.upper())
+        
+        super().save(*args, **kwargs)
+
 # Manager customizado para o modelo Usuario
 class UsuarioManager(BaseUserManager):
     def create_user(self, username, email, password=None, **extra_fields):
@@ -30,7 +56,7 @@ class UsuarioManager(BaseUserManager):
 # --------------------------------------------------------------------------------------
 # Clientes
 # --------------------------------------------------------------------------------------
-class Cliente(models.Model):
+class Cliente(UpperCaseMixin, models.Model):
     razao_social = models.CharField(max_length=255, unique=True, verbose_name="Razão Social") # Adicionado unique=True
     cnpj = models.CharField(max_length=18, unique=True, blank=True, null=True, verbose_name="CNPJ")
     nome_fantasia = models.CharField(max_length=255, blank=True, null=True, verbose_name="Nome Fantasia")
@@ -64,7 +90,7 @@ class Cliente(models.Model):
 # --------------------------------------------------------------------------------------
 # Notas Fiscal
 # --------------------------------------------------------------------------------------
-class NotaFiscal(models.Model):
+class NotaFiscal(UpperCaseMixin, models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='notas_fiscais', verbose_name="Cliente")
     nota = models.CharField(max_length=50, verbose_name="Número da Nota")
     data = models.DateField(verbose_name="Data de Emissão") # Nome 'data' mantido, era o que o Django esperava
@@ -102,7 +128,7 @@ class NotaFiscal(models.Model):
 # --------------------------------------------------------------------------------------
 # Motorista
 # --------------------------------------------------------------------------------------
-class Motorista(models.Model):
+class Motorista(UpperCaseMixin, models.Model):
     nome = models.CharField(max_length=255, verbose_name="Nome Completo")
     cpf = models.CharField(max_length=14, unique=True, verbose_name="CPF") # Ex: 000.000.000-00
     cnh = models.CharField(max_length=11, unique=True, blank=True, null=True, verbose_name="CNH")
@@ -169,7 +195,7 @@ class Motorista(models.Model):
 # --------------------------------------------------------------------------------------
 # Veiculo
 # --------------------------------------------------------------------------------------
-class Veiculo(models.Model):
+class Veiculo(UpperCaseMixin, models.Model):
     # Tipo da UNIDADE de Veículo (para menubar)
     TIPO_UNIDADE_CHOICES = [
         ('Carro', 'Carro'),
@@ -278,7 +304,7 @@ class RomaneioViagem(models.Model):
 # --------------------------------------------------------------------------------------
 # NOVO MODELO: HistoricoConsulta (para registrar cada consulta de risco)
 # --------------------------------------------------------------------------------------
-class HistoricoConsulta(models.Model):
+class HistoricoConsulta(UpperCaseMixin, models.Model):
     motorista = models.ForeignKey(
         Motorista,
         on_delete=models.CASCADE, # Se o motorista for excluído, o histórico de consulta também é
@@ -307,7 +333,7 @@ class HistoricoConsulta(models.Model):
 # --------------------------------------------------------------------------------------
 # Modelo de Usuário do Sistema
 # --------------------------------------------------------------------------------------
-class Usuario(models.Model):
+class Usuario(UpperCaseMixin, models.Model):
     TIPO_USUARIO_CHOICES = [
         ('admin', 'Administrador'),
         ('funcionario', 'Funcionário'),
@@ -422,3 +448,62 @@ class Usuario(models.Model):
     def is_authenticated(self):
         """Verifica se o usuário está autenticado"""
         return True
+
+# --------------------------------------------------------------------------------------
+# Tabela de Seguros
+# --------------------------------------------------------------------------------------
+class TabelaSeguro(models.Model):
+    ESTADOS_BRASIL = [
+        ('AC', 'Acre'),
+        ('AL', 'Alagoas'),
+        ('AP', 'Amapá'),
+        ('AM', 'Amazonas'),
+        ('BA', 'Bahia'),
+        ('CE', 'Ceará'),
+        ('DF', 'Distrito Federal'),
+        ('ES', 'Espírito Santo'),
+        ('GO', 'Goiás'),
+        ('MA', 'Maranhão'),
+        ('MT', 'Mato Grosso'),
+        ('MS', 'Mato Grosso do Sul'),
+        ('MG', 'Minas Gerais'),
+        ('PA', 'Pará'),
+        ('PB', 'Paraíba'),
+        ('PR', 'Paraná'),
+        ('PE', 'Pernambuco'),
+        ('PI', 'Piauí'),
+        ('RJ', 'Rio de Janeiro'),
+        ('RN', 'Rio Grande do Norte'),
+        ('RS', 'Rio Grande do Sul'),
+        ('RO', 'Rondônia'),
+        ('RR', 'Roraima'),
+        ('SC', 'Santa Catarina'),
+        ('SP', 'São Paulo'),
+        ('SE', 'Sergipe'),
+        ('TO', 'Tocantins'),
+    ]
+    
+    estado = models.CharField(
+        max_length=2, 
+        choices=ESTADOS_BRASIL, 
+        unique=True, 
+        verbose_name="Estado (UF)"
+    )
+    percentual_seguro = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        default=0.00, 
+        verbose_name="Percentual de Seguro (%)"
+    )
+    data_atualizacao = models.DateTimeField(
+        auto_now=True, 
+        verbose_name="Data de Atualização"
+    )
+    
+    def __str__(self):
+        return f"{self.get_estado_display()} - {self.percentual_seguro}%"
+    
+    class Meta:
+        verbose_name = "Tabela de Seguro"
+        verbose_name_plural = "Tabela de Seguros"
+        ordering = ['estado']

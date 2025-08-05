@@ -87,6 +87,11 @@
                     <li><a href="{% url 'notas:pesquisar_mercadorias_deposito' %}">Mercadorias no Depósito</a></li>
                     {% endif %}
                     
+                    {% if user.is_admin %}
+                    <li><a href="{% url 'notas:listar_tabela_seguros' %}">Tabela de Seguros</a></li>
+                    <li><a href="{% url 'notas:totalizador_por_estado' %}">Totalizador por Estado</a></li>
+                    {% endif %}
+                    
                     {% if user.is_cliente %}
                     <li><a href="{% url 'notas:minhas_notas_fiscais' %}">Minhas Notas</a></li>
                     <li><a href="{% url 'notas:meus_romaneios' %}">Meus Romaneios</a></li>

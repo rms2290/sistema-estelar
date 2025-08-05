@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load format_filters %}
+
+{% block title %}Tabela de Seguros - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-shield-alt"></i> Tabela de Seguros</h2>
+                <div>
+                    <button type="button" class="btn btn-info" onclick="exportarTabela()">
+                        <i class="fas fa-download"></i> Exportar
+                    </button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-list"></i> Percentuais de Seguro por Estado
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="tabela-seguros">
+                            <thead>
+                                <tr>
+                                    <th>Estado</th>
+                                    <th>UF</th>
+                                    <th>Percentual de Seguro (%)</th>
+                                    <th>Última Atualização</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for seguro in tabela_seguros %}
+                                    <tr data-seguro-id="{{ seguro.pk }}">
+                                        <td>
+                                            <strong>{{ seguro.get_estado_display }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ seguro.estado }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="input-group" style="max-width: 150px;">
+                                                <input type="number" 
+                                                       class="form-control percentual-input" 
+                                                       value="{{ seguro.percentual_seguro }}" 
+                                                       min="0" 
+                                                       max="100" 
+                                                       step="0.01"
+                                                       data-seguro-id="{{ seguro.pk }}"
+                                                       style="text-align: center;">
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ seguro.data_atualizacao|date:"d/m/Y H:i" }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <button type="button" 
+                                                    class="btn btn-success btn-sm salvar-percentual" 
+                                                    data-seguro-id="{{ seguro.pk }}"
+                                                    style="display: none;">
+                                                <i class="fas fa-save"></i> Salvar
+                                            </button>
+                                            <a href="{% url 'notas:editar_tabela_seguro' seguro.pk %}" 
+                                               class="btn btn-warning btn-sm">
+                                                <i class="fas fa-edit"></i> Editar
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Monitorar mudanças nos campos de percentual
+    const percentualInputs = document.querySelectorAll('.percentual-input');
+    
+    percentualInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            const seguroId = this.dataset.seguroId;
+            const salvarBtn = document.querySelector(`.salvar-percentual[data-seguro-id="${seguroId}"]`);
+            salvarBtn.style.display = 'inline-block';
+        });
+    });
+    
+    // Salvar percentual via AJAX
+    const salvarBtns = document.querySelectorAll('.salvar-percentual');
+    
+    salvarBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const seguroId = this.dataset.seguroId;
+            const input = document.querySelector(`.percentual-input[data-seguro-id="${seguroId}"]`);
+            const percentual = input.value;
+            
+            // Validar percentual
+            if (percentual < 0 || percentual > 100) {
+                alert('Percentual deve estar entre 0% e 100%');
+                return;
+            }
+            
+            // Enviar via AJAX
+            fetch(`/notas/tabela-seguros/atualizar/${seguroId}/ajax/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: `percentual_seguro=${percentual}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Ocultar botão de salvar
+                    this.style.display = 'none';
+                    
+                    // Recarregar a página para mostrar a mensagem do Django
+                    window.location.reload();
+                } else {
+                    alert('Erro: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao salvar percentual');
+            });
+        });
+    });
+});
+
+function exportarTabela() {
+    const table = document.getElementById('tabela-seguros');
+    const rows = table.querySelectorAll('tbody tr');
+    
+    let csv = 'Estado,UF,Percentual de Seguro (%),Última Atualização\n';
+    
+    rows.forEach(row => {
+        const estado = row.cells[0].textContent.trim();
+        const uf = row.cells[1].textContent.trim();
+        const percentual = row.cells[2].querySelector('input').value;
+        const data = row.cells[3].textContent.trim();
+        
+        csv += `"${estado}","${uf}","${percentual}","${data}"\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'tabela_seguros.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
+
+<!-- CSRF Token para AJAX -->
+{% csrf_token %}
+{% endblock %} 

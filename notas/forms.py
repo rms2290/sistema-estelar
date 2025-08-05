@@ -4,8 +4,16 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import datetime, timedelta
 import re
-from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, Usuario
+from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, Usuario, TabelaSeguro
 from validate_docbr import CNPJ, CPF
+
+# Custom form field that automatically converts text to uppercase
+class UpperCaseCharField(forms.CharField):
+    def to_python(self, value):
+        value = super().to_python(value)
+        if value is not None:
+            return value.upper()
+        return value
 
 ESTADOS_CHOICES = [
     ('AC', 'Acre'), ('AL', 'Alagoas'), ('AP', 'Amapá'), ('AM', 'Amazonas'),
@@ -23,7 +31,7 @@ ESTADOS_CHOICES = [
 # --------------------------------------------------------------------------------------
 class NotaFiscalForm(forms.ModelForm):
     # Campo número da nota
-    nota = forms.CharField(
+    nota = UpperCaseCharField(
         label='Número da Nota',
         required=True,
         max_length=50,
@@ -46,7 +54,7 @@ class NotaFiscalForm(forms.ModelForm):
     )
     
     # Campo fornecedor
-    fornecedor = forms.CharField(
+    fornecedor = UpperCaseCharField(
         label='Fornecedor',
         required=True,
         max_length=200,
@@ -54,7 +62,7 @@ class NotaFiscalForm(forms.ModelForm):
     )
     
     # Campo mercadoria
-    mercadoria = forms.CharField(
+    mercadoria = UpperCaseCharField(
         label='Mercadoria',
         required=True,
         max_length=200,
@@ -126,7 +134,7 @@ class ClienteForm(forms.ModelForm):
     )
     
     # Sobrescreve campos para adicionar placeholders e estilos consistentes
-    razao_social = forms.CharField(
+    razao_social = UpperCaseCharField(
         label='Razão Social',
         max_length=255,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Razão Social da Empresa'})
@@ -139,21 +147,21 @@ class ClienteForm(forms.ModelForm):
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '00.000.000/0000-00'})
     )
     
-    nome_fantasia = forms.CharField(
+    nome_fantasia = UpperCaseCharField(
         label='Nome Fantasia',
         max_length=255,
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome Fantasia (opcional)'})
     )
     
-    inscricao_estadual = forms.CharField(
+    inscricao_estadual = UpperCaseCharField(
         label='Inscrição Estadual',
         max_length=20,
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Inscrição Estadual'})
     )
     
-    endereco = forms.CharField(
+    endereco = UpperCaseCharField(
         label='Endereço',
         max_length=255,
         required=False,
@@ -167,21 +175,21 @@ class ClienteForm(forms.ModelForm):
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número'})
     )
     
-    complemento = forms.CharField(
+    complemento = UpperCaseCharField(
         label='Complemento',
         max_length=255,
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Complemento (opcional)'})
     )
     
-    bairro = forms.CharField(
+    bairro = UpperCaseCharField(
         label='Bairro',
         max_length=100,
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Bairro'})
     )
     
-    cidade = forms.CharField(
+    cidade = UpperCaseCharField(
         label='Cidade',
         max_length=100,
         required=False,
@@ -284,6 +292,89 @@ class MotoristaForm(forms.ModelForm):
         empty_label="--- Selecione o Reboque 2 ---",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+    
+    # Sobrescrever campos de texto para uppercase
+    nome = UpperCaseCharField(
+        label='Nome Completo',
+        max_length=255,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    
+    cpf = forms.CharField(
+        label='CPF',
+        max_length=14,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000.000.000-00'})
+    )
+    
+    cnh = forms.CharField(
+        label='CNH',
+        max_length=11,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '00000000000'})
+    )
+    
+    codigo_seguranca = UpperCaseCharField(
+        label='Código de Segurança CNH',
+        max_length=10,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    
+    telefone = forms.CharField(
+        label='Telefone',
+        max_length=20,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    
+    endereco = UpperCaseCharField(
+        label='Endereço',
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    
+    numero = forms.CharField(
+        label='Número',
+        max_length=10,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    
+    complemento = UpperCaseCharField(
+        label='Complemento',
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    
+    bairro = UpperCaseCharField(
+        label='Bairro',
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    
+    cidade = UpperCaseCharField(
+        label='Cidade',
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    
+    cep = forms.CharField(
+        label='CEP',
+        max_length=9,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '00000-000'})
+    )
+    
+    numero_consulta = UpperCaseCharField(
+        label='Número da Última Consulta',
+        max_length=50,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
 
     class Meta:
         model = Motorista
@@ -301,25 +392,10 @@ class MotoristaForm(forms.ModelForm):
             'reboque_2', # <<< NOVO CAMPO
         ]
         widgets = {
-            'nome': forms.TextInput(attrs={'class': 'form-control'}),
-            'cpf': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000.000.000-00'}),
-            'cnh': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '00000000000'}),
-
-            'codigo_seguranca': forms.TextInput(attrs={'class': 'form-control'}),
             'vencimento_cnh': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'uf_emissao_cnh': forms.Select(attrs={'class': 'form-control'}), 
-            
-            'telefone': forms.TextInput(attrs={'class': 'form-control'}),
-            
-            'endereco': forms.TextInput(attrs={'class': 'form-control'}),
-            'numero': forms.TextInput(attrs={'class': 'form-control'}),
-            'bairro': forms.TextInput(attrs={'class': 'form-control'}),
-            'cidade': forms.TextInput(attrs={'class': 'form-control'}),
             'estado': forms.Select(attrs={'class': 'form-control'}), 
-            'cep': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '00000-000'}),
-            
             'data_nascimento': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'numero_consulta': forms.TextInput(attrs={'class': 'form-control'}),
             # veiculo_principal, reboque_1, reboque_2 já tem widgets definidos acima
         }
 
@@ -439,7 +515,7 @@ class VeiculoForm(forms.ModelForm):
     )
     
     # Campo 'modelo' mantido como texto livre para maior flexibilidade
-    modelo = forms.CharField(
+    modelo = UpperCaseCharField(
         label='Modelo',
         required=False,
         max_length=100,
@@ -498,7 +574,7 @@ class VeiculoForm(forms.ModelForm):
     )
     
     # Sobrescreve o campo 'cidade' para padronizar
-    cidade = forms.CharField(
+    cidade = UpperCaseCharField(
         label='Cidade',
         required=False,
         max_length=100,
@@ -536,7 +612,7 @@ class VeiculoForm(forms.ModelForm):
     )
     
     # Sobrescreve os campos do proprietário para padronizar estilo e placeholder
-    proprietario_nome_razao_social = forms.CharField(
+    proprietario_nome_razao_social = UpperCaseCharField(
         label='Nome/Razão Social do Proprietário',
         required=False,
         max_length=255,
@@ -548,19 +624,19 @@ class VeiculoForm(forms.ModelForm):
         max_length=18,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
     )
-    proprietario_rg_ie = forms.CharField(
+    proprietario_rg_ie = UpperCaseCharField(
         label='RG/IE do Proprietário',
         required=False,
         max_length=20,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
     )
-    proprietario_endereco = forms.CharField(
+    proprietario_endereco = UpperCaseCharField(
         label='Endereço do Proprietário',
         required=False,
         max_length=255,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
     )
-    proprietario_bairro = forms.CharField(
+    proprietario_bairro = UpperCaseCharField(
         label='Bairro do Proprietário',
         required=False,
         max_length=100,
@@ -590,7 +666,7 @@ class VeiculoForm(forms.ModelForm):
         max_length=8,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
     )
-    proprietario_cidade = forms.CharField(
+    proprietario_cidade = UpperCaseCharField(
         label='Cidade do Proprietário',
         required=False,
         max_length=100,
@@ -762,16 +838,33 @@ class RomaneioViagemForm(forms.ModelForm):
 # NOVO: Formulário para Histórico de Consulta
 # --------------------------------------------------------------------------------------
 class HistoricoConsultaForm(forms.ModelForm):
+    # Sobrescrever campos de texto para uppercase
+    numero_consulta = UpperCaseCharField(
+        label='Número da Consulta',
+        max_length=50,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número da consulta'})
+    )
+    
+    gerenciadora = UpperCaseCharField(
+        label='Gerenciadora',
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome da gerenciadora'})
+    )
+    
+    observacoes = forms.CharField(
+        label='Observações da Consulta',
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3})
+    )
+    
     class Meta:
         model = HistoricoConsulta
         # O motorista será preenchido pela view, então não o colocamos aqui
         fields = ['numero_consulta', 'data_consulta', 'gerenciadora', 'status_consulta', 'observacoes']
         widgets = {
-            'numero_consulta': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número da consulta'}),
             'data_consulta': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'gerenciadora': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome da gerenciadora'}),
             'status_consulta': forms.Select(attrs={'class': 'form-control'}),
-            'observacoes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -784,7 +877,7 @@ class HistoricoConsultaForm(forms.ModelForm):
 # Formulários de Pesquisa de notas
 # --------------------------------------------------------------------------------------
 class NotaFiscalSearchForm(forms.Form):
-    nota = forms.CharField(
+    nota = UpperCaseCharField(
         label='Número da Nota',
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número da Nota'})
@@ -803,7 +896,7 @@ class NotaFiscalSearchForm(forms.Form):
     )
 
 class ClienteSearchForm(forms.Form):
-    razao_social = forms.CharField(
+    razao_social = UpperCaseCharField(
         label='Razão Social',
         required=False,
         max_length=255,
@@ -823,7 +916,7 @@ class ClienteSearchForm(forms.Form):
     )
 
 class MotoristaSearchForm(forms.Form):
-    nome = forms.CharField(
+    nome = UpperCaseCharField(
         label='Nome do Motorista',
         required=False,
         max_length=255,
@@ -901,7 +994,7 @@ class VeiculoSearchForm(forms.Form):
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número do Chassi'})
     )
     # Campo para pesquisar por Nome do Proprietário
-    proprietario_nome = forms.CharField(
+    proprietario_nome = UpperCaseCharField(
         label='Nome do Proprietário',
         required=False,
         max_length=255,
@@ -919,7 +1012,7 @@ class VeiculoSearchForm(forms.Form):
 # Formulário de Pesquisa para Romaneios
 # --------------------------------------------------------------------------------------
 class RomaneioSearchForm(forms.Form):
-    codigo = forms.CharField(
+    codigo = UpperCaseCharField(
         label='Código do Romaneio',
         required=False,
         max_length=20,
@@ -996,13 +1089,13 @@ class MercadoriaDepositoSearchForm(forms.Form):
         empty_label="--- Selecione um cliente ---",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
-    mercadoria = forms.CharField(
+    mercadoria = UpperCaseCharField(
         label='Mercadoria',
         required=False,
         max_length=200,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome da mercadoria'})
     )
-    fornecedor = forms.CharField(
+    fornecedor = UpperCaseCharField(
         label='Fornecedor',
         required=False,
         max_length=200,
@@ -1055,14 +1148,25 @@ class CadastroUsuarioForm(forms.ModelForm):
         })
     )
     
+    # Sobrescrever campos de texto para uppercase
+    first_name = UpperCaseCharField(
+        label='Nome',
+        max_length=30,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome'})
+    )
+    
+    last_name = UpperCaseCharField(
+        label='Sobrenome',
+        max_length=30,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Sobrenome'})
+    )
+    
     class Meta:
         model = Usuario
         fields = ['username', 'email', 'first_name', 'last_name', 'tipo_usuario', 'cliente', 'telefone']
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome de usuário'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'seu@email.com'}),
-            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome'}),
-            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Sobrenome'}),
             'tipo_usuario': forms.Select(attrs={'class': 'form-control'}),
             'cliente': forms.Select(attrs={'class': 'form-control'}),
             'telefone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(00) 00000-0000'}),
@@ -1145,8 +1249,45 @@ class AlterarSenhaForm(forms.Form):
     )
     
     def clean_confirmar_nova_senha(self):
-        nova_senha = self.cleaned_data.get("nova_senha")
-        confirmar_nova_senha = self.cleaned_data.get("confirmar_nova_senha")
-        if nova_senha and confirmar_nova_senha and nova_senha != confirmar_nova_senha:
-            raise forms.ValidationError("As senhas não coincidem.")
-        return confirmar_nova_senha
+        senha1 = self.cleaned_data.get('nova_senha')
+        senha2 = self.cleaned_data.get('confirmar_nova_senha')
+        
+        if senha1 and senha2 and senha1 != senha2:
+            raise ValidationError('As senhas não coincidem.')
+        
+        return senha2
+
+# --------------------------------------------------------------------------------------
+# Formulário para Tabela de Seguros
+# --------------------------------------------------------------------------------------
+class TabelaSeguroForm(forms.ModelForm):
+    percentual_seguro = forms.DecimalField(
+        label='Percentual de Seguro (%)',
+        max_digits=5,
+        decimal_places=2,
+        min_value=0.00,
+        max_value=100.00,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'min': '0.00',
+            'max': '100.00',
+            'placeholder': '0.00'
+        })
+    )
+    
+    class Meta:
+        model = TabelaSeguro
+        fields = ['estado', 'percentual_seguro']
+        widgets = {
+            'estado': forms.Select(attrs={'class': 'form-control'}),
+        }
+    
+    def clean_percentual_seguro(self):
+        percentual = self.cleaned_data.get('percentual_seguro')
+        if percentual is not None:
+            if percentual < 0:
+                raise ValidationError('O percentual não pode ser negativo.')
+            if percentual > 100:
+                raise ValidationError('O percentual não pode ser maior que 100%.')
+        return percentual

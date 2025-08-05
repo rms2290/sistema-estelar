@@ -5,15 +5,16 @@ from django.contrib import messages
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required, user_passes_test
 import locale
+from decimal import Decimal
 
 # Importe todos os seus modelos
-from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta 
+from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, TabelaSeguro 
 
 # Importe todos os seus formulários
 from .forms import (
     NotaFiscalForm, ClienteForm, MotoristaForm, VeiculoForm, RomaneioViagemForm,
     NotaFiscalSearchForm, ClienteSearchForm, MotoristaSearchForm, HistoricoConsultaForm,
-    VeiculoSearchForm, RomaneioSearchForm, MercadoriaDepositoSearchForm # Adicionado o novo formulário
+    VeiculoSearchForm, RomaneioSearchForm, MercadoriaDepositoSearchForm, TabelaSeguroForm # Adicionado o novo formulário
 )
 
 def formatar_valor_brasileiro(valor, tipo='numero'):
@@ -1118,3 +1119,167 @@ def excluir_usuario(request, pk):
         return redirect('notas:listar_usuarios')
     
     return render(request, 'notas/auth/confirmar_exclusao_usuario.html', {'usuario': usuario})
+
+# --------------------------------------------------------------------------------------
+# Views para Tabela de Seguros
+# --------------------------------------------------------------------------------------
+@login_required
+@user_passes_test(is_admin)
+def listar_tabela_seguros(request):
+    """Lista todos os registros da tabela de seguros"""
+    tabela_seguros = TabelaSeguro.objects.all().order_by('estado')
+    
+    # Se não existem registros, criar automaticamente para todos os estados
+    if not tabela_seguros.exists():
+        for estado_uf, estado_nome in TabelaSeguro.ESTADOS_BRASIL:
+            TabelaSeguro.objects.create(
+                estado=estado_uf,
+                percentual_seguro=0.00
+            )
+        tabela_seguros = TabelaSeguro.objects.all().order_by('estado')
+    
+    context = {
+        'tabela_seguros': tabela_seguros,
+    }
+    return render(request, 'notas/listar_tabela_seguros.html', context)
+
+@login_required
+@user_passes_test(is_admin)
+def editar_tabela_seguro(request, pk):
+    """Edita um registro específico da tabela de seguros"""
+    tabela_seguro = get_object_or_404(TabelaSeguro, pk=pk)
+    
+    if request.method == 'POST':
+        form = TabelaSeguroForm(request.POST, instance=tabela_seguro)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Percentual de seguro para {tabela_seguro.get_estado_display()} atualizado com sucesso!')
+            return redirect('notas:listar_tabela_seguros')
+        else:
+            messages.error(request, 'Houve um erro ao atualizar o percentual. Verifique os campos.')
+    else:
+        form = TabelaSeguroForm(instance=tabela_seguro)
+    
+    context = {
+        'form': form,
+        'tabela_seguro': tabela_seguro,
+    }
+    return render(request, 'notas/editar_tabela_seguro.html', context)
+
+@login_required
+@user_passes_test(is_admin)
+def atualizar_tabela_seguro_ajax(request, pk):
+    """Atualiza um registro da tabela de seguros via AJAX"""
+    if request.method == 'POST':
+        tabela_seguro = get_object_or_404(TabelaSeguro, pk=pk)
+        percentual = request.POST.get('percentual_seguro')
+        
+        try:
+            percentual_float = float(percentual)
+            if 0 <= percentual_float <= 100:
+                tabela_seguro.percentual_seguro = percentual_float
+                tabela_seguro.save()
+                
+                # Adicionar mensagem de sucesso
+                messages.success(request, f'Percentual de seguro para {tabela_seguro.get_estado_display()} atualizado para {percentual_float}%')
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Percentual atualizado para {percentual_float}%',
+                    'percentual': percentual_float
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Percentual deve estar entre 0% e 100%'
+                })
+        except ValueError:
+            return JsonResponse({
+                'success': False,
+                'message': 'Valor inválido para percentual'
+            })
+    
+    return JsonResponse({'success': False, 'message': 'Método não permitido'})
+
+@login_required
+@user_passes_test(is_admin)
+def totalizador_por_estado(request):
+    """
+    View para totalizador por estado com filtros de data
+    """
+    from django.db.models import Sum, Q
+    from datetime import datetime
+    
+    # Inicializar variáveis
+    data_inicial = request.GET.get('data_inicial', '')
+    data_final = request.GET.get('data_final', '')
+    resultados = []
+    total_geral = Decimal('0.0')
+    total_seguro_geral = Decimal('0.0')
+    
+    if data_inicial and data_final:
+        try:
+            # Converter strings para objetos datetime
+            data_inicial_obj = datetime.strptime(data_inicial, '%Y-%m-%d').date()
+            data_final_obj = datetime.strptime(data_final, '%Y-%m-%d').date()
+            
+            # Buscar romaneios emitidos no período
+            romaneios_periodo = RomaneioViagem.objects.filter(
+                data_emissao__date__range=[data_inicial_obj, data_final_obj],
+                status='Emitido'
+            ).select_related('cliente').prefetch_related('notas_fiscais')
+            
+            # Buscar todos os percentuais de seguro de uma vez
+            tabelas_seguro = {ts.estado: ts.percentual_seguro for ts in TabelaSeguro.objects.all()}
+            
+            # Agrupar por estado do cliente e calcular totais
+            for estado in Cliente.objects.values_list('estado', flat=True).distinct():
+                if estado:  # Ignorar estados vazios
+                    # Buscar clientes do estado
+                    clientes_estado = Cliente.objects.filter(estado=estado)
+                    
+                    # Buscar romaneios dos clientes deste estado no período
+                    romaneios_estado = romaneios_periodo.filter(cliente__in=clientes_estado)
+                    
+                    # Calcular total de valores das notas fiscais usando aggregate
+                    total_valor_estado = sum(
+                        nota.valor 
+                        for romaneio in romaneios_estado 
+                        for nota in romaneio.notas_fiscais.all()
+                    )
+                    
+                    # Buscar percentual de seguro para o estado
+                    percentual_seguro = tabelas_seguro.get(estado, Decimal('0.0'))
+                    
+                    # Calcular valor do seguro
+                    valor_seguro_estado = total_valor_estado * (percentual_seguro / Decimal('100.0'))
+                    
+                    if total_valor_estado > 0:  # Só incluir estados com valores
+                        resultados.append({
+                            'estado': estado,
+                            'nome_estado': dict(TabelaSeguro.ESTADOS_BRASIL)[estado],
+                            'total_valor': total_valor_estado,
+                            'percentual_seguro': percentual_seguro,
+                            'valor_seguro': valor_seguro_estado,
+                            'quantidade_romaneios': romaneios_estado.count()
+                        })
+                        
+                        total_geral += total_valor_estado
+                        total_seguro_geral += valor_seguro_estado
+            
+            # Ordenar por valor total (maior primeiro)
+            resultados.sort(key=lambda x: x['total_valor'], reverse=True)
+            
+        except ValueError:
+            messages.error(request, 'Formato de data inválido. Use YYYY-MM-DD.')
+    
+    context = {
+        'data_inicial': data_inicial,
+        'data_final': data_final,
+        'resultados': resultados,
+        'total_geral': total_geral,
+        'total_seguro_geral': total_seguro_geral,
+        'tem_resultados': len(resultados) > 0
+    }
+    
+    return render(request, 'notas/totalizador_por_estado.html', context)
