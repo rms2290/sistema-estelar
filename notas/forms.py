@@ -765,10 +765,11 @@ class HistoricoConsultaForm(forms.ModelForm):
     class Meta:
         model = HistoricoConsulta
         # O motorista será preenchido pela view, então não o colocamos aqui
-        fields = ['numero_consulta', 'data_consulta', 'status_consulta', 'observacoes']
+        fields = ['numero_consulta', 'data_consulta', 'gerenciadora', 'status_consulta', 'observacoes']
         widgets = {
-            'numero_consulta': forms.TextInput(attrs={'class': 'form-control'}),
+            'numero_consulta': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número da consulta'}),
             'data_consulta': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'gerenciadora': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome da gerenciadora'}),
             'status_consulta': forms.Select(attrs={'class': 'form-control'}),
             'observacoes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
@@ -969,10 +970,11 @@ class HistoricoConsultaForm(forms.ModelForm):
     class Meta:
         model = HistoricoConsulta
         # O motorista será preenchido pela view, então não o colocamos aqui
-        fields = ['numero_consulta', 'data_consulta', 'status_consulta', 'observacoes']
+        fields = ['numero_consulta', 'data_consulta', 'gerenciadora', 'status_consulta', 'observacoes']
         widgets = {
             'numero_consulta': forms.TextInput(attrs={'class': 'form-control'}),
             'data_consulta': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'gerenciadora': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome da gerenciadora'}),
             'status_consulta': forms.Select(attrs={'class': 'form-control'}),
             'observacoes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }

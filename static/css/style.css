@@ -255,6 +255,38 @@ body {
     border-color: var(--dark-border-color); /* Bordas das células */
 }
 
+/* Estilos específicos para tabelas sem bordas (table-borderless) */
+.table.table-borderless {
+    border: none;
+}
+.table.table-borderless td,
+.table.table-borderless th {
+    border: none;
+}
+.table.table-borderless tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.1); /* Hover mais sutil para tabelas sem bordas */
+}
+
+/* Estilos para tabelas de impressão */
+.print-table {
+    background-color: #fff !important;
+    color: #333 !important;
+}
+.print-table thead th {
+    background-color: #f8f9fa !important;
+    color: #333 !important;
+    border-color: #dee2e6 !important;
+}
+.print-table tbody tr {
+    background-color: #fff !important;
+}
+.print-table tbody tr:hover {
+    background-color: #f8f9fa !important;
+}
+.print-table td, .print-table th {
+    border-color: #dee2e6 !important;
+}
+
 
 /* Estilos para mensagens do Django (usando classes Bootstrap alert) */
 .messages .alert {

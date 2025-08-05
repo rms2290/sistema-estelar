@@ -117,6 +117,7 @@ def detalhes_cliente(request, pk):
 # --------------------------------------------------------------------------------------
 # Views para Nota Fiscal
 # --------------------------------------------------------------------------------------
+@login_required
 def listar_notas_fiscais(request):
     search_form = NotaFiscalSearchForm(request.GET)
     notas_fiscais = NotaFiscal.objects.none()
@@ -228,14 +229,19 @@ def adicionar_motorista(request):
     if request.method == 'POST':
         form = MotoristaForm(request.POST)
         if form.is_valid():
-            form.save()
+            motorista = form.save()
             messages.success(request, 'Motorista adicionado com sucesso!')
             return redirect('notas:listar_motoristas')
         else:
             messages.error(request, 'Houve um erro ao adicionar o motorista. Verifique os campos.')
     else:
         form = MotoristaForm()
-    return render(request, 'notas/adicionar_motorista.html', {'form': form})
+    
+    context = {
+        'form': form,
+        'historico_consultas': None,  # Não há histórico para motoristas novos
+    }
+    return render(request, 'notas/adicionar_motorista.html', context)
 
 def editar_motorista(request, pk):
     motorista = get_object_or_404(Motorista, pk=pk)
@@ -268,12 +274,49 @@ def adicionar_historico_consulta(request, pk):
             historico = form.save(commit=False)
             historico.motorista = motorista
             historico.save()
+            
+            # Atualizar o campo numero_consulta do motorista com o número da última consulta
+            motorista.numero_consulta = historico.numero_consulta
+            motorista.save()
+            
             messages.success(request, 'Consulta de risco registrada com sucesso!')
             return redirect('notas:editar_motorista', pk=motorista.pk)
         else:
             messages.error(request, 'Houve um erro ao registrar a consulta. Verifique os campos.')
             return redirect('notas:editar_motorista', pk=motorista.pk)
-    return redirect('notas:editar_motorista', pk=motorista.pk) 
+    return redirect('notas:editar_motorista', pk=motorista.pk)
+
+def registrar_consulta_motorista(request, pk):
+    """Nova view para registrar consultas diretamente na tela de pesquisa de motoristas"""
+    motorista = get_object_or_404(Motorista, pk=pk)
+    
+    if request.method == 'POST':
+        form = HistoricoConsultaForm(request.POST)
+        if form.is_valid():
+            historico = form.save(commit=False)
+            historico.motorista = motorista
+            historico.save()
+            
+            # Atualizar o campo numero_consulta do motorista com o número da última consulta
+            motorista.numero_consulta = historico.numero_consulta
+            motorista.save()
+            
+            messages.success(request, 'Consulta registrada com sucesso!')
+            return redirect('notas:listar_motoristas')
+        else:
+            messages.error(request, 'Houve um erro ao registrar a consulta. Verifique os campos.')
+    else:
+        form = HistoricoConsultaForm()
+    
+    # Buscar histórico das últimas 5 consultas
+    historico_consultas = HistoricoConsulta.objects.filter(motorista=motorista).order_by('-data_consulta')[:5]
+    
+    context = {
+        'motorista': motorista,
+        'form': form,
+        'historico_consultas': historico_consultas,
+    }
+    return render(request, 'notas/registrar_consulta_motorista.html', context) 
 
 def excluir_motorista(request, pk):
     motorista = get_object_or_404(Motorista, pk=pk)
@@ -733,16 +776,6 @@ def load_notas_fiscais_para_romaneio(request):
 
 # --------------------------------------------------------------------------------------
 # Detalhes Views (já implementadas)
-# --------------------------------------------------------------------------------------
-def detalhes_motorista(request, pk):
-    motorista = get_object_or_404(Motorista, pk=pk)
-    historico_consultas = HistoricoConsulta.objects.filter(motorista=motorista).order_by('-data_consulta')[:5]
-    context = {
-        'motorista': motorista,
-        'historico_consultas': historico_consultas,
-    }
-    return render(request, 'notas/detalhes_motorista.html', context)
-
 def detalhes_nota_fiscal(request, pk):
     nota = get_object_or_404(NotaFiscal, pk=pk)
     romaneios_vinculados = nota.romaneios_vinculados.all().order_by('-data_emissao')

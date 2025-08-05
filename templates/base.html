@@ -59,6 +59,7 @@
             <nav class="sidebar-nav">
                 <ul>
                     {% if user.can_access_funcionalidades %}
+                    <li><a href="{% url 'notas:listar_notas_fiscais' %}">Pesquisar Notas Fiscais</a></li>
                     <li><a href="{% url 'notas:adicionar_nota_fiscal' %}">Adicionar Nota</a></li>
                     {% endif %}
                     

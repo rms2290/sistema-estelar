@@ -105,10 +105,10 @@
                                                 <td>{{ nota.quantidade }}</td>
                                                 <td>{{ nota.peso|floatformat:"0" }}</td>
                                                 <td>{{ nota.valor|floatformat:"2" }}</td>
-                                                <td>{{ nota.get_status_display }}</td>
+                                                <td>{{ nota.status }}</td>
                                                 <td>
-                                                    {% if nota.romaneios_vinculados.all %}
-                                                        {% for romaneio in nota.romaneios_vinculados.all %}
+                                                    {% if nota.romaneios.all %}
+                                                        {% for romaneio in nota.romaneios.all %}
                                                             <a href="{% url 'notas:detalhes_romaneio' romaneio.pk %}">{{ romaneio.codigo }}</a>{% if not forloop.last %}<br>{% endif %}
                                                         {% endfor %}
                                                     {% else %}

@@ -24,6 +24,7 @@ urlpatterns = [
     path('motoristas/editar/<int:pk>/', views.editar_motorista, name='editar_motorista'),
     path('motoristas/excluir/<int:pk>/', views.excluir_motorista, name='excluir_motorista'),
     path('motoristas/<int:pk>/adicionar-consulta/', views.adicionar_historico_consulta, name='adicionar_historico_consulta'),
+    path('motoristas/<int:pk>/registrar-consulta/', views.registrar_consulta_motorista, name='registrar_consulta_motorista'),
     path('motoristas/<int:pk>/detalhes/', views.detalhes_motorista, name='detalhes_motorista'),
 
 # Novas URLs para Veículo

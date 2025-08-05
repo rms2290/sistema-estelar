@@ -112,6 +112,7 @@ class Motorista(models.Model):
     telefone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Telefone")
     endereco = models.CharField(max_length=255, blank=True, null=True, verbose_name="Endereço")
     numero = models.CharField(max_length=10, blank=True, null=True, verbose_name="Número")
+    complemento = models.CharField(max_length=255, blank=True, null=True, verbose_name="Complemento")
     bairro = models.CharField(max_length=100, blank=True, null=True, verbose_name="Bairro")
     cidade = models.CharField(max_length=100, blank=True, null=True, verbose_name="Cidade")
     estado = models.CharField(max_length=2, blank=True, null=True, verbose_name="Estado (UF)")
@@ -286,6 +287,7 @@ class HistoricoConsulta(models.Model):
     )
     numero_consulta = models.CharField(max_length=50, unique=True, verbose_name="Número da Consulta")
     data_consulta = models.DateField(default=timezone.now, verbose_name="Data da Consulta")
+    gerenciadora = models.CharField(max_length=100, blank=True, null=True, verbose_name="Gerenciadora")
     status_consulta = models.CharField(
         max_length=20,
         choices=[('Apto', 'Apto'), ('Inapto', 'Inapto'), ('Pendente', 'Pendente')],

@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+
+{% block title %}Registrar Consulta - {{ motorista.nome }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Registrar Consulta - {{ motorista.nome }}</h2>
+        <a href="{% url 'notas:listar_motoristas' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Formulário para registrar nova consulta -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-clipboard-list"></i> Nova Consulta
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.numero_consulta.id_for_label }}" class="form-label">
+                                <i class="fas fa-hashtag"></i> {{ form.numero_consulta.label }}
+                            </label>
+                            {{ form.numero_consulta }}
+                            {% if form.numero_consulta.errors %}
+                                <div class="text-danger">
+                                    {{ form.numero_consulta.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.data_consulta.id_for_label }}" class="form-label">
+                                <i class="fas fa-calendar"></i> {{ form.data_consulta.label }}
+                            </label>
+                            {{ form.data_consulta }}
+                            {% if form.data_consulta.errors %}
+                                <div class="text-danger">
+                                    {{ form.data_consulta.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.gerenciadora.id_for_label }}" class="form-label">
+                                <i class="fas fa-building"></i> {{ form.gerenciadora.label }}
+                            </label>
+                            {{ form.gerenciadora }}
+                            {% if form.gerenciadora.errors %}
+                                <div class="text-danger">
+                                    {{ form.gerenciadora.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.status_consulta.id_for_label }}" class="form-label">
+                                <i class="fas fa-check-circle"></i> {{ form.status_consulta.label }}
+                            </label>
+                            {{ form.status_consulta }}
+                            {% if form.status_consulta.errors %}
+                                <div class="text-danger">
+                                    {{ form.status_consulta.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.observacoes.id_for_label }}" class="form-label">
+                                <i class="fas fa-comment"></i> {{ form.observacoes.label }}
+                            </label>
+                            {{ form.observacoes }}
+                            {% if form.observacoes.errors %}
+                                <div class="text-danger">
+                                    {{ form.observacoes.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Registrar Consulta
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Histórico das últimas 5 consultas -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-history"></i> Histórico das Últimas 5 Consultas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if historico_consultas %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Número</th>
+                                        <th>Gerenciadora</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for consulta in historico_consultas %}
+                                        <tr>
+                                            <td>{{ consulta.data_consulta|date:"d/m/Y" }}</td>
+                                            <td><strong>{{ consulta.numero_consulta }}</strong></td>
+                                            <td>{{ consulta.gerenciadora|default:"-" }}</td>
+                                            <td>
+                                                {% if consulta.status_consulta == 'Apto' %}
+                                                    <span class="badge bg-success">{{ consulta.status_consulta }}</span>
+                                                {% elif consulta.status_consulta == 'Inapto' %}
+                                                    <span class="badge bg-danger">{{ consulta.status_consulta }}</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">{{ consulta.status_consulta }}</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Nenhuma consulta registrada ainda.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Informações do motorista -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-user"></i> Informações do Motorista
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Nome:</strong> {{ motorista.nome }}</p>
+                    <p><strong>CPF:</strong> {{ motorista.cpf }}</p>
+                    <p><strong>CNH:</strong> {{ motorista.cnh|default:"Não informado" }}</p>
+                    <p><strong>Última Consulta:</strong> {{ motorista.numero_consulta|default:"Não registrada" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Mensagens do Django #}
+    {% if messages %}
+        <div class="mt-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %} 
