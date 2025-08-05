@@ -98,6 +98,15 @@
         document.addEventListener('DOMContentLoaded', function() {
             const notaFiscalForm = document.getElementById('notaFiscalForm');
             const salvarEAdicionarBtn = document.querySelector('button[name="salvar_e_adicionar"]');
+            const campoNota = document.getElementById('{{ form.nota.id_for_label }}');
+
+            // Focar no campo nota se a flag estiver presente
+            {% if focus_nota %}
+                if (campoNota) {
+                    campoNota.focus();
+                    campoNota.select(); // Seleciona o texto para facilitar a digitação
+                }
+            {% endif %}
 
             if (notaFiscalForm && salvarEAdicionarBtn) {
                 notaFiscalForm.addEventListener('keydown', function(event) {

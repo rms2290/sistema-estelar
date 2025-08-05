@@ -49,7 +49,7 @@
         <div class="card card-body mb-4">
             <h3><i class="fas fa-file-invoice"></i> Notas Fiscais Associadas</h3>
             <div class="mb-3">
-                <div id="notas_fiscais_checkboxes" class="notes-checkbox-container"> 
+                <div id="notas-fiscais-container" class="notes-checkbox-container"> 
                     <p class="text-info">Selecione um cliente para carregar as notas fiscais.</p>
                 </div>
                 {% if form.notas_fiscais.errors %}
@@ -63,13 +63,13 @@
                     <label class="form-label">
                         <i class="fas fa-weight-hanging"></i> Peso Total (kg):
                     </label>
-                    <span id="peso_total_romaneio" class="form-control-plaintext">0,00 kg</span>
+                    <span id="total-peso" class="form-control-plaintext">0,00 kg</span>
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">
                         <i class="fas fa-dollar-sign"></i> Valor Total (R$):
                     </label>
-                    <span id="valor_total_romaneio" class="form-control-plaintext">R$ 0,00</span>
+                    <span id="total-valor" class="form-control-plaintext">R$ 0,00</span>
                 </div>
             </div>
         </div>
@@ -111,27 +111,42 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DEBUG: DOM carregado, inicializando script');
+            
             const clienteSelect = document.getElementById('id_cliente');
-            const notasFiscaisDiv = document.getElementById('notas_fiscais_checkboxes');
-            const pesoTotalSpan = document.getElementById('peso_total_romaneio');
-            const valorTotalSpan = document.getElementById('valor_total_romaneio');
+            const notasFiscaisDiv = document.getElementById('notas-fiscais-container');
+            const pesoTotalSpan = document.getElementById('total-peso');
+            const valorTotalSpan = document.getElementById('total-valor');
+
+            console.log('DEBUG: Elementos encontrados:', {
+                clienteSelect: !!clienteSelect,
+                notasFiscaisDiv: !!notasFiscaisDiv,
+                pesoTotalSpan: !!pesoTotalSpan,
+                valorTotalSpan: !!valorTotalSpan
+            });
 
             // allLoadedNotesData é global (definido em base.html)
             // updateTotals, loadNotasFiscais são globais (definidos em base.html)
 
             if (clienteSelect) {
+                console.log('DEBUG: Adicionando event listener para mudança de cliente');
                 clienteSelect.addEventListener('change', function() {
+                    console.log('DEBUG: Cliente alterado para:', this.value);
                     // Ao mudar o cliente, chamamos loadNotasFiscais passando os elementos de exibição
                     loadNotasFiscais(this.value, notasFiscaisDiv, pesoTotalSpan, valorTotalSpan); 
                 });
                 // Chamar na carga inicial se já houver um cliente selecionado (ex: em caso de erro de validação no POST)
                 if (clienteSelect.value) {
+                    console.log('DEBUG: Cliente já selecionado na carga inicial:', clienteSelect.value);
                     loadNotasFiscais(clienteSelect.value, notasFiscaisDiv, pesoTotalSpan, valorTotalSpan); 
                 } else {
+                    console.log('DEBUG: Nenhum cliente selecionado na carga inicial');
                     // Inicializa os totais como zero se nenhum cliente selecionado
                     if (pesoTotalSpan) pesoTotalSpan.textContent = '0,00 kg';
                     if (valorTotalSpan) valorTotalSpan.textContent = 'R$ 0,00';
                 }
+            } else {
+                console.error('DEBUG: Elemento clienteSelect não encontrado');
             }
         });
     </script>

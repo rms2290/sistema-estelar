@@ -375,6 +375,7 @@ body {
     margin-bottom: 8px; /* Espaçamento maior entre o cabeçalho e a primeira nota */
     padding-left: 35px; /* Ajuste para alinhar com o conteúdo após o checkbox (input de 20px + margin) */
     width: 100%; /* Garante que o cabeçalho ocupe 100% da largura disponível */
+    align-items: center;
 }
 .notes-checkbox-container .notes-header-row > div {
     /* Larguras são definidas abaixo nas classes note-col-*, aqui apenas alinhamento geral */
@@ -461,11 +462,12 @@ body {
 /* Ajustes de largura e alinhamento das "colunas" - OS % DEVEM SOMAR 100% DO ESPAÇO DISPONÍVEL APÓS O CHECKBOX */
 /* E o text-align é por coluna aqui para controle fino */
 .notes-checkbox-container .note-col-nf { width: 10%; text-align: left; } 
-.notes-checkbox-container .note-col-fornecedor { width: 25%; text-align: left; }
+.notes-checkbox-container .note-col-fornecedor { width: 20%; text-align: left; }
 .notes-checkbox-container .note-col-mercadoria { width: 20%; text-align: left; } 
 .notes-checkbox-container .note-col-qtd { width: 8%; justify-content: center; } 
 .notes-checkbox-container .note-col-peso { width: 8%; justify-content: center; } 
-.notes-checkbox-container .note-col-valor { width: 19%; justify-content: flex-end; } 
+.notes-checkbox-container .note-col-valor { width: 14%; justify-content: flex-end; }
+.notes-checkbox-container .note-col-data { width: 10%; justify-content: center; } 
 
 /* Estilos para os campos de Total (Peso e Valor) */
 .form-control-plaintext {

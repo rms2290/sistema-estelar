@@ -95,30 +95,23 @@ class NotaFiscalForm(forms.ModelForm):
         cleaned_data = super().clean() # Chama o clean original do ModelForm
         nota = cleaned_data.get('nota')
         cliente = cleaned_data.get('cliente')
-        mercadoria = cleaned_data.get('mercadoria')
-        quantidade = cleaned_data.get('quantidade')
-        peso = cleaned_data.get('peso')
-
-        # Se todos os campos chave estão presentes
-        if nota and cliente and mercadoria and quantidade is not None and peso is not None:
-            # Queryset para buscar notas que são "iguais" pela sua regra de negócio
-            qs = NotaFiscal.objects.filter(
+        valor = cleaned_data.get('valor')
+        
+        # Verifica se todos os campos necessários estão presentes
+        if nota and cliente and valor is not None:
+            # Verifica se já existe uma nota com o mesmo cliente, número da nota e valor
+            existing_nota = NotaFiscal.objects.filter(
                 nota=nota,
                 cliente=cliente,
-                mercadoria=mercadoria,
-                quantidade=quantidade,
-                peso=peso
-            )
-            # Se estamos editando uma nota, excluímos a nota atual da busca por duplicatas
-            if self.instance.pk:
-                qs = qs.exclude(pk=self.instance.pk)
+                valor=valor
+            ).exclude(pk=self.instance.pk if self.instance.pk else None)
             
-            if qs.exists():
+            if existing_nota.exists():
                 raise ValidationError(
-                    "Já existe uma nota fiscal com o mesmo Número, Cliente, Mercadoria, Quantidade e Peso.",
-                    code='duplicate_nota_fiscal'
+                    f'Já existe uma nota fiscal com o número {nota} para o cliente {cliente} '
+                    f'com o valor R$ {valor:.2f}. Não é permitido duplicar notas fiscais.'
                 )
-
+        
         return cleaned_data
 
 # --------------------------------------------------------------------------------------
@@ -1172,11 +1165,18 @@ class CadastroUsuarioForm(forms.ModelForm):
             'telefone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(00) 00000-0000'}),
         }
     
+    # Sobrescrever o campo cliente para ter controle total
+    cliente = forms.ModelChoiceField(
+        queryset=Cliente.objects.filter(status='Ativo').order_by('razao_social'),
+        label='Cliente Vinculado',
+        required=False,
+        empty_label="--- Selecione um cliente ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Filtrar apenas clientes ativos para o campo cliente
-        self.fields['cliente'].queryset = Cliente.objects.filter(status='Ativo').order_by('razao_social')
-        self.fields['cliente'].empty_label = "--- Selecione um cliente ---"
+        # Não é mais necessário configurar o campo cliente aqui, pois já foi feito na definição do campo
     
     def clean_password2(self):
         password1 = self.cleaned_data.get("password1")
@@ -1200,11 +1200,9 @@ class CadastroUsuarioForm(forms.ModelForm):
         if not password2:
             raise forms.ValidationError("A confirmação de senha é obrigatória para novos usuários.")
         
-        return cleaned_data
-    
-    def clean_tipo_usuario(self):
-        tipo_usuario = self.cleaned_data.get('tipo_usuario')
-        cliente = self.cleaned_data.get('cliente')
+        # Validação da relação entre tipo de usuário e cliente
+        tipo_usuario = cleaned_data.get('tipo_usuario')
+        cliente = cleaned_data.get('cliente')
         
         if tipo_usuario == 'cliente' and not cliente:
             raise forms.ValidationError("Usuários do tipo 'Cliente' devem estar vinculados a um cliente.")
@@ -1212,7 +1210,7 @@ class CadastroUsuarioForm(forms.ModelForm):
         if tipo_usuario != 'cliente' and cliente:
             raise forms.ValidationError("Apenas usuários do tipo 'Cliente' podem estar vinculados a um cliente.")
         
-        return tipo_usuario
+        return cleaned_data
     
     def save(self, commit=True):
         user = super().save(commit=False)

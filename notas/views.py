@@ -198,7 +198,12 @@ def adicionar_nota_fiscal(request):
             messages.success(request, f'Nota Fiscal {nota_fiscal.nota} adicionada com sucesso!')
 
             if 'salvar_e_adicionar' in request.POST:
-                return redirect('notas:adicionar_nota_fiscal')
+                # Retorna para a mesma página com formulário limpo
+                form = NotaFiscalForm()
+                return render(request, 'notas/adicionar_nota.html', {
+                    'form': form,
+                    'focus_nota': True  # Flag para focar no campo nota
+                })
             else:
                 return redirect('notas:detalhes_nota_fiscal', pk=nota_fiscal.pk)
 
@@ -783,9 +788,14 @@ def load_notas_fiscais_edicao(request):
         print(f"AJAX: Erro inesperado na view load_notas_fiscais_edicao: {e}")
         return JsonResponse({'error': str(e)}, status=500)
     
-def load_notas_fiscais_para_romaneio(request):
-    cliente_id = request.GET.get('cliente_id')
+@login_required
+def load_notas_fiscais_para_romaneio(request, cliente_id):
     romaneio_id = request.GET.get('romaneio_id') # Pode ser None para adicionar novo romaneio
+    
+    print(f"DEBUG: load_notas_fiscais_para_romaneio chamada. cliente_id={cliente_id}, romaneio_id={romaneio_id}")
+    print(f"DEBUG: Método da requisição: {request.method}")
+    print(f"DEBUG: URL da requisição: {request.path}")
+    print(f"DEBUG: Parâmetros GET: {request.GET}")
 
     notas_fiscais = NotaFiscal.objects.none()
     selected_notas_ids = []
@@ -793,6 +803,11 @@ def load_notas_fiscais_para_romaneio(request):
     if cliente_id:
         # Notas do cliente com status 'Depósito'
         notas_deposito = NotaFiscal.objects.filter(cliente_id=cliente_id, status='Depósito')
+        print(f"DEBUG: Encontradas {notas_deposito.count()} notas em depósito para cliente {cliente_id}")
+        
+        # Debug: listar algumas notas encontradas
+        for nota in notas_deposito[:3]:  # Primeiras 3 notas
+            print(f"DEBUG: Nota encontrada - ID: {nota.id}, Número: {nota.nota}, Cliente: {nota.cliente.razao_social}")
 
         # Se for um romaneio existente, incluir as notas já vinculadas a ele
         if romaneio_id:
@@ -800,20 +815,31 @@ def load_notas_fiscais_para_romaneio(request):
                 romaneio_existente = RomaneioViagem.objects.get(pk=romaneio_id)
                 notas_vinculadas = romaneio_existente.notas_fiscais.all()
                 selected_notas_ids = list(notas_vinculadas.values_list('pk', flat=True))
+                print(f"DEBUG: Encontradas {notas_vinculadas.count()} notas vinculadas ao romaneio {romaneio_id}")
                 
                 # Combine as notas em depósito com as já vinculadas (evitando duplicatas)
                 notas_fiscais = (notas_deposito | notas_vinculadas).distinct().order_by('data', 'nota')
             except RomaneioViagem.DoesNotExist:
+                print(f"DEBUG: Romaneio {romaneio_id} não encontrado")
                 pass # Romaneio não encontrado, apenas notas em depósito
         else:
             # Se for um novo romaneio, apenas notas em depósito
             notas_fiscais = notas_deposito.order_by('data', 'nota')
+            print(f"DEBUG: Usando apenas notas em depósito para novo romaneio")
             
+    print(f"DEBUG: Total de notas fiscais retornadas: {notas_fiscais.count()}")
+    
     # Renderiza o template parcial com as notas e as IDs das selecionadas
-    html = render(request, 'notas/_notas_fiscais_checkboxes.html', {
+    context = {
         'notas_fiscais': notas_fiscais,
         'selected_notas_ids': selected_notas_ids, # Passa as IDs das notas já selecionadas
-    }).content.decode('utf-8')
+    }
+    print(f"DEBUG: Contexto para template: {context}")
+    
+    html = render(request, 'notas/_notas_fiscais_checkboxes.html', context).content.decode('utf-8')
+    
+    print(f"DEBUG: HTML gerado com {len(html)} caracteres")
+    print(f"DEBUG: Primeiros 200 caracteres do HTML: {html[:200]}")
     
     return JsonResponse({'html': html})
 
@@ -1021,9 +1047,15 @@ def minhas_notas_fiscais(request):
     # Ordenar por data mais recente
     notas_fiscais = notas_fiscais.order_by('-data')
     
+    # Calcular totais
+    total_peso = sum(nota.peso for nota in notas_fiscais if nota.peso)
+    total_valor = sum(nota.valor for nota in notas_fiscais if nota.valor)
+    
     return render(request, 'notas/auth/minhas_notas.html', {
         'notas_fiscais': notas_fiscais,
-        'status_filter': status_filter
+        'status_filter': status_filter,
+        'total_peso': total_peso,
+        'total_valor': total_valor
     })
 
 @login_required

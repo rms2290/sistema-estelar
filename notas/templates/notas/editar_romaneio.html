@@ -110,11 +110,11 @@
             if (clienteSelect) {
                 clienteSelect.addEventListener('change', function() {
                     // Ao mudar o cliente, chamamos loadNotasFiscaisEdicao passando os elementos
-                    loadNotasFiscaisEdicao(this.value, notasFiscaisDiv, pesoTotalSpan, valorTotalSpan, initialSelectedNotasFromDjango);
+                    loadNotasFiscaisEdicao(this.value, {{ romaneio.pk }}, notasFiscaisDiv, pesoTotalSpan, valorTotalSpan, initialSelectedNotasFromDjango);
                 });
                 // Chamar na carga inicial se já houver um cliente selecionado
                 if (clienteSelect.value) {
-                    loadNotasFiscaisEdicao(clienteSelect.value, notasFiscaisDiv, pesoTotalSpan, valorTotalSpan, initialSelectedNotasFromDjango);
+                    loadNotasFiscaisEdicao(clienteSelect.value, {{ romaneio.pk }}, notasFiscaisDiv, pesoTotalSpan, valorTotalSpan, initialSelectedNotasFromDjango);
                 } else {
                     // Inicializa os totais como zero se nenhum cliente selecionado
                     if (pesoTotalSpan) pesoTotalSpan.textContent = '0,00 kg';

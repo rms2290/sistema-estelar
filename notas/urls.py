@@ -71,4 +71,5 @@ urlpatterns = [
     
     # URL para Totalizador por Estado
     path('totalizador-por-estado/', views.totalizador_por_estado, name='totalizador_por_estado'),
+    path('api/notas-fiscais/<int:cliente_id>/', views.load_notas_fiscais_para_romaneio, name='api_notas_fiscais_para_romaneio'),
 ]

@@ -159,72 +159,125 @@
             let totalPeso = 0;
             let totalValor = 0;
             
-            notas.forEach(nota => {
-                const notaRow = nota.closest('.form-check');
-                const pesoText = notaRow.querySelector('.note-col-peso').textContent;
-                const valorText = notaRow.querySelector('.note-col-valor').textContent;
-                
-                // Extrair números dos textos (remover "kg" e "R$")
-                const peso = parseFloat(pesoText.replace(' kg', '').replace(/\./g, '').replace(',', '.'));
-                const valor = parseFloat(valorText.replace('R$ ', '').replace(/\./g, '').replace(',', '.'));
-                
-                if (!isNaN(peso)) totalPeso += peso;
-                if (!isNaN(valor)) totalValor += valor;
+            notas.forEach((nota) => {
+                const notaRow = nota.parentElement.querySelector('.note-info-row');
+                if (notaRow) {
+                    // Para o template atual, o valor está na coluna com classe note-col-valor
+                    const valorElement = notaRow.querySelector('.note-col-valor');
+                    if (valorElement) {
+                        const valorText = valorElement.textContent;
+                        // Extrair números dos textos (remover "R$" e converter formato brasileiro)
+                        const valor = parseFloat(valorText.replace('R$ ', '').replace(/\./g, '').replace(',', '.'));
+                        if (!isNaN(valor)) {
+                            totalValor += valor;
+                        }
+                    }
+                    // Para peso, usar o valor real da nota
+                    const pesoElement = notaRow.querySelector('.note-col-peso');
+                    if (pesoElement) {
+                        const pesoText = pesoElement.textContent;
+                        // Extrair números dos textos (remover "kg" e converter formato brasileiro)
+                        const peso = parseFloat(pesoText.replace(' kg', '').replace(/\./g, '').replace(',', '.'));
+                        if (!isNaN(peso)) {
+                            totalPeso += peso;
+                        }
+                    }
+                }
             });
-            
             // Atualizar os elementos de total com formatação brasileira
             if (totalPesoElement) totalPesoElement.textContent = formatarPesoBrasileiro(totalPeso);
             if (totalValorElement) totalValorElement.textContent = formatarValorBrasileiro(totalValor, 'moeda');
         }
 
         // Função para carregar notas fiscais via AJAX
-        async function loadNotasFiscais(clienteId) {
-            if (!clienteId) return;
+        async function loadNotasFiscais(clienteId, notasContainer, totalPesoElement, totalValorElement) {
             
-            const notasContainer = document.getElementById('notas-fiscais-container');
-            const totalPesoElement = document.getElementById('total-peso');
-            const totalValorElement = document.getElementById('total-valor');
+            if (!clienteId) {
+                return;
+            }
+            
+            // Se os elementos não foram passados como parâmetros, buscar por ID
+            if (!notasContainer) {
+                notasContainer = document.getElementById('notas-fiscais-container');
+            }
+            if (!totalPesoElement) {
+                totalPesoElement = document.getElementById('total-peso');
+            }
+            if (!totalValorElement) {
+                totalValorElement = document.getElementById('total-valor');
+            }
             
             try {
-                const response = await fetch(`/notas/api/notas-fiscais/${clienteId}/`);
-                if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); }
+                const url = `/notas/api/notas-fiscais/${clienteId}/`;
+                
+                const response = await fetch(url, {
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                });
+                
+                if (!response.ok) { 
+                    throw new Error(`HTTP error! status: ${response.status}`); 
+                }
                 
                 const data = await response.json();
                 
                 // Limpar container
                 notasContainer.innerHTML = '';
                 
-                // Adicionar notas fiscais
-                data.notas_fiscais.forEach(nota => {
-                    const notaHtml = `
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="notas_fiscais" value="${nota.id}" id="nota_${nota.id}">
-                            <label class="form-check-label" for="nota_${nota.id}">
-                                <div class="note-info-row">
-                                    <div class="note-col-nf text-truncate" title="Número: ${nota.nota_numero}"><strong>${nota.nota_numero}</strong></div>
-                                    <div class="note-col-fornecedor text-truncate" title="Forn: ${nota.fornecedor}">${nota.fornecedor}</div>
-                                    <div class="note-col-mercadoria text-truncate" title="Merc: ${nota.mercadoria}">${nota.mercadoria}</div>
-                                    <div class="note-col-qtd text-truncate" title="Qtd: ${nota.quantidade}">${formatarValorBrasileiro(nota.quantidade)}</div>
-                                    <div class="note-col-peso text-truncate" title="Peso: ${nota.peso} kg">${formatarPesoBrasileiro(nota.peso)}</div>
-                                    <div class="note-col-valor text-truncate" title="Valor: R$ ${nota.valor}">${formatarValorBrasileiro(nota.valor, 'moeda')}</div>
-                                    <div class="note-col-data text-truncate" title="Data: ${nota.data_emissao}">${nota.data_emissao}</div>
-                                </div>
-                            </label>
-                        </div>
-                    `;
-                    notasContainer.insertAdjacentHTML('beforeend', notaHtml);
-                });
-                
-                // Adicionar event listeners para checkboxes
-                const checkboxes = notasContainer.querySelectorAll('.form-check-input');
-                checkboxes.forEach(checkbox => {
-                    checkbox.addEventListener('change', () => {
-                        calcularEAtualizarTotais(notasContainer, totalPesoElement, totalValorElement);
+                // Verificar se há HTML retornado
+                if (data.html) {
+                    // Inserir o HTML renderizado pelo servidor
+                    notasContainer.innerHTML = data.html;
+                    
+                    // Adicionar event listeners para checkboxes
+                    const checkboxes = notasContainer.querySelectorAll('.form-check-input');
+                    checkboxes.forEach(checkbox => {
+                        checkbox.addEventListener('change', () => {
+                            calcularEAtualizarTotais(notasContainer, totalPesoElement, totalValorElement);
+                        });
                     });
-                });
-                
-                // Calcular totais iniciais
-                calcularEAtualizarTotais(notasContainer, totalPesoElement, totalValorElement);
+                    
+                    // Calcular totais iniciais
+                    calcularEAtualizarTotais(notasContainer, totalPesoElement, totalValorElement);
+                } else {
+                    // Fallback para o formato antigo (se necessário)
+                    if (data.notas_fiscais) {
+                        data.notas_fiscais.forEach(nota => {
+                            const notaHtml = `
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="notas_fiscais" value="${nota.id}" id="nota_${nota.id}">
+                                    <label class="form-check-label" for="nota_${nota.id}">
+                                        <div class="note-info-row">
+                                            <div class="note-col-nf text-truncate" title="Número: ${nota.nota_numero}"><strong>${nota.nota_numero}</strong></div>
+                                            <div class="note-col-fornecedor text-truncate" title="Forn: ${nota.fornecedor}">${nota.fornecedor}</div>
+                                            <div class="note-col-mercadoria text-truncate" title="Merc: ${nota.mercadoria}">${nota.mercadoria}</div>
+                                            <div class="note-col-qtd text-truncate" title="Qtd: ${nota.quantidade}">${formatarValorBrasileiro(nota.quantidade)}</div>
+                                            <div class="note-col-peso text-truncate" title="Peso: ${nota.peso} kg">${formatarPesoBrasileiro(nota.peso)}</div>
+                                            <div class="note-col-valor text-truncate" title="Valor: R$ ${nota.valor}">${formatarValorBrasileiro(nota.valor, 'moeda')}</div>
+                                            <div class="note-col-data text-truncate" title="Data: ${nota.data_emissao}">${nota.data_emissao}</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            `;
+                            notasContainer.insertAdjacentHTML('beforeend', notaHtml);
+                        });
+                        
+                        // Adicionar event listeners para checkboxes
+                        const checkboxes = notasContainer.querySelectorAll('.form-check-input');
+                        checkboxes.forEach(checkbox => {
+                            checkbox.addEventListener('change', () => {
+                                calcularEAtualizarTotais(notasContainer, totalPesoElement, totalValorElement);
+                            });
+                        });
+                        
+                        // Calcular totais iniciais
+                        calcularEAtualizarTotais(notasContainer, totalPesoElement, totalValorElement);
+                    } else {
+                        notasContainer.innerHTML = '<p class="text-info">Nenhuma nota fiscal disponível para este cliente.</p>';
+                    }
+                }
                 
             } catch (error) {
                 console.error('Erro ao carregar notas fiscais (Frontend):', error);
@@ -233,16 +286,24 @@
         }
 
         // Função para carregar notas fiscais na edição
-        async function loadNotasFiscaisEdicao(clienteId, romaneioId) {
+        async function loadNotasFiscaisEdicao(clienteId, romaneioId, notasContainer, totalPesoElement, totalValorElement, selectedNotasIds) {
+            
             if (!clienteId) return;
             
-            const notasContainer = document.getElementById('notas-fiscais-container');
-            const totalPesoElement = document.getElementById('total-peso');
-            const totalValorElement = document.getElementById('total-valor');
+            // Se os elementos não foram passados como parâmetros, buscar por ID
+            if (!notasContainer) {
+                notasContainer = document.getElementById('notas-fiscais-container');
+            }
+            if (!totalPesoElement) {
+                totalPesoElement = document.getElementById('total-peso');
+            }
+            if (!totalValorElement) {
+                totalValorElement = document.getElementById('total-valor');
+            }
             
             try {
-                const response = await fetch(`/notas/api/notas-fiscais-edicao/${clienteId}/${romaneioId}/`);
-                if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); }
+                const url = `/notas/ajax/load-notas-edicao/?cliente_id=${clienteId}&romaneio_id=${romaneioId}`;
+                const response = await fetch(url);
                 
                 const data = await response.json();
                 
@@ -250,19 +311,20 @@
                 notasContainer.innerHTML = '';
                 
                 // Adicionar notas fiscais
-                data.notas_fiscais.forEach(nota => {
-                    const checked = nota.vinculada ? 'checked' : '';
+                data.forEach((nota, index) => {
+                    // Verificar se a nota está nas selecionadas inicialmente
+                    const isChecked = selectedNotasIds && selectedNotasIds.includes(nota.id) ? 'checked' : '';
                     const notaHtml = `
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="notas_fiscais" value="${nota.id}" id="nota_${nota.id}" ${checked}>
+                            <input class="form-check-input" type="checkbox" name="notas_fiscais" value="${nota.id}" id="nota_${nota.id}" ${isChecked}>
                             <label class="form-check-label" for="nota_${nota.id}">
                                 <div class="note-info-row">
                                     <div class="note-col-nf text-truncate" title="Número: ${nota.nota_numero}"><strong>${nota.nota_numero}</strong></div>
                                     <div class="note-col-fornecedor text-truncate" title="Forn: ${nota.fornecedor}">${nota.fornecedor}</div>
                                     <div class="note-col-mercadoria text-truncate" title="Merc: ${nota.mercadoria}">${nota.mercadoria}</div>
-                                    <div class="note-col-qtd text-truncate" title="Qtd: ${nota.quantidade}">${formatarValorBrasileiro(nota.quantidade)}</div>
-                                    <div class="note-col-peso text-truncate" title="Peso: ${nota.peso} kg">${formatarPesoBrasileiro(nota.peso)}</div>
-                                    <div class="note-col-valor text-truncate" title="Valor: R$ ${nota.valor}">${formatarValorBrasileiro(nota.valor, 'moeda')}</div>
+                                    <div class="note-col-qtd text-truncate" title="Qtd: ${nota.quantidade}">${nota.quantidade}</div>
+                                    <div class="note-col-peso text-truncate" title="Peso: ${nota.peso}">${nota.peso}</div>
+                                    <div class="note-col-valor text-truncate" title="Valor: ${nota.valor}">${nota.valor}</div>
                                     <div class="note-col-data text-truncate" title="Data: ${nota.data_emissao}">${nota.data_emissao}</div>
                                 </div>
                             </label>

@@ -117,6 +117,11 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Configurações de autenticação
+LOGIN_URL = '/notas/login/'
+LOGIN_REDIRECT_URL = '/notas/'
+LOGOUT_REDIRECT_URL = '/notas/login/'
+
 # projeto_notas/settings.py
 
 INSTALLED_APPS = [
