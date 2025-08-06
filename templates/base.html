@@ -54,51 +54,142 @@
     <div class="main-wrapper">
         {% if user.is_authenticated %}
         <!-- Sidebar -->
-        <div class="sidebar">
-            <h3>Menu</h3>
+               <div class="sidebar">
+           <div class="sidebar-header">
+               <h3><i class="fas fa-bars"></i></h3>
+           </div>
             <nav class="sidebar-nav">
-                <ul>
+                <ul class="nav-menu">
                     {% if user.can_access_funcionalidades %}
-                    <li><a href="{% url 'notas:listar_notas_fiscais' %}">Pesquisar Notas Fiscais</a></li>
-                    <li><a href="{% url 'notas:adicionar_nota_fiscal' %}">Adicionar Nota</a></li>
-                    {% endif %}
+                    <!-- Notas -->
+                    <li class="nav-group">
+                        <div class="nav-group-header">
+                            <i class="fas fa-file-invoice"></i>
+                            <span>Notas</span>
+                        </div>
+                        <ul class="nav-submenu">
+                            <li><a href="{% url 'notas:listar_notas_fiscais' %}">
+                                <i class="fas fa-search"></i> Pesquisar Nota
+                            </a></li>
+                            <li><a href="{% url 'notas:adicionar_nota_fiscal' %}">
+                                <i class="fas fa-plus"></i> Adicionar Nota
+                            </a></li>
+                        </ul>
+                    </li>
                     
-                    {% if user.can_access_funcionalidades %}
-                    <li><a href="{% url 'notas:listar_clientes' %}">Pesquisar Clientes</a></li>
-                    <li><a href="{% url 'notas:adicionar_cliente' %}">Adicionar Cliente</a></li>
-                    {% endif %}
+                    <!-- Clientes -->
+                    <li class="nav-group">
+                        <div class="nav-group-header">
+                            <i class="fas fa-building"></i>
+                            <span>Clientes</span>
+                        </div>
+                        <ul class="nav-submenu">
+                            <li><a href="{% url 'notas:listar_clientes' %}">
+                                <i class="fas fa-search"></i> Pesquisar Cliente
+                            </a></li>
+                            <li><a href="{% url 'notas:adicionar_cliente' %}">
+                                <i class="fas fa-plus"></i> Adicionar Cliente
+                            </a></li>
+                        </ul>
+                    </li>
                     
-                    {% if user.can_access_funcionalidades %}
-                    <li><a href="{% url 'notas:listar_motoristas' %}">Pesquisar Motoristas</a></li>
-                    <li><a href="{% url 'notas:adicionar_motorista' %}">Adicionar Motorista</a></li>
-                    {% endif %}
+                    <!-- Motoristas -->
+                    <li class="nav-group">
+                        <div class="nav-group-header">
+                            <i class="fas fa-user-tie"></i>
+                            <span>Motoristas</span>
+                        </div>
+                        <ul class="nav-submenu">
+                            <li><a href="{% url 'notas:listar_motoristas' %}">
+                                <i class="fas fa-search"></i> Pesquisar Motorista
+                            </a></li>
+                            <li><a href="{% url 'notas:adicionar_motorista' %}">
+                                <i class="fas fa-plus"></i> Adicionar Motorista
+                            </a></li>
+                        </ul>
+                    </li>
                     
-                    {% if user.can_access_funcionalidades %}
-                    <li><a href="{% url 'notas:listar_veiculos' %}">Pesquisar Veículo</a></li>
-                    <li><a href="{% url 'notas:adicionar_veiculo' %}">Adicionar Veículo</a></li>
-                    {% endif %}
+                    <!-- Veículos -->
+                    <li class="nav-group">
+                        <div class="nav-group-header">
+                            <i class="fas fa-truck"></i>
+                            <span>Veículos</span>
+                        </div>
+                        <ul class="nav-submenu">
+                            <li><a href="{% url 'notas:listar_veiculos' %}">
+                                <i class="fas fa-search"></i> Pesquisar Veículo
+                            </a></li>
+                            <li><a href="{% url 'notas:adicionar_veiculo' %}">
+                                <i class="fas fa-plus"></i> Adicionar Veículo
+                            </a></li>
+                        </ul>
+                    </li>
                     
-                    {% if user.can_access_funcionalidades %}
-                    <li><a href="{% url 'notas:listar_romaneios' %}">Pesquisar Romaneio</a></li>
-                    <li><a href="{% url 'notas:adicionar_romaneio' %}">Preparar Romaneio</a></li>
-                    {% endif %}
+                    <!-- Romaneios -->
+                    <li class="nav-group">
+                        <div class="nav-group-header">
+                            <i class="fas fa-route"></i>
+                            <span>Romaneios</span>
+                        </div>
+                        <ul class="nav-submenu">
+                            <li><a href="{% url 'notas:listar_romaneios' %}">
+                                <i class="fas fa-search"></i> Pesquisar Romaneio
+                            </a></li>
+                            <li><a href="{% url 'notas:adicionar_romaneio' %}">
+                                <i class="fas fa-plus"></i> Preparar Romaneio
+                            </a></li>
+                        </ul>
+                    </li>
                     
-                    {% if user.can_access_funcionalidades %}
-                    <li><a href="{% url 'notas:pesquisar_mercadorias_deposito' %}">Mercadorias no Depósito</a></li>
-                    {% endif %}
+                                       <!-- Depósito -->
+                   <li class="nav-item">
+                       <a href="{% url 'notas:pesquisar_mercadorias_deposito' %}">
+                           <i class="fas fa-warehouse"></i> Depósito
+                       </a>
+                   </li>
                     
+                    <!-- Relatórios -->
                     {% if user.is_admin %}
-                    <li><a href="{% url 'notas:listar_tabela_seguros' %}">Tabela de Seguros</a></li>
-                    <li><a href="{% url 'notas:totalizador_por_estado' %}">Totalizador por Estado</a></li>
+                    <li class="nav-group">
+                        <div class="nav-group-header">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Relatórios</span>
+                        </div>
+                        <ul class="nav-submenu">
+                            <li><a href="{% url 'notas:totalizador_por_estado' %}">
+                                <i class="fas fa-map-marked-alt"></i> Totalizador por Estado
+                            </a></li>
+                            <li><a href="{% url 'notas:listar_tabela_seguros' %}">
+                                <i class="fas fa-shield-alt"></i> Tabela de Seguros
+                            </a></li>
+                        </ul>
+                    </li>
+                    
+                                       <!-- Usuários -->
+                   <li class="nav-item">
+                       <a href="{% url 'notas:listar_usuarios' %}">
+                           <i class="fas fa-users-cog"></i> Usuários
+                       </a>
+                   </li>
+                    {% endif %}
                     {% endif %}
                     
                     {% if user.is_cliente %}
-                    <li><a href="{% url 'notas:minhas_notas_fiscais' %}">Minhas Notas</a></li>
-                    <li><a href="{% url 'notas:meus_romaneios' %}">Meus Romaneios</a></li>
-                    {% endif %}
-                    
-                    {% if user.is_admin %}
-                    <li><a href="{% url 'notas:listar_usuarios' %}">Gerenciar Usuários</a></li>
+                    <!-- Área do Cliente -->
+                    <li class="nav-group">
+                        <div class="nav-group-header">
+                            <i class="fas fa-user-circle"></i>
+                            <span>Minha Área</span>
+                        </div>
+                        <ul class="nav-submenu">
+                            <li><a href="{% url 'notas:minhas_notas_fiscais' %}">
+                                <i class="fas fa-file-invoice"></i> Minhas Notas
+                            </a></li>
+                            <li><a href="{% url 'notas:meus_romaneios' %}">
+                                <i class="fas fa-truck"></i> Meus Romaneios
+                            </a></li>
+                        </ul>
+                    </li>
                     {% endif %}
                 </ul>
             </nav>
@@ -127,6 +218,52 @@
     
     <!-- Scripts específicos para romaneios -->
     <script>
+                 // Menu sidebar interactions
+         document.addEventListener('DOMContentLoaded', function() {
+             // Add click handlers for nav group headers
+             const navGroupHeaders = document.querySelectorAll('.nav-group-header');
+             navGroupHeaders.forEach(header => {
+                 header.addEventListener('click', function() {
+                     const submenu = this.nextElementSibling;
+                     if (submenu && submenu.classList.contains('nav-submenu')) {
+                         const isVisible = submenu.style.display === 'block';
+                         
+                         // Toggle submenu visibility
+                         submenu.style.display = isVisible ? 'none' : 'block';
+                         
+                         // Toggle classes for visual feedback
+                         this.classList.toggle('collapsed', !isVisible);
+                         this.classList.toggle('expanded', isVisible);
+                     }
+                 });
+                 
+                 // Add cursor pointer to group headers
+                 header.style.cursor = 'pointer';
+                 
+                 // Start all groups collapsed by default
+                 header.classList.add('collapsed');
+             });
+             
+             // Highlight current page in menu and expand only the relevant group
+             const currentPath = window.location.pathname;
+             const menuLinks = document.querySelectorAll('.nav-submenu a, .nav-item a');
+             menuLinks.forEach(link => {
+                 if (link.getAttribute('href') === currentPath) {
+                     link.classList.add('active');
+                     // Expand only the parent group of the current page
+                     const parentGroup = link.closest('.nav-group');
+                     if (parentGroup) {
+                         const submenu = parentGroup.querySelector('.nav-submenu');
+                         const header = parentGroup.querySelector('.nav-group-header');
+                         if (submenu && header) {
+                             submenu.style.display = 'block';
+                             header.classList.remove('collapsed');
+                             header.classList.add('expanded');
+                         }
+                     }
+                 }
+             });
+         });
         // Função para formatar valores no padrão brasileiro
         function formatarValorBrasileiro(valor, tipo = 'numero') {
             if (valor === null || valor === undefined || isNaN(valor)) {
