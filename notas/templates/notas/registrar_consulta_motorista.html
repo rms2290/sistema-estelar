@@ -120,11 +120,11 @@
                                             <td>{{ consulta.gerenciadora|default:"-" }}</td>
                                             <td>
                                                 {% if consulta.status_consulta == 'Apto' %}
-                                                    <span class="badge bg-success">{{ consulta.status_consulta }}</span>
-                                                {% elif consulta.status_consulta == 'Inapto' %}
-                                                    <span class="badge bg-danger">{{ consulta.status_consulta }}</span>
-                                                {% else %}
-                                                    <span class="badge bg-warning">{{ consulta.status_consulta }}</span>
+                                                                                                    <span class="badge bg-ativo">{{ consulta.status_consulta }}</span>
+                                            {% elif consulta.status_consulta == 'Inapto' %}
+                                                <span class="badge bg-inativo">{{ consulta.status_consulta }}</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">{{ consulta.status_consulta }}</span>
                                                 {% endif %}
                                             </td>
                                         </tr>

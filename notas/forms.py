@@ -753,7 +753,7 @@ class RomaneioViagemForm(forms.ModelForm):
     notas_fiscais = forms.ModelMultipleChoiceField(
         queryset=NotaFiscal.objects.none(), # Começa vazio. O JS ou a edição preencherá.
         widget=forms.CheckboxSelectMultiple,
-        required=True,
+        required=True,  # RESTAURADO COMO OBRIGATÓRIO
         label="Notas Fiscais Associadas"
     )
 
@@ -782,12 +782,28 @@ class RomaneioViagemForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
 
-    # Sobrescreve o campo 'veiculo' para apontar para Veiculo (unidade)
-    veiculo = forms.ModelChoiceField(
-        queryset=Veiculo.objects.all().order_by('placa'),
-        label='Unidade de Veículo', # Ajustado o label
+    # Composição veicular
+    veiculo_principal = forms.ModelChoiceField(
+        queryset=Veiculo.objects.filter(tipo_unidade__in=['Carro', 'Van', 'Truck']).order_by('placa'),
+        label='Veículo Principal',
         required=True,
-        empty_label="--- Selecione uma unidade ---",
+        empty_label="--- Selecione o veículo principal ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    reboque_1 = forms.ModelChoiceField(
+        queryset=Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa'),
+        label='Reboque 1 (Opcional)',
+        required=False,
+        empty_label="--- Selecione o reboque 1 ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    reboque_2 = forms.ModelChoiceField(
+        queryset=Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa'),
+        label='Reboque 2 (Opcional)',
+        required=False,
+        empty_label="--- Selecione o reboque 2 ---",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
 
@@ -802,7 +818,9 @@ class RomaneioViagemForm(forms.ModelForm):
         # Querysets para ModelChoiceFields
         self.fields['cliente'].queryset = Cliente.objects.filter(status='Ativo').order_by('razao_social')
         self.fields['motorista'].queryset = Motorista.objects.all().order_by('nome')
-        self.fields['veiculo'].queryset = Veiculo.objects.all().order_by('placa')
+        self.fields['veiculo_principal'].queryset = Veiculo.objects.filter(tipo_unidade__in=['Carro', 'Van', 'Truck']).order_by('placa')
+        self.fields['reboque_1'].queryset = Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa')
+        self.fields['reboque_2'].queryset = Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa')
 
         # Lógica para edição (preencher notas_fiscais e data_romaneio)
         if self.instance and self.instance.pk:
@@ -818,6 +836,18 @@ class RomaneioViagemForm(forms.ModelForm):
                 ).order_by('nota')
                 self.fields['notas_fiscais'].initial = self.instance.notas_fiscais.all()
         
+        # CORREÇÃO: Configurar queryset das notas fiscais baseado no cliente dos dados
+        if self.data and 'cliente' in self.data:
+            try:
+                cliente_id = self.data.get('cliente')
+                if cliente_id:
+                    cliente_obj = Cliente.objects.get(pk=cliente_id)
+                    self.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
+                        cliente=cliente_obj, status='Depósito' 
+                    ).order_by('nota')
+            except (Cliente.DoesNotExist, ValueError):
+                pass
+        
         # Adicionar atributos HTML para estilização
         for field_name, field in self.fields.items():
             if field_name != 'notas_fiscais': # CheckboxSelectMultiple é estilizado diferente
@@ -830,7 +860,23 @@ class RomaneioViagemForm(forms.ModelForm):
     class Meta:
         model = RomaneioViagem
         # 'codigo' e 'status' são controlados pela view e não aparecem no formulário
-        fields = ['data_romaneio', 'cliente', 'notas_fiscais', 'motorista', 'veiculo']
+        fields = ['data_romaneio', 'cliente', 'notas_fiscais', 'motorista', 'veiculo_principal', 'reboque_1', 'reboque_2']
+    
+    def clean_notas_fiscais(self):
+        """Validação customizada para o campo notas_fiscais"""
+        notas_fiscais = self.cleaned_data.get('notas_fiscais')
+        cliente = self.cleaned_data.get('cliente')
+        
+        if not notas_fiscais:
+            raise forms.ValidationError('Selecione pelo menos uma nota fiscal.')
+        
+        # Verificar se todas as notas fiscais pertencem ao cliente selecionado
+        if cliente:
+            notas_invalidas = notas_fiscais.exclude(cliente=cliente)
+            if notas_invalidas.exists():
+                raise forms.ValidationError('Todas as notas fiscais devem pertencer ao cliente selecionado.')
+        
+        return notas_fiscais
         
 # --------------------------------------------------------------------------------------
 # NOVO: Formulário para Histórico de Consulta
@@ -992,9 +1038,9 @@ class RomaneioSearchForm(forms.Form):
         empty_label="--- Selecione um motorista ---",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
-    veiculo = forms.ModelChoiceField(
+    veiculo_principal = forms.ModelChoiceField(
         queryset=Veiculo.objects.all().order_by('placa'),
-        label='Veículo',
+        label='Veículo Principal',
         required=False,
         empty_label="--- Selecione um veículo ---",
         widget=forms.Select(attrs={'class': 'form-control'})

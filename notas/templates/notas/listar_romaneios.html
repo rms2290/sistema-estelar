@@ -38,10 +38,10 @@
                         {{ search_form.motorista }}
                     </div>
                     <div class="col-md-3 mb-3">
-                        <label for="{{ search_form.veiculo.id_for_label }}" class="form-label">
-                            <i class="fas fa-truck"></i> {{ search_form.veiculo.label }}
-                        </label>
-                        {{ search_form.veiculo }}
+                                                    <label for="{{ search_form.veiculo_principal.id_for_label }}" class="form-label">
+                                <i class="fas fa-truck"></i> {{ search_form.veiculo_principal.label }}
+                            </label>
+                            {{ search_form.veiculo_principal }}
                     </div>
                 </div>
                 <div class="row">
@@ -106,10 +106,10 @@
                             <td><strong>{{ romaneio.codigo }}</strong></td>
                             <td>{{ romaneio.cliente.razao_social }}</td>
                             <td>{{ romaneio.motorista.nome }}</td>
-                            <td>{{ romaneio.veiculo.placa }}</td>
+                                                            <td>{{ romaneio.get_composicao_veicular }}</td>
                             <td>{{ romaneio.data_emissao|date:"d/m/Y H:i" }}</td>
                             <td>
-                                <span class="badge {% if romaneio.status == 'Rascunho' %}bg-warning{% else %}bg-success{% endif %}">
+                                <span class="badge {% if romaneio.status == 'Salvo' %}bg-warning{% elif romaneio.status == 'Emitido' %}bg-success{% elif romaneio.status == 'Em_Transito' %}bg-info{% elif romaneio.status == 'Entregue' %}bg-primary{% elif romaneio.status == 'Cancelado' %}bg-danger{% else %}bg-secondary{% endif %}">
                                     {{ romaneio.get_status_display }}
                                 </span>
                             </td>

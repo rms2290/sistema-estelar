@@ -132,7 +132,7 @@
                                 <td>{{ consulta.numero_consulta }}</td>
                                 <td>{{ consulta.gerenciadora|default:"-" }}</td>
                                 <td>
-                                    <span class="badge {% if consulta.status_consulta == 'Apto' %}bg-success{% elif consulta.status_consulta == 'Inapto' %}bg-danger{% else %}bg-warning{% endif %}">
+                                                                                    <span class="badge {% if consulta.status_consulta == 'Apto' %}bg-ativo{% elif consulta.status_consulta == 'Inapto' %}bg-inativo{% else %}bg-warning{% endif %}">
                                         {{ consulta.get_status_consulta_display }}
                                     </span>
                                 </td>

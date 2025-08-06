@@ -96,26 +96,53 @@ class VeiculoAdmin(admin.ModelAdmin):
 
 @admin.register(RomaneioViagem)
 class RomaneioViagemAdmin(admin.ModelAdmin):
-    list_display = ['codigo', 'cliente', 'motorista', 'veiculo', 'data_emissao', 'status']
-    list_filter = ['status', 'data_emissao', 'cliente']
-    search_fields = ['codigo', 'cliente__razao_social', 'motorista__nome']
+    list_display = ['codigo', 'cliente', 'motorista', 'get_composicao_veicular', 'data_emissao', 'status']
+    list_filter = ['status', 'data_emissao', 'cliente', 'destino_estado']
+    search_fields = ['codigo', 'cliente__razao_social', 'motorista__nome', 'origem_cidade', 'destino_cidade']
     date_hierarchy = 'data_emissao'
     filter_horizontal = ['notas_fiscais']
+    readonly_fields = ['data_ultima_edicao', 'usuario_criacao', 'usuario_ultima_edicao']
     
     fieldsets = (
         ('Informações Básicas', {
             'fields': ('codigo', 'status', 'data_emissao')
         }),
         ('Participantes', {
-            'fields': ('cliente', 'motorista', 'veiculo')
+            'fields': ('cliente', 'motorista')
         }),
-        ('Notas Fiscais', {
-            'fields': ('notas_fiscais',)
+        ('Composição Veicular', {
+            'fields': ('veiculo_principal', 'reboque_1', 'reboque_2')
+        }),
+        ('Rota', {
+            'fields': ('origem_cidade', 'origem_estado', 'destino_cidade', 'destino_estado')
+        }),
+        ('Datas', {
+            'fields': ('data_saida', 'data_chegada_prevista', 'data_chegada_real')
+        }),
+        ('Carga', {
+            'fields': ('notas_fiscais', 'peso_total', 'valor_total', 'quantidade_total')
+        }),
+        ('Seguro', {
+            'fields': ('seguro_obrigatorio', 'percentual_seguro', 'valor_seguro')
         }),
         ('Observações', {
             'fields': ('observacoes',)
         }),
+        ('Controle de Acesso', {
+            'fields': ('usuario_criacao', 'usuario_ultima_edicao', 'data_ultima_edicao'),
+            'classes': ('collapse',)
+        }),
     )
+    
+    def get_composicao_veicular(self, obj):
+        return obj.get_composicao_veicular()
+    get_composicao_veicular.short_description = 'Composição Veicular'
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # Se é um novo romaneio
+            obj.usuario_criacao = request.user
+        obj.usuario_ultima_edicao = request.user
+        super().save_model(request, obj, form, change)
 
 @admin.register(HistoricoConsulta)
 class HistoricoConsultaAdmin(admin.ModelAdmin):

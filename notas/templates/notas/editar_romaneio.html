@@ -73,17 +73,29 @@
                     {{ form.motorista }}
                     {% if form.motorista.errors %}<div class="text-danger">{{ form.motorista.errors }}</div>{% endif %}
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label for="{{ form.veiculo.id_for_label }}" class="form-label">Unidade de Veículo:</label>
-                    {{ form.veiculo }}
-                    {% if form.veiculo.errors %}<div class="text-danger">{{ form.veiculo.errors }}</div>{% endif %}
-                </div>
+                                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.veiculo_principal.id_for_label }}" class="form-label">{{ form.veiculo_principal.label }}:</label>
+                                {{ form.veiculo_principal }}
+                                {% if form.veiculo_principal.errors %}<div class="text-danger">{{ form.veiculo_principal.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.reboque_1.id_for_label }}" class="form-label">{{ form.reboque_1.label }}:</label>
+                                {{ form.reboque_1 }}
+                                {% if form.reboque_1.errors %}<div class="text-danger">{{ form.reboque_1.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.reboque_2.id_for_label }}" class="form-label">{{ form.reboque_2.label }}:</label>
+                                {{ form.reboque_2 }}
+                                {% if form.reboque_2.errors %}<div class="text-danger">{{ form.reboque_2.errors }}</div>{% endif %}
+                            </div>
             </div>
         </div>
 
         {# Botões de ação #}
         <div class="d-flex justify-content-end">
-            <button type="submit" name="salvar" class="btn btn-secondary me-2">Salvar Rascunho</button>
+            <button type="submit" name="salvar" class="btn btn-secondary me-2">Salvar Romaneio</button>
             <button type="submit" name="emitir" class="btn btn-success">Emitir Romaneio</button>
             <a href="{% url 'notas:detalhes_romaneio' romaneio.pk %}" class="btn btn-danger">Cancelar</a>
         </div>

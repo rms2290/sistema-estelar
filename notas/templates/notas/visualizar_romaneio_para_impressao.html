@@ -36,7 +36,7 @@
                 <p class="mb-1"><strong>DATA:</strong> {{ romaneio.data_emissao|date:"d/m/Y H:i" }}</p>
                 <p class="mb-1"><strong>MOTORISTA:</strong> {{ romaneio.motorista.nome }}</p>
                 <p class="mb-1"><strong>CNH:</strong> {{ romaneio.motorista.cnh|default:"N/A" }}</p>
-                <p class="mb-1"><strong>PLACA DO VEÍCULO:</strong> {{ romaneio.veiculo.placa }} ({{ romaneio.veiculo.get_tipo_unidade_display }})</p>
+                                        <p class="mb-1"><strong>COMPOSIÇÃO VEICULAR:</strong> {{ romaneio.get_composicao_veicular }}</p>
                 {% if romaneio.motorista.reboque_1 %}
                     <p class="mb-1"><strong>PLACA DA CARRETA:</strong> {{ romaneio.motorista.reboque_1.placa }}</p>
                 {% endif %}

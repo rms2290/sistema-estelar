@@ -15,7 +15,7 @@ class UpperCaseMixin:
                     exclude_fields = [
                         'email', 'password', 'username', 'cpf', 'cnpj', 
                         'cnh', 'chassi', 'renavam', 'placa', 'cep',
-                        'telefone', 'rntrc', 'numero_consulta'
+                        'telefone', 'rntrc', 'numero_consulta', 'tipo_usuario'
                     ]
                     if field.name not in exclude_fields:
                         setattr(self, field.name, value.upper())
@@ -243,56 +243,346 @@ class Veiculo(UpperCaseMixin, models.Model):
         ordering = ['placa']
 
 # --------------------------------------------------------------------------------------
-# Romaneio
+# NOVO MODELO: Romaneio de Viagem
 # --------------------------------------------------------------------------------------
-class RomaneioViagem(models.Model):
-    # Alterado para CharField para código sequencial tipo ROM-AAAA-MM-NNNN
-    codigo = models.CharField(max_length=20, unique=True, verbose_name="Código do Romaneio") 
+class RomaneioViagem(UpperCaseMixin, models.Model):
+    """
+    Novo modelo de Romaneio de Viagem com estrutura mais robusta
+    """
     
-    # Status do Romaneio
+    # =============================================================================
+    # INFORMAÇÕES BÁSICAS DO ROMANEIO
+    # =============================================================================
+    codigo = models.CharField(
+        max_length=20, 
+        unique=True, 
+        verbose_name="Código do Romaneio",
+        help_text="Código único do romaneio (ex: ROM-2024-01-0001)"
+    )
+    
     STATUS_ROMANEIO_CHOICES = [
-        ('Rascunho', 'Rascunho'),
+        ('Salvo', 'Salvo'),
         ('Emitido', 'Emitido'),
+        ('Em_Transito', 'Em Trânsito'),
+        ('Entregue', 'Entregue'),
+        ('Cancelado', 'Cancelado'),
     ]
-    status = models.CharField(max_length=10, choices=STATUS_ROMANEIO_CHOICES, default='Rascunho', verbose_name="Status do Romaneio")
-
+    status = models.CharField(
+        max_length=15, 
+        choices=STATUS_ROMANEIO_CHOICES, 
+        default='Salvo', 
+        verbose_name="Status do Romaneio"
+    )
+    
+    # =============================================================================
+    # RELACIONAMENTOS PRINCIPAIS
+    # =============================================================================
     cliente = models.ForeignKey(
         Cliente,
         on_delete=models.PROTECT,
         related_name='romaneios_cliente',
         verbose_name="Cliente"
     )
-    # Apontando para Veiculo (unidade)
-    veiculo = models.ForeignKey( 
-        Veiculo,
-        on_delete=models.PROTECT,
-        related_name='romaneios_veiculo',
-        verbose_name="Unidade de Veículo"
-    )
+    
     motorista = models.ForeignKey(
         Motorista,
         on_delete=models.PROTECT,
         related_name='romaneios_motorista',
         verbose_name="Motorista"
     )
-    # ManyToManyField para Notas Fiscais
+    
+    # =============================================================================
+    # COMPOSIÇÃO VEICULAR
+    # =============================================================================
+    # Veículo principal (caminhão trator, carro, van)
+    veiculo_principal = models.ForeignKey(
+        Veiculo,
+        on_delete=models.PROTECT,
+        related_name='romaneios_veiculo_principal',
+        verbose_name="Veículo Principal",
+        help_text="Caminhão trator, carro ou van"
+    )
+    
+    # Reboques (opcionais)
+    reboque_1 = models.ForeignKey(
+        Veiculo,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='romaneios_reboque_1',
+        verbose_name="Reboque 1",
+        help_text="Primeiro reboque (opcional)"
+    )
+    
+    reboque_2 = models.ForeignKey(
+        Veiculo,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='romaneios_reboque_2',
+        verbose_name="Reboque 2",
+        help_text="Segundo reboque (opcional)"
+    )
+    
+    # =============================================================================
+    # CARGA E MERCADORIAS
+    # =============================================================================
     notas_fiscais = models.ManyToManyField(
         NotaFiscal,
         related_name='romaneios_vinculados',
         blank=True,
         verbose_name="Notas Fiscais"
     )
-
-    data_emissao = models.DateTimeField(default=timezone.now, verbose_name="Data de Emissão")
-    observacoes = models.TextField(blank=True, null=True, verbose_name="Observações")
-
+    
+    # Campos para totalização da carga
+    peso_total = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        blank=True, 
+        null=True,
+        verbose_name="Peso Total (kg)",
+        help_text="Peso total da carga em quilogramas"
+    )
+    
+    valor_total = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        blank=True, 
+        null=True,
+        verbose_name="Valor Total (R$)",
+        help_text="Valor total da carga em reais"
+    )
+    
+    quantidade_total = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        blank=True, 
+        null=True,
+        verbose_name="Quantidade Total",
+        help_text="Quantidade total de itens"
+    )
+    
+    # =============================================================================
+    # ROTAS E DESTINOS
+    # =============================================================================
+    origem_cidade = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True,
+        verbose_name="Cidade de Origem"
+    )
+    
+    origem_estado = models.CharField(
+        max_length=2, 
+        blank=True, 
+        null=True,
+        verbose_name="Estado de Origem (UF)"
+    )
+    
+    destino_cidade = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True,
+        verbose_name="Cidade de Destino"
+    )
+    
+    destino_estado = models.CharField(
+        max_length=2, 
+        blank=True, 
+        null=True,
+        verbose_name="Estado de Destino (UF)"
+    )
+    
+    # =============================================================================
+    # DATAS E PRAZOS
+    # =============================================================================
+    data_emissao = models.DateTimeField(
+        default=timezone.now, 
+        verbose_name="Data de Emissão"
+    )
+    
+    data_saida = models.DateTimeField(
+        blank=True, 
+        null=True,
+        verbose_name="Data de Saída",
+        help_text="Data e hora de saída para a viagem"
+    )
+    
+    data_chegada_prevista = models.DateTimeField(
+        blank=True, 
+        null=True,
+        verbose_name="Data de Chegada Prevista",
+        help_text="Data e hora prevista de chegada ao destino"
+    )
+    
+    data_chegada_real = models.DateTimeField(
+        blank=True, 
+        null=True,
+        verbose_name="Data de Chegada Real",
+        help_text="Data e hora real de chegada ao destino"
+    )
+    
+    # =============================================================================
+    # INFORMAÇÕES ADICIONAIS
+    # =============================================================================
+    observacoes = models.TextField(
+        blank=True, 
+        null=True, 
+        verbose_name="Observações"
+    )
+    
+    # Campos para controle de segurança
+    seguro_obrigatorio = models.BooleanField(
+        default=True,
+        verbose_name="Seguro Obrigatório",
+        help_text="Indica se o seguro é obrigatório para esta viagem"
+    )
+    
+    percentual_seguro = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        default=0.00,
+        verbose_name="Percentual de Seguro (%)",
+        help_text="Percentual de seguro aplicado baseado no estado de destino"
+    )
+    
+    valor_seguro = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        blank=True, 
+        null=True,
+        verbose_name="Valor do Seguro (R$)",
+        help_text="Valor calculado do seguro"
+    )
+    
+    # =============================================================================
+    # CONTROLE DE ACESSO
+    # =============================================================================
+    usuario_criacao = models.ForeignKey(
+        'Usuario',
+        on_delete=models.PROTECT,
+        related_name='romaneios_criados',
+        verbose_name="Usuário de Criação",
+        null=True,
+        blank=True
+    )
+    
+    usuario_ultima_edicao = models.ForeignKey(
+        'Usuario',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='romaneios_editados',
+        verbose_name="Usuário da Última Edição"
+    )
+    
+    data_ultima_edicao = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Data da Última Edição"
+    )
+    
+    # =============================================================================
+    # MÉTODOS
+    # =============================================================================
     def __str__(self):
-        return f"Romaneio {self.codigo} - Cliente: {self.cliente.razao_social}"
-
+        return f"Romaneio {self.codigo} - {self.cliente.razao_social}"
+    
+    def get_composicao_veicular(self):
+        """Retorna a composição veicular completa"""
+        composicao = [self.veiculo_principal.placa]
+        if self.reboque_1:
+            composicao.append(self.reboque_1.placa)
+        if self.reboque_2:
+            composicao.append(self.reboque_2.placa)
+        return " + ".join(composicao)
+    
+    def get_tipo_composicao(self):
+        """Retorna o tipo de composição veicular"""
+        if self.reboque_2:
+            return "Bi-trem"
+        elif self.reboque_1:
+            return "Carreta"
+        else:
+            return "Simples"
+    
+    def calcular_totais(self):
+        """Calcula os totais baseado nas notas fiscais vinculadas"""
+        if not self.notas_fiscais.exists():
+            return
+        
+        peso_total = sum(nf.peso for nf in self.notas_fiscais.all())
+        valor_total = sum(nf.valor for nf in self.notas_fiscais.all())
+        quantidade_total = sum(nf.quantidade for nf in self.notas_fiscais.all())
+        
+        self.peso_total = peso_total
+        self.valor_total = valor_total
+        self.quantidade_total = quantidade_total
+        self.save(update_fields=['peso_total', 'valor_total', 'quantidade_total'])
+    
+    def calcular_seguro(self):
+        """Calcula o valor do seguro baseado no estado de destino"""
+        if not self.destino_estado or not self.valor_total:
+            return
+        
+        try:
+            tabela_seguro = TabelaSeguro.objects.get(estado=self.destino_estado)
+            self.percentual_seguro = tabela_seguro.percentual_seguro
+            self.valor_seguro = (self.valor_total * self.percentual_seguro) / 100
+            self.save(update_fields=['percentual_seguro', 'valor_seguro'])
+        except TabelaSeguro.DoesNotExist:
+            pass
+    
+    def gerar_codigo_automatico(self):
+        """Gera código automático para o romaneio"""
+        if self.codigo:
+            return
+        
+        ano_atual = timezone.now().year
+        mes_atual = timezone.now().month
+        
+        # Buscar último romaneio do mês
+        ultimo_romaneio = RomaneioViagem.objects.filter(
+            codigo__startswith=f"ROM-{ano_atual}-{mes_atual:02d}"
+        ).order_by('-codigo').first()
+        
+        if ultimo_romaneio:
+            # Extrair número sequencial
+            try:
+                numero_atual = int(ultimo_romaneio.codigo.split('-')[-1])
+                novo_numero = numero_atual + 1
+            except (ValueError, IndexError):
+                novo_numero = 1
+        else:
+            novo_numero = 1
+        
+        self.codigo = f"ROM-{ano_atual}-{mes_atual:02d}-{novo_numero:04d}"
+    
+    def save(self, *args, **kwargs):
+        # Gerar código automático se não existir
+        if not self.codigo:
+            self.gerar_codigo_automatico()
+        
+        # Calcular totais se há notas fiscais
+        super().save(*args, **kwargs)
+        
+        if self.notas_fiscais.exists():
+            self.calcular_totais()
+        
+        # Calcular seguro se há destino e valor
+        if self.destino_estado and self.valor_total:
+            self.calcular_seguro()
+    
     class Meta:
         verbose_name = "Romaneio de Viagem"
         verbose_name_plural = "Romaneios de Viagem"
         ordering = ['-data_emissao', 'codigo']
+        indexes = [
+            models.Index(fields=['codigo']),
+            models.Index(fields=['status']),
+            models.Index(fields=['cliente']),
+            models.Index(fields=['motorista']),
+            models.Index(fields=['data_emissao']),
+        ]
 
 # --------------------------------------------------------------------------------------
 # NOVO MODELO: HistoricoConsulta (para registrar cada consulta de risco)

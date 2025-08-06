@@ -44,9 +44,9 @@
                                             </td>
                                             <td>{{ romaneio.data_emissao|date:"d/m/Y H:i" }}</td>
                                             <td>{{ romaneio.motorista.nome }}</td>
-                                            <td>{{ romaneio.veiculo.placa }}</td>
+                                            <td>{{ romaneio.get_composicao_veicular }}</td>
                                             <td>
-                                                <span class="badge {% if romaneio.status == 'Rascunho' %}bg-warning{% else %}bg-success{% endif %}">
+                                                <span class="badge {% if romaneio.status == 'Salvo' %}bg-warning{% elif romaneio.status == 'Emitido' %}bg-success{% elif romaneio.status == 'Em_Transito' %}bg-info{% elif romaneio.status == 'Entregue' %}bg-primary{% elif romaneio.status == 'Cancelado' %}bg-danger{% else %}bg-secondary{% endif %}">
                                                     {{ romaneio.get_status_display }}
                                                 </span>
                                             </td>

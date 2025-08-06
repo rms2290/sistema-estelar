@@ -35,7 +35,7 @@ def listar_romaneios(request):
         codigo = search_form.cleaned_data.get('codigo')
         cliente = search_form.cleaned_data.get('cliente')
         motorista = search_form.cleaned_data.get('motorista')
-        veiculo = search_form.cleaned_data.get('veiculo')
+        veiculo_principal = search_form.cleaned_data.get('veiculo_principal')
         status = search_form.cleaned_data.get('status')
         data_inicio = search_form.cleaned_data.get('data_inicio')
         data_fim = search_form.cleaned_data.get('data_fim')
@@ -46,8 +46,8 @@ def listar_romaneios(request):
             queryset = queryset.filter(cliente=cliente)
         if motorista:
             queryset = queryset.filter(motorista=motorista)
-        if veiculo:
-            queryset = queryset.filter(veiculo=veiculo)
+        if veiculo_principal:
+            queryset = queryset.filter(veiculo_principal=veiculo_principal)
         if status:
             queryset = queryset.filter(status=status)
         if data_inicio:
@@ -72,17 +72,41 @@ def adicionar_romaneio(request):
         if form.is_valid():
             romaneio = form.save(commit=False)
             romaneio.codigo = get_next_romaneio_codigo()
-            romaneio.status = 'Emitido'
-            romaneio.save()
-            form.save_m2m()  # Salvar relacionamentos many-to-many
+            romaneio.usuario_criacao = request.user
+            romaneio.usuario_ultima_edicao = request.user
             
-            # Atualizar status das notas fiscais
-            for nota in romaneio.notas_fiscais.all():
-                nota.status = 'Enviada'
-                nota.save()
-            
-            messages.success(request, 'Romaneio criado com sucesso!')
-            return redirect('notas:visualizar_romaneio_para_impressao', pk=romaneio.pk)
+            # Verificar qual botão foi clicado para definir o status
+            if 'salvar' in request.POST:
+                romaneio.status = 'Salvo'
+                romaneio.save()
+                form.save_m2m()  # Salvar relacionamentos many-to-many
+                messages.success(request, 'Romaneio salvo com sucesso!')
+                return redirect('notas:listar_romaneios')
+            elif 'emitir' in request.POST:
+                romaneio.status = 'Emitido'
+                romaneio.save()
+                form.save_m2m()  # Salvar relacionamentos many-to-many
+                
+                # Atualizar status das notas fiscais
+                for nota in romaneio.notas_fiscais.all():
+                    nota.status = 'Enviada'
+                    nota.save()
+                
+                messages.success(request, 'Romaneio criado com sucesso!')
+                return redirect('notas:visualizar_romaneio_para_impressao', pk=romaneio.pk)
+            else:
+                # Se nenhum botão específico foi clicado, definir como emitido por padrão
+                romaneio.status = 'Emitido'
+                romaneio.save()
+                form.save_m2m()  # Salvar relacionamentos many-to-many
+                
+                # Atualizar status das notas fiscais
+                for nota in romaneio.notas_fiscais.all():
+                    nota.status = 'Enviada'
+                    nota.save()
+                
+                messages.success(request, 'Romaneio criado com sucesso!')
+                return redirect('notas:visualizar_romaneio_para_impressao', pk=romaneio.pk)
         else:
             messages.error(request, 'Houve um erro ao criar o romaneio. Verifique os campos.')
     else:
@@ -104,8 +128,26 @@ def editar_romaneio(request, pk):
     if request.method == 'POST':
         form = RomaneioViagemForm(request.POST, instance=romaneio)
         if form.is_valid():
-            romaneio = form.save()
-            messages.success(request, 'Romaneio atualizado com sucesso!')
+            romaneio = form.save(commit=False)
+            romaneio.usuario_ultima_edicao = request.user
+            
+            # Verificar qual botão foi clicado para definir o status
+            if 'salvar' in request.POST:
+                romaneio.status = 'Salvo'
+                messages.success(request, 'Romaneio salvo com sucesso!')
+            elif 'emitir' in request.POST:
+                romaneio.status = 'Emitido'
+                # Atualizar status das notas fiscais para 'Enviada'
+                for nota in romaneio.notas_fiscais.all():
+                    nota.status = 'Enviada'
+                    nota.save()
+                messages.success(request, 'Romaneio emitido com sucesso!')
+            else:
+                # Se nenhum botão específico foi clicado, manter o status atual
+                pass
+            
+            romaneio.save()
+            form.save_m2m()
             return redirect('notas:listar_romaneios')
         else:
             messages.error(request, 'Houve um erro ao atualizar o romaneio.')

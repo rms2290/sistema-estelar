@@ -94,8 +94,8 @@
                                                 <td>{{ cliente.cnpj }}</td>
                                                 <td>{{ cliente.telefone|default:"-" }}</td>
                                                 <td>
-                                                    <span class="badge {% if cliente.status == 'Ativo' %}bg-success{% else %}bg-danger{% endif %}">
-                                                        {{ cliente.get_status_display }}
+                                                    <span class="badge {% if cliente.status == 'Ativo' %}bg-ativo{% else %}bg-inativo{% endif %}">
+                                                        {{ cliente.get_status_display|upper }}
                                                     </span>
                                                 </td>
                                                 <td>

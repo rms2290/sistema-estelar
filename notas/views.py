@@ -379,6 +379,7 @@ def adicionar_romaneio(request):
     if request.method == 'POST':
         form = RomaneioViagemForm(request.POST)
         
+        # Configurar o queryset das notas fiscais baseado no cliente selecionado
         cliente_id = request.POST.get('cliente')
         if cliente_id:
             try:
@@ -400,7 +401,7 @@ def adicionar_romaneio(request):
             if 'emitir' in request.POST:
                 romaneio.status = 'Emitido'
             else: # Clicou em 'salvar' ou outro botão
-                romaneio.status = 'Rascunho'
+                romaneio.status = 'Salvo'
 
             romaneio.save()
             form.save_m2m() # Salva a relação ManyToMany
@@ -417,17 +418,27 @@ def adicionar_romaneio(request):
             
             # >>> MUDANÇA AQUI: Redirecionar para a tela de visualização se Emitido <<<
             if romaneio.status == 'Emitido':
-                return redirect('notas:visualizar_romaneio_para_impressao', pk=romaneio.pk)
-            else: # Rascunho
+                return redirect('notas:visualizar_romaneio_paisagem', pk=romaneio.pk)
+            else: # Salvo
                 # Redirecionar para detalhes (para poder continuar editando) ou para listar
-                return redirect('notas:detalhes_romaneio', pk=romaneio.pk) # Sugiro detalhes para rascunho
+                return redirect('notas:detalhes_romaneio', pk=romaneio.pk) # Sugiro detalhes para salvo
         else:
+            # Se o formulário não for válido, reconfigurar o queryset para manter as seleções
+            if cliente_id:
+                try:
+                    cliente_obj = Cliente.objects.get(pk=cliente_id)
+                    form.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
+                        cliente=cliente_obj, status='Depósito' 
+                    ).order_by('nota')
+                except Cliente.DoesNotExist:
+                    form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
+            else:
+                form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
+            
             messages.error(request, 'Houve um erro ao emitir/salvar o romaneio. Verifique os campos.')
     else:
         form = RomaneioViagemForm()
         provisional_codigo = get_next_romaneio_codigo()
-        
-        # ... (querysets) ...
 
     context = {
         'form': form,
@@ -467,7 +478,7 @@ def editar_romaneio(request, pk):
             if 'emitir' in request.POST:
                 romaneio.status = 'Emitido'
             elif 'salvar' in request.POST:
-                romaneio.status = 'Rascunho'
+                romaneio.status = 'Salvo'
             
             form.save()
             
@@ -489,15 +500,27 @@ def editar_romaneio(request, pk):
             
             # >>> MUDANÇA AQUI: Redirecionar para a tela de visualização se Emitido <<<
             if romaneio.status == 'Emitido':
-                return redirect('notas:visualizar_romaneio_para_impressao', pk=romaneio.pk)
+                return redirect('notas:visualizar_romaneio_paisagem', pk=romaneio.pk)
             else: # Rascunho
                 return redirect('notas:detalhes_romaneio', pk=romaneio.pk) # Volta para os detalhes do romaneio
         else:
+            # Se o formulário não for válido, reconfigurar o queryset para manter as seleções
+            if cliente_id:
+                try:
+                    cliente_obj = Cliente.objects.get(pk=cliente_id)
+                    form.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
+                        cliente=cliente_obj
+                    ).filter(
+                        Q(romaneios_vinculados=romaneio) | Q(status='Depósito')
+                    ).order_by('nota')
+                except Cliente.DoesNotExist:
+                    form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
+            else:
+                form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
+            
             messages.error(request, 'Houve um erro ao atualizar o romaneio. Verifique os campos.')
     else: # GET request para edição
         form = RomaneioViagemForm(instance=romaneio)
-        
-        # ... (querysets e data_emissao) ...
 
     context = {
         'form': form,
@@ -522,7 +545,7 @@ def detalhes_romaneio(request, pk):
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
     
     # Verificar se o usuário tem permissão para ver este romaneio
-    if request.user.is_cliente and request.user.cliente:
+    if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente:
         # Cliente só pode ver romaneios que contêm suas notas fiscais
         if not romaneio.notas_fiscais.filter(cliente=request.user.cliente).exists():
             messages.error(request, 'Você não tem permissão para acessar este romaneio.')
@@ -712,7 +735,7 @@ def visualizar_romaneio_para_impressao(request, pk):
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
     
     # Verificar se o usuário tem permissão para imprimir este romaneio
-    if request.user.is_cliente and request.user.cliente:
+    if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente:
         # Cliente só pode imprimir romaneios que contêm suas notas fiscais
         if not romaneio.notas_fiscais.filter(cliente=request.user.cliente).exists():
             messages.error(request, 'Você não tem permissão para imprimir este romaneio.')
@@ -739,7 +762,7 @@ def visualizar_romaneio_paisagem(request, pk):
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
     
     # Verificar se o usuário tem permissão para imprimir este romaneio
-    if request.user.is_cliente and request.user.cliente:
+    if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente:
         # Cliente só pode imprimir romaneios que contêm suas notas fiscais
         if not romaneio.notas_fiscais.filter(cliente=request.user.cliente).exists():
             messages.error(request, 'Você não tem permissão para imprimir este romaneio.')
@@ -825,13 +848,13 @@ def perfil_usuario(request):
 
 # Decorators para verificar permissões
 def is_admin(user):
-    return user.is_authenticated and user.is_admin
+    return user.is_authenticated and user.tipo_usuario.upper() == 'ADMIN'
 
 def is_funcionario(user):
-    return user.is_authenticated and (user.is_admin or user.is_funcionario)
+    return user.is_authenticated and user.tipo_usuario.upper() in ['ADMIN', 'FUNCIONARIO']
 
 def is_cliente(user):
-    return user.is_authenticated and (user.is_admin or user.is_funcionario or user.is_cliente)
+    return user.is_authenticated and user.tipo_usuario.upper() in ['ADMIN', 'FUNCIONARIO', 'CLIENTE']
 
 # View para clientes verem apenas suas notas fiscais
 @login_required
@@ -840,7 +863,7 @@ def minhas_notas_fiscais(request):
     # Obter parâmetro de filtro
     status_filter = request.GET.get('status', '')
     
-    if request.user.is_cliente and request.user.cliente:
+    if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente:
         # Cliente vê apenas suas notas
         notas_fiscais = NotaFiscal.objects.filter(cliente=request.user.cliente)
     else:
@@ -874,7 +897,7 @@ def imprimir_nota_fiscal(request, pk):
     nota = get_object_or_404(NotaFiscal, pk=pk)
     
     # Verificar se o usuário tem permissão para ver esta nota
-    if request.user.is_cliente and request.user.cliente != nota.cliente:
+    if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente != nota.cliente:
         messages.error(request, 'Você não tem permissão para acessar esta nota fiscal.')
         return redirect('notas:minhas_notas_fiscais')
     
@@ -885,7 +908,7 @@ def imprimir_nota_fiscal(request, pk):
 @login_required
 @user_passes_test(is_cliente)
 def meus_romaneios(request):
-    if request.user.is_cliente and request.user.cliente:
+    if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente:
         # Cliente vê apenas romaneios de suas notas
         romaneios = RomaneioViagem.objects.filter(
             notas_fiscais__cliente=request.user.cliente

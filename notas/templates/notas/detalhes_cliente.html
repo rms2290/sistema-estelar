@@ -32,7 +32,7 @@
                 </div>
                 <div class="col-md-6">
                     <p><strong><i class="fas fa-toggle-on"></i> Status:</strong> 
-                        <span class="badge {% if cliente.status == 'Ativo' %}bg-success{% else %}bg-danger{% endif %}">
+                                                        <span class="badge {% if cliente.status == 'Ativo' %}bg-ativo{% else %}bg-inativo{% endif %}">
                             {{ cliente.get_status_display }}
                         </span>
                     </p>

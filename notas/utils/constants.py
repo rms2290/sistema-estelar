@@ -63,7 +63,7 @@ STATUS_NF_CHOICES = [
 
 # Status de romaneio
 STATUS_ROMANEIO_CHOICES = [
-    ('Rascunho', 'Rascunho'),
+    ('Salvo', 'Salvo'),
     ('Emitido', 'Emitido'),
 ]
 
