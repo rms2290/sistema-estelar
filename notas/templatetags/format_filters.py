@@ -77,4 +77,19 @@ def format_brazilian_quantity(value):
     """
     Formata um valor de quantidade como número brasileiro
     """
-    return format_brazilian_number(value, 0) 
+    return format_brazilian_number(value, 0)
+
+@register.filter
+def format_for_input(value, decimal_places=2):
+    """
+    Formata um valor decimal para uso em campos de input (usa ponto como separador decimal)
+    """
+    if value is None:
+        return '0.00'
+    
+    try:
+        # Converter para float e formatar com ponto como separador decimal
+        float_value = float(value)
+        return f"{float_value:.{decimal_places}f}"
+    except (ValueError, TypeError):
+        return '0.00' 

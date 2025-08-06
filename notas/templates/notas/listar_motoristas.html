@@ -3,94 +3,126 @@
 {% block title %}Pesquisar Motoristas{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-id-card"></i> Pesquisar Motoristas</h2>
-        <a href="{% url 'notas:adicionar_motorista' %}" class="btn btn-primary">Adicionar Motorista</a>
-    </div>
-
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-search"></i> Filtros de Pesquisa
-            </h5>
-        </div>
-        <div class="card-body">
-            <form method="get">
-                <div class="row">
-                    <div class="col-md-5 mb-3">
-                        <label for="{{ search_form.nome.id_for_label }}" class="form-label">
-                            <i class="fas fa-user"></i> {{ search_form.nome.label }}
-                        </label>
-                        {{ search_form.nome }}
-                    </div>
-                    <div class="col-md-5 mb-3">
-                        <label for="{{ search_form.cpf.id_for_label }}" class="form-label">
-                            <i class="fas fa-id-card"></i> {{ search_form.cpf.label }}
-                        </label>
-                        {{ search_form.cpf }}
-                    </div>
-                    <div class="col-md-2 mb-3">
-                        <label class="form-label">&nbsp;</label>
-                        <button type="submit" class="btn btn-primary btn-block">
-                            <i class="fas fa-search"></i> Buscar
-                        </button>
-                    </div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2><i class="fas fa-id-card"></i> Pesquisar Motoristas</h2>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-filter"></i> Filtros de Pesquisa
+                    </h5>
                 </div>
-            </form>
+                <div class="card-body">
+                    <!-- Formulário de Pesquisa -->
+                    <form method="GET" class="mb-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ search_form.nome.label_tag }}
+                                    {{ search_form.nome }}
+                                    {% if search_form.nome.errors %}
+                                        <div class="text-danger">{{ search_form.nome.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ search_form.cpf.label_tag }}
+                                    {{ search_form.cpf }}
+                                    {% if search_form.cpf.errors %}
+                                        <div class="text-danger">{{ search_form.cpf.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> Buscar
+                                </button>
+                                <a href="{% url 'notas:listar_motoristas' %}" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Limpar Filtros
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Mensagens do Django -->
+                    {% if messages %}
+                        <ul class="messages list-unstyled">
+                            {% for message in messages %}
+                                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+
+                    <!-- Resultados da Pesquisa -->
+                    {% if search_performed %}
+                        {% if motoristas %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> 
+                                Encontrados <strong>{{ motoristas.count }}</strong> motorista(s).
+                            </div>
+
+                            <!-- Tabela de Resultados -->
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Nome</th>
+                                            <th>CPF</th>
+                                            <th>CNH</th>
+                                            <th>Telefone</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for motorista in motoristas %}
+                                            <tr>
+                                                <td><strong>{{ motorista.nome }}</strong></td>
+                                                <td>{{ motorista.cpf }}</td>
+                                                <td>{{ motorista.cnh|default:"-" }}</td>
+                                                <td>{{ motorista.telefone|default:"-" }}</td>
+                                                <td>
+                                                    <a href="{% url 'notas:detalhes_motorista' motorista.pk %}" class="btn btn-info btn-sm" title="Ver Detalhes">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a href="{% url 'notas:registrar_consulta_motorista' motorista.pk %}" class="btn btn-warning btn-sm" title="Registrar Consulta">
+                                                        <i class="fas fa-clipboard-list"></i>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i> 
+                                Nenhum motorista encontrado com os filtros especificados.
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 
+                            Utilize os filtros acima para pesquisar motoristas.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
+</div>
 
-    {# Mensagens do Django #}
-    {% if messages %}
-        <ul class="messages list-unstyled">
-            {% for message in messages %}
-                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-            {% endfor %}
-        </ul>
-    {% endif %}
-
-    {# Exibição dos resultados #}
-    {% if motoristas %}
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>CPF</th>
-                        <th>CNH</th>
-                        <th>Telefone</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for motorista in motoristas %}
-                        <tr>
-                            <td><strong>{{ motorista.nome }}</strong></td>
-                            <td>{{ motorista.cpf }}</td>
-                            <td>{{ motorista.cnh|default:"-" }}</td>
-                            <td>{{ motorista.telefone|default:"-" }}</td>
-                            <td>
-                                <a href="{% url 'notas:detalhes_motorista' motorista.pk %}" class="btn btn-info btn-sm" title="Ver Detalhes">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{% url 'notas:registrar_consulta_motorista' motorista.pk %}" class="btn btn-warning btn-sm" title="Registrar Consulta">
-                                    <i class="fas fa-clipboard-list"></i>
-                                </a>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<div class="container-fluid mt-3">
+    <div class="row">
+        <div class="col-12">
+            <a href="{% url 'notas:adicionar_motorista' %}" class="btn btn-success">
+                <i class="fas fa-plus"></i> Adicionar Novo Motorista
+            </a>
         </div>
-    {% else %}
-        {% if search_performed %}
-            <p class="alert alert-info">Nenhum motorista encontrado com os filtros especificados.</p>
-        {% else %}
-            <p class="alert alert-info">Utilize os filtros acima para pesquisar motoristas.</p>
-        {% endif %}
-    {% endif %}
-
-    <a href="{% url 'notas:adicionar_motorista' %}" class="btn btn-success mt-3">Adicionar Novo Motorista</a>
+    </div>
 </div>
 {% endblock %}

@@ -6,26 +6,19 @@ from django.contrib.auth.models import BaseUserManager, AbstractUser
 # Custom save method mixin for uppercase text fields
 class UpperCaseMixin:
     def save(self, *args, **kwargs):
-        # List of fields that should be converted to uppercase
-        uppercase_fields = [
-            'razao_social', 'nome_fantasia', 'inscricao_estadual', 'endereco', 
-            'complemento', 'bairro', 'cidade',
-            'nome', 'codigo_seguranca', 'endereco', 'complemento', 'bairro', 'cidade',
-            'numero_consulta',
-            'fornecedor', 'mercadoria',
-            'marca', 'modelo', 'cidade',
-            'proprietario_nome_razao_social', 'proprietario_rg_ie', 'proprietario_endereco',
-            'proprietario_bairro', 'proprietario_cidade',
-            'first_name', 'last_name',
-            'numero_consulta', 'gerenciadora',
-        ]
-        
-        # Convert text fields to uppercase
-        for field_name in uppercase_fields:
-            if hasattr(self, field_name) and getattr(self, field_name):
-                current_value = getattr(self, field_name)
-                if isinstance(current_value, str):
-                    setattr(self, field_name, current_value.upper())
+        # Detectar campos CharField automaticamente e converter para maiúsculo
+        for field in self._meta.fields:
+            if hasattr(field, 'max_length') and hasattr(self, field.name):
+                value = getattr(self, field.name)
+                if value and isinstance(value, str):
+                    # Campos que NÃO devem ser convertidos para maiúsculo
+                    exclude_fields = [
+                        'email', 'password', 'username', 'cpf', 'cnpj', 
+                        'cnh', 'chassi', 'renavam', 'placa', 'cep',
+                        'telefone', 'rntrc', 'numero_consulta'
+                    ]
+                    if field.name not in exclude_fields:
+                        setattr(self, field.name, value.upper())
         
         super().save(*args, **kwargs)
 

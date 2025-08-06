@@ -50,7 +50,8 @@ class NotaFiscalForm(forms.ModelForm):
     data = forms.DateField(
         label='Data',
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-        required=True
+        required=True,
+        input_formats=['%Y-%m-%d', '%d/%m/%Y', '%d/%m/%y']
     )
     
     # Campo fornecedor
@@ -73,7 +74,6 @@ class NotaFiscalForm(forms.ModelForm):
         model = NotaFiscal
         exclude = ['status', 'romaneios']
         widgets = {
-            'data': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'peso': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'valor': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'quantidade': forms.NumberInput(attrs={'class': 'form-control', 'step': '1'}),
@@ -82,7 +82,9 @@ class NotaFiscalForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance.pk is None and not self.initial.get('data'):
-            self.fields['data'].initial = datetime.now().date()
+            # Formatar a data no formato ISO para input HTML5 date
+            data_atual = datetime.now().date()
+            self.fields['data'].initial = data_atual.strftime('%Y-%m-%d')
 
     def clean_peso(self):
         peso = self.cleaned_data.get('peso')
@@ -758,7 +760,8 @@ class RomaneioViagemForm(forms.ModelForm):
     data_romaneio = forms.DateField(
         label='Data do Romaneio',
         required=True,
-        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        input_formats=['%Y-%m-%d', '%d/%m/%Y', '%d/%m/%y']
     )
 
     # Sobrescreve o campo 'cliente' para filtrar por status
@@ -792,7 +795,9 @@ class RomaneioViagemForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if self.instance.pk is None and not self.initial.get('data_romaneio'):
-            self.fields['data_romaneio'].initial = datetime.now().date()
+            # Formatar a data no formato ISO para input HTML5 date
+            data_atual = datetime.now().date()
+            self.fields['data_romaneio'].initial = data_atual.strftime('%Y-%m-%d')
         
         # Querysets para ModelChoiceFields
         self.fields['cliente'].queryset = Cliente.objects.filter(status='Ativo').order_by('razao_social')
@@ -802,7 +807,7 @@ class RomaneioViagemForm(forms.ModelForm):
         # Lógica para edição (preencher notas_fiscais e data_romaneio)
         if self.instance and self.instance.pk:
             if self.instance.data_emissao:
-                 self.fields['data_romaneio'].initial = self.instance.data_emissao.date()
+                 self.fields['data_romaneio'].initial = self.instance.data_emissao.date().strftime('%Y-%m-%d')
 
             if self.instance.cliente:
                 # Filtrar notas para edição: Notas do cliente OU já vinculadas a este romaneio E em status 'Depósito'
@@ -925,48 +930,10 @@ class MotoristaSearchForm(forms.Form):
 # --------------------------------------------------------------------------------------
 # Formulário de Pesquisa para Clientes
 # --------------------------------------------------------------------------------------
-class ClienteSearchForm(forms.Form):
-    # Campo para pesquisar por Razão Social
-    razao_social = forms.CharField(
-        label='Razão Social',
-        required=False,
-        max_length=255,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Razão Social'})
-    )
-    # Campo para pesquisar por CNPJ
-    cnpj = forms.CharField(
-        label='CNPJ',
-        required=False,
-        max_length=18,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '00.000.000/0000-00'})
-    )
-    # Campo para filtrar por Status (Ativo/Inativo)
-    status = forms.ChoiceField(
-        label='Status',
-        # Adiciona 'Todos' como opção inicial, e depois as escolhas do modelo Cliente
-        choices=[('', 'Todos'),] + Cliente.STATUS_CHOICES, 
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
 
 # --------------------------------------------------------------------------------------
 # Formulário de Pesquisa para Motoristas
 # --------------------------------------------------------------------------------------
-class MotoristaSearchForm(forms.Form):
-    # Campo para pesquisar por Nome do Motorista
-    nome = forms.CharField(
-        label='Nome do Motorista',
-        required=False,
-        max_length=255,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome do Motorista'})
-    )
-    # Campo para pesquisar por CPF
-    cpf = forms.CharField(
-        label='CPF',
-        required=False,
-        max_length=14, # 11 dígitos + pontos e traços
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000.000.000-00'})
-    )
 
 # --------------------------------------------------------------------------------------
 # Formulário de Pesquisa para Veículos

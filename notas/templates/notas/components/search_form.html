@@ -1,0 +1,27 @@
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-search"></i> Filtros de Busca
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            {% for field in form %}
+                <div class="col-md-{% if forloop.counter0 < 3 %}4{% else %}3{% endif %}">
+                    {% include 'notas/components/form_field.html' with field=field %}
+                </div>
+            {% endfor %}
+            
+            <div class="col-12">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                    <a href="{% url request.resolver_match.url_name %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Limpar
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div> 

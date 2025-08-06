@@ -1,10 +1,137 @@
 from django.contrib import admin
+from django.utils.html import format_html
+from django.urls import reverse
+from django.utils.safestring import mark_safe
 from .models import Cliente, NotaFiscal, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, Usuario, TabelaSeguro
 
-admin.site.register(NotaFiscal)
-admin.site.register(Cliente)
-admin.site.register(Motorista)
-admin.site.register(Veiculo)
+@admin.register(Cliente)
+class ClienteAdmin(admin.ModelAdmin):
+    list_display = ['razao_social', 'nome_fantasia', 'cnpj', 'cidade', 'estado', 'status', 'telefone']
+    list_filter = ['status', 'estado', 'cidade']
+    search_fields = ['razao_social', 'nome_fantasia', 'cnpj', 'cidade']
+    list_editable = ['status']
+    
+    fieldsets = (
+        ('Informações Básicas', {
+            'fields': ('razao_social', 'nome_fantasia', 'cnpj', 'inscricao_estadual', 'status')
+        }),
+        ('Endereço', {
+            'fields': ('endereco', 'numero', 'complemento', 'bairro', 'cidade', 'estado', 'cep')
+        }),
+        ('Contato', {
+            'fields': ('telefone', 'email')
+        }),
+    )
+
+@admin.register(NotaFiscal)
+class NotaFiscalAdmin(admin.ModelAdmin):
+    list_display = ['nota', 'cliente', 'fornecedor', 'data', 'valor', 'peso', 'status']
+    list_filter = ['status', 'data', 'cliente']
+    search_fields = ['nota', 'fornecedor', 'mercadoria', 'cliente__razao_social']
+    list_editable = ['status']
+    date_hierarchy = 'data'
+    
+    fieldsets = (
+        ('Informações Básicas', {
+            'fields': ('cliente', 'nota', 'data', 'status')
+        }),
+        ('Mercadoria', {
+            'fields': ('fornecedor', 'mercadoria', 'quantidade', 'peso', 'valor')
+        }),
+    )
+
+@admin.register(Motorista)
+class MotoristaAdmin(admin.ModelAdmin):
+    list_display = ['nome', 'cpf', 'cnh', 'cidade', 'estado', 'telefone']
+    list_filter = ['estado', 'tipo_composicao_motorista']
+    search_fields = ['nome', 'cpf', 'cnh', 'cidade']
+    
+    fieldsets = (
+        ('Informações Pessoais', {
+            'fields': ('nome', 'cpf', 'data_nascimento')
+        }),
+        ('CNH', {
+            'fields': ('cnh', 'codigo_seguranca', 'vencimento_cnh', 'uf_emissao_cnh')
+        }),
+        ('Endereço', {
+            'fields': ('endereco', 'numero', 'complemento', 'bairro', 'cidade', 'estado', 'cep')
+        }),
+        ('Contato', {
+            'fields': ('telefone',)
+        }),
+        ('Composição Veicular', {
+            'fields': ('tipo_composicao_motorista', 'veiculo_principal', 'reboque_1', 'reboque_2')
+        }),
+    )
+
+@admin.register(Veiculo)
+class VeiculoAdmin(admin.ModelAdmin):
+    list_display = ['placa', 'tipo_unidade', 'marca', 'modelo', 'proprietario_nome_razao_social']
+    list_filter = ['tipo_unidade', 'marca', 'estado']
+    search_fields = ['placa', 'chassi', 'renavam', 'proprietario_nome_razao_social']
+    
+    fieldsets = (
+        ('Informações do Veículo', {
+            'fields': ('tipo_unidade', 'placa', 'marca', 'modelo', 'ano_fabricacao')
+        }),
+        ('Documentação', {
+            'fields': ('chassi', 'renavam', 'rntrc')
+        }),
+        ('Localização', {
+            'fields': ('pais', 'estado', 'cidade')
+        }),
+        ('Medidas', {
+            'fields': ('largura', 'altura', 'comprimento', 'cubagem')
+        }),
+        ('Proprietário', {
+            'fields': ('proprietario_cpf_cnpj', 'proprietario_nome_razao_social', 'proprietario_rg_ie')
+        }),
+        ('Endereço do Proprietário', {
+            'fields': ('proprietario_endereco', 'proprietario_numero', 'proprietario_bairro', 'proprietario_cidade', 'proprietario_estado', 'proprietario_cep')
+        }),
+        ('Contato do Proprietário', {
+            'fields': ('proprietario_telefone',)
+        }),
+    )
+
+@admin.register(RomaneioViagem)
+class RomaneioViagemAdmin(admin.ModelAdmin):
+    list_display = ['codigo', 'cliente', 'motorista', 'veiculo', 'data_emissao', 'status']
+    list_filter = ['status', 'data_emissao', 'cliente']
+    search_fields = ['codigo', 'cliente__razao_social', 'motorista__nome']
+    date_hierarchy = 'data_emissao'
+    filter_horizontal = ['notas_fiscais']
+    
+    fieldsets = (
+        ('Informações Básicas', {
+            'fields': ('codigo', 'status', 'data_emissao')
+        }),
+        ('Participantes', {
+            'fields': ('cliente', 'motorista', 'veiculo')
+        }),
+        ('Notas Fiscais', {
+            'fields': ('notas_fiscais',)
+        }),
+        ('Observações', {
+            'fields': ('observacoes',)
+        }),
+    )
+
+@admin.register(HistoricoConsulta)
+class HistoricoConsultaAdmin(admin.ModelAdmin):
+    list_display = ['motorista', 'numero_consulta', 'data_consulta', 'gerenciadora', 'status_consulta']
+    list_filter = ['status_consulta', 'data_consulta', 'gerenciadora']
+    search_fields = ['motorista__nome', 'numero_consulta', 'gerenciadora']
+    date_hierarchy = 'data_consulta'
+    
+    fieldsets = (
+        ('Informações da Consulta', {
+            'fields': ('motorista', 'numero_consulta', 'data_consulta', 'gerenciadora')
+        }),
+        ('Resultado', {
+            'fields': ('status_consulta', 'observacoes')
+        }),
+    )
 
 @admin.register(Usuario)
 class UsuarioAdmin(admin.ModelAdmin):

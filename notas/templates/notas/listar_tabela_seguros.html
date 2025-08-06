@@ -11,9 +11,12 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2><i class="fas fa-shield-alt"></i> Tabela de Seguros</h2>
                 <div>
-                    <button type="button" class="btn btn-info" onclick="exportarTabela()">
-                        <i class="fas fa-download"></i> Exportar
-                    </button>
+                                         <button type="button" class="btn btn-info" onclick="exportarTabela()">
+                         <i class="fas fa-download"></i> Exportar
+                     </button>
+                     <button type="button" class="btn btn-warning" onclick="testarCampos()">
+                         <i class="fas fa-eye"></i> Testar Visibilidade
+                     </button>
                 </div>
             </div>
             
@@ -57,12 +60,14 @@
                                             <div class="input-group" style="max-width: 150px;">
                                                 <input type="number" 
                                                        class="form-control percentual-input" 
-                                                       value="{{ seguro.percentual_seguro }}" 
+                                                       value="{{ seguro.percentual_seguro|format_for_input:2 }}" 
                                                        min="0" 
                                                        max="100" 
                                                        step="0.01"
                                                        data-seguro-id="{{ seguro.pk }}"
-                                                       style="text-align: center;">
+                                                       data-original-value="{{ seguro.percentual_seguro }}"
+                                                       style="text-align: center; color: #000000 !important; font-weight: bold !important; background-color: white !important; border: 2px solid #007bff !important; font-size: 14px !important;"
+                                                       onchange="console.log('Campo alterado:', this.value);">
                                                 <span class="input-group-text">%</span>
                                             </div>
                                         </td>
@@ -94,18 +99,115 @@
     </div>
 </div>
 
+<style>
+/* Forçar visibilidade dos campos de percentual */
+.percentual-input {
+    background-color: white !important;
+    color: #000000 !important;
+    border: 2px solid #007bff !important;
+    font-weight: bold !important;
+    font-size: 14px !important;
+    text-align: center !important;
+}
+
+.percentual-input:focus {
+    background-color: white !important;
+    color: #000000 !important;
+    border-color: #0056b3 !important;
+    box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25) !important;
+}
+
+.percentual-input:hover {
+    background-color: #f8f9fa !important;
+    color: #000000 !important;
+}
+
+.percentual-input::placeholder {
+    color: #6c757d !important;
+}
+
+/* Garantir que o valor seja sempre visível */
+.percentual-input[value] {
+    color: #000000 !important;
+    font-weight: bold !important;
+}
+
+/* Estilo adicional para garantir visibilidade */
+input[type="number"].percentual-input {
+    color: #000000 !important;
+    background-color: white !important;
+    font-weight: bold !important;
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Monitorar mudanças nos campos de percentual
     const percentualInputs = document.querySelectorAll('.percentual-input');
     
-    percentualInputs.forEach(input => {
+    console.log('Encontrados', percentualInputs.length, 'campos de percentual');
+    
+    percentualInputs.forEach((input, index) => {
+        console.log(`Campo ${index + 1}:`, input.value, '| Cor atual:', input.style.color);
+        
+        // Forçar visibilidade com estilos mais agressivos
+        // Forçar visibilidade com estilos mais agressivos
+        input.style.color = '#000000';
+        input.style.fontWeight = 'bold';
+        input.style.backgroundColor = 'white';
+        input.style.border = '2px solid #007bff';
+        input.style.fontSize = '14px';
+        
+        // Função para garantir visibilidade
+        function garantirVisibilidade(element) {
+            element.style.color = '#000000';
+            element.style.fontWeight = 'bold';
+            element.style.backgroundColor = 'white';
+            element.style.border = '2px solid #007bff';
+            element.style.fontSize = '14px';
+        }
+        
         input.addEventListener('input', function() {
             const seguroId = this.dataset.seguroId;
             const salvarBtn = document.querySelector(`.salvar-percentual[data-seguro-id="${seguroId}"]`);
             salvarBtn.style.display = 'inline-block';
+            
+            // Garantir visibilidade
+            garantirVisibilidade(this);
         });
+        
+        input.addEventListener('focus', function() {
+            garantirVisibilidade(this);
+        });
+        
+        input.addEventListener('blur', function() {
+            garantirVisibilidade(this);
+        });
+        
+        input.addEventListener('change', function() {
+            garantirVisibilidade(this);
+        });
+        
+        // Aplicar estilos imediatamente
+        setTimeout(() => {
+            garantirVisibilidade(input);
+        }, 100);
     });
+    
+    // Teste automático após 2 segundos
+    setTimeout(() => {
+        console.log('=== TESTE AUTOMÁTICO ===');
+        const inputs = document.querySelectorAll('.percentual-input');
+        console.log('Campos encontrados:', inputs.length);
+        
+        inputs.forEach((input, index) => {
+            console.log(`Campo ${index + 1} - Valor: ${input.value} | Cor: ${input.style.color}`);
+            // Forçar aplicação dos estilos
+            input.style.setProperty('color', '#000000', 'important');
+            input.style.setProperty('font-weight', 'bold', 'important');
+            input.style.setProperty('background-color', 'white', 'important');
+        });
+    }, 2000);
     
     // Salvar percentual via AJAX
     const salvarBtns = document.querySelectorAll('.salvar-percentual');
@@ -123,11 +225,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Enviar via AJAX
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
             fetch(`/notas/tabela-seguros/atualizar/${seguroId}/ajax/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    'X-CSRFToken': csrfToken
                 },
                 body: `percentual_seguro=${percentual}`
             })
@@ -175,6 +279,32 @@ function exportarTabela() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+function testarCampos() {
+    const inputs = document.querySelectorAll('.percentual-input');
+    console.log('=== TESTE DE VISIBILIDADE ===');
+    console.log('Total de campos encontrados:', inputs.length);
+    
+    inputs.forEach((input, index) => {
+        console.log(`Campo ${index + 1}:`);
+        console.log('  - Valor:', input.value);
+        console.log('  - Cor atual:', input.style.color);
+        console.log('  - Background:', input.style.backgroundColor);
+        console.log('  - Font-weight:', input.style.fontWeight);
+        console.log('  - Classes:', input.className);
+        
+        // Aplicar estilos forçados
+        input.style.color = '#000000';
+        input.style.fontWeight = 'bold';
+        input.style.backgroundColor = 'white';
+        input.style.border = '2px solid #007bff';
+        input.style.fontSize = '14px';
+        
+        console.log('  - Cor após aplicação:', input.style.color);
+    });
+    
+    alert(`Teste concluído! Verifique o console para detalhes.\nCampos encontrados: ${inputs.length}`);
 }
 </script>
 

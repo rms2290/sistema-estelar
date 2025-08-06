@@ -98,32 +98,7 @@ def adicionar_cliente(request):
         form = ClienteForm()
     return render(request, 'notas/adicionar_cliente.html', {'form': form})
 
-def listar_clientes(request):
-    search_form = ClienteSearchForm(request.GET)
-    clientes = Cliente.objects.none()
-    search_performed = bool(request.GET)
 
-    if search_performed and search_form.is_valid():
-        queryset = Cliente.objects.all()
-        razao_social = search_form.cleaned_data.get('razao_social')
-        cnpj = search_form.cleaned_data.get('cnpj')
-        status = search_form.cleaned_data.get('status')
-
-        if razao_social:
-            queryset = queryset.filter(razao_social__icontains=razao_social)
-        if cnpj:
-            queryset = queryset.filter(cnpj__icontains=cnpj)
-        if status:
-            queryset = queryset.filter(status=status)
-        
-        clientes = queryset.order_by('razao_social')
-    
-    context = {
-        'clientes': clientes,
-        'search_form': search_form,
-        'search_performed': search_performed,
-    }
-    return render(request, 'notas/listar_clientes.html', context)
 
 def editar_cliente(request, pk):
     cliente = get_object_or_404(Cliente, pk=pk)
@@ -160,33 +135,7 @@ def detalhes_cliente(request, pk):
 # --------------------------------------------------------------------------------------
 # Views para Nota Fiscal
 # --------------------------------------------------------------------------------------
-@login_required
-def listar_notas_fiscais(request):
-    search_form = NotaFiscalSearchForm(request.GET)
-    notas_fiscais = NotaFiscal.objects.none()
-    search_performed = bool(request.GET)
 
-    if search_performed and search_form.is_valid():
-        numero_nota = search_form.cleaned_data.get('nota')
-        cliente_obj = search_form.cleaned_data.get('cliente')
-        data_emissao = search_form.cleaned_data.get('data')
-
-        queryset = NotaFiscal.objects.all()
-        if numero_nota:
-            queryset = queryset.filter(nota__icontains=numero_nota)
-        if cliente_obj:
-            queryset = queryset.filter(cliente=cliente_obj)
-        if data_emissao:
-            queryset = queryset.filter(data=data_emissao)
-        
-        notas_fiscais = queryset.order_by('-data', '-nota')
-    
-    context = {
-        'search_form': search_form,
-        'notas_fiscais': notas_fiscais,
-        'search_performed': search_performed,
-    }
-    return render(request, 'notas/listar_notas.html', context)
 
 def adicionar_nota_fiscal(request):
     if request.method == 'POST':
@@ -249,29 +198,7 @@ def detalhes_nota_fiscal(request, pk):
 # --------------------------------------------------------------------------------------
 # Views Motorista
 # --------------------------------------------------------------------------------------
-def listar_motoristas(request):
-    search_form = MotoristaSearchForm(request.GET)
-    motoristas = Motorista.objects.none()
-    search_performed = bool(request.GET)
 
-    if search_performed and search_form.is_valid():
-        queryset = Motorista.objects.all()
-        nome = search_form.cleaned_data.get('nome')
-        cpf = search_form.cleaned_data.get('cpf')
-
-        if nome:
-            queryset = queryset.filter(nome__icontains=nome)
-        if cpf:
-            queryset = queryset.filter(cpf__icontains=cpf)
-        
-        motoristas = queryset.order_by('nome')
-
-    context = {
-        'motoristas': motoristas,
-        'search_form': search_form,
-        'search_performed': search_performed,
-    }
-    return render(request, 'notas/listar_motoristas.html', context)
 
 def adicionar_motorista(request):
     if request.method == 'POST':
@@ -389,46 +316,7 @@ def detalhes_motorista(request, pk):
 # --------------------------------------------------------------------------------------
 # Views Veiculo (Unidades Individuais)
 # --------------------------------------------------------------------------------------
-def listar_veiculos(request):
-    search_form = VeiculoSearchForm(request.GET)
-    
-    veiculos = []  # Inicia com lista vazia
-    filters_applied = False  # Variável para verificar se algum filtro foi realmente aplicado
 
-    if search_form.is_valid():
-        placa = search_form.cleaned_data.get('placa')
-        chassi = search_form.cleaned_data.get('chassi')
-        proprietario_nome = search_form.cleaned_data.get('proprietario_nome')
-        tipo_unidade = search_form.cleaned_data.get('tipo_unidade')
-
-        # Só executa a busca se pelo menos um filtro foi aplicado
-        if placa or chassi or proprietario_nome or tipo_unidade:
-            veiculos_query = Veiculo.objects.all().order_by('placa')
-            
-            if placa:
-                veiculos_query = veiculos_query.filter(placa__icontains=placa)
-                filters_applied = True
-            
-            if chassi:
-                veiculos_query = veiculos_query.filter(chassi__icontains=chassi)
-                filters_applied = True
-            
-            if proprietario_nome:
-                veiculos_query = veiculos_query.filter(proprietario_nome_razao_social__icontains=proprietario_nome)
-                filters_applied = True
-            
-            if tipo_unidade:
-                veiculos_query = veiculos_query.filter(tipo_unidade=tipo_unidade)
-                filters_applied = True
-            
-            veiculos = veiculos_query.order_by('placa')
-
-    context = {
-        'veiculos': veiculos,
-        'search_form': search_form,
-        'filters_applied': filters_applied,
-    }
-    return render(request, 'notas/listar_veiculos.html', context)
 
 def adicionar_veiculo(request): # Esta view é para adicionar UMA UNIDADE de Veículo
     if request.method == 'POST':
@@ -485,61 +373,7 @@ def detalhes_veiculo(request, pk):
 # --------------------------------------------------------------------------------------
 # Views Romaneio
 # --------------------------------------------------------------------------------------
-def listar_romaneios(request):
-    search_form = RomaneioSearchForm(request.GET)
-    
-    romaneios = []  # Inicia com lista vazia
-    filters_applied = False  # Variável para verificar se algum filtro foi realmente aplicado
 
-    if search_form.is_valid():
-        codigo = search_form.cleaned_data.get('codigo')
-        cliente = search_form.cleaned_data.get('cliente')
-        motorista = search_form.cleaned_data.get('motorista')
-        veiculo = search_form.cleaned_data.get('veiculo')
-        status = search_form.cleaned_data.get('status')
-        data_inicio = search_form.cleaned_data.get('data_inicio')
-        data_fim = search_form.cleaned_data.get('data_fim')
-
-        # Só executa a busca se pelo menos um filtro foi aplicado
-        if codigo or cliente or motorista or veiculo or status or data_inicio or data_fim:
-            romaneios_query = RomaneioViagem.objects.all().order_by('-data_emissao', '-codigo')
-            
-            if codigo:
-                romaneios_query = romaneios_query.filter(codigo__icontains=codigo)
-                filters_applied = True
-            
-            if cliente:
-                romaneios_query = romaneios_query.filter(cliente=cliente)
-                filters_applied = True
-            
-            if motorista:
-                romaneios_query = romaneios_query.filter(motorista=motorista)
-                filters_applied = True
-            
-            if veiculo:
-                romaneios_query = romaneios_query.filter(veiculo=veiculo)
-                filters_applied = True
-            
-            if status:
-                romaneios_query = romaneios_query.filter(status=status)
-                filters_applied = True
-            
-            if data_inicio:
-                romaneios_query = romaneios_query.filter(data_emissao__gte=data_inicio)
-                filters_applied = True
-            
-            if data_fim:
-                romaneios_query = romaneios_query.filter(data_emissao__lte=data_fim)
-                filters_applied = True
-            
-            romaneios = romaneios_query.order_by('-data_emissao', '-codigo')
-
-    context = {
-        'romaneios': romaneios,
-        'search_form': search_form,
-        'filters_applied': filters_applied,
-    }
-    return render(request, 'notas/listar_romaneios.html', context)
 
 def adicionar_romaneio(request):
     if request.method == 'POST':
@@ -869,64 +703,7 @@ def detalhes_veiculo(request, pk):
     return render(request, 'notas/detalhes_veiculo.html', context)
 # --------------------------------------------------------------------------------------
 # NOVA VIEW: Pesquisar Mercadorias no Depósito por Cliente
-# --------------------------------------------------------------------------------------
-def pesquisar_mercadorias_deposito(request):
-    search_form = MercadoriaDepositoSearchForm(request.GET)
-    mercadorias = NotaFiscal.objects.none()
-    search_performed = False
-    total_peso = 0
-    total_valor = 0
 
-    if request.GET:
-        # Validar se o formulário foi submetido e se o cliente foi selecionado
-        if search_form.is_valid():
-            cliente = search_form.cleaned_data.get('cliente')
-            
-            # Se o formulário foi submetido mas não há cliente selecionado, adicionar erro
-            if not cliente:
-                search_form.add_error('cliente', 'Este campo é obrigatório para realizar a pesquisa.')
-            else:
-                search_performed = True
-                
-                # Filtrar apenas notas com status 'Depósito'
-                queryset = NotaFiscal.objects.filter(status='Depósito')
-                
-                # Aplicar filtros do formulário
-                mercadoria = search_form.cleaned_data.get('mercadoria')
-                fornecedor = search_form.cleaned_data.get('fornecedor')
-                data_inicio = search_form.cleaned_data.get('data_inicio')
-                data_fim = search_form.cleaned_data.get('data_fim')
-                
-                if cliente:
-                    queryset = queryset.filter(cliente=cliente)
-                
-                if mercadoria:
-                    queryset = queryset.filter(mercadoria__icontains=mercadoria)
-                
-                if fornecedor:
-                    queryset = queryset.filter(fornecedor__icontains=fornecedor)
-                
-                if data_inicio:
-                    queryset = queryset.filter(data__gte=data_inicio)
-                
-                if data_fim:
-                    queryset = queryset.filter(data__lte=data_fim)
-                
-                # Ordenar por data de emissão (mais recente primeiro) e depois por número da nota
-                mercadorias = queryset.order_by('-data', 'nota')
-                
-                # Calcular totais
-                total_peso = sum(mercadoria.peso for mercadoria in mercadorias if mercadoria.peso)
-                total_valor = sum(mercadoria.valor for mercadoria in mercadorias if mercadoria.valor)
-    
-    context = {
-        'search_form': search_form,
-        'mercadorias': mercadorias,
-        'search_performed': search_performed,
-        'total_peso': total_peso,
-        'total_valor': total_valor,
-    }
-    return render(request, 'notas/pesquisar_mercadorias_deposito.html', context)
 
 # --------------------------------------------------------------------------------------
 # NOVA VIEW: Visualizar Romaneio para Impressão

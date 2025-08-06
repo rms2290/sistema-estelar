@@ -40,7 +40,27 @@
                     <p><strong>Chassi:</strong> {{ veiculo.chassi|default:"N/A" }}</p>
                     <p><strong>Renavam:</strong> {{ veiculo.renavam|default:"N/A" }}</p>
                     <p><strong>RNTRC:</strong> {{ veiculo.rntrc|default:"N/A" }}</p>
-                    <p><strong>Capacidade (kg):</strong> {{ veiculo.capacidade_kg|default:"N/A" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Medidas do Veículo #}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title mb-0">
+                <i class="fas fa-ruler-combined"></i> Medidas do Baú/Carreta
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Largura:</strong> {{ veiculo.largura|default:"N/A" }} m</p>
+                    <p><strong>Altura:</strong> {{ veiculo.altura|default:"N/A" }} m</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Comprimento:</strong> {{ veiculo.comprimento|default:"N/A" }} m</p>
+                    <p><strong>Cubagem:</strong> <span class="badge bg-success">{{ veiculo.cubagem|default:"N/A" }} m³</span></p>
                 </div>
             </div>
         </div>
@@ -63,7 +83,6 @@
                 </div>
                 <div class="col-md-6">
                     <p><strong>Endereço:</strong> {{ veiculo.proprietario_endereco|default:"N/A" }}, {{ veiculo.proprietario_numero|default:"S/N" }}</p>
-                    <p><strong>Complemento:</strong> {{ veiculo.proprietario_complemento|default:"N/A" }}</p>
                     <p><strong>Bairro:</strong> {{ veiculo.proprietario_bairro|default:"N/A" }}</p>
                     <p><strong>Cidade/Estado:</strong> {{ veiculo.proprietario_cidade|default:"N/A" }}/{{ veiculo.proprietario_estado|default:"N/A" }}</p>
                     <p><strong>CEP:</strong> {{ veiculo.proprietario_cep|default:"N/A" }}</p>
