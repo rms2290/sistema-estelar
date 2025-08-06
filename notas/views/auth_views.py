@@ -9,7 +9,7 @@ from ..forms import LoginForm, CadastroUsuarioForm, AlterarSenhaForm
 def login_view(request):
     """View para login de usuários"""
     if request.user.is_authenticated:
-        return redirect('notas:listar_notas_fiscais')
+        return redirect('notas:dashboard')
     
     if request.method == 'POST':
         form = LoginForm(request.POST)
@@ -21,7 +21,7 @@ def login_view(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, f'Bem-vindo, {user.get_full_name()}!')
-                return redirect('notas:listar_notas_fiscais')
+                return redirect('notas:dashboard')
             else:
                 messages.error(request, 'Usuário ou senha incorretos.')
     else:

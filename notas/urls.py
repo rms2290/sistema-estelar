@@ -4,8 +4,10 @@ from . import views
 app_name = 'notas'
 
 urlpatterns = [
+# URLs para Dashboard
+    path('', views.dashboard, name='dashboard'),
 # URLs para Notas Fiscais
-    path('', views.listar_notas_fiscais, name='listar_notas_fiscais'),
+    path('notas/', views.listar_notas_fiscais, name='listar_notas_fiscais'),
     path('adicionar/', views.adicionar_nota_fiscal, name='adicionar_nota_fiscal'),
     path('editar/<int:pk>/', views.editar_nota_fiscal, name='editar_nota_fiscal'),
     path('excluir/<int:pk>/', views.excluir_nota_fiscal, name='excluir_nota_fiscal'),

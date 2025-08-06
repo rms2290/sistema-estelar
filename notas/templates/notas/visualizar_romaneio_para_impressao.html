@@ -15,10 +15,18 @@
 <body>
     <div class="romaneio-print-container">
         {# Cabeçalho da Empresa #}
-        <div class="print-header mb-4 text-center">
-            <h1 class="mb-0">AGENCIA DE CARGAS ESTELAR</h1>
-            <p class="mb-0">RUA MAUÁ, 898 - Fone: (55)11 32273798 | 32270396</p>
-            <p class="mb-0">www.agenciaestelar.com.br / agenciaestelar@agenciaestelar.com.br</p>
+        <div class="print-header mb-4">
+            <div class="empresa-header">
+                <div class="logo-container">
+                    <img src="{% static 'logo-estelar.svg' %}" alt="Agência Estelar" class="print-logo">
+                </div>
+                <div class="empresa-info">
+                    <h1 class="mb-0">AGÊNCIA ESTELAR</h1>
+                    <p class="empresa-subtitle mb-1">TRANSPORTES E LOGÍSTICA</p>
+                    <p class="mb-0">RUA MAUÁ, 898 - Fone: (55)11 32273798 | 32270396</p>
+                    <p class="mb-0">www.agenciaestelar.com.br / agenciaestelar@agenciaestelar.com.br</p>
+                </div>
+            </div>
         </div>
 
         {# Informações do Romaneio (primeira linha do cabeçalho) #}

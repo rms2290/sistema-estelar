@@ -1148,3 +1148,12 @@ def totalizador_por_estado(request):
     }
     
     return render(request, 'notas/totalizador_por_estado.html', context)
+
+@login_required
+def dashboard(request):
+    """Dashboard principal do sistema"""
+    context = {
+        'title': 'Dashboard - Agência Estelar',
+        'user': request.user,
+    }
+    return render(request, 'notas/dashboard.html', context)

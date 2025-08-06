@@ -10,11 +10,21 @@
     {# Opcional: Font Awesome para ícones #}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
-<body>
+<body data-theme="dark">
     <!-- Top Bar -->
     <div class="top-bar">
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{% url 'notas:listar_notas_fiscais' %}" class="logo">Agencia Estelar</a>
+        <!-- Botão de Menu -->
+        <button id="menu-toggle" class="btn btn-outline-light btn-sm menu-toggle-btn" title="Alternar Menu">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+                                <!-- Logo Centralizado -->
+                        <div class="logo-container">
+                            <span class="logo">Agência Estelar</span>
+                        </div>
+        
+        <!-- Área do Usuário -->
+        <div class="user-area">
             <div class="user-info">
                 {% if user.is_authenticated %}
                     <div class="dropdown">
@@ -47,6 +57,11 @@
                     <a href="{% url 'notas:login' %}" class="btn btn-outline-light">Login</a>
                 {% endif %}
             </div>
+            
+            <!-- Botão de Alternância de Tema -->
+            <button id="theme-toggle" class="btn btn-outline-light btn-sm theme-toggle-btn" title="Alternar Tema">
+                <i id="theme-icon" class="fas fa-moon"></i>
+            </button>
         </div>
     </div>
 
@@ -218,8 +233,43 @@
     
     <!-- Scripts específicos para romaneios -->
     <script>
-                 // Menu sidebar interactions
-         document.addEventListener('DOMContentLoaded', function() {
+        // Controle do botão de menu e sidebar interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Controle do botão de menu
+            const menuToggle = document.getElementById('menu-toggle');
+            const sidebar = document.querySelector('.sidebar');
+            const mainContent = document.querySelector('.main-content');
+            
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('collapsed');
+                    mainContent.classList.toggle('expanded');
+                    
+                    // Salvar estado no localStorage
+                    const isCollapsed = sidebar.classList.contains('collapsed');
+                    localStorage.setItem('sidebarCollapsed', isCollapsed);
+                    
+                    // Atualizar ícone do botão
+                    const icon = menuToggle.querySelector('i');
+                    if (icon) {
+                        icon.className = isCollapsed ? 'fas fa-bars' : 'fas fa-times';
+                    }
+                });
+                
+                // Restaurar estado do menu ao carregar a página
+                const savedState = localStorage.getItem('sidebarCollapsed');
+                // Sempre manter o menu aberto por padrão
+                sidebar.classList.remove('collapsed');
+                mainContent.classList.remove('expanded');
+                const icon = menuToggle.querySelector('i');
+                if (icon) {
+                    icon.className = 'fas fa-times';
+                }
+                // Limpar o localStorage para garantir que sempre fique aberto
+                localStorage.removeItem('sidebarCollapsed');
+            }
+            
+            // Menu sidebar interactions
              // Add click handlers for nav group headers
              const navGroupHeaders = document.querySelectorAll('.nav-group-header');
              navGroupHeaders.forEach(header => {
@@ -486,6 +536,47 @@
                 notasContainer.innerHTML = '<p class="text-danger">Erro ao carregar notas fiscais.</p>';
             }
         }
+
+        // Sistema de Temas
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggle = document.getElementById('theme-toggle');
+            const themeIcon = document.getElementById('theme-icon');
+            
+            // Função para obter o tema atual
+            function getCurrentTheme() {
+                return localStorage.getItem('theme') || 'dark';
+            }
+            
+            // Função para aplicar o tema
+            function applyTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                document.body.setAttribute('data-theme', theme);
+                localStorage.setItem('theme', theme);
+                
+                // Atualizar ícone
+                if (theme === 'light') {
+                    themeIcon.className = 'fas fa-sun';
+                    themeToggle.title = 'Mudar para Tema Escuro';
+                } else {
+                    themeIcon.className = 'fas fa-moon';
+                    themeToggle.title = 'Mudar para Tema Claro';
+                }
+            }
+            
+            // Função para alternar tema
+            function toggleTheme() {
+                const currentTheme = getCurrentTheme();
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                applyTheme(newTheme);
+            }
+            
+            // Aplicar tema inicial
+            const savedTheme = getCurrentTheme();
+            applyTheme(savedTheme);
+            
+            // Adicionar event listener para o botão
+            themeToggle.addEventListener('click', toggleTheme);
+        });
     </script>
 </body>
 </html>

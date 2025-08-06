@@ -33,9 +33,15 @@
                                     <p><strong>Data de Emissão:</strong> {{ nota.data|date:"d/m/Y" }}</p>
                                 </div>
                                 <div class="col-6 text-end">
-                                    <h4>Agência Estelar</h4>
-                                    <p>Sistema de Gestão de Notas Fiscais</p>
-                                    <p>Data de Impressão: {% now "d/m/Y H:i" %}</p>
+                                    <div class="empresa-header-print">
+                                        <img src="{% static 'logo-estelar.svg' %}" alt="Agência Estelar" class="print-logo-small">
+                                        <div>
+                                            <h4>Agência Estelar</h4>
+                                            <p class="empresa-subtitle-small">TRANSPORTES E LOGÍSTICA</p>
+                                            <p>Sistema de Gestão de Notas Fiscais</p>
+                                            <p>Data de Impressão: {% now "d/m/Y H:i" %}</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
