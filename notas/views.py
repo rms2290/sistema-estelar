@@ -1050,16 +1050,35 @@ def imprimir_relatorio_deposito(request):
     else:
         # Admin e funcionários veem todas as notas em depósito
         notas_fiscais = NotaFiscal.objects.filter(status='Depósito').order_by('data')
-    
+
     # Calcular totais
     total_peso = sum(nota.peso for nota in notas_fiscais)
     total_valor = sum(nota.valor for nota in notas_fiscais)
-    
+
     return render(request, 'notas/auth/imprimir_relatorio_deposito.html', {
         'notas_fiscais': notas_fiscais,
         'total_peso': total_peso,
         'total_valor': total_valor,
         'cliente': request.user.cliente if request.user.cliente else None
+    })
+
+@login_required
+def imprimir_romaneio_novo(request, pk):
+    """View para imprimir romaneio usando o novo template baseado no relatório de mercadorias"""
+    romaneio = get_object_or_404(RomaneioViagem, pk=pk)
+    
+    # Obter notas fiscais vinculadas ao romaneio
+    notas_romaneadas = romaneio.notas_fiscais.all().order_by('data')
+    
+    # Calcular totais
+    total_peso = sum(nota.peso for nota in notas_romaneadas)
+    total_valor = sum(nota.valor for nota in notas_romaneadas)
+    
+    return render(request, 'notas/romaneio_impressao_novo.html', {
+        'romaneio': romaneio,
+        'notas_romaneadas': notas_romaneadas,
+        'total_peso': total_peso,
+        'total_valor': total_valor
     })
 
 @login_required

@@ -74,6 +74,9 @@
             <a href="{% url 'notas:visualizar_romaneio_para_impressao' romaneio.pk %}" target="_blank" class="btn btn-primary">
                 <i class="fas fa-print"></i> Imprimir Romaneio
             </a>
+            <a href="{% url 'notas:imprimir_romaneio_novo' romaneio.pk %}" target="_blank" class="btn btn-info">
+                <i class="fas fa-file-alt"></i> Novo Formato
+            </a>
         {% endif %}
         
         {% if user.is_admin or user.is_funcionario %}
