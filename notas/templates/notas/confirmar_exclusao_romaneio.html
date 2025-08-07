@@ -5,8 +5,10 @@
     <p>Você tem certeza que deseja excluir o romaneio: <strong>{{ romaneio.codigo }}</strong> do cliente <strong>{{ romaneio.cliente.razao_social }}</strong>?</p>
     <form method="post">
         {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Sim, Excluir</button>
-        {# MUDANÇA AQUI: Redirecionar para detalhes_romaneio #}
-        <a href="{% url 'notas:detalhes_romaneio' romaneio.pk %}" class="btn btn-secondary">Cancelar</a>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-danger">Sim, Excluir</button>
+            {# MUDANÇA AQUI: Redirecionar para detalhes_romaneio #}
+            <a href="{% url 'notas:detalhes_romaneio' romaneio.pk %}" class="btn btn-secondary">Cancelar</a>
+        </div>
     </form>
 {% endblock %}

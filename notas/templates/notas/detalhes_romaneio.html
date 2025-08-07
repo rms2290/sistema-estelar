@@ -68,22 +68,22 @@
     {% endif %}
 
     {# Botões de Ação: Imprimir, Editar, Excluir e Voltar #}
-    <div class="mt-4">
+    <div class="mt-4 d-flex gap-2">
         {% if romaneio.status == 'Emitido' %}
             {# Botão Imprimir, aparece APENAS se o status for 'Emitido' #}
-            <a href="{% url 'notas:visualizar_romaneio_para_impressao' romaneio.pk %}" target="_blank" class="btn btn-primary me-2">
+            <a href="{% url 'notas:visualizar_romaneio_para_impressao' romaneio.pk %}" target="_blank" class="btn btn-primary">
                 <i class="fas fa-print"></i> Imprimir Romaneio
             </a>
         {% endif %}
         
         {% if user.is_admin or user.is_funcionario %}
-            <a href="{% url 'notas:editar_romaneio' romaneio.pk %}" class="btn btn-warning me-2">
+            <a href="{% url 'notas:editar_romaneio' romaneio.pk %}" class="btn btn-warning">
                 <i class="fas fa-edit"></i> Editar Romaneio
             </a>
             
             <form action="{% url 'notas:excluir_romaneio' romaneio.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este romaneio?');">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-danger me-2">
+                <button type="submit" class="btn btn-danger">
                     <i class="fas fa-trash"></i> Excluir Romaneio
                 </button>
             </form>

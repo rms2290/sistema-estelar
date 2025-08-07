@@ -884,7 +884,7 @@ from .models import Usuario # Adicionado import para o modelo Usuario
 
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('notas:listar_notas_fiscais')
+        return redirect('notas:dashboard')
     
     if request.method == 'POST':
         form = LoginForm(request.POST)
@@ -900,7 +900,7 @@ def login_view(request):
                 user.save()
                 
                 messages.success(request, f'Bem-vindo, {user.get_full_name()}!')
-                return redirect('notas:listar_notas_fiscais')
+                return redirect('notas:dashboard')
             else:
                 messages.error(request, 'Nome de usuário ou senha inválidos.')
     else:
@@ -929,7 +929,7 @@ def alterar_senha(request):
                 request.user.set_password(nova_senha)
                 request.user.save()
                 messages.success(request, 'Senha alterada com sucesso!')
-                return redirect('notas:listar_notas_fiscais')
+                return redirect('notas:dashboard')
     else:
         form = AlterarSenhaForm()
     

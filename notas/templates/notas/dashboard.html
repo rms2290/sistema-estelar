@@ -5,31 +5,6 @@
 
 {% block content %}
 <div class="dashboard-container">
-    <div class="dashboard-background">
-        <div class="warehouse-image"></div>
-        <div class="background-overlay"></div>
-        <div class="warehouse-elements">
-            <div class="warehouse-shelves">
-                <div class="shelf shelf-1"></div>
-                <div class="shelf shelf-2"></div>
-                <div class="shelf shelf-3"></div>
-            </div>
-            <div class="warehouse-lights">
-                <div class="light light-1"></div>
-                <div class="light light-2"></div>
-                <div class="light light-3"></div>
-            </div>
-            <div class="warehouse-boxes">
-                <div class="box box-1"></div>
-                <div class="box box-2"></div>
-                <div class="box box-3"></div>
-                <div class="box box-4"></div>
-                <div class="box box-5"></div>
-                <div class="box box-6"></div>
-            </div>
-        </div>
-    </div>
-    
     <div class="dashboard-content">
         <div class="welcome-message">
             <h1><i class="fas fa-warehouse"></i> Bem-vindo ao Sistema Estelar</h1>
@@ -39,234 +14,58 @@
 </div>
 
 <style>
-* {
-    box-sizing: border-box;
+/* Sobrescrever completamente o CSS global */
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
 }
 
-body {
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden;
+.main-wrapper {
+    overflow: hidden !important;
+    height: calc(100vh - 60px) !important;
+    max-height: calc(100vh - 60px) !important;
 }
 
+.main-content {
+    overflow: hidden !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Dashboard container fixo */
 .dashboard-container {
-    position: relative;
-    height: calc(100vh - 60px);
-    width: calc(100vw - 220px); /* Ajustado para considerar a largura do sidebar */
-    margin-left: 0; /* Removendo margem esquerda para alinhar com a linha vermelha */
-    overflow: hidden;
-    margin-top: 0;
-    margin-bottom: 0;
-    margin-right: 0;
-    padding: 0;
-    box-sizing: border-box; /* Garantir que padding não cause overflow */
-    max-width: calc(100vw - 220px); /* Garantir que não ultrapasse a largura disponível */
-}
-
-.dashboard-background {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    position: fixed !important;
+    top: 60px !important;
+    left: 220px !important;
+    right: 0 !important;
+    bottom: 0 !important;
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-}
-
-.warehouse-image {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: 
-        linear-gradient(135deg, rgba(26, 26, 46, 0.7) 0%, rgba(22, 33, 62, 0.7) 50%, rgba(15, 52, 96, 0.7) 100%),
-        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><defs><linearGradient id="shelf" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:%232c3e50;stop-opacity:1" /><stop offset="50%" style="stop-color:%2334495e;stop-opacity:1" /><stop offset="100%" style="stop-color:%232c3e50;stop-opacity:1" /></linearGradient><linearGradient id="box" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%23e67e22;stop-opacity:1" /><stop offset="100%" style="stop-color:%23d35400;stop-opacity:1" /></linearGradient><linearGradient id="light" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:%23f39c12;stop-opacity:1" /><stop offset="50%" style="stop-color:%23e67e22;stop-opacity:1" /><stop offset="100%" style="stop-color:%23d35400;stop-opacity:1" /></linearGradient></defs><rect width="800" height="600" fill="%231a1a2e"/><g opacity="0.8"><!-- Floor --><rect x="0" y="500" width="800" height="100" fill="%23344a5e"/><rect x="0" y="500" width="800" height="2" fill="%23ffffff" opacity="0.3"/><rect x="0" y="550" width="800" height="2" fill="%23ffffff" opacity="0.2"/><rect x="0" y="580" width="800" height="2" fill="%23ffffff" opacity="0.1"/><!-- Left Shelves --><rect x="30" y="150" width="200" height="350" fill="url(%23shelf)" stroke="%2334495e" stroke-width="2"/><rect x="30" y="170" width="200" height="8" fill="%2334495e"/><rect x="30" y="220" width="200" height="8" fill="%2334495e"/><rect x="30" y="270" width="200" height="8" fill="%2334495e"/><rect x="30" y="320" width="200" height="8" fill="%2334495e"/><rect x="30" y="370" width="200" height="8" fill="%2334495e"/><!-- Right Shelves --><rect x="570" y="150" width="200" height="350" fill="url(%23shelf)" stroke="%2334495e" stroke-width="2"/><rect x="570" y="170" width="200" height="8" fill="%2334495e"/><rect x="570" y="220" width="200" height="8" fill="%2334495e"/><rect x="570" y="270" width="200" height="8" fill="%2334495e"/><rect x="570" y="320" width="200" height="8" fill="%2334495e"/><rect x="570" y="370" width="200" height="8" fill="%2334495e"/><!-- Center Shelf --><rect x="300" y="200" width="200" height="300" fill="url(%23shelf)" stroke="%2334495e" stroke-width="2"/><rect x="300" y="220" width="200" height="8" fill="%2334495e"/><rect x="300" y="270" width="200" height="8" fill="%2334495e"/><rect x="300" y="320" width="200" height="8" fill="%2334495e"/><rect x="300" y="370" width="200" height="8" fill="%2334495e"/><!-- Boxes on Left Shelves --><rect x="45" y="180" width="30" height="25" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="85" y="180" width="25" height="20" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="120" y="180" width="35" height="30" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="165" y="180" width="20" height="15" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="195" y="180" width="30" height="25" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><!-- Boxes on Right Shelves --><rect x="585" y="180" width="30" height="25" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="625" y="180" width="25" height="20" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="660" y="180" width="35" height="30" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="705" y="180" width="20" height="15" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="735" y="180" width="30" height="25" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><!-- Boxes on Center Shelf --><rect x="315" y="230" width="30" height="25" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="355" y="230" width="25" height="20" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="390" y="230" width="35" height="30" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="435" y="230" width="20" height="15" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="465" y="230" width="30" height="25" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><!-- Industrial Lights --><circle cx="400" cy="100" r="20" fill="%23f39c12" opacity="0.8"/><circle cx="400" cy="100" r="12" fill="%23ffffff" opacity="0.9"/><circle cx="400" cy="100" r="6" fill="%23f39c12" opacity="1"/><circle cx="250" cy="120" r="15" fill="%23f39c12" opacity="0.8"/><circle cx="250" cy="120" r="9" fill="%23ffffff" opacity="0.9"/><circle cx="250" cy="120" r="4" fill="%23f39c12" opacity="1"/><circle cx="550" cy="120" r="15" fill="%23f39c12" opacity="0.8"/><circle cx="550" cy="120" r="9" fill="%23ffffff" opacity="0.9"/><circle cx="550" cy="120" r="4" fill="%23f39c12" opacity="1"/><!-- Light Beams --><path d="M 400 120 L 250 500 L 550 500 Z" fill="%23f39c12" opacity="0.1"/><path d="M 250 140 L 150 500 L 350 500 Z" fill="%23f39c12" opacity="0.1"/><path d="M 550 140 L 450 500 L 650 500 Z" fill="%23f39c12" opacity="0.1"/><!-- Ceiling Structure --><rect x="0" y="0" width="800" height="80" fill="%232c3e50"/><rect x="0" y="15" width="800" height="2" fill="%23ffffff" opacity="0.3"/><rect x="0" y="30" width="800" height="2" fill="%23ffffff" opacity="0.2"/><rect x="0" y="45" width="800" height="2" fill="%23ffffff" opacity="0.1"/><rect x="0" y="60" width="800" height="2" fill="%23ffffff" opacity="0.1"/></g></svg>');
-    background-size: 80% auto; /* Reduzindo o tamanho da imagem para 80% da largura */
-    background-position: center;
-    background-repeat: no-repeat;
-    max-width: 100%;
-    max-height: 100%;
-    overflow: hidden; /* Garantir que não haja overflow */
-}
-
-.background-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(45deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 100%);
-}
-
-.warehouse-elements {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-}
-
-.warehouse-shelves {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 60%;
-}
-
-.shelf {
-    position: absolute;
-    background: linear-gradient(90deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
-    border: 2px solid #34495e;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-}
-
-.shelf-1 {
-    bottom: 20%;
-    left: 10%;
-    width: 30%;
-    height: 8px;
-    transform: perspective(100px) rotateX(15deg);
-}
-
-.shelf-2 {
-    bottom: 35%;
-    left: 15%;
-    width: 25%;
-    height: 8px;
-    transform: perspective(100px) rotateX(15deg);
-}
-
-.shelf-3 {
-    bottom: 50%;
-    left: 20%;
-    width: 20%;
-    height: 8px;
-    transform: perspective(100px) rotateX(15deg);
-}
-
-.warehouse-lights {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-}
-
-.light {
-    position: absolute;
-    width: 4px;
-    height: 60px;
-    background: linear-gradient(to bottom, #f39c12 0%, #e67e22 50%, #d35400 100%);
-    border-radius: 2px;
-    box-shadow: 0 0 20px rgba(243, 156, 18, 0.6);
-    animation: light-flicker 3s ease-in-out infinite;
-}
-
-.light-1 {
-    top: 20%;
-    left: 30%;
-    animation-delay: 0s;
-}
-
-.light-2 {
-    top: 25%;
-    left: 60%;
-    animation-delay: 1s;
-}
-
-.light-3 {
-    top: 30%;
-    left: 80%;
-    animation-delay: 2s;
-}
-
-@keyframes light-flicker {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-}
-
-.warehouse-boxes {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-}
-
-.box {
-    position: absolute;
-    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
-    border: 1px solid #c0392b;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    border-radius: 2px;
-}
-
-.box-1 {
-    bottom: 25%;
-    left: 12%;
-    width: 40px;
-    height: 30px;
-    animation: box-float 4s ease-in-out infinite;
-}
-
-.box-2 {
-    bottom: 40%;
-    left: 18%;
-    width: 35px;
-    height: 25px;
-    animation: box-float 4s ease-in-out infinite 0.5s;
-}
-
-.box-3 {
-    bottom: 55%;
-    left: 25%;
-    width: 30px;
-    height: 20px;
-    animation: box-float 4s ease-in-out infinite 1s;
-}
-
-.box-4 {
-    bottom: 30%;
-    left: 45%;
-    width: 45px;
-    height: 35px;
-    animation: box-float 4s ease-in-out infinite 1.5s;
-}
-
-.box-5 {
-    bottom: 45%;
-    left: 55%;
-    width: 35px;
-    height: 25px;
-    animation: box-float 4s ease-in-out infinite 2s;
-}
-
-.box-6 {
-    bottom: 60%;
-    left: 65%;
-    width: 25px;
-    height: 15px;
-    animation: box-float 4s ease-in-out infinite 2.5s;
-}
-
-@keyframes box-float {
-    0%, 100% { transform: translateY(0px) rotate(0deg); }
-    50% { transform: translateY(-5px) rotate(1deg); }
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: calc(100vw - 220px) !important;
+    height: calc(100vh - 60px) !important;
+    max-width: calc(100vw - 220px) !important;
+    max-height: calc(100vh - 60px) !important;
 }
 
 .dashboard-content {
-    position: relative;
-    z-index: 2;
-    height: 100%;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
+    height: 100%;
     padding: 2rem;
     max-width: 100%;
     overflow: hidden;
-    padding-top: 8vh;
+    margin: 0;
 }
 
 .welcome-message {
@@ -290,72 +89,42 @@ body {
 
 .welcome-message .lead {
     font-size: clamp(1.2rem, 3vw, 1.5rem);
-    margin-bottom: 3rem;
+    margin-bottom: 0;
     opacity: 0.9;
     color: #ecf0f1;
     word-wrap: break-word;
 }
 
-/* Responsividade para quando o sidebar está colapsado */
+/* Responsividade */
 @media (max-width: 768px) {
     .dashboard-container {
-        width: 100vw;
-        margin-left: 0;
-        height: calc(100vh - 60px);
-        max-width: 100vw; /* Garantir que não ultrapasse a largura da viewport */
-        overflow-x: hidden; /* Previne scroll horizontal */
+        left: 0 !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
     }
     
     .welcome-message {
         padding: 0 0.5rem;
     }
-    
-    .warehouse-elements {
-        opacity: 0.5;
-    }
 }
 
 @media (max-width: 480px) {
     .dashboard-container {
-        width: 100vw;
-        margin-left: 0;
-        height: calc(100vh - 60px);
-        max-width: 100vw; /* Garantir que não ultrapasse a largura da viewport */
-        overflow-x: hidden; /* Previne scroll horizontal */
+        left: 0 !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
     }
     
     .welcome-message {
         padding: 0 0.25rem;
     }
-    
-    .warehouse-elements {
-        opacity: 0.3;
-    }
 }
 
 /* Ajuste para quando o sidebar está colapsado */
 .sidebar.collapsed + .main-content .dashboard-container {
-    width: 100vw;
-    margin-left: 0;
-}
-
-/* Garantir que não haja overflow horizontal */
-html, body {
-    overflow-x: hidden;
-    width: 100%;
-    max-width: 100%;
-}
-
-.main-content {
-    overflow-x: hidden;
-    width: 100%;
-    max-width: 100%;
-}
-
-/* Ajuste para quando o sidebar está colapsado */
-.sidebar.collapsed + .main-content .dashboard-container {
-    width: 100vw;
-    margin-left: 0;
+    left: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
 }
 </style>
 {% endblock %} 

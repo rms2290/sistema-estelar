@@ -181,3 +181,8 @@ LOGGING = {
 
 # Criar diretório de logs se não existir
 os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+
+# Configurações de Autenticação
+LOGIN_REDIRECT_URL = 'notas:dashboard'
+LOGIN_URL = 'notas:login'
+LOGOUT_REDIRECT_URL = 'notas:login'

@@ -10,13 +10,15 @@
     {# Opcional: Font Awesome para ícones #}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
-<body data-theme="dark">
+<body data-theme="dark" class="{% if not user.is_authenticated %}login-page{% endif %}">
     <!-- Top Bar -->
     <div class="top-bar">
         <!-- Botão de Menu -->
+        {% if user.is_authenticated %}
         <button id="menu-toggle" class="btn btn-outline-light btn-sm menu-toggle-btn" title="Alternar Menu">
             <i class="fas fa-bars"></i>
         </button>
+        {% endif %}
         
                                 <!-- Logo Centralizado -->
                         <div class="logo-container">
@@ -71,7 +73,7 @@
         <!-- Sidebar -->
                <div class="sidebar">
            <div class="sidebar-header">
-               <h3><i class="fas fa-bars"></i></h3>
+               <h3>MENU</h3>
            </div>
             <nav class="sidebar-nav">
                 <ul class="nav-menu">
@@ -264,11 +266,7 @@
                     const isCollapsed = sidebar.classList.contains('collapsed');
                     localStorage.setItem('sidebarCollapsed', isCollapsed);
                     
-                    // Atualizar ícone do botão
-                    const icon = menuToggle.querySelector('i');
-                    if (icon) {
-                        icon.className = isCollapsed ? 'fas fa-bars' : 'fas fa-times';
-                    }
+                                    // O botão agora usa apenas ícone, não precisa trocar texto
                 });
                 
                 // Restaurar estado do menu ao carregar a página
@@ -276,10 +274,6 @@
                 // Sempre manter o menu aberto por padrão
                 sidebar.classList.remove('collapsed');
                 mainContent.classList.remove('expanded');
-                const icon = menuToggle.querySelector('i');
-                if (icon) {
-                    icon.className = 'fas fa-times';
-                }
                 // Limpar o localStorage para garantir que sempre fique aberto
                 localStorage.removeItem('sidebarCollapsed');
             }
