@@ -81,12 +81,23 @@
                 <i class="fas fa-edit"></i> Editar Romaneio
             </a>
             
-            <form action="{% url 'notas:excluir_romaneio' romaneio.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este romaneio?');">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-danger">
-                    <i class="fas fa-trash"></i> Excluir Romaneio
-                </button>
-            </form>
+            {% if romaneio.status == 'Emitido' %}
+                {% if user.is_admin %}
+                    <form action="{% url 'notas:excluir_romaneio' romaneio.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este romaneio?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Excluir Romaneio
+                        </button>
+                    </form>
+                {% endif %}
+            {% else %}
+                <form action="{% url 'notas:excluir_romaneio' romaneio.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este romaneio?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Excluir Romaneio
+                    </button>
+                </form>
+            {% endif %}
         {% endif %}
         
         {% if user.is_cliente %}

@@ -49,7 +49,7 @@ class NotaFiscalForm(forms.ModelForm):
     # Campo data
     data = forms.DateField(
         label='Data',
-        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'tabindex': '-1'}),
         required=True,
         input_formats=['%Y-%m-%d', '%d/%m/%Y', '%d/%m/%y']
     )

@@ -152,12 +152,14 @@
         <a href="{% url 'notas:editar_motorista' motorista.pk %}" class="btn btn-warning me-2">
             <i class="fas fa-edit"></i> Editar Motorista
         </a>
-        <form action="{% url 'notas:excluir_motorista' motorista.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este motorista?');">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-danger me-2">
-                <i class="fas fa-trash"></i> Excluir Motorista
-            </button>
-        </form>
+        {% if user.is_admin %}
+            <form action="{% url 'notas:excluir_motorista' motorista.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este motorista?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger me-2">
+                    <i class="fas fa-trash"></i> Excluir Motorista
+                </button>
+            </form>
+        {% endif %}
         <a href="{% url 'notas:listar_motoristas' %}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Voltar à Pesquisa
         </a>

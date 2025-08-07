@@ -64,6 +64,7 @@ urlpatterns = [
     path('alterar-senha/', views.alterar_senha, name='alterar_senha'),
     path('minhas-notas/', views.minhas_notas_fiscais, name='minhas_notas_fiscais'),
     path('minhas-notas/<int:pk>/imprimir/', views.imprimir_nota_fiscal, name='imprimir_nota_fiscal'),
+    path('minhas-notas/imprimir-relatorio-deposito/', views.imprimir_relatorio_deposito, name='imprimir_relatorio_deposito'),
     path('meus-romaneios/', views.meus_romaneios, name='meus_romaneios'),
     
     # URLs para Gerenciamento de Usuários (apenas administradores)

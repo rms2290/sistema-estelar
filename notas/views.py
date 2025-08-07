@@ -136,8 +136,15 @@ def editar_cliente(request, pk):
         form = ClienteForm(instance=cliente)
     return render(request, 'notas/editar_cliente.html', {'form': form, 'cliente': cliente})
 
+@login_required
 def excluir_cliente(request, pk):
     cliente = get_object_or_404(Cliente, pk=pk)
+    
+    # Verificar se o usuário é administrador
+    if not request.user.is_admin:
+        messages.error(request, 'Apenas administradores podem excluir clientes cadastrados.')
+        return redirect('notas:listar_clientes')
+    
     if request.method == 'POST':
         try:
             cliente.delete()
@@ -333,8 +340,15 @@ def registrar_consulta_motorista(request, pk):
     }
     return render(request, 'notas/registrar_consulta_motorista.html', context) 
 
+@login_required
 def excluir_motorista(request, pk):
     motorista = get_object_or_404(Motorista, pk=pk)
+    
+    # Verificar se o usuário é administrador
+    if not request.user.is_admin:
+        messages.error(request, 'Apenas administradores podem excluir motoristas cadastrados.')
+        return redirect('notas:listar_motoristas')
+    
     if request.method == 'POST':
         try:
             motorista.delete()
@@ -640,8 +654,17 @@ def editar_romaneio(request, pk):
     }
     return render(request, 'notas/editar_romaneio.html', context)
 
+@login_required
 def excluir_romaneio(request, pk):
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
+    
+    # Verificar se o romaneio foi emitido
+    if romaneio.status == 'Emitido':
+        # Se foi emitido, apenas administradores podem excluir
+        if not request.user.is_admin:
+            messages.error(request, 'Apenas administradores podem excluir romaneios que já foram emitidos.')
+            return redirect('notas:listar_romaneios')
+    
     if request.method == 'POST':
         for nota_fiscal in romaneio.notas_fiscais.all():
             nota_fiscal.status = 'Depósito'
@@ -972,7 +995,7 @@ def is_cliente(user):
 @user_passes_test(is_cliente)
 def minhas_notas_fiscais(request):
     # Obter parâmetro de filtro
-    status_filter = request.GET.get('status', '')
+    status_filter = request.GET.get('status', 'deposito')  # Padrão agora é 'deposito'
     
     if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente:
         # Cliente vê apenas suas notas
@@ -981,12 +1004,11 @@ def minhas_notas_fiscais(request):
         # Admin e funcionários veem todas as notas
         notas_fiscais = NotaFiscal.objects.all()
     
-    # Aplicar filtro por status se especificado
-    if status_filter:
-        if status_filter == 'deposito':
-            notas_fiscais = notas_fiscais.filter(status='Depósito')
-        elif status_filter == 'enviada':
-            notas_fiscais = notas_fiscais.filter(status='Enviada')
+    # Aplicar filtro por status
+    if status_filter == 'deposito':
+        notas_fiscais = notas_fiscais.filter(status='Depósito')
+    elif status_filter == 'enviada':
+        notas_fiscais = notas_fiscais.filter(status='Enviada')
     
     # Ordenar por data mais recente
     notas_fiscais = notas_fiscais.order_by('-data')
@@ -1014,6 +1036,30 @@ def imprimir_nota_fiscal(request, pk):
     
     return render(request, 'notas/auth/imprimir_nota_fiscal.html', {
         'nota': nota
+    })
+
+@login_required
+@user_passes_test(is_cliente)
+def imprimir_relatorio_deposito(request):
+    # Obter apenas notas em depósito do cliente
+    if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente:
+        notas_fiscais = NotaFiscal.objects.filter(
+            cliente=request.user.cliente,
+            status='Depósito'
+        ).order_by('data')
+    else:
+        # Admin e funcionários veem todas as notas em depósito
+        notas_fiscais = NotaFiscal.objects.filter(status='Depósito').order_by('data')
+    
+    # Calcular totais
+    total_peso = sum(nota.peso for nota in notas_fiscais)
+    total_valor = sum(nota.valor for nota in notas_fiscais)
+    
+    return render(request, 'notas/auth/imprimir_relatorio_deposito.html', {
+        'notas_fiscais': notas_fiscais,
+        'total_peso': total_peso,
+        'total_valor': total_valor,
+        'cliente': request.user.cliente if request.user.cliente else None
     })
 
 @login_required

@@ -35,6 +35,9 @@
                     </label>
                     {{ form.data }}
                     {% if form.data.errors %}<div class="text-danger">{{ form.data.errors }}</div>{% endif %}
+                    <small class="form-text text-muted">
+                        <i class="fas fa-info-circle"></i> Data atual pré-definida. Clique para alterar se necessário.
+                    </small>
                 </div>
                 <div class="col-md-6 mb-3">
                     <label for="{{ form.cliente.id_for_label }}" class="form-label">
@@ -95,17 +98,24 @@
                 </a>
             </div>
             <div class="text-muted small">
-                <i class="fas fa-info-circle"></i> Dica: Pressione <kbd>Enter</kbd> para salvar e adicionar outra nota
+                <i class="fas fa-info-circle"></i> Dica: Pressione <kbd>Enter</kbd> para salvar e adicionar outra nota | 
+                <i class="fas fa-keyboard"></i> Campo data é pulado na navegação por <kbd>Tab</kbd>
             </div>
         </div>
     </form>
 
-    {# JavaScript para o comportamento da tecla Enter #}
+    {# JavaScript para o comportamento da tecla Enter e navegação por tab #}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const notaFiscalForm = document.getElementById('notaFiscalForm');
             const salvarEAdicionarBtn = document.querySelector('button[name="salvar_e_adicionar"]');
             const campoNota = document.getElementById('{{ form.nota.id_for_label }}');
+            const campoData = document.getElementById('{{ form.data.id_for_label }}');
+
+            // Adicionar tabindex="-1" ao campo data para que seja pulado na navegação por tab
+            if (campoData) {
+                campoData.setAttribute('tabindex', '-1');
+            }
 
             // Focar no campo nota se a flag estiver presente
             {% if focus_nota %}
@@ -151,6 +161,48 @@
                             // Se for o último campo, submete o formulário
                             salvarEAdicionarBtn.click();
                         }
+                    }
+                });
+            });
+
+            // Função para navegar entre campos pulando o campo data
+            function navigateToNextField(currentField, forward = true) {
+                const allFields = Array.from(notaFiscalForm.querySelectorAll('input, select, textarea'));
+                const currentIndex = allFields.indexOf(currentField);
+                
+                if (forward) {
+                    // Navegação para frente (Tab)
+                    let nextIndex = currentIndex + 1;
+                    while (nextIndex < allFields.length && allFields[nextIndex] === campoData) {
+                        nextIndex++;
+                    }
+                    
+                    if (nextIndex < allFields.length) {
+                        allFields[nextIndex].focus();
+                    } else {
+                        // Se chegou ao final, submete o formulário
+                        salvarEAdicionarBtn.click();
+                    }
+                } else {
+                    // Navegação para trás (Shift+Tab)
+                    let prevIndex = currentIndex - 1;
+                    while (prevIndex >= 0 && allFields[prevIndex] === campoData) {
+                        prevIndex--;
+                    }
+                    
+                    if (prevIndex >= 0) {
+                        allFields[prevIndex].focus();
+                    }
+                }
+            }
+
+            // Adicionar listener para Tab em todos os campos exceto o campo data
+            const camposNavegacao = notaFiscalForm.querySelectorAll('input:not([id="{{ form.data.id_for_label }}"]), select, textarea');
+            camposNavegacao.forEach(function(campo) {
+                campo.addEventListener('keydown', function(event) {
+                    if (event.key === 'Tab') {
+                        event.preventDefault();
+                        navigateToNextField(this, !event.shiftKey);
                     }
                 });
             });
