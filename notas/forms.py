@@ -227,7 +227,12 @@ class ClienteForm(forms.ModelForm):
         }
 
     def clean_cnpj(self):
-        cnpj = self.cleaned_data['cnpj']
+        cnpj = self.cleaned_data.get('cnpj')
+        
+        # Se o campo não for obrigatório e estiver vazio, retorne imediatamente
+        if not cnpj:
+            return cnpj
+            
         cnpj_numeros = re.sub(r'[^0-9]', '', cnpj) # Remove tudo que não for número
 
         # Validação de comprimento (básica)
@@ -319,7 +324,7 @@ class MotoristaForm(forms.ModelForm):
         label='Telefone',
         max_length=20,
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(00) 00000-0000'})
     )
     
     endereco = UpperCaseCharField(
@@ -423,7 +428,12 @@ class MotoristaForm(forms.ModelForm):
         return telefone_numeros
 
     def clean_cep(self):
-        cep = self.cleaned_data['cep']
+        cep = self.cleaned_data.get('cep')
+        
+        # Se o campo não for obrigatório e estiver vazio, retorne imediatamente
+        if not cep:
+            return cep
+            
         cep_numeros = re.sub(r'[^0-9]', '', cep)
         if len(cep_numeros) != 8:
             raise forms.ValidationError("CEP deve conter 8 dígitos numéricos.")
@@ -617,7 +627,7 @@ class VeiculoForm(forms.ModelForm):
         label='CPF/CNPJ do Proprietário',
         required=False,
         max_length=18,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000.000.000-00 ou 00.000.000/0000-00'})
     )
     proprietario_rg_ie = UpperCaseCharField(
         label='RG/IE do Proprietário',
@@ -653,7 +663,7 @@ class VeiculoForm(forms.ModelForm):
         label='Telefone do Proprietário',
         required=False,
         max_length=20,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '---'})
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(00) 00000-0000'})
     )
     proprietario_placa = forms.CharField(
         label='Placa do Proprietário',

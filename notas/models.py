@@ -15,7 +15,8 @@ class UpperCaseMixin:
                     exclude_fields = [
                         'email', 'password', 'username', 'cpf', 'cnpj', 
                         'cnh', 'chassi', 'renavam', 'placa', 'cep',
-                        'telefone', 'rntrc', 'numero_consulta', 'tipo_usuario'
+                        'telefone', 'rntrc', 'numero_consulta', 'tipo_usuario',
+                        'status'  # Adicionado para não converter status para maiúsculo
                     ]
                     if field.name not in exclude_fields:
                         setattr(self, field.name, value.upper())

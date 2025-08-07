@@ -64,11 +64,26 @@
         </div>
     </div>
 
-    {# Botões de Ação: Editar e Excluir #}
+    {# Botões de Ação: Editar, Ativar/Desativar e Excluir #}
     <div class="mt-4">
         <a href="{% url 'notas:editar_cliente' cliente.pk %}" class="btn btn-warning me-2">
             <i class="fas fa-edit"></i> Editar Cliente
         </a>
+        
+        {# Botão Ativar/Desativar #}
+        <form action="{% url 'notas:toggle_status_cliente' cliente.pk %}" method="post" style="display:inline;">
+            {% csrf_token %}
+            {% if cliente.status == 'Ativo' %}
+                <button type="submit" class="btn btn-warning me-2" onclick="return confirm('Tem certeza que deseja desativar este cliente?');">
+                    <i class="fas fa-toggle-off"></i> Desativar Cliente
+                </button>
+            {% else %}
+                <button type="submit" class="btn btn-success me-2" onclick="return confirm('Tem certeza que deseja ativar este cliente?');">
+                    <i class="fas fa-toggle-on"></i> Ativar Cliente
+                </button>
+            {% endif %}
+        </form>
+        
         <form action="{% url 'notas:excluir_cliente' cliente.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este cliente?');">
             {% csrf_token %}
             <button type="submit" class="btn btn-danger me-2">

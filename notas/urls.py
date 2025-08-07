@@ -19,6 +19,7 @@ urlpatterns = [
     path('clientes/editar/<int:pk>/', views.editar_cliente, name='editar_cliente'),
     path('clientes/excluir/<int:pk>/', views.excluir_cliente, name='excluir_cliente'),
     path('clientes/<int:pk>/detalhes/', views.detalhes_cliente, name='detalhes_cliente'),
+    path('clientes/<int:pk>/toggle-status/', views.toggle_status_cliente, name='toggle_status_cliente'),
 
 # Novas URLs para Motoristas
     path('motoristas/', views.listar_motoristas, name='listar_motoristas'),

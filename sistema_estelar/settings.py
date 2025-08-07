@@ -50,11 +50,11 @@ MIDDLEWARE = [
     'notas.middleware.AuthenticationMiddleware',  # Nosso middleware customizado
 ]
 
-# Debug Toolbar (apenas em desenvolvimento)
-if DEBUG:
-    INSTALLED_APPS.append('debug_toolbar')
-    MIDDLEWARE.insert(1, 'debug_toolbar.middleware.DebugToolbarMiddleware')
-    INTERNAL_IPS = ['127.0.0.1']
+# Debug Toolbar removido
+# if DEBUG:
+#     INSTALLED_APPS.append('debug_toolbar')
+#     MIDDLEWARE.insert(1, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+#     INTERNAL_IPS = ['127.0.0.1']
 
 ROOT_URLCONF = 'sistema_estelar.urls'
 

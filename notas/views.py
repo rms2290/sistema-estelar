@@ -154,6 +154,24 @@ def detalhes_cliente(request, pk):
     }
     return render(request, 'notas/detalhes_cliente.html', context)
 
+def toggle_status_cliente(request, pk):
+    """Ativa ou desativa um cliente"""
+    cliente = get_object_or_404(Cliente, pk=pk)
+    
+    if request.method == 'POST':
+        # Alternar o status
+        if cliente.status == 'Ativo':
+            cliente.status = 'Inativo'
+            messages.success(request, f'Cliente {cliente.razao_social} foi desativado com sucesso!')
+        else:
+            cliente.status = 'Ativo'
+            messages.success(request, f'Cliente {cliente.razao_social} foi ativado com sucesso!')
+        
+        cliente.save()
+        return redirect('notas:detalhes_cliente', pk=cliente.pk)
+    
+    return redirect('notas:detalhes_cliente', pk=cliente.pk)
+
 # --------------------------------------------------------------------------------------
 # Views para Nota Fiscal
 # --------------------------------------------------------------------------------------
