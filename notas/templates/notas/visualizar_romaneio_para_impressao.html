@@ -1,129 +1,479 @@
-{% load static %}
 {% load format_filters %}
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Romaneio de Viagem - {{ romaneio.codigo }}</title>
-    {# Incluir Bootstrap CSS #}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    
-    {# Estilos customizados (para tela e impressão) #}
-    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+    <title>Romaneio de Viagem - Sistema Estelar</title>
+    <style>
+        @media print {
+            body {
+                margin: 0;
+                padding: 10px;
+                font-family: Arial, sans-serif;
+                font-size: 12px;
+                line-height: 1.4;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            .page-break {
+                page-break-before: always;
+            }
+            
+            .header {
+                text-align: center;
+                margin-bottom: 18px;
+                border-bottom: 1px solid #999;
+                padding-bottom: 12px;
+            }
+            
+            .header h1 {
+                margin: 0;
+                font-size: 20px;
+                font-weight: bold;
+                color: #000;
+            }
+            
+            .header p {
+                margin: 3px 0;
+                font-size: 10px;
+                color: #000;
+            }
+            
+            .info-container {
+                display: flex;
+                justify-content: flex-start;
+                margin-bottom: 20px;
+            }
+            
+            .romaneio-info {
+                flex: 0 0 30%;
+                padding: 10px;
+                background-color: #f9f9f9;
+            }
+            
+            .romaneio-info h3 {
+                margin: 0 0 8px 0;
+                font-size: 12px;
+                color: #000;
+            }
+            
+            .romaneio-info p {
+                margin: 3px 0;
+                font-size: 10px;
+            }
+            
+            .motorista-info {
+                flex: 0 0 30%;
+                padding: 10px;
+                background-color: #f9f9f9;
+                margin-left: auto;
+            }
+            
+            .motorista-info h3 {
+                margin: 0 0 8px 0;
+                font-size: 12px;
+                color: #000;
+            }
+            
+            .motorista-info p {
+                margin: 3px 0;
+                font-size: 10px;
+            }
+            
+            .report-title {
+                text-align: center;
+                margin: 20px 0;
+                font-size: 14px;
+                font-weight: bold;
+                color: #000;
+            }
+            
+            .table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 20px;
+            }
+            
+            .table th,
+            .table td {
+                border: 1px solid #ddd;
+                padding: 4px;
+                text-align: left;
+                font-size: 9px;
+                white-space: nowrap;
+            }
+            
+            .table th {
+                background-color: #f2f2f2;
+                font-weight: bold;
+            }
+            
+            .table tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            
+            .totals {
+                margin-top: 20px;
+                padding: 8px;
+                border: 1px solid #999;
+                background-color: #f0f0f0;
+            }
+            
+            .totals h4 {
+                margin: 0 0 5px 0;
+                font-size: 10px;
+                color: #000;
+            }
+            
+            .totals p {
+                margin: 2px 0;
+                font-size: 9px;
+                font-weight: bold;
+            }
+            
+            .totals-inline {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            
+            .total-item {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+            
+            .total-label {
+                font-weight: bold;
+                color: #000;
+            }
+            
+            .total-value {
+                font-weight: bold;
+                color: #000;
+            }
+            
+            .footer {
+                margin-top: 40px;
+                text-align: center;
+                font-size: 10px;
+                color: #000;
+                border-top: 1px solid #999;
+                padding-top: 10px;
+            }
+            
+            .date-info {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                font-size: 10px;
+                color: #000;
+            }
+            
+
+        }
+        
+        /* Estilos para visualização na tela */
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            margin: 10px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 18px;
+            border-bottom: 1px solid #999;
+            padding-bottom: 12px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: bold;
+            color: #000;
+        }
+        
+        .header p {
+            margin: 3px 0;
+            font-size: 10px;
+            color: #000;
+        }
+        
+        .info-container {
+            display: flex;
+            justify-content: flex-start;
+            margin-bottom: 20px;
+        }
+        
+        .romaneio-info {
+            flex: 0 0 30%;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        
+        .romaneio-info h3 {
+            margin: 0 0 8px 0;
+            font-size: 12px;
+            color: #000;
+        }
+        
+        .romaneio-info p {
+            margin: 3px 0;
+            font-size: 10px;
+        }
+        
+        .motorista-info {
+            flex: 0 0 30%;
+            padding: 10px;
+            background-color: #f9f9f9;
+            margin-left: auto;
+        }
+        
+        .motorista-info h3 {
+            margin: 0 0 8px 0;
+            font-size: 12px;
+            color: #000;
+        }
+        
+        .motorista-info p {
+            margin: 3px 0;
+            font-size: 10px;
+        }
+        
+        .report-title {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 14px;
+            font-weight: bold;
+            color: #000;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .table th,
+        .table td {
+            border: 1px solid #ddd;
+            padding: 4px;
+            text-align: left;
+            font-size: 9px;
+            white-space: nowrap;
+        }
+        
+        .table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        
+        .table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .totals {
+            margin-top: 20px;
+            padding: 8px;
+            border: 1px solid #999;
+            background-color: #f0f0f0;
+        }
+        
+        .totals h4 {
+            margin: 0 0 5px 0;
+            font-size: 10px;
+            color: #000;
+        }
+        
+        .totals p {
+            margin: 2px 0;
+            font-size: 9px;
+            font-weight: bold;
+        }
+        
+        .totals-inline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .total-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .total-label {
+            font-weight: bold;
+            color: #000;
+        }
+        
+        .total-value {
+            font-weight: bold;
+            color: #000;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 10px;
+            color: #000;
+            border-top: 1px solid #999;
+            padding-top: 10px;
+        }
+        
+        .date-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 10px;
+            color: #000;
+        }
+        
+
+        
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .print-button:hover {
+            background-color: #0056b3;
+        }
+        
+        @media print {
+            .print-button {
+                display: none;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="romaneio-print-container">
-        {# Cabeçalho da Empresa #}
-        <div class="print-header mb-4">
-            <div class="empresa-header">
-                <div class="logo-container">
-                    <img src="{% static 'logo-estelar.svg' %}" alt="Agência Estelar" class="print-logo">
-                </div>
-                <div class="empresa-info">
-                    <h1 class="mb-0">AGÊNCIA ESTELAR</h1>
-                    <p class="empresa-subtitle mb-1">TRANSPORTES E LOGÍSTICA</p>
-                    <p class="mb-0">RUA MAUÁ, 898 - Fone: (55)11 32273798 | 32270396</p>
-                    <p class="mb-0">www.agenciaestelar.com.br / agenciaestelar@agenciaestelar.com.br</p>
-                </div>
-            </div>
+    <button class="print-button no-print" onclick="window.print()">
+        <i class="fas fa-print"></i> Imprimir
+    </button>
+    
+    <div class="date-info">
+        Data do romaneio: {% now "d/m/Y H:i" %}
+    </div>
+    
+    <!-- Cabeçalho -->
+    <div class="header">
+        <h1>AGÊNCIA ESTELAR</h1>
+        <p>Sistema de Gestão de Armazenamento</p>
+    </div>
+    
+    <!-- Container para Dados do Romaneio e Motorista -->
+    <div class="info-container">
+        <!-- Dados do Romaneio -->
+        {% if romaneio %}
+        <div class="romaneio-info">
+            <h3>Dados do Romaneio</h3>
+            <p><strong>Código:</strong> {{ romaneio.codigo }}</p>
+            <p><strong>Data de Emissão:</strong> {{ romaneio.data_emissao|date:"d/m/Y H:i" }}</p>
+            <p><strong>Cliente:</strong> {{ romaneio.cliente.razao_social }}</p>
+            <p><strong>Motorista:</strong> {{ romaneio.motorista.nome }}</p>
         </div>
-
-        {# Informações do Romaneio (primeira linha do cabeçalho) #}
-        <div class="row mb-3 print-section-top">
-            <div class="col-6">
-                <p class="mb-1"><strong>CNPJ:</strong> {{ romaneio.cliente.cnpj|default:"N/A" }}</p>
-                <p class="mb-1"><strong>INSCR. EST:</strong> {{ romaneio.cliente.inscricao_estadual|default:"N/A" }}</p>
-                <p class="mb-1"><strong>COMP. C/C:</strong> {{ romaneio.cliente.telefone|default:"N/A" }}</p>
-                <p class="mb-1"><strong>DESTINATÁRIO:</strong> {{ romaneio.cliente.razao_social }}</p>
-                <p class="mb-1"><strong>ENDEREÇO:</strong> {{ romaneio.cliente.endereco|default:"N/A" }}, {{ romaneio.cliente.numero|default:"S/N" }} - {{ romaneio.cliente.bairro|default:"N/A" }}</p>
-                <p class="mb-1 ms-4">{{ romaneio.cliente.cidade|default:"N/A" }}/{{ romaneio.cliente.estado|default:"N/A" }}</p>
-            </div>
-            <div class="col-6 text-end">
-                <p class="mb-1"><strong>ORDEM PARA DESPACHO Nº.:</strong> <span class="romaneio-code">{{ romaneio.codigo }}</span></p>
-                <p class="mb-1"><strong>DATA:</strong> {{ romaneio.data_emissao|date:"d/m/Y H:i" }}</p>
-                <p class="mb-1"><strong>MOTORISTA:</strong> {{ romaneio.motorista.nome }}</p>
-                <p class="mb-1"><strong>CNH:</strong> {{ romaneio.motorista.cnh|default:"N/A" }}</p>
-                                        <p class="mb-1"><strong>COMPOSIÇÃO VEICULAR:</strong> {{ romaneio.get_composicao_veicular }}</p>
-                {% if romaneio.motorista.reboque_1 %}
-                    <p class="mb-1"><strong>PLACA DA CARRETA:</strong> {{ romaneio.motorista.reboque_1.placa }}</p>
-                {% endif %}
-                {% if romaneio.motorista.reboque_2 %}
-                    <p class="mb-1"><strong>PLACA DO BITREM:</strong> {{ romaneio.motorista.reboque_2.placa }}</p>
-                {% endif %}
-            </div>
+        {% endif %}
+        
+        <!-- Dados do Motorista -->
+        {% if romaneio.motorista %}
+        <div class="motorista-info">
+            <h3>Dados do Motorista</h3>
+            <p><strong>Nome:</strong> {{ romaneio.motorista.nome }}</p>
+            <p><strong>CPF:</strong> {{ romaneio.motorista.cpf }}</p>
+            <p><strong>CNH:</strong> {{ romaneio.motorista.cnh|default:"N/A" }}</p>
+            <p><strong>RG:</strong> {{ romaneio.motorista.rg|default:"N/A" }}</p>
         </div>
-
-        {# Resumo de Notas Fiscais #}
-        <div class="notes-print-section mb-4">
-            <h4 class="text-center mb-3">RESUMO DE NOTAS FISCAIS</h4>
-            {% if notas_romaneadas %}
-                <table class="table table-bordered table-hover print-table">
-                    <thead>
-                        <tr>
-                            <th>NR. NOTA</th>
-                            <th>FORNECEDOR</th>
-                            <th>MERCADORIA</th>
-                            <th>QTD</th>
-                            <th>PESO (KG)</th>
-                            <th>VALOR (R$)</th>
-                            {# REMOVIDO: <th>Data Emissão</th> #}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for nota in notas_romaneadas %}
-                            <tr>
-                                <td>{{ nota.nota }}</td>
-                                <td>{{ nota.fornecedor }}</td>
-                                <td>{{ nota.mercadoria }}</td>
-                                <td>{{ nota.quantidade|format_brazilian_quantity }}</td>
-                                <td>{{ nota.peso|format_brazilian_weight }}</td>
-                                <td>{{ nota.valor|format_brazilian_currency }}</td>
-                                {# REMOVIDO: <td>{{ nota.data|date:"d/m/Y" }}</td> #}
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                <div class="row total-row">
-                    <div class="col-6 text-end"><strong>Total de Notas:</strong></div>
-                    <div class="col-6 text-start">{{ notas_romaneadas.count }}</div>
-                    <div class="col-6 text-end"><strong>Peso Total (KG):</strong></div>
-                    <div class="col-6 text-start">{{ total_peso|format_brazilian_weight }}</div>
-                    <div class="col-6 text-end"><strong>Valor Total (R$):</strong></div>
-                    <div class="col-6 text-start">{{ total_valor|format_brazilian_currency }}</div>
-                </div>
-            {% else %}
-                <p class="text-center">Nenhuma nota fiscal vinculada a este romaneio.</p>
-            {% endif %}
-        </div>
-
-        {# Rodapé do Romaneio #}
-        <div class="print-footer mt-5">
-            <p class="mb-4">NÃO NOS RESPONSABILIZAMOS POR PERDA OU AVARIA DE MERCADORIA SAÍDA DE NOSSO ARMAZÉM.</p>
-            <div class="row">
-                <div class="col-6">
-                    <p class="mb-1"><strong>FRETE TRATADO R$:</strong> _________________________</p>
-                    <p class="mb-1 ms-4">_________________________</p>
-                    <p class="mb-1"><strong>Motorista:</strong> {{ romaneio.motorista.nome }}</p>
-                    <p class="mb-1"><strong>RG/IE:</strong> {{ romaneio.motorista.cnh|default:"N/A" }}</p>
-                    <p class="mb-1"><strong>CPF/MF:</strong> {{ romaneio.motorista.cpf }}</p>
-                </div>
-                <div class="col-6 text-end">
-                    <p class="mb-4 text-start">Declaro ter recebido em perfeitas condições os volumes desta ordem, cujo carregamento foi por mim presenciado, não cabendo nenhuma responsabilidade à agência por falta de volumes em viagem. Obrigado-me ainda, a fazer as entregas em seu destino exato.</p>
-                </div>
+        {% endif %}
+    </div>
+    
+    <!-- Título do Relatório -->
+    <div class="report-title">
+        ROMANEIO DE VIAGEM
+    </div>
+    
+    <!-- Tabela de Notas -->
+    {% if notas_romaneadas %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>NOTA</th>
+                <th>FORNECEDOR</th>
+                <th>MERCADORIA</th>
+                <th>QUANTIDADE</th>
+                <th>PESO</th>
+                <th>VALOR</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for nota in notas_romaneadas %}
+            <tr>
+                <td><strong>{{ nota.nota }}</strong></td>
+                <td>{{ nota.fornecedor }}</td>
+                <td>{{ nota.mercadoria }}</td>
+                <td>{{ nota.quantidade|format_brazilian_quantity }}</td>
+                <td>{{ nota.peso|format_brazilian_weight }}</td>
+                <td>{{ nota.valor|format_brazilian_currency }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- Totalizadores -->
+    <div class="totals">
+        <h4>RESUMO DOS TOTAIS</h4>
+        <div class="totals-inline">
+            <div class="total-item">
+                <span class="total-label">Total de Notas:</span>
+                <span class="total-value">{{ notas_romaneadas.count }}</span>
+            </div>
+            <div class="total-item">
+                <span class="total-label">Total de Peso:</span>
+                <span class="total-value">{{ total_peso|format_brazilian_weight }}</span>
+            </div>
+            <div class="total-item">
+                <span class="total-label">Total de Valor:</span>
+                <span class="total-value">{{ total_valor|format_brazilian_currency }}</span>
             </div>
         </div>
     </div>
-
-    {# Botão de Imprimir (visível apenas na tela, oculto na impressão) #}
-    <div class="print-actions-buttons text-center my-4 d-flex justify-content-center gap-2">
-        <button onclick="window.print()" class="btn btn-primary"><i class="fas fa-print"></i> Imprimir Romaneio</button>
-        <a href="{% url 'notas:detalhes_romaneio' romaneio.pk %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a>
+    {% else %}
+    <div style="text-align: center; padding: 40px; color: #666;">
+        <h3>Nenhuma nota fiscal vinculada a este romaneio.</h3>
     </div>
-
-    {# Incluir Font Awesome para o ícone de impressora #}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
-    {# Incluir Bootstrap JS #}
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    {% endif %}
+    
+    <!-- Observações -->
+    {% if romaneio.observacoes %}
+    <div class="romaneio-info">
+        <h3>Observações</h3>
+        <p>{{ romaneio.observacoes }}</p>
+    </div>
+    {% endif %}
+    
+    <!-- Rodapé -->
+    <div class="footer">
+        <p>Romaneio gerado pelo Sistema Estelar</p>
+        <p>Data de emissão: {% now "d/m/Y" %}</p>
+    </div>
 </body>
-</html>
+</html> 
