@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}Preparar Romaneio Genérico{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2><i class="fas fa-route"></i> Emitir Romaneio Genérico de Viagem</h2>
+            
+            <form method="post">
+                {% csrf_token %}
+
+                {# Erros gerais do formulário #}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {# Seção de Dados do Romaneio #}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-file-alt"></i> Dados do Romaneio Genérico
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-5 mb-3">
+                                <label for="{{ form.cliente.id_for_label }}" class="form-label">
+                                    <i class="fas fa-user"></i> {{ form.cliente.label }}:
+                                </label>
+                                {{ form.cliente }}
+                                {% if form.cliente.errors %}<div class="text-danger">{{ form.cliente.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.data_romaneio.id_for_label }}" class="form-label">
+                                    <i class="fas fa-calendar-alt"></i> {{ form.data_romaneio.label }}:
+                                </label>
+                                {{ form.data_romaneio }}
+                                {% if form.data_romaneio.errors %}<div class="text-danger">{{ form.data_romaneio.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-hashtag"></i> Número do Romaneio Genérico:
+                                </label>
+                                <p class="form-control-plaintext">{{ provisional_codigo }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# Seção de Notas Fiscais #}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-file-invoice"></i> Notas Fiscais Associadas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div id="notas-fiscais-container" class="notes-checkbox-container"> 
+                                <p class="text-info">Selecione um cliente para carregar as notas fiscais.</p>
+                            </div>
+                            {% if form.notas_fiscais.errors %}
+                                <div class="text-danger">{{ form.notas_fiscais.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        {# Resumo dos Totais #}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-weight-hanging"></i> Peso Total (kg):
+                                </label>
+                                <span id="total-peso" class="form-control-plaintext">0,00 kg</span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-dollar-sign"></i> Valor Total (R$):
+                                </label>
+                                <span id="total-valor" class="form-control-plaintext">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# Seção de Motorista e Veículo #}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-user-tie"></i> Motorista e Veículo
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.motorista.id_for_label }}" class="form-label">
+                                    <i class="fas fa-user"></i> {{ form.motorista.label }}:
+                                </label>
+                                {{ form.motorista }}
+                                {% if form.motorista.errors %}<div class="text-danger">{{ form.motorista.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.veiculo_principal.id_for_label }}" class="form-label">
+                                    <i class="fas fa-truck"></i> {{ form.veiculo_principal.label }}:
+                                </label>
+                                {{ form.veiculo_principal }}
+                                {% if form.veiculo_principal.errors %}<div class="text-danger">{{ form.veiculo_principal.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.reboque_1.id_for_label }}" class="form-label">
+                                    <i class="fas fa-truck-moving"></i> {{ form.reboque_1.label }}:
+                                </label>
+                                {{ form.reboque_1 }}
+                                {% if form.reboque_1.errors %}<div class="text-danger">{{ form.reboque_1.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.reboque_2.id_for_label }}" class="form-label">
+                                    <i class="fas fa-truck-moving"></i> {{ form.reboque_2.label }}:
+                                </label>
+                                {{ form.reboque_2 }}
+                                {% if form.reboque_2.errors %}<div class="text-danger">{{ form.reboque_2.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# Botões de ação #}
+                <div class="d-flex justify-content-end">
+                    <button type="submit" name="salvar" class="btn btn-secondary me-2">
+                        <i class="fas fa-save"></i> Salvar Romaneio Genérico
+                    </button>
+                    <button type="submit" name="emitir" class="btn btn-success">
+                        <i class="fas fa-paper-plane"></i> Emitir Romaneio Genérico
+                    </button>
+                    <a href="{% url 'notas:listar_romaneios' %}" class="btn btn-danger">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const clienteSelect = document.getElementById('id_cliente');
+            const notasFiscaisDiv = document.getElementById('notas-fiscais-container');
+            const pesoTotalSpan = document.getElementById('total-peso');
+            const valorTotalSpan = document.getElementById('total-valor');
+
+            // allLoadedNotesData é global (definido em base.html)
+            // updateTotals, loadNotasFiscais são globais (definidos em base.html)
+
+            if (clienteSelect) {
+                clienteSelect.addEventListener('change', function() {
+                    // Ao mudar o cliente, chamamos loadNotasFiscais passando os elementos de exibição
+                    loadNotasFiscais(this.value, notasFiscaisDiv, pesoTotalSpan, valorTotalSpan); 
+                });
+                // Chamar na carga inicial se já houver um cliente selecionado (ex: em caso de erro de validação no POST)
+                if (clienteSelect.value) {
+                    loadNotasFiscais(clienteSelect.value, notasFiscaisDiv, pesoTotalSpan, valorTotalSpan); 
+                } else {
+                    // Inicializa os totais como zero se nenhum cliente selecionado
+                    if (pesoTotalSpan) pesoTotalSpan.textContent = '0,00 kg';
+                    if (valorTotalSpan) valorTotalSpan.textContent = 'R$ 0,00';
+                }
+            }
+        });
+    </script>
+</div>
+{% endblock %} 

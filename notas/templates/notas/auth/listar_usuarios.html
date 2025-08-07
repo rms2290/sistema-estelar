@@ -1,107 +1,73 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Gerenciar Usuários - Sistema Estelar{% endblock %}
+{% block title %}Listar Usuários - Sistema Estelar{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2><i class="fas fa-users"></i> Gerenciar Usuários</h2>
-                <a href="{% url 'notas:cadastrar_usuario' %}" class="btn btn-primary">
-                    <i class="fas fa-user-plus"></i> Cadastrar Novo Usuário
-                </a>
-            </div>
-            
             <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-list"></i> Lista de Usuários
-                    </h5>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">
+                        <i class="fas fa-users"></i> Usuários do Sistema
+                    </h3>
+                    <a href="{% url 'notas:cadastrar_usuario' %}" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i> Novo Usuário
+                    </a>
                 </div>
                 <div class="card-body">
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-
-                    {% if usuarios %}
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i> 
-                            Total de <strong>{{ usuarios.count }}</strong> usuário(s) cadastrado(s).
-                        </div>
-
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover usuarios-table">
-                                <thead>
-                                    <tr>
-                                        <th class="col-username">Nome de Usuário</th>
-                                        <th class="col-fullname">Nome Completo</th>
-                                        <th class="col-tipo">Tipo</th>
-                                        <th class="col-cliente">Cliente Vinculado</th>
-                                        <th class="col-status">Status</th>
-                                        <th class="col-date">Data de Cadastro</th>
-                                        <th class="col-actions">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for usuario in usuarios %}
-                                        <tr>
-                                            <td class="col-username">
-                                                <strong>{{ usuario.username }}</strong>
-                                            </td>
-                                            <td class="col-fullname">{{ usuario.get_full_name }}</td>
-                                            <td class="col-tipo">
-                                                <span class="badge badge-sm
-                                                    {% if usuario.tipo_usuario == 'admin' %}bg-admin
-                                                    {% elif usuario.tipo_usuario == 'funcionario' %}bg-funcionario
-                                                    {% else %}bg-cliente{% endif %}">
-                                                    {{ usuario.get_tipo_usuario_display|upper }}
-                                                </span>
-                                            </td>
-                                            <td class="col-cliente">
-                                                {% if usuario.cliente %}
-                                                    <span class="cliente-nome">{{ usuario.cliente.razao_social }}</span>
-                                                {% else %}
-                                                    <span class="text-muted">N/A</span>
-                                                {% endif %}
-                                            </td>
-                                            <td class="col-status">
-                                                <span class="badge badge-sm {% if usuario.is_active %}bg-ativo{% else %}bg-inativo{% endif %}">
-                                                    {% if usuario.is_active %}ATIVO{% else %}INATIVO{% endif %}
-                                                </span>
-                                            </td>
-                                            <td class="col-date">{{ usuario.date_joined|date:"d/m/Y H:i" }}</td>
-                                            <td class="col-actions">
-                                                <div class="btn-group" role="group">
-                                                    <a href="{% url 'notas:editar_usuario' usuario.pk %}" 
-                                                       class="btn btn-warning btn-sm" title="Editar">
-                                                        <i class="fas fa-edit"></i>
-                                                    </a>
-                                                    {% if usuario != user %}
-                                                        <a href="{% url 'notas:excluir_usuario' usuario.pk %}" 
-                                                           class="btn btn-danger btn-sm" title="Excluir">
-                                                            <i class="fas fa-trash"></i>
-                                                        </a>
-                                                    {% endif %}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle"></i> 
-                            Nenhum usuário cadastrado no sistema.
-                        </div>
-                    {% endif %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Nome Completo</th>
+                                    <th>Email</th>
+                                    <th>Tipo</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for usuario in usuarios %}
+                                <tr>
+                                    <td>{{ usuario.username }}</td>
+                                    <td>{{ usuario.get_full_name|default:"-" }}</td>
+                                    <td>{{ usuario.email|default:"-" }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ usuario.get_tipo_display|lower }}">
+                                            {{ usuario.get_tipo_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if usuario.is_active %}
+                                            <span class="badge bg-success">Ativo</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inativo</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'notas:editar_usuario' usuario.pk %}" class="btn btn-sm btn-outline-primary" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% if usuario != user %}
+                                            <a href="{% url 'notas:excluir_usuario' usuario.pk %}" class="btn btn-sm btn-outline-danger" title="Excluir">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center">Nenhum usuário encontrado.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

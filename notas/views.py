@@ -82,6 +82,28 @@ def get_next_romaneio_codigo():
 
     return f"ROM-{ano:04d}-{mes:02d}-{next_sequence:04d}"
 
+def get_next_romaneio_generico_codigo():
+    """Gera o próximo código sequencial de romaneio genérico no formato ROM-GEN-AAAA-MM-NNNN, começando de 100."""
+    ano = timezone.now().year
+    mes = timezone.now().month
+    
+    last_romaneio = RomaneioViagem.objects.filter(
+        data_emissao__year=ano,
+        data_emissao__month=mes,
+        codigo__startswith='ROM-GEN'
+    ).order_by('-codigo').first()
+
+    next_sequence = 100  # Começa do 100
+    if last_romaneio and last_romaneio.codigo:
+        try:
+            parts = last_romaneio.codigo.split('-')
+            if len(parts) == 5 and parts[0] == 'ROM' and parts[1] == 'GEN' and int(parts[2]) == ano and int(parts[3]) == mes:
+                next_sequence = int(parts[4]) + 1
+        except (ValueError, IndexError):
+            pass
+
+    return f"ROM-GEN-{ano:04d}-{mes:02d}-{next_sequence:04d}"
+
 # --------------------------------------------------------------------------------------
 # Views para Cliente
 # --------------------------------------------------------------------------------------
@@ -445,6 +467,77 @@ def adicionar_romaneio(request):
         'provisional_codigo': provisional_codigo,
     }
     return render(request, 'notas/adicionar_romaneio.html', context)
+
+def adicionar_romaneio_generico(request):
+    if request.method == 'POST':
+        form = RomaneioViagemForm(request.POST)
+        
+        # Configurar o queryset das notas fiscais baseado no cliente selecionado
+        cliente_id = request.POST.get('cliente')
+        if cliente_id:
+            try:
+                cliente_obj = Cliente.objects.get(pk=cliente_id)
+                form.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
+                    cliente=cliente_obj, status='Depósito' 
+                ).order_by('nota')
+            except Cliente.DoesNotExist:
+                form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
+        else:
+            form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
+
+        if form.is_valid():
+            romaneio = form.save(commit=False)
+            
+            romaneio.codigo = get_next_romaneio_generico_codigo()
+            romaneio.data_emissao = form.cleaned_data['data_romaneio']
+            
+            if 'emitir' in request.POST:
+                romaneio.status = 'Emitido'
+            else: # Clicou em 'salvar' ou outro botão
+                romaneio.status = 'Salvo'
+
+            romaneio.save()
+            form.save_m2m() # Salva a relação ManyToMany
+
+            # Atualizar o status das notas fiscais associadas
+            for nota_fiscal in romaneio.notas_fiscais.all():
+                if romaneio.status == 'Emitido':
+                    nota_fiscal.status = 'Enviada'
+                else:
+                    nota_fiscal.status = 'Depósito'
+                nota_fiscal.save()
+
+            messages.success(request, f'Romaneio Genérico {romaneio.codigo} ({romaneio.status}) salvo com sucesso!')
+            
+            # >>> MUDANÇA AQUI: Redirecionar para a tela de visualização se Emitido <<<
+            if romaneio.status == 'Emitido':
+                return redirect('notas:visualizar_romaneio_paisagem', pk=romaneio.pk)
+            else: # Salvo
+                # Redirecionar para detalhes (para poder continuar editando) ou para listar
+                return redirect('notas:detalhes_romaneio', pk=romaneio.pk) # Sugiro detalhes para salvo
+        else:
+            # Se o formulário não for válido, reconfigurar o queryset para manter as seleções
+            if cliente_id:
+                try:
+                    cliente_obj = Cliente.objects.get(pk=cliente_id)
+                    form.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
+                        cliente=cliente_obj, status='Depósito' 
+                    ).order_by('nota')
+                except Cliente.DoesNotExist:
+                    form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
+            else:
+                form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
+            
+            messages.error(request, 'Houve um erro ao emitir/salvar o romaneio genérico. Verifique os campos.')
+    else:
+        form = RomaneioViagemForm()
+        provisional_codigo = get_next_romaneio_generico_codigo()
+
+    context = {
+        'form': form,
+        'provisional_codigo': provisional_codigo,
+    }
+    return render(request, 'notas/adicionar_romaneio_generico.html', context)
 
 def editar_romaneio(request, pk):
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
@@ -1150,6 +1243,30 @@ def totalizador_por_estado(request):
     return render(request, 'notas/totalizador_por_estado.html', context)
 
 @login_required
+@user_passes_test(is_admin)
+def totalizador_por_cliente(request):
+    """View para o relatório de totalizador por cliente."""
+    return render(request, 'notas/relatorios/totalizador_por_cliente.html')
+
+@login_required
+@user_passes_test(is_admin)
+def fechamento_frete(request):
+    """View para o relatório de fechamento de frete."""
+    return render(request, 'notas/relatorios/fechamento_frete.html')
+
+@login_required
+@user_passes_test(is_admin)
+def cobranca_mensal(request):
+    """View para o relatório de cobrança mensal."""
+    return render(request, 'notas/relatorios/cobranca_mensal.html')
+
+@login_required
+@user_passes_test(is_admin)
+def cobranca_carregamento(request):
+    """View para o relatório de cobrança de carregamento."""
+    return render(request, 'notas/relatorios/cobranca_carregamento.html')
+
+@login_required
 def dashboard(request):
     """Dashboard principal do sistema"""
     context = {
@@ -1157,3 +1274,210 @@ def dashboard(request):
         'user': request.user,
     }
     return render(request, 'notas/dashboard.html', context)
+
+@login_required
+def listar_notas_fiscais(request):
+    """Lista todas as notas fiscais com filtros de busca"""
+    search_form = NotaFiscalSearchForm(request.GET)
+    notas_fiscais = NotaFiscal.objects.none()
+    search_performed = bool(request.GET)
+
+    if search_performed and search_form.is_valid():
+        queryset = NotaFiscal.objects.all()
+        nota = search_form.cleaned_data.get('nota')
+        cliente = search_form.cleaned_data.get('cliente')
+        data = search_form.cleaned_data.get('data')
+        
+        if nota:
+            queryset = queryset.filter(nota__icontains=nota)
+        if cliente:
+            queryset = queryset.filter(cliente=cliente)
+        if data:
+            queryset = queryset.filter(data=data)
+        
+        notas_fiscais = queryset.order_by('-data', '-nota')
+    
+    context = {
+        'notas_fiscais': notas_fiscais,
+        'search_form': search_form,
+        'search_performed': search_performed,
+    }
+    return render(request, 'notas/listar_notas.html', context)
+
+@login_required
+def listar_clientes(request):
+    """Lista todos os clientes com filtros de busca"""
+    search_form = ClienteSearchForm(request.GET)
+    clientes = Cliente.objects.none()
+    search_performed = bool(request.GET)
+
+    if search_performed and search_form.is_valid():
+        queryset = Cliente.objects.all()
+        razao_social = search_form.cleaned_data.get('razao_social')
+        cnpj = search_form.cleaned_data.get('cnpj')
+        status = search_form.cleaned_data.get('status')
+
+        if razao_social:
+            queryset = queryset.filter(razao_social__icontains=razao_social)
+        if cnpj:
+            queryset = queryset.filter(cnpj__icontains=cnpj)
+        if status:
+            queryset = queryset.filter(status=status)
+        
+        clientes = queryset.order_by('razao_social')
+    
+    context = {
+        'clientes': clientes,
+        'search_form': search_form,
+        'search_performed': search_performed,
+    }
+    return render(request, 'notas/listar_clientes.html', context)
+
+@login_required
+def listar_motoristas(request):
+    """Lista todos os motoristas com filtros de busca"""
+    search_form = MotoristaSearchForm(request.GET)
+    motoristas = Motorista.objects.none()
+    search_performed = bool(request.GET)
+
+    if search_performed and search_form.is_valid():
+        queryset = Motorista.objects.all()
+        nome = search_form.cleaned_data.get('nome')
+        cpf = search_form.cleaned_data.get('cpf')
+
+        if nome:
+            queryset = queryset.filter(nome__icontains=nome)
+        if cpf:
+            queryset = queryset.filter(cpf__icontains=cpf)
+        
+        motoristas = queryset.order_by('nome')
+
+    context = {
+        'motoristas': motoristas,
+        'search_form': search_form,
+        'search_performed': search_performed,
+    }
+    return render(request, 'notas/listar_motoristas.html', context)
+
+@login_required
+def listar_veiculos(request):
+    """Lista todos os veículos com filtros de busca"""
+    search_form = VeiculoSearchForm(request.GET)
+    veiculos = Veiculo.objects.none()
+    search_performed = bool(request.GET)
+
+    if search_performed and search_form.is_valid():
+        queryset = Veiculo.objects.all()
+        placa = search_form.cleaned_data.get('placa')
+        chassi = search_form.cleaned_data.get('chassi')
+        proprietario_nome = search_form.cleaned_data.get('proprietario_nome')
+        tipo_unidade = search_form.cleaned_data.get('tipo_unidade')
+        
+        if placa:
+            queryset = queryset.filter(placa__icontains=placa)
+        if chassi:
+            queryset = queryset.filter(chassi__icontains=chassi)
+        if proprietario_nome:
+            queryset = queryset.filter(proprietario_nome_razao_social__icontains=proprietario_nome)
+        if tipo_unidade:
+            queryset = queryset.filter(tipo_unidade=tipo_unidade)
+        
+        veiculos = queryset.order_by('placa')
+    
+    context = {
+        'veiculos': veiculos,
+        'search_form': search_form,
+        'search_performed': search_performed,
+    }
+    return render(request, 'notas/listar_veiculos.html', context)
+
+@login_required
+def listar_romaneios(request):
+    """Lista todos os romaneios com filtros de busca"""
+    search_form = RomaneioSearchForm(request.GET)
+    romaneios = RomaneioViagem.objects.none()
+    search_performed = bool(request.GET)
+
+    if search_performed and search_form.is_valid():
+        queryset = RomaneioViagem.objects.all()
+        codigo = search_form.cleaned_data.get('codigo')
+        cliente = search_form.cleaned_data.get('cliente')
+        motorista = search_form.cleaned_data.get('motorista')
+        veiculo_principal = search_form.cleaned_data.get('veiculo_principal')
+        status = search_form.cleaned_data.get('status')
+        data_inicio = search_form.cleaned_data.get('data_inicio')
+        data_fim = search_form.cleaned_data.get('data_fim')
+        
+        if codigo:
+            queryset = queryset.filter(codigo__icontains=codigo)
+        if cliente:
+            queryset = queryset.filter(cliente=cliente)
+        if motorista:
+            queryset = queryset.filter(motorista=motorista)
+        if veiculo_principal:
+            queryset = queryset.filter(veiculo_principal=veiculo_principal)
+        if status:
+            queryset = queryset.filter(status=status)
+        if data_inicio:
+            queryset = queryset.filter(data_emissao__date__gte=data_inicio)
+        if data_fim:
+            queryset = queryset.filter(data_emissao__date__lte=data_fim)
+        
+        romaneios = queryset.order_by('-data_emissao', '-codigo')
+    
+    context = {
+        'romaneios': romaneios,
+        'search_form': search_form,
+        'search_performed': search_performed,
+    }
+    return render(request, 'notas/listar_romaneios.html', context)
+
+@login_required
+def pesquisar_mercadorias_deposito(request):
+    """Pesquisa mercadorias em depósito"""
+    search_form = MercadoriaDepositoSearchForm(request.GET)
+    search_performed = bool(request.GET)
+
+    # Inicializar com queryset vazio
+    notas_fiscais = NotaFiscal.objects.none()
+    total_peso = 0
+    total_valor = 0
+    
+    if search_performed and search_form.is_valid():
+        # Buscar notas em depósito apenas quando há pesquisa válida
+        queryset = NotaFiscal.objects.filter(status='Depósito')
+        
+        cliente = search_form.cleaned_data.get('cliente')
+        mercadoria = search_form.cleaned_data.get('mercadoria')
+        fornecedor = search_form.cleaned_data.get('fornecedor')
+        data_inicio = search_form.cleaned_data.get('data_inicio')
+        data_fim = search_form.cleaned_data.get('data_fim')
+        
+        if cliente:
+            queryset = queryset.filter(cliente=cliente)
+        if mercadoria:
+            queryset = queryset.filter(mercadoria__icontains=mercadoria)
+        if fornecedor:
+            queryset = queryset.filter(fornecedor__icontains=fornecedor)
+        if data_inicio:
+            queryset = queryset.filter(data__gte=data_inicio)
+        if data_fim:
+            queryset = queryset.filter(data__lte=data_fim)
+        
+        notas_fiscais = queryset.order_by('data', 'nota')
+        
+        # Calcular totais apenas quando há resultados
+        total_peso = sum(nota.peso for nota in notas_fiscais)
+        total_valor = sum(nota.valor for nota in notas_fiscais)
+    elif search_performed:
+        # Se o formulário não for válido, mostrar mensagem de erro
+        messages.warning(request, f'Erro na validação do formulário: {search_form.errors}.')
+    
+    context = {
+        'mercadorias': notas_fiscais,
+        'search_form': search_form,
+        'search_performed': search_performed,
+        'total_peso': total_peso,
+        'total_valor': total_valor,
+    }
+    return render(request, 'notas/pesquisar_mercadorias_deposito.html', context)

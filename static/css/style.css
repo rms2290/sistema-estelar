@@ -3,12 +3,20 @@
 /* Importação de fontes estilizadas */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Cinzel:wght@400;600&display=swap');
 
-/* Reset básico para evitar scroll desnecessário */
+/* Reset e configurações globais */
 html, body {
-    height: 100%;
-    overflow-x: hidden;
     margin: 0;
     padding: 0;
+    overflow-x: hidden; /* Previne scroll horizontal */
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+    line-height: 1.5;
+    overflow-x: hidden; /* Previne scroll horizontal */
 }
 
 /* Garantir que não haja scroll desnecessário */
@@ -364,6 +372,7 @@ body {
 
 .nav-group-header i {
     transition: transform 0.3s ease;
+    transform: rotate(0deg); /* Garantir que os ícones iniciem na posição correta */
 }
 
 /* Smooth transitions for submenu */
@@ -416,6 +425,8 @@ body {
     position: relative; /* Para posicionamento correto */
     width: calc(100% - 220px); /* Largura considerando o sidebar */
     max-width: calc(100% - 220px); /* Garantir que não ultrapasse a largura disponível */
+    margin-left: 0; /* Garantir que não haja margem esquerda */
+    box-sizing: border-box; /* Garantir que padding não cause overflow */
 }
 
 /* Top Bar (Header) */
@@ -478,7 +489,7 @@ body {
     z-index: 1001;
 }
 
-/* Logo Estelar - Estilo Moderno com Fonte Estilizada */
+/* Logo Estelar - Estilo Simples */
 .top-bar .logo {
     font-size: 1.1rem;
     font-weight: 600;
@@ -487,16 +498,13 @@ body {
     display: flex;
     align-items: center;
     color: #007bff;
-    text-shadow: 0 1px 2px rgba(0, 123, 255, 0.2);
-    transition: all 0.3s ease;
     letter-spacing: 1px;
     text-transform: uppercase;
 }
 
 .top-bar .logo:hover {
-    transform: scale(1.02);
-    text-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
-    letter-spacing: 1.2px;
+    color: #0056b3;
+    text-decoration: none;
 }
 
 
@@ -584,18 +592,32 @@ body {
     .login-logo-container {
         margin-bottom: 15px;
         text-align: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
     
     .login-logo {
         width: 120px;
         height: auto;
+        max-width: 120px;
         filter: drop-shadow(0 2px 4px rgba(0, 123, 255, 0.3));
         transition: all 0.3s ease;
+        display: block;
+        margin: 0 auto;
     }
     
     .login-logo:hover {
         filter: drop-shadow(0 4px 8px rgba(0, 123, 255, 0.5));
         transform: scale(1.05);
+    }
+
+    /* Garantir que a logo seja visível */
+    .login-logo-container img {
+        display: block !important;
+        margin: 0 auto !important;
+        max-width: 120px !important;
+        height: auto !important;
     }
 }
 
@@ -826,11 +848,12 @@ body {
 /* Estilos para mensagens do Django (usando classes Bootstrap alert) */
 .messages .alert {
     margin-bottom: 10px; /* Reduzindo margin */
+    border: none !important; /* Remove todas as bordas */
 }
-.alert-success { background-color: #28a745; border-color: #218838; color: #fff; }
-.alert-danger { background-color: #dc3545; border-color: #c82333; color: #fff; }
-.alert-info { background-color: #17a2b8; border-color: #138496; color: #fff; }
-.alert-warning { background-color: #ffc107; border-color: #e0a800; color: #212529; } /* Texto escuro para warning */
+.alert-success { background-color: #28a745; border: none !important; color: #fff; }
+.alert-danger { background-color: #dc3545; border: none !important; color: #fff; }
+.alert-info { background-color: #17a2b8; border: none !important; color: #fff; }
+.alert-warning { background-color: #ffc107; border: none !important; color: #212529; } /* Texto escuro para warning */
 
 /* Estilos para cards com fundo claro no tema escuro */
 .card.bg-light {
@@ -1232,6 +1255,7 @@ h6 { font-size: 0.9rem !important; }
     padding: 8px 12px; /* Reduzindo padding */
     font-size: 0.85rem; /* Reduzindo tamanho da fonte */
     margin-bottom: 10px; /* Reduzindo margin */
+    border: none !important; /* Remove todas as bordas */
 }
 
 /* Reduzindo tamanhos de dropdowns */
@@ -1304,7 +1328,7 @@ h6 { font-size: 0.9rem !important; }
 /* Ajustes para responsividade */
 @media (max-width: 768px) {
     body {
-        font-size: 13px; /* Reduzindo ainda mais em telas menores */
+        font-size: 14px;
     }
     
     .sidebar {
@@ -1315,6 +1339,10 @@ h6 { font-size: 0.9rem !important; }
     .main-content {
         padding: 10px; /* Reduzindo padding */
         width: calc(100% - 200px); /* Ajustado para a nova largura do sidebar */
+        margin-left: 0; /* Garantir que não haja margem esquerda */
+        max-width: calc(100% - 200px); /* Garantir que não ultrapasse a largura disponível */
+        overflow-x: hidden; /* Previne scroll horizontal */
+        box-sizing: border-box; /* Garantir que padding não cause overflow */
     }
 }
 
@@ -1534,7 +1562,7 @@ body {
     font-size: 0.85rem;
     margin-bottom: 15px;
     border-radius: 6px;
-    border: 1px solid transparent;
+    border: none !important; /* Remove todas as bordas */
 }
 
 /* Padronização de textos */
@@ -1958,6 +1986,11 @@ td .badge.bg-inativo,
     min-height: calc(100vh - 60px);
     background: linear-gradient(135deg, var(--bg-color) 0%, var(--card-bg) 100%);
     padding: 20px;
+    width: 100%;
+    margin-left: 0;
+    overflow-x: hidden; /* Previne scroll horizontal */
+    box-sizing: border-box; /* Garantir que padding não cause overflow */
+    max-width: 100%; /* Garantir que não ultrapasse a largura disponível */
 }
 
 .dashboard-header {

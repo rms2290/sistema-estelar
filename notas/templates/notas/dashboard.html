@@ -53,12 +53,14 @@ body {
     position: relative;
     height: calc(100vh - 60px);
     width: calc(100vw - 220px); /* Ajustado para considerar a largura do sidebar */
-    margin-left: 220px; /* Margem esquerda para compensar o sidebar */
+    margin-left: 0; /* Removendo margem esquerda para alinhar com a linha vermelha */
     overflow: hidden;
     margin-top: 0;
     margin-bottom: 0;
     margin-right: 0;
     padding: 0;
+    box-sizing: border-box; /* Garantir que padding não cause overflow */
+    max-width: calc(100vw - 220px); /* Garantir que não ultrapasse a largura disponível */
 }
 
 .dashboard-background {
@@ -79,11 +81,12 @@ body {
     background-image: 
         linear-gradient(135deg, rgba(26, 26, 46, 0.7) 0%, rgba(22, 33, 62, 0.7) 50%, rgba(15, 52, 96, 0.7) 100%),
         url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><defs><linearGradient id="shelf" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:%232c3e50;stop-opacity:1" /><stop offset="50%" style="stop-color:%2334495e;stop-opacity:1" /><stop offset="100%" style="stop-color:%232c3e50;stop-opacity:1" /></linearGradient><linearGradient id="box" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%23e67e22;stop-opacity:1" /><stop offset="100%" style="stop-color:%23d35400;stop-opacity:1" /></linearGradient><linearGradient id="light" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:%23f39c12;stop-opacity:1" /><stop offset="50%" style="stop-color:%23e67e22;stop-opacity:1" /><stop offset="100%" style="stop-color:%23d35400;stop-opacity:1" /></linearGradient></defs><rect width="800" height="600" fill="%231a1a2e"/><g opacity="0.8"><!-- Floor --><rect x="0" y="500" width="800" height="100" fill="%23344a5e"/><rect x="0" y="500" width="800" height="2" fill="%23ffffff" opacity="0.3"/><rect x="0" y="550" width="800" height="2" fill="%23ffffff" opacity="0.2"/><rect x="0" y="580" width="800" height="2" fill="%23ffffff" opacity="0.1"/><!-- Left Shelves --><rect x="30" y="150" width="200" height="350" fill="url(%23shelf)" stroke="%2334495e" stroke-width="2"/><rect x="30" y="170" width="200" height="8" fill="%2334495e"/><rect x="30" y="220" width="200" height="8" fill="%2334495e"/><rect x="30" y="270" width="200" height="8" fill="%2334495e"/><rect x="30" y="320" width="200" height="8" fill="%2334495e"/><rect x="30" y="370" width="200" height="8" fill="%2334495e"/><!-- Right Shelves --><rect x="570" y="150" width="200" height="350" fill="url(%23shelf)" stroke="%2334495e" stroke-width="2"/><rect x="570" y="170" width="200" height="8" fill="%2334495e"/><rect x="570" y="220" width="200" height="8" fill="%2334495e"/><rect x="570" y="270" width="200" height="8" fill="%2334495e"/><rect x="570" y="320" width="200" height="8" fill="%2334495e"/><rect x="570" y="370" width="200" height="8" fill="%2334495e"/><!-- Center Shelf --><rect x="300" y="200" width="200" height="300" fill="url(%23shelf)" stroke="%2334495e" stroke-width="2"/><rect x="300" y="220" width="200" height="8" fill="%2334495e"/><rect x="300" y="270" width="200" height="8" fill="%2334495e"/><rect x="300" y="320" width="200" height="8" fill="%2334495e"/><rect x="300" y="370" width="200" height="8" fill="%2334495e"/><!-- Boxes on Left Shelves --><rect x="45" y="180" width="30" height="25" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="85" y="180" width="25" height="20" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="120" y="180" width="35" height="30" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="165" y="180" width="20" height="15" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="195" y="180" width="30" height="25" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><!-- Boxes on Right Shelves --><rect x="585" y="180" width="30" height="25" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="625" y="180" width="25" height="20" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="660" y="180" width="35" height="30" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="705" y="180" width="20" height="15" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="735" y="180" width="30" height="25" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><!-- Boxes on Center Shelf --><rect x="315" y="230" width="30" height="25" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="355" y="230" width="25" height="20" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="390" y="230" width="35" height="30" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="435" y="230" width="20" height="15" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><rect x="465" y="230" width="30" height="25" fill="url(%23box)" stroke="%23c0392b" stroke-width="1"/><!-- Industrial Lights --><circle cx="400" cy="100" r="20" fill="%23f39c12" opacity="0.8"/><circle cx="400" cy="100" r="12" fill="%23ffffff" opacity="0.9"/><circle cx="400" cy="100" r="6" fill="%23f39c12" opacity="1"/><circle cx="250" cy="120" r="15" fill="%23f39c12" opacity="0.8"/><circle cx="250" cy="120" r="9" fill="%23ffffff" opacity="0.9"/><circle cx="250" cy="120" r="4" fill="%23f39c12" opacity="1"/><circle cx="550" cy="120" r="15" fill="%23f39c12" opacity="0.8"/><circle cx="550" cy="120" r="9" fill="%23ffffff" opacity="0.9"/><circle cx="550" cy="120" r="4" fill="%23f39c12" opacity="1"/><!-- Light Beams --><path d="M 400 120 L 250 500 L 550 500 Z" fill="%23f39c12" opacity="0.1"/><path d="M 250 140 L 150 500 L 350 500 Z" fill="%23f39c12" opacity="0.1"/><path d="M 550 140 L 450 500 L 650 500 Z" fill="%23f39c12" opacity="0.1"/><!-- Ceiling Structure --><rect x="0" y="0" width="800" height="80" fill="%232c3e50"/><rect x="0" y="15" width="800" height="2" fill="%23ffffff" opacity="0.3"/><rect x="0" y="30" width="800" height="2" fill="%23ffffff" opacity="0.2"/><rect x="0" y="45" width="800" height="2" fill="%23ffffff" opacity="0.1"/><rect x="0" y="60" width="800" height="2" fill="%23ffffff" opacity="0.1"/></g></svg>');
-    background-size: contain;
+    background-size: 80% auto; /* Reduzindo o tamanho da imagem para 80% da largura */
     background-position: center;
     background-repeat: no-repeat;
     max-width: 100%;
     max-height: 100%;
+    overflow: hidden; /* Garantir que não haja overflow */
 }
 
 .background-overlay {
@@ -299,6 +302,8 @@ body {
         width: 100vw;
         margin-left: 0;
         height: calc(100vh - 60px);
+        max-width: 100vw; /* Garantir que não ultrapasse a largura da viewport */
+        overflow-x: hidden; /* Previne scroll horizontal */
     }
     
     .welcome-message {
@@ -315,6 +320,8 @@ body {
         width: 100vw;
         margin-left: 0;
         height: calc(100vh - 60px);
+        max-width: 100vw; /* Garantir que não ultrapasse a largura da viewport */
+        overflow-x: hidden; /* Previne scroll horizontal */
     }
     
     .welcome-message {
@@ -324,6 +331,12 @@ body {
     .warehouse-elements {
         opacity: 0.3;
     }
+}
+
+/* Ajuste para quando o sidebar está colapsado */
+.sidebar.collapsed + .main-content .dashboard-container {
+    width: 100vw;
+    margin-left: 0;
 }
 
 /* Garantir que não haja overflow horizontal */

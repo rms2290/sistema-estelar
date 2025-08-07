@@ -39,6 +39,7 @@ urlpatterns = [
 # Novas URLs para Romaneio
     path('romaneios/', views.listar_romaneios, name='listar_romaneios'),
     path('romaneios/adicionar/', views.adicionar_romaneio, name='adicionar_romaneio'),
+    path('romaneios/generico/adicionar/', views.adicionar_romaneio_generico, name='adicionar_romaneio_generico'),
     path('romaneios/editar/<int:pk>/', views.editar_romaneio, name='editar_romaneio'),
     path('romaneios/excluir/<int:pk>/', views.excluir_romaneio, name='excluir_romaneio'),
     path('romaneios/<int:pk>/detalhes/', views.detalhes_romaneio, name='detalhes_romaneio'),
@@ -74,5 +75,12 @@ urlpatterns = [
     
     # URL para Totalizador por Estado
     path('totalizador-por-estado/', views.totalizador_por_estado, name='totalizador_por_estado'),
+    
+    # URLs para novos relatórios
+    path('relatorios/totalizador-por-cliente/', views.totalizador_por_cliente, name='totalizador_por_cliente'),
+    path('relatorios/fechamento-frete/', views.fechamento_frete, name='fechamento_frete'),
+    path('relatorios/cobranca-mensal/', views.cobranca_mensal, name='cobranca_mensal'),
+    path('relatorios/cobranca-carregamento/', views.cobranca_carregamento, name='cobranca_carregamento'),
+    
     path('api/notas-fiscais/<int:cliente_id>/', views.load_notas_fiscais_para_romaneio, name='api_notas_fiscais_para_romaneio'),
 ]

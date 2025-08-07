@@ -20,7 +20,7 @@
         
                                 <!-- Logo Centralizado -->
                         <div class="logo-container">
-                            <span class="logo">Agência Estelar</span>
+                            <a href="{% url 'notas:dashboard' %}" class="logo">Agência Estelar</a>
                         </div>
         
         <!-- Área do Usuário -->
@@ -153,6 +153,9 @@
                             <li><a href="{% url 'notas:adicionar_romaneio' %}">
                                 <i class="fas fa-plus"></i> Preparar Romaneio
                             </a></li>
+                            <li><a href="{% url 'notas:adicionar_romaneio_generico' %}">
+                                <i class="fas fa-plus-circle"></i> Preparar Romaneio Genérico
+                            </a></li>
                         </ul>
                     </li>
                     
@@ -173,6 +176,18 @@
                         <ul class="nav-submenu">
                             <li><a href="{% url 'notas:totalizador_por_estado' %}">
                                 <i class="fas fa-map-marked-alt"></i> Totalizador por Estado
+                            </a></li>
+                            <li><a href="{% url 'notas:totalizador_por_cliente' %}">
+                                <i class="fas fa-chart-pie"></i> Totalizador por Cliente
+                            </a></li>
+                            <li><a href="{% url 'notas:fechamento_frete' %}">
+                                <i class="fas fa-file-invoice-dollar"></i> Fechamento de Frete
+                            </a></li>
+                            <li><a href="{% url 'notas:cobranca_mensal' %}">
+                                <i class="fas fa-calendar-alt"></i> Cobrança Mensal
+                            </a></li>
+                            <li><a href="{% url 'notas:cobranca_carregamento' %}">
+                                <i class="fas fa-truck-loading"></i> Cobrança Carregamento
                             </a></li>
                             <li><a href="{% url 'notas:listar_tabela_seguros' %}">
                                 <i class="fas fa-shield-alt"></i> Tabela de Seguros
@@ -292,6 +307,12 @@
                  
                  // Start all groups collapsed by default
                  header.classList.add('collapsed');
+                 
+                 // Hide all submenus by default
+                 const submenu = header.nextElementSibling;
+                 if (submenu && submenu.classList.contains('nav-submenu')) {
+                     submenu.style.display = 'none';
+                 }
              });
              
              // Highlight current page in menu and expand only the relevant group
