@@ -3,43 +3,43 @@ from notas.models import TipoVeiculo
 
 
 class Command(BaseCommand):
-    help = 'Popula os tipos de veículos padrão no sistema'
+    help = 'Popula a tabela TipoVeiculo com os tipos padrão'
 
     def handle(self, *args, **options):
-        tipos_veiculos = [
+        tipos_padrao = [
             {
                 'nome': 'Carro',
-                'descricao': 'Veículo de passeio para transporte de pequenas cargas',
+                'descricao': 'Veículo de passeio com até 8 lugares',
                 'ativo': True
             },
             {
                 'nome': 'Van',
-                'descricao': 'Veículo utilitário para transporte de cargas médias',
+                'descricao': 'Veículo utilitário para transporte de passageiros',
                 'ativo': True
             },
             {
                 'nome': 'Caminhão',
-                'descricao': 'Veículo de carga para transporte de grandes volumes',
+                'descricao': 'Veículo de carga com capacidade superior a 3.500 kg',
                 'ativo': True
             },
             {
                 'nome': 'Cavalo',
-                'descricao': 'Caminhão trator para acoplar reboques e semi-reboques',
+                'descricao': 'Caminhão trator para reboques',
                 'ativo': True
             },
             {
                 'nome': 'Reboque',
-                'descricao': 'Unidade de carga acoplada ao caminhão trator',
+                'descricao': 'Carreta para transporte de cargas',
                 'ativo': True
             },
             {
                 'nome': 'Semi-reboque',
-                'descricao': 'Unidade de carga semi-acoplada ao caminhão trator',
+                'descricao': 'Carreta semi-reboque para transporte de cargas',
                 'ativo': True
-            }
+            },
         ]
 
-        for tipo in tipos_veiculos:
+        for tipo in tipos_padrao:
             tipo_obj, created = TipoVeiculo.objects.get_or_create(
                 nome=tipo['nome'],
                 defaults={
@@ -58,5 +58,5 @@ class Command(BaseCommand):
                 )
 
         self.stdout.write(
-            self.style.SUCCESS('Tipos de veículos populados com sucesso!')
+            self.style.SUCCESS('População de tipos de veículos concluída!')
         ) 
