@@ -272,25 +272,25 @@ class MotoristaForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_tipo_composicao_motorista_select'}) # ID para JS
     )
     veiculo_principal = forms.ModelChoiceField(
-        queryset=Veiculo.objects.filter(tipo_unidade__in=['Carro', 'Van', 'Truck']).order_by('placa'),
+        queryset=Veiculo.objects.all().order_by('placa'),  # Inicialmente todos os veículos
         label='Veículo Principal (Placa 1)',
         required=False,
         empty_label="--- Selecione o Veículo Principal ---",
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_veiculo_principal_select'})
     )
     reboque_1 = forms.ModelChoiceField(
-        queryset=Veiculo.objects.filter(tipo_unidade__in=['REBOQUE', 'SEMI-REBOQUE']).order_by('placa'), # Filtrar por tipo de unidade
+        queryset=Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa'), # Filtrar por tipo de unidade
         label='Reboque 1 (Placa 2)',
         required=False,
         empty_label="--- Selecione o Reboque 1 ---",
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_reboque_1_select'})
     )
     reboque_2 = forms.ModelChoiceField(
-        queryset=Veiculo.objects.filter(tipo_unidade__in=['REBOQUE', 'SEMI-REBOQUE']).order_by('placa'), # Filtrar por tipo de unidade
+        queryset=Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa'), # Filtrar por tipo de unidade
         label='Reboque 2 (Placa 3)',
         required=False,
         empty_label="--- Selecione o Reboque 2 ---",
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_reboque_2_select'})
     )
     
     # Sobrescrever campos de texto para uppercase
@@ -375,6 +375,23 @@ class MotoristaForm(forms.ModelForm):
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control'})
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Definir os filtros de veículos baseados no tipo de composição
+        self.fields['veiculo_principal'].queryset = Veiculo.objects.all().order_by('placa')
+        
+        # Se temos uma instância (edição), filtrar baseado no tipo de composição atual
+        if self.instance and self.instance.pk:
+            tipo_composicao = self.instance.tipo_composicao_motorista
+            if tipo_composicao in ['Carro']:
+                self.fields['veiculo_principal'].queryset = Veiculo.objects.filter(tipo_unidade='Carro').order_by('placa')
+            elif tipo_composicao in ['Van']:
+                self.fields['veiculo_principal'].queryset = Veiculo.objects.filter(tipo_unidade='Van').order_by('placa')
+            elif tipo_composicao in ['Caminhão']:
+                self.fields['veiculo_principal'].queryset = Veiculo.objects.filter(tipo_unidade='Caminhão').order_by('placa')
+            elif tipo_composicao in ['Carreta', 'Bitrem']:
+                self.fields['veiculo_principal'].queryset = Veiculo.objects.filter(tipo_unidade='Cavalo').order_by('placa')
 
     class Meta:
         model = Motorista
@@ -836,7 +853,7 @@ class RomaneioViagemForm(forms.ModelForm):
 
     # Composição veicular
     veiculo_principal = forms.ModelChoiceField(
-        queryset=Veiculo.objects.filter(tipo_unidade__in=['Carro', 'Van', 'Truck']).order_by('placa'),
+        queryset=Veiculo.objects.filter(tipo_unidade__in=['Carro', 'Van', 'Caminhão', 'Cavalo']).order_by('placa'),
         label='Veículo Principal',
         required=True,
         empty_label="--- Selecione o veículo principal ---",
@@ -844,7 +861,7 @@ class RomaneioViagemForm(forms.ModelForm):
     )
     
     reboque_1 = forms.ModelChoiceField(
-        queryset=Veiculo.objects.filter(tipo_unidade__in=['REBOQUE', 'SEMI-REBOQUE']).order_by('placa'),
+        queryset=Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa'),
         label='Reboque 1 (Opcional)',
         required=False,
         empty_label="--- Selecione o reboque 1 ---",
@@ -852,7 +869,7 @@ class RomaneioViagemForm(forms.ModelForm):
     )
     
     reboque_2 = forms.ModelChoiceField(
-        queryset=Veiculo.objects.filter(tipo_unidade__in=['REBOQUE', 'SEMI-REBOQUE']).order_by('placa'),
+        queryset=Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa'),
         label='Reboque 2 (Opcional)',
         required=False,
         empty_label="--- Selecione o reboque 2 ---",
@@ -870,9 +887,9 @@ class RomaneioViagemForm(forms.ModelForm):
         # Querysets para ModelChoiceFields
         self.fields['cliente'].queryset = Cliente.objects.filter(status='Ativo').order_by('razao_social')
         self.fields['motorista'].queryset = Motorista.objects.all().order_by('nome')
-        self.fields['veiculo_principal'].queryset = Veiculo.objects.filter(tipo_unidade__in=['Carro', 'Van', 'Truck']).order_by('placa')
-        self.fields['reboque_1'].queryset = Veiculo.objects.filter(tipo_unidade__in=['REBOQUE', 'SEMI-REBOQUE']).order_by('placa')
-        self.fields['reboque_2'].queryset = Veiculo.objects.filter(tipo_unidade__in=['REBOQUE', 'SEMI-REBOQUE']).order_by('placa')
+        self.fields['veiculo_principal'].queryset = Veiculo.objects.filter(tipo_unidade__in=['Carro', 'Van', 'Caminhão', 'Cavalo']).order_by('placa')
+        self.fields['reboque_1'].queryset = Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa')
+        self.fields['reboque_2'].queryset = Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa')
 
         # Lógica para edição (preencher notas_fiscais e data_romaneio)
         if self.instance and self.instance.pk:

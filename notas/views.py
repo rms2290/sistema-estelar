@@ -1499,3 +1499,40 @@ def pesquisar_mercadorias_deposito(request):
         'total_valor': total_valor,
     }
     return render(request, 'notas/pesquisar_mercadorias_deposito.html', context)
+
+# --------------------------------------------------------------------------------------
+# NOVA VIEW PARA FILTRAR VEÍCULOS BASEADO NO TIPO DE COMPOSIÇÃO
+# --------------------------------------------------------------------------------------
+def filtrar_veiculos_por_composicao(request):
+    """View para filtrar veículos baseado no tipo de composição selecionado"""
+    if request.method == 'GET' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        tipo_composicao = request.GET.get('tipo_composicao')
+        
+        if tipo_composicao:
+            # Definir filtros baseados no tipo de composição
+            if tipo_composicao in ['Carro']:
+                veiculos = Veiculo.objects.filter(tipo_unidade='Carro').order_by('placa')
+            elif tipo_composicao in ['Van']:
+                veiculos = Veiculo.objects.filter(tipo_unidade='Van').order_by('placa')
+            elif tipo_composicao in ['Caminhão']:
+                veiculos = Veiculo.objects.filter(tipo_unidade='Caminhão').order_by('placa')
+            elif tipo_composicao in ['Carreta', 'Bitrem']:
+                veiculos = Veiculo.objects.filter(tipo_unidade='Cavalo').order_by('placa')
+            else:
+                veiculos = Veiculo.objects.all().order_by('placa')
+            
+            # Preparar dados para JSON
+            veiculos_data = []
+            for veiculo in veiculos:
+                veiculos_data.append({
+                    'id': veiculo.id,
+                    'placa': veiculo.placa,
+                    'tipo_unidade': veiculo.tipo_unidade,
+                    'text': f"{veiculo.placa} - {veiculo.tipo_unidade}"
+                })
+            
+            from django.http import JsonResponse
+            return JsonResponse({'veiculos': veiculos_data})
+    
+    from django.http import JsonResponse
+    return JsonResponse({'error': 'Invalid request'}, status=400)

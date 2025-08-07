@@ -35,16 +35,19 @@ ESTADOS_BRASIL = [
 
 # Tipos de composição de motorista
 TIPO_COMPOSICAO_MOTORISTA_CHOICES = [
-    ('Simples', 'Simples (Carro/Van/Truck)'),
-    ('Carreta', 'Carreta (Caminhão Trator + 1 Reboque/Semi-reboque)'),
-    ('Bi-trem', 'Bi-trem (Caminhão Trator + 2 Reboques/Semi-reboques)'),
+    ('Carro', 'Carro'),
+    ('Van', 'Van'),
+    ('Caminhão', 'Caminhão'),
+    ('Carreta', 'Carreta (Cavalo + 1 Reboque/Semi-reboque)'),
+    ('Bitrem', 'Bitrem (Cavalo + 2 Reboques/Semi-reboques)'),
 ]
 
 # Tipos de unidade de veículo
 TIPO_UNIDADE_CHOICES = [
     ('Carro', 'Carro'),
     ('Van', 'Van'),
-    ('Truck', 'Caminhão Trator'),
+    ('Caminhão', 'Caminhão'),
+    ('Cavalo', 'Cavalo'),
     ('Reboque', 'Reboque'),
     ('Semi-reboque', 'Semi-reboque'),
 ]

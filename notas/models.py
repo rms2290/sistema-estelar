@@ -142,14 +142,16 @@ class Motorista(UpperCaseMixin, models.Model):
 
     # >>> NOVOS CAMPOS PARA A COMPOSIÇÃO VEICULAR NO MOTORISTA <<<
     TIPO_COMPOSICAO_MOTORISTA_CHOICES = [
-        ('Simples', 'Simples (Carro/Van/Truck)'),
-        ('Carreta', 'Carreta (Caminhão Trator + 1 Reboque/Semi-reboque)'),
-        ('Bi-trem', 'Bi-trem (Caminhão Trator + 2 Reboques/Semi-reboques)'),
+        ('Carro', 'Carro'),
+        ('Van', 'Van'),
+        ('Caminhão', 'Caminhão'),
+        ('Carreta', 'Carreta (Cavalo + 1 Reboque/Semi-reboque)'),
+        ('Bitrem', 'Bitrem (Cavalo + 2 Reboques/Semi-reboques)'),
     ]
     tipo_composicao_motorista = models.CharField(
         max_length=50,
         choices=TIPO_COMPOSICAO_MOTORISTA_CHOICES,
-        default='Simples',
+        default='Caminhão',
         verbose_name="Tipo de Composição que Dirige"
     )
 
@@ -187,21 +189,64 @@ class Motorista(UpperCaseMixin, models.Model):
         ordering = ['nome']    
 
 # --------------------------------------------------------------------------------------
-# Veiculo
+# Tipos de Veículos
+# --------------------------------------------------------------------------------------
+class TipoVeiculo(models.Model):
+    """
+    Modelo para gerenciar os tipos de veículos disponíveis no sistema
+    """
+    nome = models.CharField(max_length=50, unique=True, verbose_name="Nome do Tipo")
+    descricao = models.TextField(blank=True, null=True, verbose_name="Descrição")
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    
+    def __str__(self):
+        return self.nome
+    
+    class Meta:
+        verbose_name = "Tipo de Veículo"
+        verbose_name_plural = "Tipos de Veículos"
+        ordering = ['nome']
+
+# --------------------------------------------------------------------------------------
+# Placas de Veículos
+# --------------------------------------------------------------------------------------
+class PlacaVeiculo(models.Model):
+    """
+    Modelo para gerenciar as placas dos veículos de forma organizada
+    """
+    placa = models.CharField(max_length=7, unique=True, verbose_name="Placa")
+    estado = models.CharField(max_length=2, blank=True, null=True, verbose_name="Estado (UF)")
+    cidade = models.CharField(max_length=100, blank=True, null=True, verbose_name="Cidade")
+    pais = models.CharField(max_length=50, default='Brasil', verbose_name="País")
+    ativa = models.BooleanField(default=True, verbose_name="Placa Ativa")
+    data_registro = models.DateTimeField(auto_now_add=True, verbose_name="Data de Registro")
+    observacoes = models.TextField(blank=True, null=True, verbose_name="Observações")
+    
+    def __str__(self):
+        return f"{self.placa} - {self.estado or 'N/A'}"
+    
+    class Meta:
+        verbose_name = "Placa de Veículo"
+        verbose_name_plural = "Placas de Veículos"
+        ordering = ['placa']
+
+# --------------------------------------------------------------------------------------
+# Veículos
 # --------------------------------------------------------------------------------------
 class Veiculo(UpperCaseMixin, models.Model):
     # Tipo da UNIDADE de Veículo (para menubar)
     TIPO_UNIDADE_CHOICES = [
         ('Carro', 'Carro'),
         ('Van', 'Van'),
-        ('Truck', 'Caminhão Trator'),
+        ('Caminhão', 'Caminhão'),
+        ('Cavalo', 'Cavalo'),
         ('Reboque', 'Reboque'),
         ('Semi-reboque', 'Semi-reboque'),
     ]
     tipo_unidade = models.CharField(
         max_length=50,
         choices=TIPO_UNIDADE_CHOICES,
-        default='Truck',
+        default='Caminhão',
         verbose_name="Tipo da Unidade de Veículo"
     )
 

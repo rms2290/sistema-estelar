@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from .models import Cliente, NotaFiscal, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, Usuario, TabelaSeguro
+from .models import Cliente, NotaFiscal, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, Usuario, TabelaSeguro, TipoVeiculo, PlacaVeiculo
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
@@ -217,3 +217,34 @@ class TabelaSeguroAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # Não permite deletar registros da tabela de seguros
         return False
+
+@admin.register(TipoVeiculo)
+class TipoVeiculoAdmin(admin.ModelAdmin):
+    list_display = ['nome', 'descricao', 'ativo']
+    list_filter = ['ativo']
+    search_fields = ['nome', 'descricao']
+    list_editable = ['ativo']
+    
+    fieldsets = (
+        ('Informações do Tipo', {
+            'fields': ('nome', 'descricao', 'ativo')
+        }),
+    )
+
+@admin.register(PlacaVeiculo)
+class PlacaVeiculoAdmin(admin.ModelAdmin):
+    list_display = ['placa', 'estado', 'cidade', 'pais', 'ativa', 'data_registro']
+    list_filter = ['ativa', 'estado', 'pais', 'data_registro']
+    search_fields = ['placa', 'estado', 'cidade']
+    list_editable = ['ativa']
+    readonly_fields = ['data_registro']
+    
+    fieldsets = (
+        ('Informações da Placa', {
+            'fields': ('placa', 'estado', 'cidade', 'pais', 'ativa')
+        }),
+        ('Informações do Sistema', {
+            'fields': ('data_registro', 'observacoes'),
+            'classes': ('collapse',)
+        }),
+    )

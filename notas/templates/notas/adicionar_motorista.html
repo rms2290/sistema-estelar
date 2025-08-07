@@ -217,6 +217,42 @@
             const veiculoPrincipalDiv = document.getElementById('veiculo_principal_div');
             const reboque1Div = document.getElementById('reboque_1_div');
             const reboque2Div = document.getElementById('reboque_2_div');
+            const veiculoPrincipalSelect = document.getElementById('id_veiculo_principal_select');
+            const reboque1Select = document.getElementById('id_reboque_1_select');
+            const reboque2Select = document.getElementById('id_reboque_2_select');
+
+            // Função para filtrar veículos via AJAX
+            function filterVehiclesAjax() {
+                const selectedType = tipoComposicaoSelect.value;
+                
+                if (!selectedType) return;
+                
+                // Fazer requisição AJAX para filtrar veículos
+                fetch(`{% url 'notas:ajax_filtrar_veiculos' %}?tipo_composicao=${encodeURIComponent(selectedType)}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.veiculos) {
+                        // Limpar opções atuais
+                        veiculoPrincipalSelect.innerHTML = '<option value="">--- Selecione o Veículo Principal ---</option>';
+                        
+                        // Adicionar novas opções filtradas
+                        data.veiculos.forEach(veiculo => {
+                            const option = document.createElement('option');
+                            option.value = veiculo.id;
+                            option.textContent = veiculo.text;
+                            veiculoPrincipalSelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao filtrar veículos:', error);
+                });
+            }
 
             function toggleReboques() {
                 const selectedType = tipoComposicaoSelect.value;
@@ -226,13 +262,30 @@
                 reboque2Div.classList.add('d-none');
                 
                 // Show/hide based on selected type
-                if (selectedType === 'Carreta') {
+                if (selectedType === 'Carro') {
+                    // Carro: apenas veículo principal (carro)
+                    reboque1Div.classList.add('d-none');
+                    reboque2Div.classList.add('d-none');
+                } else if (selectedType === 'Van') {
+                    // Van: apenas veículo principal (van)
+                    reboque1Div.classList.add('d-none');
+                    reboque2Div.classList.add('d-none');
+                } else if (selectedType === 'Caminhão') {
+                    // Caminhão: apenas veículo principal (caminhão)
+                    reboque1Div.classList.add('d-none');
+                    reboque2Div.classList.add('d-none');
+                } else if (selectedType === 'Carreta') {
+                    // Carreta: veículo principal (cavalo) + reboque 1
                     reboque1Div.classList.remove('d-none');
-                } else if (selectedType === 'Bi-trem') {
+                    reboque2Div.classList.add('d-none');
+                } else if (selectedType === 'Bitrem') {
+                    // Bitrem: veículo principal (cavalo) + reboque 1 + reboque 2
                     reboque1Div.classList.remove('d-none');
                     reboque2Div.classList.remove('d-none');
                 }
-                // 'Simples', 'Carro', 'Van', 'Truck' show only veiculo_principal (default visible)
+                
+                // Filter vehicles based on composition type
+                filterVehiclesAjax();
             }
 
             // Bind event listener
