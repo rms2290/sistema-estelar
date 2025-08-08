@@ -403,17 +403,41 @@ def editar_veiculo(request, pk):
         form = VeiculoForm(instance=veiculo)
     return render(request, 'notas/editar_veiculo.html', {'form': form, 'veiculo': veiculo})
 
+@login_required
 def excluir_veiculo(request, pk):
     veiculo = get_object_or_404(Veiculo, pk=pk)
+    
+    # Verificar se o usuário é administrador
+    if not is_admin(request.user):
+        messages.error(request, 'Apenas administradores podem excluir veículos cadastrados.')
+        return redirect('notas:listar_veiculos')
+    
     if request.method == 'POST':
         try:
-            for romaneio in veiculo.romaneios_veiculo.all():
-                romaneio.veiculo = None
-                romaneio.save()
+            # Verificar se o veículo está sendo usado em romaneios
+            romaneios_principal = veiculo.romaneios_veiculo_principal.all()
+            romaneios_reboque1 = veiculo.romaneios_reboque_1.all()
+            romaneios_reboque2 = veiculo.romaneios_reboque_2.all()
+            
+            total_romaneios = romaneios_principal.count() + romaneios_reboque1.count() + romaneios_reboque2.count()
+            
+            if total_romaneios > 0:
+                # Desvincular o veículo dos romaneios
+                for romaneio in romaneios_principal:
+                    romaneio.veiculo_principal = None
+                    romaneio.save()
+                for romaneio in romaneios_reboque1:
+                    romaneio.reboque_1 = None
+                    romaneio.save()
+                for romaneio in romaneios_reboque2:
+                    romaneio.reboque_2 = None
+                    romaneio.save()
+                messages.warning(request, f'Veículo desvinculado de {total_romaneios} romaneio(s) antes da exclusão.')
+            
             veiculo.delete()
             messages.success(request, 'Unidade de Veículo excluída com sucesso!')
         except Exception as e:
-            messages.error(request, f'Não foi possível excluir o veículo: {e}')
+            messages.error(request, f'Não foi possível excluir o veículo: {str(e)}')
         return redirect('notas:listar_veiculos')
     return render(request, 'notas/confirmar_exclusao_veiculo.html', {'veiculo': veiculo})
 
@@ -679,7 +703,7 @@ def detalhes_romaneio(request, pk):
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
     
     # Verificar se o usuário tem permissão para ver este romaneio
-    if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente:
+    if request.user.tipo_usuario == 'cliente' and request.user.cliente:
         # Cliente só pode ver romaneios que contêm suas notas fiscais
         if not romaneio.notas_fiscais.filter(cliente=request.user.cliente).exists():
             messages.error(request, 'Você não tem permissão para acessar este romaneio.')
@@ -930,13 +954,13 @@ def perfil_usuario(request):
 
 # Decorators para verificar permissões
 def is_admin(user):
-    return user.is_authenticated and user.tipo_usuario.upper() == 'ADMIN'
+    return user.is_authenticated and user.tipo_usuario == 'admin'
 
 def is_funcionario(user):
-    return user.is_authenticated and user.tipo_usuario.upper() in ['ADMIN', 'FUNCIONARIO']
+    return user.is_authenticated and user.tipo_usuario in ['admin', 'funcionario']
 
 def is_cliente(user):
-    return user.is_authenticated and user.tipo_usuario.upper() in ['ADMIN', 'FUNCIONARIO', 'CLIENTE']
+    return user.is_authenticated and user.tipo_usuario in ['admin', 'funcionario', 'cliente']
 
 # View para clientes verem apenas suas notas fiscais
 @login_required
@@ -945,7 +969,7 @@ def minhas_notas_fiscais(request):
     # Obter parâmetro de filtro
     status_filter = request.GET.get('status', 'deposito')  # Padrão agora é 'deposito'
     
-    if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente:
+    if request.user.tipo_usuario == 'cliente' and request.user.cliente:
         # Cliente vê apenas suas notas
         notas_fiscais = NotaFiscal.objects.filter(cliente=request.user.cliente)
     else:
@@ -978,7 +1002,7 @@ def imprimir_nota_fiscal(request, pk):
     nota = get_object_or_404(NotaFiscal, pk=pk)
     
     # Verificar se o usuário tem permissão para ver esta nota
-    if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente != nota.cliente:
+    if request.user.tipo_usuario == 'cliente' and request.user.cliente != nota.cliente:
         messages.error(request, 'Você não tem permissão para acessar esta nota fiscal.')
         return redirect('notas:minhas_notas_fiscais')
     
@@ -990,7 +1014,7 @@ def imprimir_nota_fiscal(request, pk):
 @user_passes_test(is_cliente)
 def imprimir_relatorio_deposito(request):
     # Obter apenas notas em depósito do cliente
-    if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente:
+    if request.user.tipo_usuario == 'cliente' and request.user.cliente:
         notas_fiscais = NotaFiscal.objects.filter(
             cliente=request.user.cliente,
             status='Depósito'
@@ -1549,3 +1573,11 @@ def filtrar_veiculos_por_composicao(request):
     
     from django.http import JsonResponse
     return JsonResponse({'error': 'Invalid request'}, status=400)
+
+# --------------------------------------------------------------------------------------
+# NOVA VIEW: Procurar Mercadorias no Depósito (Tela Vazia)
+# --------------------------------------------------------------------------------------
+@login_required
+def procurar_mercadorias_deposito(request):
+    """Tela vazia para procurar mercadorias no depósito - para futuros aprimoramentos"""
+    return render(request, 'notas/procurar_mercadorias_deposito.html')

@@ -85,11 +85,11 @@
                             <span>Notas</span>
                         </div>
                         <ul class="nav-submenu">
-                            <li><a href="{% url 'notas:listar_notas_fiscais' %}">
-                                <i class="fas fa-search"></i> Pesquisar Nota
-                            </a></li>
                             <li><a href="{% url 'notas:adicionar_nota_fiscal' %}">
                                 <i class="fas fa-plus"></i> Adicionar Nota
+                            </a></li>
+                            <li><a href="{% url 'notas:listar_notas_fiscais' %}">
+                                <i class="fas fa-search"></i> Pesquisar Nota
                             </a></li>
                         </ul>
                     </li>
@@ -101,11 +101,11 @@
                             <span>Clientes</span>
                         </div>
                         <ul class="nav-submenu">
-                            <li><a href="{% url 'notas:listar_clientes' %}">
-                                <i class="fas fa-search"></i> Pesquisar Cliente
-                            </a></li>
                             <li><a href="{% url 'notas:adicionar_cliente' %}">
                                 <i class="fas fa-plus"></i> Adicionar Cliente
+                            </a></li>
+                            <li><a href="{% url 'notas:listar_clientes' %}">
+                                <i class="fas fa-search"></i> Pesquisar Cliente
                             </a></li>
                         </ul>
                     </li>
@@ -117,11 +117,11 @@
                             <span>Motoristas</span>
                         </div>
                         <ul class="nav-submenu">
-                            <li><a href="{% url 'notas:listar_motoristas' %}">
-                                <i class="fas fa-search"></i> Pesquisar Motorista
-                            </a></li>
                             <li><a href="{% url 'notas:adicionar_motorista' %}">
                                 <i class="fas fa-plus"></i> Adicionar Motorista
+                            </a></li>
+                            <li><a href="{% url 'notas:listar_motoristas' %}">
+                                <i class="fas fa-search"></i> Pesquisar Motorista
                             </a></li>
                         </ul>
                     </li>
@@ -133,11 +133,11 @@
                             <span>Veículos</span>
                         </div>
                         <ul class="nav-submenu">
-                            <li><a href="{% url 'notas:listar_veiculos' %}">
-                                <i class="fas fa-search"></i> Pesquisar Veículo
-                            </a></li>
                             <li><a href="{% url 'notas:adicionar_veiculo' %}">
                                 <i class="fas fa-plus"></i> Adicionar Veículo
+                            </a></li>
+                            <li><a href="{% url 'notas:listar_veiculos' %}">
+                                <i class="fas fa-search"></i> Pesquisar Veículo
                             </a></li>
                         </ul>
                     </li>
@@ -149,11 +149,11 @@
                             <span>Romaneios</span>
                         </div>
                         <ul class="nav-submenu">
-                            <li><a href="{% url 'notas:listar_romaneios' %}">
-                                <i class="fas fa-search"></i> Pesquisar Romaneio
-                            </a></li>
                             <li><a href="{% url 'notas:adicionar_romaneio' %}">
                                 <i class="fas fa-plus"></i> Preparar Romaneio
+                            </a></li>
+                            <li><a href="{% url 'notas:listar_romaneios' %}">
+                                <i class="fas fa-search"></i> Pesquisar Romaneio
                             </a></li>
                             <li><a href="{% url 'notas:adicionar_romaneio_generico' %}">
                                 <i class="fas fa-plus-circle"></i> Preparar Romaneio Genérico
@@ -162,11 +162,20 @@
                     </li>
                     
                                        <!-- Depósito -->
-                   <li class="nav-item">
-                       <a href="{% url 'notas:pesquisar_mercadorias_deposito' %}">
-                           <i class="fas fa-warehouse"></i> Depósito
-                       </a>
-                   </li>
+                    <li class="nav-group">
+                        <div class="nav-group-header">
+                            <i class="fas fa-warehouse"></i>
+                            <span>Depósito</span>
+                        </div>
+                        <ul class="nav-submenu">
+                            <li><a href="{% url 'notas:pesquisar_mercadorias_deposito' %}">
+                                <i class="fas fa-list"></i> Pesquisar Mercadoria
+                            </a></li>
+                            <li><a href="{% url 'notas:procurar_mercadorias_deposito' %}">
+                                <i class="fas fa-search"></i> Procurar Mercadoria
+                            </a></li>
+                        </ul>
+                    </li>
                     
                     <!-- Relatórios -->
                     {% if user.is_admin %}

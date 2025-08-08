@@ -7,7 +7,6 @@
 html, body {
     margin: 0;
     padding: 0;
-    overflow-x: hidden; /* Previne scroll horizontal */
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
@@ -16,12 +15,8 @@ html, body {
 html {
     font-size: 16px;
     line-height: 1.5;
-    overflow-x: hidden; /* Previne scroll horizontal */
-}
-
-/* Garantir que não haja scroll desnecessário */
-html {
-    overflow: hidden;
+    overflow: hidden; /* Remove scroll do html */
+    height: 100%;
 }
 
 /* Variáveis CSS para Sistema de Temas */
@@ -174,28 +169,9 @@ body::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
 }
 
-/* Garantir que não haja scroll desnecessário */
-html {
-    overflow: hidden !important;
-}
+/* Removido para evitar conflitos com as regras do final do arquivo */
 
-body {
-    overflow: hidden !important;
-}
-
-/* Garantir que o main-content não cause scroll horizontal */
-.main-content {
-    overflow-x: hidden !important;
-    max-width: 100% !important;
-    width: 100% !important;
-}
-
-/* Garantir que o main-wrapper não cause scroll horizontal */
-.main-wrapper {
-    overflow-x: hidden !important;
-    max-width: 100% !important;
-    width: 100% !important;
-}
+/* Removido para evitar conflitos com as regras do final do arquivo */
 
 
 
@@ -451,8 +427,6 @@ body {
     flex-grow: 1;
     padding: 15px; /* Reduzindo o padding */
     background-color: var(--bg-color);
-    overflow-x: hidden; /* Evita scroll horizontal indesejado */
-    overflow-y: auto; /* Permite scroll apenas quando necessário */
     height: 100%; /* Garante que ocupe toda a altura disponível */
     position: relative; /* Para posicionamento correto */
     width: calc(100% - 220px); /* Largura considerando o sidebar */
@@ -891,7 +865,76 @@ body {
 .messages .alert {
     margin-bottom: 10px; /* Reduzindo margin */
     border: none !important; /* Remove todas as bordas */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
 }
+
+/* Estilos específicos para o botão de fechar (btn-close) */
+.alert .btn-close {
+    align-self: center;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    font-size: 1.25rem;
+    line-height: 1;
+    color: #000;
+    text-shadow: 0 1px 0 #fff;
+    opacity: 0.5;
+    transition: opacity 0.15s ease-in-out;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    position: relative;
+    top: 0;
+    right: 0;
+}
+
+.alert .btn-close:hover {
+    opacity: 0.75;
+}
+
+.alert .btn-close:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* Garantir que o texto da mensagem não interfira no alinhamento */
+.alert {
+    position: relative;
+}
+
+.alert:not(.alert-dismissible) {
+    padding-right: 15px;
+}
+
+.alert.alert-dismissible {
+    padding-right: 50px; /* Espaço para o botão de fechar */
+}
+
+/* Ajuste específico para o conteúdo da mensagem */
+.alert > *:not(.btn-close) {
+    flex: 1;
+    margin: 0;
+    text-align: right;
+}
+
+/* Alinhamento específico para alerts de contagem (como "Encontrados X cliente(s)") */
+.alert.alert-info {
+    text-align: right;
+}
+
+.alert.alert-info i,
+.alert.alert-info strong {
+    display: inline-block;
+    vertical-align: middle;
+}
+
 .alert-success { background-color: #28a745; border: none !important; color: #fff; }
 .alert-danger { background-color: #dc3545; border: none !important; color: #fff; }
 .alert-info { background-color: #17a2b8; border: none !important; color: #fff; }
@@ -936,7 +979,10 @@ body {
     border-radius: 8px; /* Cantos mais arredondados */
     max-height: 400px; /* Aumenta a altura máxima para mais notas */
     overflow-y: auto; /* Adiciona scroll se muitas notas */
+    overflow-x: hidden; /* Previne scroll horizontal no container */
     color: var(--secondary-text-color); /* Cor de texto padrão para o container */
+    width: 100%; /* Garante que ocupe toda a largura disponível */
+    box-sizing: border-box; /* Garante que padding não cause overflow */
 }
 
 /* Cabeçalho das "colunas" das notas dentro do container de checkboxes */
@@ -950,6 +996,7 @@ body {
     padding-left: 35px; /* Ajuste para alinhar com o conteúdo após o checkbox (input de 20px + margin) */
     width: 100%; /* Garante que o cabeçalho ocupe 100% da largura disponível */
     align-items: center;
+    box-sizing: border-box; /* Garante que padding não adicione largura extra */
 }
 .notes-checkbox-container .notes-header-row > div {
     /* Larguras são definidas abaixo nas classes note-col-*, aqui apenas alinhamento geral */
@@ -974,6 +1021,7 @@ body {
     cursor: pointer;
     width: 100%; /* Garante que cada item ocupe a largura total */
     transition: background-color 0.2s ease; /* Transição no hover */
+    box-sizing: border-box; /* Garante que padding não cause overflow */
 }
 .notes-checkbox-container .form-check:hover {
     background-color: rgba(0, 123, 255, 0.15); /* Um highlight mais visível no hover */
@@ -1014,8 +1062,9 @@ body {
     align-items: center;
     margin: 0 !important; /* REMOVER MARGEM PADRÃO DA ROW DO BOOTSTRAP */
     width: 100% !important; /* Ocupa 100% da largura do label. Use !important */
-    /* flex-wrap: nowrap; */ /* Pode causar overflow, mas garante que não quebre linha */
+    flex-wrap: nowrap; /* Garante que não quebre linha */
     box-sizing: border-box;
+    overflow: hidden; /* Previne overflow horizontal */
 }
 
 .notes-checkbox-container .note-info-row > div {
@@ -1027,6 +1076,9 @@ body {
     align-items: center;
     min-height: 20px; 
     box-sizing: border-box;
+    overflow: hidden; /* Previne overflow individual */
+    text-overflow: ellipsis; /* Adiciona ellipsis para texto longo */
+    white-space: nowrap; /* Mantém texto em uma linha */
 }
 .notes-checkbox-container .note-info-row > div strong {
     color: var(--text-color);
@@ -1298,6 +1350,73 @@ h6 { font-size: 0.9rem !important; }
     font-size: 0.85rem; /* Reduzindo tamanho da fonte */
     margin-bottom: 10px; /* Reduzindo margin */
     border: none !important; /* Remove todas as bordas */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Estilos específicos para o botão de fechar (btn-close) - versão reduzida */
+.alert .btn-close {
+    align-self: center;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: #000;
+    text-shadow: 0 1px 0 #fff;
+    opacity: 0.5;
+    transition: opacity 0.15s ease-in-out;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    position: relative;
+    top: 0;
+    right: 0;
+}
+
+.alert .btn-close:hover {
+    opacity: 0.75;
+}
+
+.alert .btn-close:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* Garantir que o texto da mensagem não interfira no alinhamento */
+.alert {
+    position: relative;
+}
+
+.alert:not(.alert-dismissible) {
+    padding-right: 12px;
+}
+
+.alert.alert-dismissible {
+    padding-right: 45px; /* Espaço para o botão de fechar */
+}
+
+/* Ajuste específico para o conteúdo da mensagem */
+.alert > *:not(.btn-close) {
+    flex: 1;
+    margin: 0;
+    text-align: right;
+}
+
+/* Alinhamento específico para alerts de contagem (como "Encontrados X cliente(s)") */
+.alert.alert-info {
+    text-align: right;
+}
+
+.alert.alert-info i,
+.alert.alert-info strong {
+    display: inline-block;
+    vertical-align: middle;
 }
 
 /* Reduzindo tamanhos de dropdowns */
@@ -1605,6 +1724,73 @@ body {
     margin-bottom: 15px;
     border-radius: 6px;
     border: none !important; /* Remove todas as bordas */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Estilos específicos para o botão de fechar (btn-close) - versão geral */
+.alert .btn-close {
+    align-self: center;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    font-size: 1.25rem;
+    line-height: 1;
+    color: #000;
+    text-shadow: 0 1px 0 #fff;
+    opacity: 0.5;
+    transition: opacity 0.15s ease-in-out;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    position: relative;
+    top: 0;
+    right: 0;
+}
+
+.alert .btn-close:hover {
+    opacity: 0.75;
+}
+
+.alert .btn-close:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* Garantir que o texto da mensagem não interfira no alinhamento */
+.alert {
+    position: relative;
+}
+
+.alert:not(.alert-dismissible) {
+    padding-right: 15px;
+}
+
+.alert.alert-dismissible {
+    padding-right: 50px; /* Espaço para o botão de fechar */
+}
+
+/* Ajuste específico para o conteúdo da mensagem */
+.alert > *:not(.btn-close) {
+    flex: 1;
+    margin: 0;
+    text-align: right;
+}
+
+/* Alinhamento específico para alerts de contagem (como "Encontrados X cliente(s)") */
+.alert.alert-info {
+    text-align: right;
+}
+
+.alert.alert-info i,
+.alert.alert-info strong {
+    display: inline-block;
+    vertical-align: middle;
 }
 
 /* Padronização de textos */
@@ -2197,5 +2383,140 @@ td .badge.bg-inativo,
     
     .dashboard-text p {
         font-size: 1rem;
+    }
+}
+
+/* =============================================================================
+   CORREÇÕES ESPECÍFICAS PARA PROBLEMA DE DUAS BARRAS DE ROLAGEM
+   ============================================================================= */
+
+/* SOLUÇÃO DEFINITIVA PARA O PROBLEMA DE DUAS BARRAS DE ROLAGEM */
+/* Remove todas as regras duplicadas e cria uma solução específica */
+
+/* 1. Garantir que apenas o body tenha scroll vertical */
+html {
+    overflow: hidden !important;
+    height: 100% !important;
+}
+
+body {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* 2. Remover scroll do main-wrapper */
+.main-wrapper {
+    overflow: hidden !important;
+    height: 100vh !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* 3. Permitir scroll apenas no main-content */
+.main-content {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: calc(100vh - 60px) !important; /* 60px é a altura da top-bar */
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 20px !important;
+}
+
+/* 4. Garantir que container-fluid não cause overflow */
+.container-fluid {
+    overflow: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* 5. Ajustar cards para não causar overflow */
+.card {
+    overflow: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.card-body {
+    overflow: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* 6. Ajustar especificamente o container de notas fiscais */
+.notes-checkbox-container {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    max-height: 400px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 10px !important;
+}
+
+/* 7. Garantir que as linhas de notas não causem overflow */
+.note-info-row {
+    overflow: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    flex-wrap: nowrap !important;
+}
+
+.note-info-row > div {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+}
+
+/* 8. Ajustar cabeçalho das notas */
+.notes-header-row {
+    overflow: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.notes-header-row > div {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+}
+
+/* 9. Garantir que form-check não cause overflow */
+.form-check {
+    overflow: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.form-check-label {
+    overflow: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* 10. Ajustes específicos para telas menores */
+@media (max-width: 768px) {
+    .main-content {
+        height: calc(100vh - 50px) !important;
+        padding: 10px !important;
+    }
+    
+    .notes-checkbox-container {
+        max-height: 300px !important;
     }
 }

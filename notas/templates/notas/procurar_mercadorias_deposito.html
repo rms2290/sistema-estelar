@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Procurar Mercadorias no Depósito{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2><i class="fas fa-search"></i> Procurar Mercadorias no Depósito</h2>
+            
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="py-5">
+                        <i class="fas fa-warehouse fa-4x text-muted mb-4"></i>
+                        <h4 class="text-muted">Funcionalidade em Desenvolvimento</h4>
+                        <p class="text-muted mb-4">
+                            Esta funcionalidade está sendo desenvolvida e será disponibilizada em breve.
+                        </p>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Em breve:</strong> Sistema avançado de busca e localização de mercadorias no depósito.
+                        </div>
+                        <a href="{% url 'notas:pesquisar_mercadorias_deposito' %}" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Usar Pesquisa Atual
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
