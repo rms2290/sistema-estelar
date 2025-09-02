@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load format_filters %}
+
+{% block title %}Totalizador por Cliente - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2><i class="fas fa-chart-pie"></i> Totalizador por Cliente</h2>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-filter"></i> Filtros de Pesquisa
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Formulário de Filtros -->
+                    <form method="GET" class="mb-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="data_inicial" class="form-label">Data Inicial</label>
+                                    <input type="date" class="form-control" id="data_inicial" name="data_inicial" 
+                                           value="{{ data_inicial }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="data_final" class="form-label">Data Final</label>
+                                    <input type="date" class="form-control" id="data_final" name="data_final" 
+                                           value="{{ data_final }}" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> Pesquisar
+                                </button>
+                                <a href="{% url 'notas:totalizador_por_cliente' %}" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Limpar
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                    
+
+                    <!-- Resultados da Pesquisa -->
+                    {% if tem_resultados %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 
+                            Encontrados <strong>{{ resultados|length }}</strong> cliente(s) com movimentação no período.
+                        </div>
+                        
+                        <!-- Resumo dos Totais -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Clientes com Movimentação</h6>
+                                        <p class="card-text h4">{{ resultados|length }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Valor Total</h6>
+                                        <p class="card-text h4">{{ total_geral|format_brazilian_currency }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Seguro Total</h6>
+                                        <p class="card-text h4">{{ total_seguro_geral|format_brazilian_currency }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Tabela Hierárquica por Estado -->
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>CLIENTE / ESTADO</th>
+                                        <th class="text-center">QTD. ROMANEIOS</th>
+                                        <th class="text-end">VALOR TOTAL</th>
+                                        <th class="text-center">% SEGURO</th>
+                                        <th class="text-end">VALOR SEGURO</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in lista_hierarquica %}
+                                        {% if item.tipo == 'estado' %}
+                                            <!-- Cabeçalho do Estado -->
+                                            <tr class="table-primary">
+                                                <td>
+                                                    <strong class="fs-6">
+                                                        <i class="fas fa-map-marker-alt"></i> {{ item.estado }} - {{ item.nome_estado }}
+                                                    </strong>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge bg-primary">{{ item.quantidade_romaneios }}</span>
+                                                </td>
+                                                <td class="text-end">
+                                                    <strong class="fs-6 text-success">
+                                                        {{ item.total_valor|format_brazilian_currency }}
+                                                    </strong>
+                                                </td>
+                                                <td class="text-center">-</td>
+                                                <td class="text-end">
+                                                    <strong class="fs-6 text-primary">
+                                                        {{ item.total_seguro|format_brazilian_currency }}
+                                                    </strong>
+                                                </td>
+                                            </tr>
+                                        {% elif item.tipo == 'cliente' %}
+                                            <!-- Cliente -->
+                                            <tr>
+                                                <td class="ps-4">
+                                                    <strong>{{ item.cliente.razao_social }}</strong>
+                                                    <small class="text-muted d-block">{{ item.cliente.cnpj }}</small>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge bg-info">{{ item.quantidade_romaneios }}</span>
+                                                </td>
+                                                <td class="text-end">
+                                                    <strong class="text-success">
+                                                        {{ item.total_valor|format_brazilian_currency }}
+                                                    </strong>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge bg-warning text-dark">
+                                                        {{ item.percentual_seguro|floatformat:2 }}%
+                                                    </span>
+                                                </td>
+                                                <td class="text-end">
+                                                    <strong class="text-primary">
+                                                        {{ item.valor_seguro|format_brazilian_currency }}
+                                                    </strong>
+                                                </td>
+                                            </tr>
+                                        {% elif item.tipo == 'total_estado' %}
+                                            <!-- Total do Estado -->
+                                            <tr class="table-light">
+                                                <td class="ps-3">
+                                                    <strong class="text-dark">
+                                                        <i class="fas fa-calculator"></i> TOTAL {{ item.estado }}
+                                                    </strong>
+                                                </td>
+                                                <td class="text-center">
+                                                    <strong class="text-dark">{{ item.quantidade_romaneios }}</strong>
+                                                </td>
+                                                <td class="text-end">
+                                                    <strong class="text-success">
+                                                        {{ item.total_valor|format_brazilian_currency }}
+                                                    </strong>
+                                                </td>
+                                                <td class="text-center">-</td>
+                                                <td class="text-end">
+                                                    <strong class="text-primary">
+                                                        {{ item.total_seguro|format_brazilian_currency }}
+                                                    </strong>
+                                                </td>
+                                            </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot class="table-dark">
+                                    <tr>
+                                        <th>
+                                            <i class="fas fa-chart-pie"></i> TOTAL GERAL
+                                        </th>
+                                        <th class="text-center">{{ resultados|length }}</th>
+                                        <th class="text-end">{{ total_geral|format_brazilian_currency }}</th>
+                                        <th class="text-center">-</th>
+                                        <th class="text-end">{{ total_seguro_geral|format_brazilian_currency }}</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                    {% elif data_inicial and data_final %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            Nenhum resultado encontrado para o período especificado.
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 
+                            Selecione as datas inicial e final para visualizar o totalizador por cliente.
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Botões de Relatórios -->
+                    {% if data_inicial and data_final %}
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex gap-2 justify-content-center">
+                                    <a href="{% url 'notas:totalizador_por_cliente_pdf' %}?data_inicial={{ data_inicial }}&data_final={{ data_final }}" 
+                                       class="btn btn-danger btn-lg" target="_blank">
+                                        <i class="fas fa-file-pdf"></i> Gerar PDF
+                                    </a>
+                                    <a href="{% url 'notas:totalizador_por_cliente_excel' %}?data_inicial={{ data_inicial }}&data_final={{ data_final }}" 
+                                       class="btn btn-success btn-lg" target="_blank">
+                                        <i class="fas fa-file-excel"></i> Gerar Excel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -2387,6 +2387,62 @@ td .badge.bg-inativo,
 }
 
 /* =============================================================================
+   AJUSTES PARA CENTRALIZAÇÃO DO PAINEL DE LOGIN
+   ============================================================================= */
+
+/* Correção específica para página de login - remover scroll */
+body.login-page {
+    overflow: hidden !important;
+    height: 100vh !important;
+}
+
+body.login-page .main-wrapper {
+    height: 100vh !important;
+    overflow: hidden !important;
+}
+
+body.login-page .main-content {
+    height: 100vh !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+}
+
+
+
+/* Centralizar perfeitamente o painel de login */
+body.login-page .container-fluid {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    height: 100vh !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+body.login-page .container-fluid .row {
+    width: 100% !important;
+    max-width: 400px !important;
+    margin: 0 !important;
+    justify-content: center !important;
+}
+
+body.login-page .container-fluid .row .col-md-6 {
+    width: 100% !important;
+    max-width: 400px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Ajustar o posicionamento do card de login */
+body.login-page .card.mt-5 {
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 400px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* =============================================================================
    CORREÇÕES ESPECÍFICAS PARA PROBLEMA DE DUAS BARRAS DE ROLAGEM
    ============================================================================= */
 
@@ -2408,6 +2464,8 @@ body {
     padding: 0 !important;
     box-sizing: border-box !important;
 }
+
+
 
 /* 2. Remover scroll do main-wrapper */
 .main-wrapper {

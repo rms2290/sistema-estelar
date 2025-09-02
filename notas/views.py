@@ -1246,39 +1246,54 @@ def totalizador_por_estado(request):
             tabelas_seguro = {ts.estado: ts.percentual_seguro for ts in TabelaSeguro.objects.all()}
             
             # Agrupar por estado do cliente e calcular totais
-            for estado in Cliente.objects.values_list('estado', flat=True).distinct():
-                if estado:  # Ignorar estados vazios
-                    # Buscar clientes do estado
-                    clientes_estado = Cliente.objects.filter(estado=estado)
+            # Usar um dicionário para agrupar os dados por estado
+            estados_agrupados = {}
+            
+            for romaneio in romaneios_periodo:
+                estado_cliente = romaneio.cliente.estado
+                if not estado_cliente:  # Ignorar estados vazios
+                    continue
+                
+                # Inicializar dados do estado se não existir
+                if estado_cliente not in estados_agrupados:
+                    estados_agrupados[estado_cliente] = {
+                        'estado': estado_cliente,
+                        'nome_estado': dict(TabelaSeguro.ESTADOS_BRASIL).get(estado_cliente, estado_cliente),
+                        'total_valor': Decimal('0.0'),
+                        'quantidade_romaneios': 0,
+                        'romaneios_ids': set()
+                    }
+                
+                # Adicionar valores das notas fiscais do romaneio
+                for nota in romaneio.notas_fiscais.all():
+                    estados_agrupados[estado_cliente]['total_valor'] += nota.valor
+                
+                # Contar romaneios únicos (usar set para evitar duplicatas)
+                estados_agrupados[estado_cliente]['romaneios_ids'].add(romaneio.id)
+            
+            # Processar dados agrupados
+            for estado, dados in estados_agrupados.items():
+                total_valor_estado = dados['total_valor']
+                quantidade_romaneios = len(dados['romaneios_ids'])
+                
+                # Buscar percentual de seguro para o estado
+                percentual_seguro = tabelas_seguro.get(estado, Decimal('0.0'))
+                
+                # Calcular valor do seguro
+                valor_seguro_estado = total_valor_estado * (percentual_seguro / Decimal('100.0'))
+                
+                if total_valor_estado > 0:  # Só incluir estados com valores
+                    resultados.append({
+                        'estado': estado,
+                        'nome_estado': dados['nome_estado'],
+                        'total_valor': total_valor_estado,
+                        'percentual_seguro': percentual_seguro,
+                        'valor_seguro': valor_seguro_estado,
+                        'quantidade_romaneios': quantidade_romaneios
+                    })
                     
-                    # Buscar romaneios dos clientes deste estado no período
-                    romaneios_estado = romaneios_periodo.filter(cliente__in=clientes_estado)
-                    
-                    # Calcular total de valores das notas fiscais usando aggregate
-                    total_valor_estado = sum(
-                        nota.valor 
-                        for romaneio in romaneios_estado 
-                        for nota in romaneio.notas_fiscais.all()
-                    )
-                    
-                    # Buscar percentual de seguro para o estado
-                    percentual_seguro = tabelas_seguro.get(estado, Decimal('0.0'))
-                    
-                    # Calcular valor do seguro
-                    valor_seguro_estado = total_valor_estado * (percentual_seguro / Decimal('100.0'))
-                    
-                    if total_valor_estado > 0:  # Só incluir estados com valores
-                        resultados.append({
-                            'estado': estado,
-                            'nome_estado': dict(TabelaSeguro.ESTADOS_BRASIL)[estado],
-                            'total_valor': total_valor_estado,
-                            'percentual_seguro': percentual_seguro,
-                            'valor_seguro': valor_seguro_estado,
-                            'quantidade_romaneios': romaneios_estado.count()
-                        })
-                        
-                        total_geral += total_valor_estado
-                        total_seguro_geral += valor_seguro_estado
+                    total_geral += total_valor_estado
+                    total_seguro_geral += valor_seguro_estado
             
             # Ordenar por valor total (maior primeiro)
             resultados.sort(key=lambda x: x['total_valor'], reverse=True)
@@ -1297,11 +1312,731 @@ def totalizador_por_estado(request):
     
     return render(request, 'notas/totalizador_por_estado.html', context)
 
+
+@login_required
+@user_passes_test(is_admin)
+def totalizador_por_estado_pdf(request):
+    """
+    Gera relatório PDF para Totalizador por Estado
+    """
+    from .utils.relatorios import gerar_relatorio_pdf_totalizador_estado, gerar_resposta_pdf
+    from django.db.models import Sum, Q
+    from datetime import datetime
+    
+    # Obter parâmetros
+    data_inicial = request.GET.get('data_inicial', '')
+    data_final = request.GET.get('data_final', '')
+    
+    if not data_inicial or not data_final:
+        messages.error(request, 'É necessário informar as datas inicial e final.')
+        return redirect('notas:totalizador_por_estado')
+    
+    try:
+        # Converter strings para objetos datetime
+        data_inicial_obj = datetime.strptime(data_inicial, '%Y-%m-%d').date()
+        data_final_obj = datetime.strptime(data_final, '%Y-%m-%d').date()
+        
+        # Buscar romaneios emitidos no período
+        romaneios_periodo = RomaneioViagem.objects.filter(
+            data_emissao__date__range=[data_inicial_obj, data_final_obj],
+            status='Emitido'
+        ).select_related('cliente').prefetch_related('notas_fiscais')
+        
+        # Buscar todos os percentuais de seguro de uma vez
+        tabelas_seguro = {ts.estado: ts.percentual_seguro for ts in TabelaSeguro.objects.all()}
+        
+        # Agrupar por estado do cliente e calcular totais
+        estados_agrupados = {}
+        
+        for romaneio in romaneios_periodo:
+            estado_cliente = romaneio.cliente.estado
+            if not estado_cliente:
+                continue
+            
+            if estado_cliente not in estados_agrupados:
+                estados_agrupados[estado_cliente] = {
+                    'estado': estado_cliente,
+                    'nome_estado': dict(TabelaSeguro.ESTADOS_BRASIL).get(estado_cliente, estado_cliente),
+                    'total_valor': Decimal('0.0'),
+                    'quantidade_romaneios': 0,
+                    'romaneios_ids': set()
+                }
+            
+            for nota in romaneio.notas_fiscais.all():
+                estados_agrupados[estado_cliente]['total_valor'] += nota.valor
+            
+            estados_agrupados[estado_cliente]['romaneios_ids'].add(romaneio.id)
+        
+        # Processar dados agrupados
+        resultados = []
+        total_geral = Decimal('0.0')
+        total_seguro_geral = Decimal('0.0')
+        
+        for estado, dados in estados_agrupados.items():
+            total_valor_estado = dados['total_valor']
+            quantidade_romaneios = len(dados['romaneios_ids'])
+            
+            percentual_seguro = tabelas_seguro.get(estado, Decimal('0.0'))
+            valor_seguro_estado = total_valor_estado * (percentual_seguro / Decimal('100.0'))
+            
+            if total_valor_estado > 0:
+                resultados.append({
+                    'estado': estado,
+                    'nome_estado': dados['nome_estado'],
+                    'total_valor': total_valor_estado,
+                    'percentual_seguro': percentual_seguro,
+                    'valor_seguro': valor_seguro_estado,
+                    'quantidade_romaneios': quantidade_romaneios
+                })
+                
+                total_geral += total_valor_estado
+                total_seguro_geral += valor_seguro_estado
+        
+        # Ordenar por valor total
+        resultados.sort(key=lambda x: x['total_valor'], reverse=True)
+        
+        # Gerar PDF
+        pdf_content = gerar_relatorio_pdf_totalizador_estado(
+            resultados, data_inicial_obj, data_final_obj, total_geral, total_seguro_geral
+        )
+        
+        # Nome do arquivo
+        nome_arquivo = f"totalizador_por_estado_{data_inicial}_{data_final}.pdf"
+        
+        return gerar_resposta_pdf(pdf_content, nome_arquivo)
+        
+    except ValueError:
+        messages.error(request, 'Formato de data inválido. Use YYYY-MM-DD.')
+        return redirect('notas:totalizador_por_estado')
+
+
+@login_required
+@user_passes_test(is_admin)
+def totalizador_por_estado_excel(request):
+    """
+    Gera relatório Excel para Totalizador por Estado
+    """
+    from .utils.relatorios import gerar_relatorio_excel_totalizador_estado, gerar_resposta_excel
+    from django.db.models import Sum, Q
+    from datetime import datetime
+    
+    # Obter parâmetros
+    data_inicial = request.GET.get('data_inicial', '')
+    data_final = request.GET.get('data_final', '')
+    
+    if not data_inicial or not data_final:
+        messages.error(request, 'É necessário informar as datas inicial e final.')
+        return redirect('notas:totalizador_por_estado')
+    
+    try:
+        # Converter strings para objetos datetime
+        data_inicial_obj = datetime.strptime(data_inicial, '%Y-%m-%d').date()
+        data_final_obj = datetime.strptime(data_final, '%Y-%m-%d').date()
+        
+        # Buscar romaneios emitidos no período
+        romaneios_periodo = RomaneioViagem.objects.filter(
+            data_emissao__date__range=[data_inicial_obj, data_final_obj],
+            status='Emitido'
+        ).select_related('cliente').prefetch_related('notas_fiscais')
+        
+        # Buscar todos os percentuais de seguro de uma vez
+        tabelas_seguro = {ts.estado: ts.percentual_seguro for ts in TabelaSeguro.objects.all()}
+        
+        # Agrupar por estado do cliente e calcular totais
+        estados_agrupados = {}
+        
+        for romaneio in romaneios_periodo:
+            estado_cliente = romaneio.cliente.estado
+            if not estado_cliente:
+                continue
+            
+            if estado_cliente not in estados_agrupados:
+                estados_agrupados[estado_cliente] = {
+                    'estado': estado_cliente,
+                    'nome_estado': dict(TabelaSeguro.ESTADOS_BRASIL).get(estado_cliente, estado_cliente),
+                    'total_valor': Decimal('0.0'),
+                    'quantidade_romaneios': 0,
+                    'romaneios_ids': set()
+                }
+            
+            for nota in romaneio.notas_fiscais.all():
+                estados_agrupados[estado_cliente]['total_valor'] += nota.valor
+            
+            estados_agrupados[estado_cliente]['romaneios_ids'].add(romaneio.id)
+        
+        # Processar dados agrupados
+        resultados = []
+        total_geral = Decimal('0.0')
+        total_seguro_geral = Decimal('0.0')
+        
+        for estado, dados in estados_agrupados.items():
+            total_valor_estado = dados['total_valor']
+            quantidade_romaneios = len(dados['romaneios_ids'])
+            
+            percentual_seguro = tabelas_seguro.get(estado, Decimal('0.0'))
+            valor_seguro_estado = total_valor_estado * (percentual_seguro / Decimal('100.0'))
+            
+            if total_valor_estado > 0:
+                resultados.append({
+                    'estado': estado,
+                    'nome_estado': dados['nome_estado'],
+                    'total_valor': total_valor_estado,
+                    'percentual_seguro': percentual_seguro,
+                    'valor_seguro': valor_seguro_estado,
+                    'quantidade_romaneios': quantidade_romaneios
+                })
+                
+                total_geral += total_valor_estado
+                total_seguro_geral += valor_seguro_estado
+        
+        # Ordenar por valor total
+        resultados.sort(key=lambda x: x['total_valor'], reverse=True)
+        
+        # Gerar Excel
+        excel_content = gerar_relatorio_excel_totalizador_estado(
+            resultados, data_inicial_obj, data_final_obj, total_geral, total_seguro_geral
+        )
+        
+        # Nome do arquivo
+        nome_arquivo = f"totalizador_por_estado_{data_inicial}_{data_final}.xlsx"
+        
+        return gerar_resposta_excel(excel_content, nome_arquivo)
+        
+    except ValueError:
+        messages.error(request, 'Formato de data inválido. Use YYYY-MM-DD.')
+        return redirect('notas:totalizador_por_estado')
+
+
 @login_required
 @user_passes_test(is_admin)
 def totalizador_por_cliente(request):
-    """View para o relatório de totalizador por cliente."""
-    return render(request, 'notas/relatorios/totalizador_por_cliente.html')
+    """
+    View para totalizador por cliente com filtros de data
+    """
+    from django.db.models import Sum, Q
+    from datetime import datetime
+    
+    # Inicializar variáveis
+    data_inicial = request.GET.get('data_inicial', '')
+    data_final = request.GET.get('data_final', '')
+    resultados = []
+    resumo_estados = []
+    lista_hierarquica = []
+    total_geral = Decimal('0.0')
+    total_seguro_geral = Decimal('0.0')
+    
+    if data_inicial and data_final:
+        try:
+            # Converter strings para objetos datetime
+            data_inicial_obj = datetime.strptime(data_inicial, '%Y-%m-%d').date()
+            data_final_obj = datetime.strptime(data_final, '%Y-%m-%d').date()
+            
+            # Buscar romaneios emitidos no período
+            romaneios_periodo = RomaneioViagem.objects.filter(
+                data_emissao__date__range=[data_inicial_obj, data_final_obj],
+                status='Emitido'
+            ).select_related('cliente').prefetch_related('notas_fiscais')
+            
+            # Buscar todos os percentuais de seguro de uma vez
+            tabelas_seguro = {ts.estado: ts.percentual_seguro for ts in TabelaSeguro.objects.all()}
+            
+            # Agrupar por cliente e calcular totais
+            clientes_agrupados = {}
+            
+            for romaneio in romaneios_periodo:
+                cliente = romaneio.cliente
+                if not cliente:
+                    continue
+                
+                # Inicializar dados do cliente se não existir
+                if cliente.id not in clientes_agrupados:
+                    clientes_agrupados[cliente.id] = {
+                        'cliente': cliente,
+                        'total_valor': Decimal('0.0'),
+                        'quantidade_romaneios': 0,
+                        'romaneios_ids': set(),
+                        'estados_envolvidos': set()
+                    }
+                
+                # Adicionar valores das notas fiscais do romaneio
+                for nota in romaneio.notas_fiscais.all():
+                    clientes_agrupados[cliente.id]['total_valor'] += nota.valor
+                
+                # Contar romaneios únicos (usar set para evitar duplicatas)
+                clientes_agrupados[cliente.id]['romaneios_ids'].add(romaneio.id)
+                
+                # Coletar estados envolvidos
+                if cliente.estado:
+                    clientes_agrupados[cliente.id]['estados_envolvidos'].add(cliente.estado)
+            
+            # Processar dados agrupados
+            for cliente_id, dados in clientes_agrupados.items():
+                total_valor_cliente = dados['total_valor']
+                quantidade_romaneios = len(dados['romaneios_ids'])
+                cliente = dados['cliente']
+                
+                # Calcular seguro baseado no estado do cliente
+                percentual_seguro = Decimal('0.0')
+                if cliente.estado:
+                    percentual_seguro = tabelas_seguro.get(cliente.estado, Decimal('0.0'))
+                
+                valor_seguro_cliente = total_valor_cliente * (percentual_seguro / Decimal('100.0'))
+                
+                if total_valor_cliente > 0:  # Só incluir clientes com valores
+                    # Obter nome do estado
+                    nome_estado = ''
+                    if cliente.estado:
+                        nome_estado = dict(TabelaSeguro.ESTADOS_BRASIL).get(cliente.estado, cliente.estado)
+                    
+                    resultados.append({
+                        'cliente': cliente,
+                        'total_valor': total_valor_cliente,
+                        'percentual_seguro': percentual_seguro,
+                        'valor_seguro': valor_seguro_cliente,
+                        'quantidade_romaneios': quantidade_romaneios,
+                        'estado': cliente.estado or 'N/A',
+                        'nome_estado': nome_estado,
+                        'estados_envolvidos': list(dados['estados_envolvidos'])
+                    })
+                    
+                    total_geral += total_valor_cliente
+                    total_seguro_geral += valor_seguro_cliente
+            
+            # Ordenar por valor total (maior primeiro)
+            resultados.sort(key=lambda x: x['total_valor'], reverse=True)
+            
+            # Criar estrutura hierárquica agrupada por estado
+            estados_agrupados = {}
+            for resultado in resultados:
+                estado = resultado['estado']
+                if estado not in estados_agrupados:
+                    estados_agrupados[estado] = {
+                        'estado': estado,
+                        'nome_estado': resultado['nome_estado'],
+                        'clientes': [],
+                        'quantidade_clientes': 0,
+                        'quantidade_romaneios': 0,
+                        'total_valor': Decimal('0.0'),
+                        'total_seguro': Decimal('0.0')
+                    }
+                
+                # Adicionar cliente ao estado
+                estados_agrupados[estado]['clientes'].append(resultado)
+                estados_agrupados[estado]['quantidade_clientes'] += 1
+                estados_agrupados[estado]['quantidade_romaneios'] += resultado['quantidade_romaneios']
+                estados_agrupados[estado]['total_valor'] += resultado['total_valor']
+                estados_agrupados[estado]['total_seguro'] += resultado['valor_seguro']
+            
+            # Converter para lista e ordenar por valor total
+            resumo_estados = list(estados_agrupados.values())
+            resumo_estados.sort(key=lambda x: x['total_valor'], reverse=True)
+            
+            # Criar lista hierárquica para exibição
+            lista_hierarquica = []
+            for estado_info in resumo_estados:
+                # Adicionar cabeçalho do estado
+                lista_hierarquica.append({
+                    'tipo': 'estado',
+                    'estado': estado_info['estado'],
+                    'nome_estado': estado_info['nome_estado'],
+                    'quantidade_clientes': estado_info['quantidade_clientes'],
+                    'quantidade_romaneios': estado_info['quantidade_romaneios'],
+                    'total_valor': estado_info['total_valor'],
+                    'total_seguro': estado_info['total_seguro']
+                })
+                
+                # Adicionar clientes do estado
+                for cliente in estado_info['clientes']:
+                    lista_hierarquica.append({
+                        'tipo': 'cliente',
+                        'cliente': cliente['cliente'],
+                        'estado': cliente['estado'],
+                        'nome_estado': cliente['nome_estado'],
+                        'quantidade_romaneios': cliente['quantidade_romaneios'],
+                        'total_valor': cliente['total_valor'],
+                        'percentual_seguro': cliente['percentual_seguro'],
+                        'valor_seguro': cliente['valor_seguro']
+                    })
+                
+                # Adicionar linha de total do estado
+                lista_hierarquica.append({
+                    'tipo': 'total_estado',
+                    'estado': estado_info['estado'],
+                    'nome_estado': estado_info['nome_estado'],
+                    'quantidade_clientes': estado_info['quantidade_clientes'],
+                    'quantidade_romaneios': estado_info['quantidade_romaneios'],
+                    'total_valor': estado_info['total_valor'],
+                    'total_seguro': estado_info['total_seguro']
+                })
+            
+        except ValueError:
+            messages.error(request, 'Formato de data inválido. Use YYYY-MM-DD.')
+            resumo_estados = []
+            lista_hierarquica = []
+    
+    context = {
+        'data_inicial': data_inicial,
+        'data_final': data_final,
+        'resultados': resultados,
+        'resumo_estados': resumo_estados,
+        'lista_hierarquica': lista_hierarquica,
+        'total_geral': total_geral,
+        'total_seguro_geral': total_seguro_geral,
+        'tem_resultados': len(resultados) > 0
+    }
+    
+    return render(request, 'notas/totalizador_por_cliente.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+def totalizador_por_cliente_pdf(request):
+    """
+    Gera relatório PDF para Totalizador por Cliente
+    """
+    from .utils.relatorios import gerar_relatorio_pdf_totalizador_cliente, gerar_resposta_pdf
+    from django.db.models import Sum, Q
+    from datetime import datetime
+    
+    # Obter parâmetros
+    data_inicial = request.GET.get('data_inicial', '')
+    data_final = request.GET.get('data_final', '')
+    
+    if not data_inicial or not data_final:
+        messages.error(request, 'É necessário informar as datas inicial e final.')
+        return redirect('notas:totalizador_por_cliente')
+    
+    try:
+        # Converter strings para objetos datetime
+        data_inicial_obj = datetime.strptime(data_inicial, '%Y-%m-%d').date()
+        data_final_obj = datetime.strptime(data_final, '%Y-%m-%d').date()
+        
+        # Buscar romaneios emitidos no período
+        romaneios_periodo = RomaneioViagem.objects.filter(
+            data_emissao__date__range=[data_inicial_obj, data_final_obj],
+            status='Emitido'
+        ).select_related('cliente').prefetch_related('notas_fiscais')
+        
+        # Buscar todos os percentuais de seguro de uma vez
+        tabelas_seguro = {ts.estado: ts.percentual_seguro for ts in TabelaSeguro.objects.all()}
+        
+        # Agrupar por cliente e calcular totais
+        clientes_agrupados = {}
+        
+        for romaneio in romaneios_periodo:
+            cliente = romaneio.cliente
+            if not cliente:
+                continue
+            
+            if cliente.id not in clientes_agrupados:
+                clientes_agrupados[cliente.id] = {
+                    'cliente': cliente,
+                    'total_valor': Decimal('0.0'),
+                    'quantidade_romaneios': 0,
+                    'romaneios_ids': set(),
+                    'estados_envolvidos': set()
+                }
+            
+            for nota in romaneio.notas_fiscais.all():
+                clientes_agrupados[cliente.id]['total_valor'] += nota.valor
+            
+            clientes_agrupados[cliente.id]['romaneios_ids'].add(romaneio.id)
+            
+            if cliente.estado:
+                clientes_agrupados[cliente.id]['estados_envolvidos'].add(cliente.estado)
+        
+        # Processar dados agrupados
+        resultados = []
+        total_geral = Decimal('0.0')
+        total_seguro_geral = Decimal('0.0')
+        
+        for cliente_id, dados in clientes_agrupados.items():
+            total_valor_cliente = dados['total_valor']
+            quantidade_romaneios = len(dados['romaneios_ids'])
+            cliente = dados['cliente']
+            
+            percentual_seguro = Decimal('0.0')
+            if cliente.estado:
+                percentual_seguro = tabelas_seguro.get(cliente.estado, Decimal('0.0'))
+            
+            valor_seguro_cliente = total_valor_cliente * (percentual_seguro / Decimal('100.0'))
+            
+            if total_valor_cliente > 0:
+                resultados.append({
+                    'cliente': cliente,
+                    'total_valor': total_valor_cliente,
+                    'percentual_seguro': percentual_seguro,
+                    'valor_seguro': valor_seguro_cliente,
+                    'quantidade_romaneios': quantidade_romaneios,
+                    'estados_envolvidos': list(dados['estados_envolvidos'])
+                })
+                
+                total_geral += total_valor_cliente
+                total_seguro_geral += valor_seguro_cliente
+        
+        # Ordenar por valor total
+        resultados.sort(key=lambda x: x['total_valor'], reverse=True)
+        
+        # Criar estrutura hierárquica agrupada por estado
+        estados_agrupados = {}
+        for resultado in resultados:
+            cliente = resultado['cliente']
+            estado = cliente.estado or 'N/A'
+            
+            # Obter nome do estado
+            nome_estado = ''
+            if cliente.estado:
+                nome_estado = dict(TabelaSeguro.ESTADOS_BRASIL).get(cliente.estado, cliente.estado)
+            
+            if estado not in estados_agrupados:
+                estados_agrupados[estado] = {
+                    'estado': estado,
+                    'nome_estado': nome_estado,
+                    'clientes': [],
+                    'quantidade_clientes': 0,
+                    'quantidade_romaneios': 0,
+                    'total_valor': Decimal('0.0'),
+                    'total_seguro': Decimal('0.0')
+                }
+            
+            # Adicionar cliente ao estado
+            estados_agrupados[estado]['clientes'].append(resultado)
+            estados_agrupados[estado]['quantidade_clientes'] += 1
+            estados_agrupados[estado]['quantidade_romaneios'] += resultado['quantidade_romaneios']
+            estados_agrupados[estado]['total_valor'] += resultado['total_valor']
+            estados_agrupados[estado]['total_seguro'] += resultado['valor_seguro']
+        
+        # Converter para lista e ordenar por valor total
+        resumo_estados = list(estados_agrupados.values())
+        resumo_estados.sort(key=lambda x: x['total_valor'], reverse=True)
+        
+        # Criar lista hierárquica para exibição
+        lista_hierarquica = []
+        for estado_info in resumo_estados:
+            # Adicionar cabeçalho do estado
+            lista_hierarquica.append({
+                'tipo': 'estado',
+                'estado': estado_info['estado'],
+                'nome_estado': estado_info['nome_estado'],
+                'quantidade_clientes': estado_info['quantidade_clientes'],
+                'quantidade_romaneios': estado_info['quantidade_romaneios'],
+                'total_valor': estado_info['total_valor'],
+                'total_seguro': estado_info['total_seguro']
+            })
+            
+            # Adicionar clientes do estado
+            for cliente in estado_info['clientes']:
+                lista_hierarquica.append({
+                    'tipo': 'cliente',
+                    'cliente': cliente['cliente'],
+                    'estado': cliente['cliente'].estado or 'N/A',
+                    'nome_estado': estado_info['nome_estado'],
+                    'quantidade_romaneios': cliente['quantidade_romaneios'],
+                    'total_valor': cliente['total_valor'],
+                    'percentual_seguro': cliente['percentual_seguro'],
+                    'valor_seguro': cliente['valor_seguro']
+                })
+            
+            # Adicionar linha de total do estado
+            lista_hierarquica.append({
+                'tipo': 'total_estado',
+                'estado': estado_info['estado'],
+                'nome_estado': estado_info['nome_estado'],
+                'quantidade_clientes': estado_info['quantidade_clientes'],
+                'quantidade_romaneios': estado_info['quantidade_romaneios'],
+                'total_valor': estado_info['total_valor'],
+                'total_seguro': estado_info['total_seguro']
+            })
+        
+        # Gerar PDF
+        pdf_content = gerar_relatorio_pdf_totalizador_cliente(
+            lista_hierarquica, data_inicial_obj, data_final_obj, total_geral, total_seguro_geral
+        )
+        
+        # Nome do arquivo
+        nome_arquivo = f"totalizador_por_cliente_{data_inicial}_{data_final}.pdf"
+        
+        return gerar_resposta_pdf(pdf_content, nome_arquivo)
+        
+    except ValueError:
+        messages.error(request, 'Formato de data inválido. Use YYYY-MM-DD.')
+        return redirect('notas:totalizador_por_cliente')
+
+
+@login_required
+@user_passes_test(is_admin)
+def totalizador_por_cliente_excel(request):
+    """
+    Gera relatório Excel para Totalizador por Cliente
+    """
+    from .utils.relatorios import gerar_relatorio_excel_totalizador_cliente, gerar_resposta_excel
+    from django.db.models import Sum, Q
+    from datetime import datetime
+    
+    # Obter parâmetros
+    data_inicial = request.GET.get('data_inicial', '')
+    data_final = request.GET.get('data_final', '')
+    
+    if not data_inicial or not data_final:
+        messages.error(request, 'É necessário informar as datas inicial e final.')
+        return redirect('notas:totalizador_por_cliente')
+    
+    try:
+        # Converter strings para objetos datetime
+        data_inicial_obj = datetime.strptime(data_inicial, '%Y-%m-%d').date()
+        data_final_obj = datetime.strptime(data_final, '%Y-%m-%d').date()
+        
+        # Buscar romaneios emitidos no período
+        romaneios_periodo = RomaneioViagem.objects.filter(
+            data_emissao__date__range=[data_inicial_obj, data_final_obj],
+            status='Emitido'
+        ).select_related('cliente').prefetch_related('notas_fiscais')
+        
+        # Buscar todos os percentuais de seguro de uma vez
+        tabelas_seguro = {ts.estado: ts.percentual_seguro for ts in TabelaSeguro.objects.all()}
+        
+        # Agrupar por cliente e calcular totais
+        clientes_agrupados = {}
+        
+        for romaneio in romaneios_periodo:
+            cliente = romaneio.cliente
+            if not cliente:
+                continue
+            
+            if cliente.id not in clientes_agrupados:
+                clientes_agrupados[cliente.id] = {
+                    'cliente': cliente,
+                    'total_valor': Decimal('0.0'),
+                    'quantidade_romaneios': 0,
+                    'romaneios_ids': set(),
+                    'estados_envolvidos': set()
+                }
+            
+            for nota in romaneio.notas_fiscais.all():
+                clientes_agrupados[cliente.id]['total_valor'] += nota.valor
+            
+            clientes_agrupados[cliente.id]['romaneios_ids'].add(romaneio.id)
+            
+            if cliente.estado:
+                clientes_agrupados[cliente.id]['estados_envolvidos'].add(cliente.estado)
+        
+        # Processar dados agrupados
+        resultados = []
+        total_geral = Decimal('0.0')
+        total_seguro_geral = Decimal('0.0')
+        
+        for cliente_id, dados in clientes_agrupados.items():
+            total_valor_cliente = dados['total_valor']
+            quantidade_romaneios = len(dados['romaneios_ids'])
+            cliente = dados['cliente']
+            
+            percentual_seguro = Decimal('0.0')
+            if cliente.estado:
+                percentual_seguro = tabelas_seguro.get(cliente.estado, Decimal('0.0'))
+            
+            valor_seguro_cliente = total_valor_cliente * (percentual_seguro / Decimal('100.0'))
+            
+            if total_valor_cliente > 0:
+                resultados.append({
+                    'cliente': cliente,
+                    'total_valor': total_valor_cliente,
+                    'percentual_seguro': percentual_seguro,
+                    'valor_seguro': valor_seguro_cliente,
+                    'quantidade_romaneios': quantidade_romaneios,
+                    'estados_envolvidos': list(dados['estados_envolvidos'])
+                })
+                
+                total_geral += total_valor_cliente
+                total_seguro_geral += valor_seguro_cliente
+        
+        # Ordenar por valor total
+        resultados.sort(key=lambda x: x['total_valor'], reverse=True)
+        
+        # Criar estrutura hierárquica agrupada por estado
+        estados_agrupados = {}
+        for resultado in resultados:
+            cliente = resultado['cliente']
+            estado = cliente.estado or 'N/A'
+            
+            # Obter nome do estado
+            nome_estado = ''
+            if cliente.estado:
+                nome_estado = dict(TabelaSeguro.ESTADOS_BRASIL).get(cliente.estado, cliente.estado)
+            
+            if estado not in estados_agrupados:
+                estados_agrupados[estado] = {
+                    'estado': estado,
+                    'nome_estado': nome_estado,
+                    'clientes': [],
+                    'quantidade_clientes': 0,
+                    'quantidade_romaneios': 0,
+                    'total_valor': Decimal('0.0'),
+                    'total_seguro': Decimal('0.0')
+                }
+            
+            # Adicionar cliente ao estado
+            estados_agrupados[estado]['clientes'].append(resultado)
+            estados_agrupados[estado]['quantidade_clientes'] += 1
+            estados_agrupados[estado]['quantidade_romaneios'] += resultado['quantidade_romaneios']
+            estados_agrupados[estado]['total_valor'] += resultado['total_valor']
+            estados_agrupados[estado]['total_seguro'] += resultado['valor_seguro']
+        
+        # Converter para lista e ordenar por valor total
+        resumo_estados = list(estados_agrupados.values())
+        resumo_estados.sort(key=lambda x: x['total_valor'], reverse=True)
+        
+        # Criar lista hierárquica para exibição
+        lista_hierarquica = []
+        for estado_info in resumo_estados:
+            # Adicionar cabeçalho do estado
+            lista_hierarquica.append({
+                'tipo': 'estado',
+                'estado': estado_info['estado'],
+                'nome_estado': estado_info['nome_estado'],
+                'quantidade_clientes': estado_info['quantidade_clientes'],
+                'quantidade_romaneios': estado_info['quantidade_romaneios'],
+                'total_valor': estado_info['total_valor'],
+                'total_seguro': estado_info['total_seguro']
+            })
+            
+            # Adicionar clientes do estado
+            for cliente in estado_info['clientes']:
+                lista_hierarquica.append({
+                    'tipo': 'cliente',
+                    'cliente': cliente['cliente'],
+                    'estado': cliente['cliente'].estado or 'N/A',
+                    'nome_estado': estado_info['nome_estado'],
+                    'quantidade_romaneios': cliente['quantidade_romaneios'],
+                    'total_valor': cliente['total_valor'],
+                    'percentual_seguro': cliente['percentual_seguro'],
+                    'valor_seguro': cliente['valor_seguro']
+                })
+            
+            # Adicionar linha de total do estado
+            lista_hierarquica.append({
+                'tipo': 'total_estado',
+                'estado': estado_info['estado'],
+                'nome_estado': estado_info['nome_estado'],
+                'quantidade_clientes': estado_info['quantidade_clientes'],
+                'quantidade_romaneios': estado_info['quantidade_romaneios'],
+                'total_valor': estado_info['total_valor'],
+                'total_seguro': estado_info['total_seguro']
+            })
+        
+        # Gerar Excel
+        excel_content = gerar_relatorio_excel_totalizador_cliente(
+            lista_hierarquica, data_inicial_obj, data_final_obj, total_geral, total_seguro_geral
+        )
+        
+        # Nome do arquivo
+        nome_arquivo = f"totalizador_por_cliente_{data_inicial}_{data_final}.xlsx"
+        
+        return gerar_resposta_excel(excel_content, nome_arquivo)
+        
+    except ValueError:
+        messages.error(request, 'Formato de data inválido. Use YYYY-MM-DD.')
+        return redirect('notas:totalizador_por_cliente')
+
 
 @login_required
 @user_passes_test(is_admin)

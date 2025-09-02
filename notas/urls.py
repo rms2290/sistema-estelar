@@ -82,9 +82,13 @@ urlpatterns = [
     
     # URL para Totalizador por Estado
     path('totalizador-por-estado/', views.totalizador_por_estado, name='totalizador_por_estado'),
+    path('totalizador-por-estado/pdf/', views.totalizador_por_estado_pdf, name='totalizador_por_estado_pdf'),
+    path('totalizador-por-estado/excel/', views.totalizador_por_estado_excel, name='totalizador_por_estado_excel'),
     
     # URLs para novos relatórios
     path('relatorios/totalizador-por-cliente/', views.totalizador_por_cliente, name='totalizador_por_cliente'),
+    path('relatorios/totalizador-por-cliente/pdf/', views.totalizador_por_cliente_pdf, name='totalizador_por_cliente_pdf'),
+    path('relatorios/totalizador-por-cliente/excel/', views.totalizador_por_cliente_excel, name='totalizador_por_cliente_excel'),
     path('relatorios/fechamento-frete/', views.fechamento_frete, name='fechamento_frete'),
     path('relatorios/cobranca-mensal/', views.cobranca_mensal, name='cobranca_mensal'),
     path('relatorios/cobranca-carregamento/', views.cobranca_carregamento, name='cobranca_carregamento'),
