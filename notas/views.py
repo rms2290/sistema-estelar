@@ -494,12 +494,8 @@ def adicionar_romaneio(request):
 
             messages.success(request, f'Romaneio {romaneio.codigo} ({romaneio.status}) salvo com sucesso!')
             
-            # >>> MUDANÇA AQUI: Redirecionar para a tela de visualização se Emitido <<<
-            if romaneio.status == 'Emitido':
-                return redirect('notas:visualizar_romaneio_paisagem', pk=romaneio.pk)
-            else: # Salvo
-                # Redirecionar para detalhes (para poder continuar editando) ou para listar
-                return redirect('notas:detalhes_romaneio', pk=romaneio.pk) # Sugiro detalhes para salvo
+            # Redirecionar sempre para detalhes do romaneio (impressão apenas via botão)
+            return redirect('notas:detalhes_romaneio', pk=romaneio.pk)
         else:
             # Se o formulário não for válido, reconfigurar o queryset para manter as seleções
             if cliente_id:
@@ -565,12 +561,8 @@ def adicionar_romaneio_generico(request):
 
             messages.success(request, f'Romaneio Genérico {romaneio.codigo} ({romaneio.status}) salvo com sucesso!')
             
-            # >>> MUDANÇA AQUI: Redirecionar para a tela de visualização se Emitido <<<
-            if romaneio.status == 'Emitido':
-                return redirect('notas:visualizar_romaneio_paisagem', pk=romaneio.pk)
-            else: # Salvo
-                # Redirecionar para detalhes (para poder continuar editando) ou para listar
-                return redirect('notas:detalhes_romaneio', pk=romaneio.pk) # Sugiro detalhes para salvo
+            # Redirecionar sempre para detalhes do romaneio (impressão apenas via botão)
+            return redirect('notas:detalhes_romaneio', pk=romaneio.pk)
         else:
             # Se o formulário não for válido, reconfigurar o queryset para manter as seleções
             if cliente_id:
@@ -647,11 +639,8 @@ def editar_romaneio(request, pk):
 
             messages.success(request, f'Romaneio {romaneio.codigo} ({romaneio.status}) atualizado com sucesso!')
             
-            # >>> MUDANÇA AQUI: Redirecionar para a tela de visualização se Emitido <<<
-            if romaneio.status == 'Emitido':
-                return redirect('notas:visualizar_romaneio_paisagem', pk=romaneio.pk)
-            else: # Rascunho
-                return redirect('notas:detalhes_romaneio', pk=romaneio.pk) # Volta para os detalhes do romaneio
+            # Redirecionar sempre para detalhes do romaneio (impressão apenas via botão)
+            return redirect('notas:detalhes_romaneio', pk=romaneio.pk)
         else:
             # Se o formulário não for válido, reconfigurar o queryset para manter as seleções
             if cliente_id:
@@ -2059,9 +2048,69 @@ def cobranca_carregamento(request):
 @login_required
 def dashboard(request):
     """Dashboard principal do sistema"""
+    from django.db.models import Count, Sum
+    from datetime import datetime, timedelta
+    
+    # Estatísticas básicas para o dashboard
+    total_notas = NotaFiscal.objects.count()
+    total_clientes = Cliente.objects.count()
+    total_motoristas = Motorista.objects.count()
+    total_veiculos = Veiculo.objects.count()
+    total_romaneios = RomaneioViagem.objects.count()
+    
+    # Notas por status
+    notas_deposito = NotaFiscal.objects.filter(status='Depósito').count()
+    notas_enviadas = NotaFiscal.objects.filter(status='Enviada').count()
+    
+    # Valores financeiros
+    valor_total_deposito = NotaFiscal.objects.filter(status='Depósito').aggregate(
+        total=Sum('valor')
+    )['total'] or 0
+    
+    valor_total_enviadas = NotaFiscal.objects.filter(status='Enviada').aggregate(
+        total=Sum('valor')
+    )['total'] or 0
+    
+    # Atividade recente (últimos 7 dias)
+    data_limite = datetime.now() - timedelta(days=7)
+    notas_recentes = NotaFiscal.objects.filter(
+        data__gte=data_limite.date()
+    ).order_by('-data')[:5]
+    
+    romaneios_recentes = RomaneioViagem.objects.filter(
+        data_emissao__gte=data_limite
+    ).order_by('-data_emissao')[:5]
+    
+    # Top clientes por valor em depósito
+    top_clientes_deposito = Cliente.objects.annotate(
+        valor_deposito=Sum('notas_fiscais__valor', filter=Q(notas_fiscais__status='Depósito'))
+    ).filter(valor_deposito__gt=0).order_by('-valor_deposito')[:5]
+    
     context = {
         'title': 'Dashboard - Agência Estelar',
         'user': request.user,
+        
+        # Estatísticas gerais
+        'total_notas': total_notas,
+        'total_clientes': total_clientes,
+        'total_motoristas': total_motoristas,
+        'total_veiculos': total_veiculos,
+        'total_romaneios': total_romaneios,
+        
+        # Estatísticas por status
+        'notas_deposito': notas_deposito,
+        'notas_enviadas': notas_enviadas,
+        
+        # Valores financeiros
+        'valor_total_deposito': valor_total_deposito,
+        'valor_total_enviadas': valor_total_enviadas,
+        
+        # Atividade recente
+        'notas_recentes': notas_recentes,
+        'romaneios_recentes': romaneios_recentes,
+        
+        # Top clientes
+        'top_clientes_deposito': top_clientes_deposito,
     }
     return render(request, 'notas/dashboard.html', context)
 

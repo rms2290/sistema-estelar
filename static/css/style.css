@@ -1,4 +1,4 @@
-/* F:\ESTELAR - PYTHON\sistema_estelar\static\css\style.css */
+/* F:\ESTELAR - PYTHON\sistema_estelar\static\css\style.css - v1.8 - Menu lateral branco apenas no tema dark */
 
 /* Importação de fontes estilizadas */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Cinzel:wght@400;600&display=swap');
@@ -21,25 +21,25 @@ html {
 
 /* Variáveis CSS para Sistema de Temas */
 :root {
-    /* Tema Escuro (padrão) */
-    --dark-bg-color: #212529;
-    --dark-sidebar-bg: #343a40;
-    --dark-header-bg: #212529;
-    --dark-text-color: #f8f9fa;
-    --dark-secondary-text-color: #adb5bd;
-    --dark-border-color: #495057;
-    --dark-card-bg: #343a40;
-    --dark-card-header-bg: #495057;
+    /* Tema Escuro Suave (Opção 1) */
+    --dark-bg-color: #1a1d23;        /* Azul escuro suave */
+    --dark-sidebar-bg: #252831;      /* Azul acinzentado */
+    --dark-header-bg: #1a1d23;       /* Azul escuro suave */
+    --dark-text-color: #e8eaed;      /* Branco suave */
+    --dark-secondary-text-color: #9aa0a6; /* Cinza claro */
+    --dark-border-color: #3c4043;    /* Cinza azulado */
+    --dark-card-bg: #252831;         /* Azul acinzentado */
+    --dark-card-header-bg: #2d3136;  /* Cinza azulado médio */
     
-    /* Tema Claro */
-    --light-bg-color: #f8f9fa;
-    --light-sidebar-bg: #ffffff;
-    --light-header-bg: #ffffff;
-    --light-text-color: #212529;
-    --light-secondary-text-color: #6c757d;
-    --light-border-color: #6c757d;
-    --light-card-bg: #ffffff;
-    --light-card-header-bg: #f8f9fa;
+    /* Tema Claro Suave (Opção 1) - Cinza Suave */
+    --light-bg-color: #f5f7fa;        /* Azul muito claro suave */
+    --light-sidebar-bg: #f8f9fa;      /* Cinza muito claro */
+    --light-header-bg: #e9ecef;       /* Cinza claro */
+    --light-text-color: #495057;      /* Cinza escuro */
+    --light-secondary-text-color: #6c757d; /* Cinza médio */
+    --light-border-color: #dee2e6;    /* Cinza médio */
+    --light-card-bg: #ffffff;         /* Branco puro */
+    --light-card-header-bg: #f8f9fa;  /* Cinza muito claro */
     
     /* Cores comuns */
     --primary-color: #007bff;
@@ -83,6 +83,14 @@ html {
     --border-color: var(--light-border-color);
     --card-bg: var(--light-card-bg);
     --card-header-bg: var(--light-card-header-bg);
+}
+
+/* Ajustes específicos para cores do menu lateral */
+[data-theme="light"] .sidebar-nav a:hover,
+[data-theme="light"] .nav-item a:hover,
+[data-theme="light"] .nav-submenu a:hover {
+    background-color: #e9ecef !important;
+    color: var(--primary-color) !important;
 }
 
 /* Melhorar visibilidade dos campos no tema claro */
@@ -175,41 +183,44 @@ body::-webkit-scrollbar {
 
 
 
-/* Sidebar */
+/* Sidebar - Estilo dos Widgets */
 .sidebar {
     width: 220px;
-    background-color: var(--sidebar-bg);
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
     padding: 15px;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
     color: var(--text-color);
-    position: relative; /* Mudando de sticky para relative */
-    height: 100%; /* Altura relativa ao container pai */
-    overflow-y: auto; /* Scroll apenas quando necessário */
+    position: relative;
+    height: 100%;
+    overflow-y: auto;
     transition: all 0.3s ease;
-    flex-shrink: 0; /* Impede que a sidebar encolha */
+    flex-shrink: 0;
+    margin: 10px;
+    margin-right: 0;
 }
 
 /* Estado colapsado da sidebar */
 .sidebar.collapsed {
     width: 0;
     padding: 0;
+    margin: 0;
     overflow: hidden;
     box-shadow: none;
+    border: none;
 }
 
-/* Main content quando sidebar está colapsada */
-.main-content.expanded {
-    margin-left: 0;
-    width: 100%;
-}
+
 
 .sidebar h3 {
-    color: var(--primary-color);
+    color: var(--text-color);
     margin-bottom: 20px;
     text-align: center;
     font-size: 1.2rem;
+    font-weight: 600;
 }
 
 .sidebar-nav ul {
@@ -224,29 +235,37 @@ body::-webkit-scrollbar {
 .sidebar-nav a {
     display: block;
     padding: 8px 12px;
-    color: var(--text-color);
+    color: var(--text-color) !important;
     text-decoration: none;
-    border-radius: 5px;
-    transition: background-color 0.3s ease;
+    border-radius: 8px;
+    transition: all 0.3s ease;
     font-size: 0.9rem;
+    margin-bottom: 4px;
 }
 
 .sidebar-nav a:hover {
     background-color: var(--card-header-bg);
-    color: var(--primary-color);
+    color: var(--primary-color) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* Sidebar Header */
+
+
+/* Sidebar Header - Estilo dos Widgets */
 .sidebar-header {
+    background: var(--card-header-bg);
+    padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
-    padding-bottom: 15px;
-    margin-bottom: 20px;
+    border-radius: 12px 12px 0 0;
+    margin: -15px -15px 20px -15px;
 }
 
 .sidebar-header h3 {
     margin: 0;
-    font-size: 1rem;
-    color: var(--primary-color);
+    color: var(--text-color);
+    font-size: 1.1rem;
+    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -254,6 +273,7 @@ body::-webkit-scrollbar {
 
 .sidebar-header h3 i {
     font-size: 1rem;
+    color: var(--primary-color);
 }
 
 /* Navigation Menu Structure */
@@ -278,10 +298,10 @@ body::-webkit-scrollbar {
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border-left: 3px solid var(--primary-color);
-    margin-bottom: 5px;
-    background-color: rgba(0, 123, 255, 0.1);
-    border-radius: 0 5px 5px 0;
+    margin-bottom: 8px;
+    background-color: var(--card-header-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
 }
 
 .nav-group-header i {
@@ -308,19 +328,19 @@ body::-webkit-scrollbar {
     align-items: center;
     gap: 8px;
     padding: 6px 10px;
-    color: var(--secondary-text-color);
+    color: var(--text-color) !important;
     text-decoration: none;
-    border-radius: 4px;
+    border-radius: 6px;
     transition: all 0.3s ease;
     font-size: 0.85rem;
-    border-left: 2px solid transparent;
+    margin-bottom: 2px;
 }
 
 .nav-submenu a:hover {
     background-color: var(--card-header-bg);
-    color: var(--primary-color);
-    border-left-color: var(--primary-color);
-    transform: translateX(3px);
+    color: var(--primary-color) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .nav-submenu a i {
@@ -339,19 +359,19 @@ body::-webkit-scrollbar {
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    color: var(--text-color);
+    color: var(--text-color) !important;
     text-decoration: none;
-    border-radius: 5px;
+    border-radius: 8px;
     transition: all 0.3s ease;
     font-size: 0.9rem;
-    border-left: 3px solid transparent;
+    margin-bottom: 4px;
 }
 
 .nav-item a:hover {
     background-color: var(--card-header-bg);
-    color: var(--primary-color);
-    border-left-color: var(--primary-color);
-    transform: translateX(3px);
+    color: var(--primary-color) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .nav-item a i {
@@ -364,13 +384,14 @@ body::-webkit-scrollbar {
 .nav-submenu a.active,
 .nav-item a.active {
     background-color: var(--primary-color);
-    color: white;
-    border-left-color: var(--accent-color);
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
 }
 
 /* Collapsed state for nav groups */
 .nav-group-header.collapsed {
-    background-color: rgba(0, 123, 255, 0.05);
+    background-color: var(--border-color);
+    color: var(--secondary-text-color);
 }
 
 .nav-group-header.collapsed i {
@@ -425,14 +446,22 @@ body::-webkit-scrollbar {
 /* Main Content Area */
 .main-content {
     flex-grow: 1;
-    padding: 15px; /* Reduzindo o padding */
+    padding: 15px;
     background-color: var(--bg-color);
-    height: 100%; /* Garante que ocupe toda a altura disponível */
-    position: relative; /* Para posicionamento correto */
-    width: calc(100% - 220px); /* Largura considerando o sidebar */
-    max-width: calc(100% - 220px); /* Garantir que não ultrapasse a largura disponível */
-    margin-left: 0; /* Garantir que não haja margem esquerda */
-    box-sizing: border-box; /* Garantir que padding não cause overflow */
+    height: 100%;
+    position: relative;
+    width: calc(100% - 240px); /* Ajustado para o novo sidebar com margem */
+    max-width: calc(100% - 240px);
+    margin-left: 0;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+}
+
+/* Main content quando sidebar está colapsada */
+.main-content.expanded {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
 }
 
 /* Top Bar (Header) */
@@ -2198,6 +2227,12 @@ td .badge.bg-inativo,
 
 [data-theme="light"] .sidebar {
     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    background-color: #f8f9fa !important;
+}
+
+[data-theme="light"] .top-bar {
+    background-color: #e9ecef !important;
+    color: #495057 !important;
 }
 
 [data-theme="light"] .card {
@@ -2235,6 +2270,13 @@ td .badge.bg-inativo,
     overflow-x: hidden; /* Previne scroll horizontal */
     box-sizing: border-box; /* Garantir que padding não cause overflow */
     max-width: 100%; /* Garantir que não ultrapasse a largura disponível */
+    transition: all 0.3s ease;
+}
+
+/* Dashboard quando sidebar está colapsada */
+.sidebar.collapsed + .main-content .dashboard-container {
+    width: 100%;
+    max-width: 100%;
 }
 
 .dashboard-header {
@@ -2364,6 +2406,12 @@ td .badge.bg-inativo,
     
     .feature-list {
         max-width: 100%;
+    }
+    
+    /* Em telas pequenas, o main-content sempre ocupa 100% */
+    .main-content {
+        width: 100% !important;
+        max-width: 100% !important;
     }
 }
 

@@ -309,9 +309,6 @@ class RomaneioViagem(UpperCaseMixin, models.Model):
     STATUS_ROMANEIO_CHOICES = [
         ('Salvo', 'Salvo'),
         ('Emitido', 'Emitido'),
-        ('Em_Transito', 'Em Trânsito'),
-        ('Entregue', 'Entregue'),
-        ('Cancelado', 'Cancelado'),
     ]
     status = models.CharField(
         max_length=15, 
@@ -608,14 +605,17 @@ class RomaneioViagem(UpperCaseMixin, models.Model):
         if not self.codigo:
             self.gerar_codigo_automatico()
         
-        # Calcular totais se há notas fiscais
+        # Verificar se é uma atualização de campos específicos (para evitar recursão)
+        update_fields = kwargs.get('update_fields')
+        
+        # Calcular totais se há notas fiscais e não é uma atualização de campos específicos
         super().save(*args, **kwargs)
         
-        if self.notas_fiscais.exists():
+        if not update_fields and self.notas_fiscais.exists():
             self.calcular_totais()
         
-        # Calcular seguro se há destino e valor
-        if self.destino_estado and self.valor_total:
+        # Calcular seguro se há destino e valor e não é uma atualização de campos específicos
+        if not update_fields and self.destino_estado and self.valor_total:
             self.calcular_seguro()
     
     class Meta:

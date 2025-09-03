@@ -1,130 +1,714 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load format_filters %}
 
 {% block title %}Dashboard - Agência Estelar{% endblock %}
 
 {% block content %}
 <div class="dashboard-container">
-    <div class="dashboard-content">
-        <div class="welcome-message">
-            <h1><i class="fas fa-warehouse"></i> Bem-vindo ao Sistema Estelar</h1>
-            <p class="lead">Sistema de Gestão de Armazenamento</p>
+    <div class="dashboard-header">
+        <h1><i class="fas fa-chart-line"></i> Dashboard - Sistema Estelar</h1>
+        <p class="lead">Sistema de gestão de armazenamento</p>
+    </div>
+    
+    <div class="dashboard-widgets">
+        <!-- Widget de Acesso Rápido -->
+        <div class="widget widget-quick-access">
+            <div class="widget-header">
+                <h3><i class="fas fa-bolt"></i> Acesso Rápido</h3>
+            </div>
+            <div class="widget-content">
+                <div class="quick-access-buttons">
+                    <a href="{% url 'notas:adicionar_nota_fiscal' %}" class="quick-btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        <span>Adicionar Nota</span>
+                    </a>
+                    <a href="{% url 'notas:adicionar_cliente' %}" class="quick-btn btn-success">
+                        <i class="fas fa-building"></i>
+                        <span>Adicionar Cliente</span>
+                    </a>
+                    <a href="{% url 'notas:adicionar_motorista' %}" class="quick-btn btn-info">
+                        <i class="fas fa-user-tie"></i>
+                        <span>Adicionar Motorista</span>
+                    </a>
+                    <a href="{% url 'notas:adicionar_veiculo' %}" class="quick-btn btn-warning">
+                        <i class="fas fa-truck"></i>
+                        <span>Adicionar Veículo</span>
+                    </a>
+                    <a href="{% url 'notas:adicionar_romaneio' %}" class="quick-btn btn-danger">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span>Criar Romaneio</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Widget de Estatísticas Gerais -->
+        <div class="widget widget-stats">
+            <div class="widget-header">
+                <h3><i class="fas fa-chart-bar"></i> Estatísticas Gerais</h3>
+            </div>
+            <div class="widget-content">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-icon">
+                            <i class="fas fa-file-invoice"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-number">{{ total_notas }}</span>
+                            <span class="stat-label">Notas Fiscais</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-icon">
+                            <i class="fas fa-building"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-number">{{ total_clientes }}</span>
+                            <span class="stat-label">Clientes</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-icon">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-number">{{ total_motoristas }}</span>
+                            <span class="stat-label">Motoristas</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-icon">
+                            <i class="fas fa-truck"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-number">{{ total_veiculos }}</span>
+                            <span class="stat-label">Veículos</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-icon">
+                            <i class="fas fa-clipboard-list"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-number">{{ total_romaneios }}</span>
+                            <span class="stat-label">Romaneios</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Widget de Atalhos a Relatórios -->
+        <div class="widget widget-reports">
+            <div class="widget-header">
+                <h3><i class="fas fa-chart-bar"></i> Atalhos a Relatórios</h3>
+            </div>
+            <div class="widget-content">
+                <div class="reports-grid">
+                    <a href="{% url 'notas:totalizador_por_estado' %}" class="report-item btn-primary">
+                        <div class="report-icon">
+                            <i class="fas fa-map-marked-alt"></i>
+                        </div>
+                        <div class="report-info">
+                            <span class="report-label">Totalizador por Estado</span>
+                            <span class="report-desc">Relatório de notas por estado</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'notas:totalizador_por_cliente' %}" class="report-item btn-success">
+                        <div class="report-icon">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                        <div class="report-info">
+                            <span class="report-label">Totalizador por Cliente</span>
+                            <span class="report-desc">Relatório de notas por cliente</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'notas:fechamento_frete' %}" class="report-item btn-info">
+                        <div class="report-icon">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </div>
+                        <div class="report-info">
+                            <span class="report-label">Fechamento de Frete</span>
+                            <span class="report-desc">Relatório de fechamento</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'notas:cobranca_mensal' %}" class="report-item btn-warning">
+                        <div class="report-icon">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <div class="report-info">
+                            <span class="report-label">Cobrança Mensal</span>
+                            <span class="report-desc">Relatório mensal de cobrança</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'notas:cobranca_carregamento' %}" class="report-item btn-danger">
+                        <div class="report-icon">
+                            <i class="fas fa-truck-loading"></i>
+                        </div>
+                        <div class="report-info">
+                            <span class="report-label">Cobrança Carregamento</span>
+                            <span class="report-desc">Relatório de carregamento</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'notas:listar_tabela_seguros' %}" class="report-item btn-primary">
+                        <div class="report-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div class="report-info">
+                            <span class="report-label">Tabela de Seguros</span>
+                            <span class="report-desc">Gestão de seguros</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Widget de Atividade Recente -->
+        <div class="widget widget-activity">
+            <div class="widget-header">
+                <h3><i class="fas fa-clock"></i> Atividade Recente</h3>
+            </div>
+            <div class="widget-content">
+                <div class="activity-tabs">
+                    <button class="tab-btn active" onclick="showTab('notas')">Notas Fiscais</button>
+                    <button class="tab-btn" onclick="showTab('romaneios')">Romaneios</button>
+                </div>
+                
+                <div id="notas-tab" class="tab-content active">
+                    {% if notas_recentes %}
+                        <div class="activity-list">
+                            {% for nota in notas_recentes %}
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    <i class="fas fa-file-invoice"></i>
+                                </div>
+                                <div class="activity-info">
+                                    <span class="activity-title">Nota {{ nota.nota }}</span>
+                                    <span class="activity-subtitle">{{ nota.cliente.razao_social }}</span>
+                                    <span class="activity-date">{{ nota.data|date:"d/m/Y" }}</span>
+                                </div>
+                                <div class="activity-value">
+                                    {{ nota.valor|format_brazilian_currency }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="no-data">Nenhuma nota fiscal recente</p>
+                    {% endif %}
+                </div>
+                
+                <div id="romaneios-tab" class="tab-content">
+                    {% if romaneios_recentes %}
+                        <div class="activity-list">
+                            {% for romaneio in romaneios_recentes %}
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    <i class="fas fa-clipboard-list"></i>
+                                </div>
+                                <div class="activity-info">
+                                    <span class="activity-title">Romaneio {{ romaneio.codigo }}</span>
+                                    <span class="activity-subtitle">{{ romaneio.cliente.razao_social }}</span>
+                                    <span class="activity-date">{{ romaneio.data_emissao|date:"d/m/Y H:i" }}</span>
+                                </div>
+                                <div class="activity-status">
+                                    <span class="badge badge-{{ romaneio.status|lower }}">{{ romaneio.status }}</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="no-data">Nenhum romaneio recente</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Widget de Top Clientes -->
+        <div class="widget widget-top-clients">
+            <div class="widget-header">
+                <h3><i class="fas fa-trophy"></i> Top Clientes (Depósito)</h3>
+            </div>
+            <div class="widget-content">
+                {% if top_clientes_deposito %}
+                    <div class="top-clients-list">
+                        {% for cliente in top_clientes_deposito %}
+                        <div class="client-item">
+                            <div class="client-rank">{{ forloop.counter }}º</div>
+                            <div class="client-info">
+                                <span class="client-name">{{ cliente.razao_social }}</span>
+                                <span class="client-cnpj">{{ cliente.cnpj }}</span>
+                            </div>
+                            <div class="client-value">
+                                {{ cliente.valor_deposito|format_brazilian_currency }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="no-data">Nenhum cliente com valor em depósito</p>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
 
 <style>
-/* Sobrescrever completamente o CSS global */
-html, body {
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-    width: 100% !important;
-    height: 100% !important;
-    max-width: 100% !important;
-    max-height: 100% !important;
-}
-
-.main-wrapper {
-    overflow: hidden !important;
-    height: calc(100vh - 60px) !important;
-    max-height: calc(100vh - 60px) !important;
-}
-
-.main-content {
-    overflow: hidden !important;
-    max-width: 100% !important;
-    width: 100% !important;
-    height: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-/* Dashboard container fixo */
+/* Dashboard Container */
 .dashboard-container {
-    position: fixed !important;
-    top: 60px !important;
-    left: 220px !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    overflow: hidden !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    width: calc(100vw - 220px) !important;
-    height: calc(100vh - 60px) !important;
-    max-width: calc(100vw - 220px) !important;
-    max-height: calc(100vh - 60px) !important;
+    position: fixed;
+    top: 60px;
+    left: 220px;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    overflow-y: auto;
+    width: calc(100vw - 220px);
+    height: calc(100vh - 60px);
+    padding: 2rem;
+    box-sizing: border-box;
 }
 
-.dashboard-content {
+/* Dashboard Header */
+.dashboard-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #2c3e50;
+}
+
+.dashboard-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.dashboard-header .lead {
+    font-size: 1.2rem;
+    color: #7f8c8d;
+    font-weight: 400;
+}
+
+/* Dashboard Widgets Grid */
+.dashboard-widgets {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Widget Base Styles */
+.widget {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e1e8ed;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.widget:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.widget-header {
+    background: #f8f9fa;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e1e8ed;
+}
+
+.widget-header h3 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.widget-header i {
+    margin-right: 0.5rem;
+    color: #3498db;
+}
+
+.widget-content {
+    padding: 1.5rem;
+}
+
+/* Quick Access Widget */
+.widget-quick-access {
+    grid-column: span 2;
+}
+
+.quick-access-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.quick-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem 1rem;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    color: white;
+    font-weight: 500;
+    text-align: center;
+    border: none;
+}
+
+.quick-btn:hover {
+    transform: translateY(-2px);
+    text-decoration: none;
+    color: white;
+}
+
+.quick-btn i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.quick-btn span {
+    font-size: 0.9rem;
+}
+
+.btn-primary { background: #3498db; }
+.btn-success { background: #27ae60; }
+.btn-info { background: #17a2b8; }
+.btn-warning { background: #f39c12; }
+.btn-danger { background: #e74c3c; }
+
+/* Stats Widget */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    transition: background 0.3s ease;
+}
+
+.stat-item:hover {
+    background: #e9ecef;
+}
+
+.stat-icon {
+    margin-right: 1rem;
+    font-size: 1.5rem;
+    color: #3498db;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #2c3e50;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #7f8c8d;
+    margin-top: 0.25rem;
+}
+
+/* Reports Widget */
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.report-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 8px;
+    text-decoration: none;
+    color: white;
+    transition: all 0.3s ease;
+    min-height: 80px;
+    border: none;
+}
+
+.report-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    text-decoration: none;
+    color: white;
+}
+
+.report-icon {
+    margin-right: 0.75rem;
+    font-size: 1.5rem;
+    color: white;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.report-item:hover .report-icon {
+    color: white;
+    transform: scale(1.05);
+}
+
+.report-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.report-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+    color: white;
+    line-height: 1.2;
+}
+
+.report-desc {
+    font-size: 0.75rem;
+    color: white;
+    opacity: 0.9;
+    line-height: 1.3;
+}
+
+/* Activity Widget */
+.activity-tabs {
+    display: flex;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e1e8ed;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    padding: 0.75rem 1rem;
+    color: #7f8c8d;
+    cursor: pointer;
+    transition: color 0.3s ease;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-btn.active {
+    color: #3498db;
+    border-bottom-color: #3498db;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.activity-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    transition: background 0.3s ease;
+}
+
+.activity-item:hover {
+    background: #e9ecef;
+}
+
+.activity-icon {
+    margin-right: 1rem;
+    font-size: 1.2rem;
+    color: #3498db;
+}
+
+.activity-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.activity-title {
+    color: #2c3e50;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.activity-subtitle {
+    color: #7f8c8d;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.activity-date {
+    color: #95a5a6;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.activity-value {
+    color: #27ae60;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.activity-status .badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-emitido { background: #3498db; color: white; }
+.badge-enviado { background: #27ae60; color: white; }
+.badge-cancelado { background: #e74c3c; color: white; }
+
+/* Top Clients Widget */
+.top-clients-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.client-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    transition: background 0.3s ease;
+}
+
+.client-item:hover {
+    background: #e9ecef;
+}
+
+.client-rank {
+    width: 30px;
+    height: 30px;
+    background: #f39c12;
+    color: white;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100%;
-    padding: 2rem;
-    max-width: 100%;
-    overflow: hidden;
-    margin: 0;
+    font-weight: bold;
+    font-size: 0.8rem;
+    margin-right: 1rem;
 }
 
-.welcome-message {
+.client-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.client-name {
+    color: #2c3e50;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.client-cnpj {
+    color: #7f8c8d;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.client-value {
+    color: #27ae60;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* No Data Message */
+.no-data {
     text-align: center;
-    color: white;
-    max-width: 800px;
-    width: 100%;
-    padding: 0 1rem;
+    color: #7f8c8d;
+    font-style: italic;
+    padding: 2rem;
 }
 
-.welcome-message h1 {
-    font-size: clamp(2rem, 5vw, 3rem);
-    margin-bottom: 1rem;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-    background: linear-gradient(45deg, #3498db, #2980b9);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    word-wrap: break-word;
-}
-
-.welcome-message .lead {
-    font-size: clamp(1.2rem, 3vw, 1.5rem);
-    margin-bottom: 0;
-    opacity: 0.9;
-    color: #ecf0f1;
-    word-wrap: break-word;
-}
-
-/* Responsividade */
+/* Responsive Design */
 @media (max-width: 768px) {
     .dashboard-container {
-        left: 0 !important;
-        width: 100vw !important;
-        max-width: 100vw !important;
+        left: 0;
+        width: 100vw;
+        padding: 1rem;
     }
     
-    .welcome-message {
-        padding: 0 0.5rem;
+    .dashboard-widgets {
+        grid-template-columns: 1fr;
+    }
+    
+    .widget-quick-access {
+        grid-column: span 1;
+    }
+    
+    .quick-access-buttons {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .reports-grid {
+        grid-template-columns: 1fr;
     }
 }
 
 @media (max-width: 480px) {
-    .dashboard-container {
-        left: 0 !important;
-        width: 100vw !important;
-        max-width: 100vw !important;
+    .dashboard-header h1 {
+        font-size: 2rem;
     }
     
-    .welcome-message {
-        padding: 0 0.25rem;
+    .stats-grid {
+        grid-template-columns: 1fr;
     }
 }
 
-/* Ajuste para quando o sidebar está colapsado */
+/* Sidebar Collapsed */
 .sidebar.collapsed + .main-content .dashboard-container {
-    left: 0 !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
+    left: 0;
+    width: 100vw;
 }
 </style>
+
+<script>
+function showTab(tabName) {
+    // Hide all tab contents
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => content.classList.remove('active'));
+    
+    // Remove active class from all tab buttons
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    tabButtons.forEach(button => button.classList.remove('active'));
+    
+    // Show selected tab content
+    document.getElementById(tabName + '-tab').classList.add('active');
+    
+    // Add active class to clicked button
+    event.target.classList.add('active');
+}
+</script>
 {% endblock %} 
