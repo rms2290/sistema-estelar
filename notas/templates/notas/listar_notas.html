@@ -5,9 +5,7 @@
 {% block title %}Pesquisar Notas Fiscais{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
+<div class="container mt-4">
             <h2><i class="fas fa-search"></i> Pesquisar Notas Fiscais</h2>
             
             <div class="card">
@@ -147,16 +145,13 @@
                     {% endif %}
                 </div>
             </div>
-        </div>
-    </div>
-</div>
-
-<div class="container-fluid mt-3">
-    <div class="row">
-        <div class="col-12">
-            <a href="{% url 'notas:adicionar_nota_fiscal' %}" class="btn btn-success">
-                <i class="fas fa-plus"></i> Adicionar Nova Nota Fiscal
-            </a>
+            
+            <!-- Botão de Adicionar -->
+            <div class="mt-4 text-center">
+                <a href="{% url 'notas:adicionar_nota_fiscal' %}" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Adicionar Nova Nota Fiscal
+                </a>
+            </div>
         </div>
     </div>
 </div>

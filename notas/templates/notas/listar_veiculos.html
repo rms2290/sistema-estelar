@@ -3,9 +3,7 @@
 {% block title %}Pesquisar Veículos{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
+<div class="container mt-4">
             <h2><i class="fas fa-car"></i> Pesquisar Veículos</h2>
             
             <div class="card">
@@ -111,8 +109,10 @@
         {% endif %}
     {% endif %}
 
-    <a href="{% url 'notas:adicionar_veiculo' %}" class="btn btn-success mt-3">Adicionar Novo Veículo</a>
-        </div>
+    <!-- Botão de Adicionar -->
+    <div class="mt-4 text-center">
+        <a href="{% url 'notas:adicionar_veiculo' %}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Adicionar Novo Veículo
+        </a>
     </div>
-</div>
 {% endblock %}

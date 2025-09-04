@@ -257,17 +257,11 @@
 <style>
 /* Dashboard Container */
 .dashboard-container {
-    position: fixed;
-    top: 60px;
-    left: 220px;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    overflow-y: auto;
-    width: calc(100vw - 220px);
-    height: calc(100vh - 60px);
+    max-width: 1200px;
+    margin: 0 auto;
     padding: 2rem;
-    box-sizing: border-box;
+    background: #f8f9fa;
+    min-height: 100vh;
 }
 
 /* Dashboard Header */
@@ -294,9 +288,8 @@
 .dashboard-widgets {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 1.5rem;
-    max-width: 1400px;
-    margin: 0 auto;
+    gap: 2rem;
+    margin-top: 2rem;
 }
 
 /* Widget Base Styles */
@@ -651,8 +644,6 @@
 /* Responsive Design */
 @media (max-width: 768px) {
     .dashboard-container {
-        left: 0;
-        width: 100vw;
         padding: 1rem;
     }
     
@@ -687,11 +678,6 @@
     }
 }
 
-/* Sidebar Collapsed */
-.sidebar.collapsed + .main-content .dashboard-container {
-    left: 0;
-    width: 100vw;
-}
 </style>
 
 <script>

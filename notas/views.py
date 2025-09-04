@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.db.models import Q, Max 
+from django.db import IntegrityError
 from django.contrib import messages
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -66,9 +67,10 @@ def get_next_romaneio_codigo():
     ano = timezone.now().year
     mes = timezone.now().month
     
+    # Buscar todos os romaneios com código no formato correto para o ano/mês atual
+    prefix = f"ROM-{ano:04d}-{mes:02d}-"
     last_romaneio = RomaneioViagem.objects.filter(
-        data_emissao__year=ano,
-        data_emissao__month=mes
+        codigo__startswith=prefix
     ).order_by('-codigo').first()
 
     next_sequence = 1
@@ -87,10 +89,10 @@ def get_next_romaneio_generico_codigo():
     ano = timezone.now().year
     mes = timezone.now().month
     
+    # Buscar todos os romaneios genéricos com código no formato correto para o ano/mês atual
+    prefix = f"ROM-GEN-{ano:04d}-{mes:02d}-"
     last_romaneio = RomaneioViagem.objects.filter(
-        data_emissao__year=ano,
-        data_emissao__month=mes,
-        codigo__startswith='ROM-GEN'
+        codigo__startswith=prefix
     ).order_by('-codigo').first()
 
     next_sequence = 100  # Começa do 100
@@ -473,16 +475,28 @@ def adicionar_romaneio(request):
         if form.is_valid():
             romaneio = form.save(commit=False)
             
-            romaneio.codigo = get_next_romaneio_codigo()
-            romaneio.data_emissao = form.cleaned_data['data_romaneio']
-            
-            if 'emitir' in request.POST:
-                romaneio.status = 'Emitido'
-            else: # Clicou em 'salvar' ou outro botão
-                romaneio.status = 'Salvo'
+            # Tentar salvar com código único (proteção contra concorrência)
+            max_tentativas = 5
+            for tentativa in range(max_tentativas):
+                try:
+                    romaneio.codigo = get_next_romaneio_codigo()
+                    romaneio.data_emissao = form.cleaned_data['data_romaneio']
+                    
+                    if 'emitir' in request.POST:
+                        romaneio.status = 'Emitido'
+                    else: # Clicou em 'salvar' ou outro botão
+                        romaneio.status = 'Salvo'
 
-            romaneio.save()
-            form.save_m2m() # Salva a relação ManyToMany
+                    romaneio.save()
+                    form.save_m2m() # Salva a relação ManyToMany
+                    break  # Sucesso, sair do loop
+                except IntegrityError as e:
+                    if 'codigo' in str(e) and tentativa < max_tentativas - 1:
+                        # Código duplicado, tentar novamente
+                        continue
+                    else:
+                        # Outro erro ou esgotaram as tentativas
+                        raise e
 
             # Atualizar o status das notas fiscais associadas
             for nota_fiscal in romaneio.notas_fiscais.all():
@@ -510,6 +524,8 @@ def adicionar_romaneio(request):
                 form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
             
             messages.error(request, 'Houve um erro ao emitir/salvar o romaneio. Verifique os campos.')
+            # Definir provisional_codigo mesmo em caso de erro
+            provisional_codigo = get_next_romaneio_codigo()
     else:
         form = RomaneioViagemForm()
         provisional_codigo = get_next_romaneio_codigo()
@@ -540,16 +556,28 @@ def adicionar_romaneio_generico(request):
         if form.is_valid():
             romaneio = form.save(commit=False)
             
-            romaneio.codigo = get_next_romaneio_generico_codigo()
-            romaneio.data_emissao = form.cleaned_data['data_romaneio']
-            
-            if 'emitir' in request.POST:
-                romaneio.status = 'Emitido'
-            else: # Clicou em 'salvar' ou outro botão
-                romaneio.status = 'Salvo'
+            # Tentar salvar com código único (proteção contra concorrência)
+            max_tentativas = 5
+            for tentativa in range(max_tentativas):
+                try:
+                    romaneio.codigo = get_next_romaneio_generico_codigo()
+                    romaneio.data_emissao = form.cleaned_data['data_romaneio']
+                    
+                    if 'emitir' in request.POST:
+                        romaneio.status = 'Emitido'
+                    else: # Clicou em 'salvar' ou outro botão
+                        romaneio.status = 'Salvo'
 
-            romaneio.save()
-            form.save_m2m() # Salva a relação ManyToMany
+                    romaneio.save()
+                    form.save_m2m() # Salva a relação ManyToMany
+                    break  # Sucesso, sair do loop
+                except IntegrityError as e:
+                    if 'codigo' in str(e) and tentativa < max_tentativas - 1:
+                        # Código duplicado, tentar novamente
+                        continue
+                    else:
+                        # Outro erro ou esgotaram as tentativas
+                        raise e
 
             # Atualizar o status das notas fiscais associadas
             for nota_fiscal in romaneio.notas_fiscais.all():
@@ -577,6 +605,8 @@ def adicionar_romaneio_generico(request):
                 form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
             
             messages.error(request, 'Houve um erro ao emitir/salvar o romaneio genérico. Verifique os campos.')
+            # Definir provisional_codigo mesmo em caso de erro
+            provisional_codigo = get_next_romaneio_generico_codigo()
     else:
         form = RomaneioViagemForm()
         provisional_codigo = get_next_romaneio_generico_codigo()
@@ -1041,6 +1071,70 @@ def imprimir_romaneio_novo(request, pk):
         'total_peso': total_peso,
         'total_valor': total_valor
     })
+
+@login_required
+def gerar_romaneio_pdf(request, pk):
+    """View para gerar PDF do romaneio"""
+    from django.http import HttpResponse
+    from django.template.loader import get_template
+    from django.conf import settings
+    import os
+    
+    romaneio = get_object_or_404(RomaneioViagem, pk=pk)
+    
+    # Obter notas fiscais vinculadas ao romaneio
+    notas_romaneadas = romaneio.notas_fiscais.all().order_by('data')
+    
+    # Calcular totais
+    total_peso = sum(nota.peso for nota in notas_romaneadas)
+    total_valor = sum(nota.valor for nota in notas_romaneadas)
+    
+    # Renderizar template
+    template = get_template('notas/visualizar_romaneio_para_impressao.html')
+    html = template.render({
+        'romaneio': romaneio,
+        'notas_romaneadas': notas_romaneadas,
+        'total_peso': total_peso,
+        'total_valor': total_valor
+    })
+    
+    # Configurar resposta para PDF
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="romaneio_{romaneio.codigo}.pdf"'
+    
+    # Tentar usar weasyprint se disponível
+    try:
+        from weasyprint import HTML, CSS
+        from weasyprint.text.fonts import FontConfiguration
+        
+        font_config = FontConfiguration()
+        css = CSS(string='''
+            @page {
+                size: A4;
+                margin: 1cm;
+            }
+            body {
+                font-family: Arial, sans-serif;
+                font-size: 12px;
+                line-height: 1.4;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-button {
+                display: none !important;
+            }
+        ''', font_config=font_config)
+        
+        HTML(string=html).write_pdf(response, stylesheets=[css], font_config=font_config)
+        
+    except ImportError:
+        # Fallback: retornar HTML para impressão
+        response = HttpResponse(html, content_type='text/html')
+        response['Content-Disposition'] = f'inline; filename="romaneio_{romaneio.codigo}.html"'
+        messages.warning(request, 'Biblioteca WeasyPrint não encontrada. Instale com: pip install weasyprint')
+    
+    return response
 
 @login_required
 @user_passes_test(is_cliente)
@@ -2048,6 +2142,18 @@ def cobranca_carregamento(request):
 @login_required
 def dashboard(request):
     """Dashboard principal do sistema"""
+    # Se o usuário for um cliente, redirecionar para o dashboard específico do cliente
+    if hasattr(request.user, 'tipo_usuario') and request.user.tipo_usuario == 'cliente':
+        return dashboard_cliente(request)
+    
+    # Se o usuário for um funcionário, redirecionar para o dashboard específico do funcionário
+    if hasattr(request.user, 'tipo_usuario') and request.user.tipo_usuario == 'funcionario':
+        return dashboard_funcionario(request)
+    
+    # Verificar se o usuário tem o atributo is_cliente (método alternativo)
+    if hasattr(request.user, 'is_cliente') and request.user.is_cliente:
+        return dashboard_cliente(request)
+    
     from django.db.models import Count, Sum
     from datetime import datetime, timedelta
     
@@ -2113,6 +2219,163 @@ def dashboard(request):
         'top_clientes_deposito': top_clientes_deposito,
     }
     return render(request, 'notas/dashboard.html', context)
+
+@login_required
+def dashboard_cliente(request):
+    """Dashboard específico para clientes"""
+    from django.db.models import Count, Sum
+    from datetime import datetime, timedelta
+    
+    # Verificar se o usuário é um cliente
+    if not (hasattr(request.user, 'tipo_usuario') and request.user.tipo_usuario == 'cliente'):
+        return redirect('notas:dashboard')
+    
+    # Obter o cliente vinculado ao usuário
+    cliente = request.user.cliente
+    if not cliente:
+        messages.error(request, 'Cliente não encontrado. Entre em contato com o administrador.')
+        return redirect('notas:login')
+    
+    # Estatísticas do cliente
+    total_notas_cliente = NotaFiscal.objects.filter(cliente=cliente).count()
+    notas_deposito_cliente = NotaFiscal.objects.filter(cliente=cliente, status='Depósito').count()
+    notas_enviadas_cliente = NotaFiscal.objects.filter(cliente=cliente, status='Enviada').count()
+    
+    # Valores financeiros do cliente
+    valor_total_deposito_cliente = NotaFiscal.objects.filter(
+        cliente=cliente, status='Depósito'
+    ).aggregate(total=Sum('valor'))['total'] or 0
+    
+    valor_total_enviadas_cliente = NotaFiscal.objects.filter(
+        cliente=cliente, status='Enviada'
+    ).aggregate(total=Sum('valor'))['total'] or 0
+    
+    # Últimas notas do cliente (últimos 30 dias)
+    data_limite = datetime.now() - timedelta(days=30)
+    ultimas_notas = NotaFiscal.objects.filter(
+        cliente=cliente,
+        data__gte=data_limite.date()
+    ).order_by('-data')[:10]
+    
+    # Romaneios do cliente (últimos 30 dias)
+    romaneios_cliente = RomaneioViagem.objects.filter(
+        cliente=cliente,
+        data_emissao__gte=data_limite
+    ).order_by('-data_emissao')[:10]
+    
+    # Estatísticas de carregamentos (últimos 6 meses)
+    data_limite_6_meses = datetime.now() - timedelta(days=180)
+    carregamentos_6_meses = RomaneioViagem.objects.filter(
+        cliente=cliente,
+        data_emissao__gte=data_limite_6_meses
+    ).count()
+    
+    # Carregamentos por mês (últimos 6 meses)
+    carregamentos_por_mes = []
+    for i in range(6):
+        data_inicio = datetime.now() - timedelta(days=30*i + 30)
+        data_fim = datetime.now() - timedelta(days=30*i)
+        mes = data_inicio.strftime('%m/%Y')
+        
+        quantidade = RomaneioViagem.objects.filter(
+            cliente=cliente,
+            data_emissao__gte=data_inicio,
+            data_emissao__lt=data_fim
+        ).count()
+        
+        carregamentos_por_mes.append({
+            'mes': mes,
+            'quantidade': quantidade
+        })
+    
+    carregamentos_por_mes.reverse()  # Ordenar do mais antigo para o mais recente
+    
+    # Valor total dos carregamentos (últimos 6 meses)
+    valor_total_carregamentos = RomaneioViagem.objects.filter(
+        cliente=cliente,
+        data_emissao__gte=data_limite_6_meses
+    ).aggregate(total=Sum('valor_total'))['total'] or 0
+    
+    context = {
+        'title': f'Dashboard - {cliente.razao_social}',
+        'user': request.user,
+        'cliente': cliente,
+        
+        # Estatísticas do cliente
+        'total_notas_cliente': total_notas_cliente,
+        'notas_deposito_cliente': notas_deposito_cliente,
+        'notas_enviadas_cliente': notas_enviadas_cliente,
+        
+        # Valores financeiros do cliente
+        'valor_total_deposito_cliente': valor_total_deposito_cliente,
+        'valor_total_enviadas_cliente': valor_total_enviadas_cliente,
+        
+        # Atividade recente do cliente
+        'ultimas_notas': ultimas_notas,
+        'romaneios_cliente': romaneios_cliente,
+        
+        # Estatísticas de carregamentos
+        'carregamentos_6_meses': carregamentos_6_meses,
+        'carregamentos_por_mes': carregamentos_por_mes,
+        'valor_total_carregamentos': valor_total_carregamentos,
+    }
+    return render(request, 'notas/dashboard_cliente.html', context)
+
+@login_required
+def dashboard_funcionario(request):
+    """Dashboard específico para funcionários"""
+    from django.db.models import Count, Sum
+    from datetime import datetime, timedelta
+    
+    # Verificar se o usuário é um funcionário
+    if not (hasattr(request.user, 'tipo_usuario') and request.user.tipo_usuario == 'funcionario'):
+        return redirect('notas:dashboard')
+    
+    # Estatísticas básicas para funcionários
+    total_notas = NotaFiscal.objects.count()
+    total_clientes = Cliente.objects.count()
+    total_motoristas = Motorista.objects.count()
+    total_veiculos = Veiculo.objects.count()
+    total_romaneios = RomaneioViagem.objects.count()
+    
+    # Notas por status
+    notas_deposito = NotaFiscal.objects.filter(status='Depósito').count()
+    notas_enviadas = NotaFiscal.objects.filter(status='Enviada').count()
+    
+    # Valores financeiros
+    valor_total_notas = NotaFiscal.objects.aggregate(total=Sum('valor'))['total'] or 0
+    valor_total_romaneios = RomaneioViagem.objects.aggregate(total=Sum('valor_total'))['total'] or 0
+    
+    # Atividade recente (últimas 5 notas fiscais)
+    notas_recentes = NotaFiscal.objects.select_related('cliente').order_by('-data')[:5]
+    
+    # Romaneios recentes (últimos 5)
+    romaneios_recentes = RomaneioViagem.objects.select_related('cliente', 'motorista').order_by('-data_emissao')[:5]
+    
+    context = {
+        'title': 'Dashboard - Funcionário',
+        'user': request.user,
+        
+        # Estatísticas básicas
+        'total_notas': total_notas,
+        'total_clientes': total_clientes,
+        'total_motoristas': total_motoristas,
+        'total_veiculos': total_veiculos,
+        'total_romaneios': total_romaneios,
+        
+        # Notas por status
+        'notas_deposito': notas_deposito,
+        'notas_enviadas': notas_enviadas,
+        
+        # Valores financeiros
+        'valor_total_notas': valor_total_notas,
+        'valor_total_romaneios': valor_total_romaneios,
+        
+        # Atividade recente
+        'notas_recentes': notas_recentes,
+        'romaneios_recentes': romaneios_recentes,
+    }
+    return render(request, 'notas/dashboard_funcionario.html', context)
 
 @login_required
 def listar_notas_fiscais(request):
@@ -2183,11 +2446,14 @@ def listar_motoristas(request):
         queryset = Motorista.objects.all()
         nome = search_form.cleaned_data.get('nome')
         cpf = search_form.cleaned_data.get('cpf')
+        rg = search_form.cleaned_data.get('rg')
 
         if nome:
             queryset = queryset.filter(nome__icontains=nome)
         if cpf:
             queryset = queryset.filter(cpf__icontains=cpf)
+        if rg:
+            queryset = queryset.filter(rg__icontains=rg)
         
         motoristas = queryset.order_by('nome')
 

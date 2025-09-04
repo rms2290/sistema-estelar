@@ -125,6 +125,7 @@ class NotaFiscal(UpperCaseMixin, models.Model):
 class Motorista(UpperCaseMixin, models.Model):
     nome = models.CharField(max_length=255, verbose_name="Nome Completo")
     cpf = models.CharField(max_length=14, unique=True, verbose_name="CPF") # Ex: 000.000.000-00
+    rg = models.CharField(max_length=20, blank=True, null=True, verbose_name="RG/RNE")
     cnh = models.CharField(max_length=11, unique=True, blank=True, null=True, verbose_name="CNH")
     codigo_seguranca = models.CharField(max_length=10, blank=True, null=True, verbose_name="Código de Segurança CNH")
     vencimento_cnh = models.DateField(blank=True, null=True, verbose_name="Vencimento CNH")
@@ -551,16 +552,31 @@ class RomaneioViagem(UpperCaseMixin, models.Model):
     def calcular_totais(self):
         """Calcula os totais baseado nas notas fiscais vinculadas"""
         if not self.notas_fiscais.exists():
+            # Se não há notas fiscais, zerar os totais
+            self.peso_total = 0
+            self.valor_total = 0
+            self.quantidade_total = 0
+            self.save(update_fields=['peso_total', 'valor_total', 'quantidade_total'])
             return
         
-        peso_total = sum(nf.peso for nf in self.notas_fiscais.all())
-        valor_total = sum(nf.valor for nf in self.notas_fiscais.all())
-        quantidade_total = sum(nf.quantidade for nf in self.notas_fiscais.all())
+        # Calcular totais com tratamento de valores None
+        peso_total = sum(nf.peso or 0 for nf in self.notas_fiscais.all())
+        valor_total = sum(nf.valor or 0 for nf in self.notas_fiscais.all())
+        quantidade_total = sum(nf.quantidade or 0 for nf in self.notas_fiscais.all())
         
-        self.peso_total = peso_total
-        self.valor_total = valor_total
-        self.quantidade_total = quantidade_total
-        self.save(update_fields=['peso_total', 'valor_total', 'quantidade_total'])
+        # Verificar se os valores mudaram para evitar saves desnecessários
+        if (self.peso_total != peso_total or 
+            self.valor_total != valor_total or 
+            self.quantidade_total != quantidade_total):
+            
+            self.peso_total = peso_total
+            self.valor_total = valor_total
+            self.quantidade_total = quantidade_total
+            self.save(update_fields=['peso_total', 'valor_total', 'quantidade_total'])
+            
+            # Recalcular seguro se necessário
+            if self.destino_estado and self.valor_total:
+                self.calcular_seguro()
     
     def calcular_seguro(self):
         """Calcula o valor do seguro baseado no estado de destino"""
@@ -574,6 +590,69 @@ class RomaneioViagem(UpperCaseMixin, models.Model):
             self.save(update_fields=['percentual_seguro', 'valor_seguro'])
         except TabelaSeguro.DoesNotExist:
             pass
+    
+    def validar_capacidade_veiculo(self):
+        """Valida se o peso total da carga não excede a capacidade do veículo"""
+        if not self.peso_total or not self.veiculo_principal:
+            return True, ""
+        
+        # Capacidades padrão por tipo de veículo (em kg)
+        capacidades = {
+            'Carro': 1000,
+            'Van': 1500,
+            'Caminhão': 10000,
+            'Cavalo': 25000,  # Cavalo + reboque
+            'Reboque': 25000,
+            'Semi-reboque': 25000,
+        }
+        
+        capacidade_principal = capacidades.get(self.veiculo_principal.tipo_unidade, 0)
+        capacidade_reboque_1 = capacidades.get(self.reboque_1.tipo_unidade, 0) if self.reboque_1 else 0
+        capacidade_reboque_2 = capacidades.get(self.reboque_2.tipo_unidade, 0) if self.reboque_2 else 0
+        
+        capacidade_total = capacidade_principal + capacidade_reboque_1 + capacidade_reboque_2
+        
+        if self.peso_total > capacidade_total:
+            return False, f"Peso total da carga ({self.peso_total:.2f} kg) excede a capacidade total dos veículos ({capacidade_total} kg)."
+        
+        return True, ""
+    
+    def get_resumo_carga(self):
+        """Retorna um resumo da carga do romaneio"""
+        if not self.notas_fiscais.exists():
+            return {
+                'total_notas': 0,
+                'peso_total': 0,
+                'valor_total': 0,
+                'quantidade_total': 0,
+                'capacidade_utilizada': 0,
+                'capacidade_maxima': 0,
+            }
+        
+        # Calcular capacidade total
+        capacidades = {
+            'Carro': 1000,
+            'Van': 1500,
+            'Caminhão': 10000,
+            'Cavalo': 25000,
+            'Reboque': 25000,
+            'Semi-reboque': 25000,
+        }
+        
+        capacidade_principal = capacidades.get(self.veiculo_principal.tipo_unidade, 0) if self.veiculo_principal else 0
+        capacidade_reboque_1 = capacidades.get(self.reboque_1.tipo_unidade, 0) if self.reboque_1 else 0
+        capacidade_reboque_2 = capacidades.get(self.reboque_2.tipo_unidade, 0) if self.reboque_2 else 0
+        capacidade_maxima = capacidade_principal + capacidade_reboque_1 + capacidade_reboque_2
+        
+        return {
+            'total_notas': self.notas_fiscais.count(),
+            'peso_total': self.peso_total or 0,
+            'valor_total': self.valor_total or 0,
+            'quantidade_total': self.quantidade_total or 0,
+            'capacidade_utilizada': self.peso_total or 0,
+            'capacidade_maxima': capacidade_maxima,
+            'percentual_capacidade': (self.peso_total / capacidade_maxima * 100) if capacidade_maxima > 0 else 0,
+        }
     
     def gerar_codigo_automatico(self):
         """Gera código automático para o romaneio"""

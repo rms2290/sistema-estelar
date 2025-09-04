@@ -37,6 +37,13 @@
                     {{ form.cpf }}
                     {% if form.cpf.errors %}<div class="text-danger">{{ form.cpf.errors }}</div>{% endif %}
                 </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.rg.id_for_label }}" class="form-label">
+                        <i class="fas fa-id-card"></i> {{ form.rg.label }}:
+                    </label>
+                    {{ form.rg }}
+                    {% if form.rg.errors %}<div class="text-danger">{{ form.rg.errors }}</div>{% endif %}
+                </div>
                 {# ... (outros campos: cnh, codigo_seguranca, vencimento_cnh, uf_emissao_cnh, telefone) ... #}
                 <div class="col-md-6 mb-3">
                     <label for="{{ form.cnh.id_for_label }}" class="form-label">

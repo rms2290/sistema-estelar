@@ -6,6 +6,7 @@ app_name = 'notas'
 urlpatterns = [
 # URLs para Dashboard
     path('', views.dashboard, name='dashboard'),
+    path('dashboard-cliente/', views.dashboard_cliente, name='dashboard_cliente'),
 # URLs para Notas Fiscais
     path('notas/', views.listar_notas_fiscais, name='listar_notas_fiscais'),
     path('adicionar/', views.adicionar_nota_fiscal, name='adicionar_nota_fiscal'),
@@ -45,6 +46,7 @@ urlpatterns = [
     path('romaneios/excluir/<int:pk>/', views.excluir_romaneio, name='excluir_romaneio'),
     path('romaneios/<int:pk>/detalhes/', views.detalhes_romaneio, name='detalhes_romaneio'),
     path('romaneios/<int:pk>/imprimir-novo/', views.imprimir_romaneio_novo, name='imprimir_romaneio_novo'),
+    path('romaneios/<int:pk>/gerar-pdf/', views.gerar_romaneio_pdf, name='gerar_romaneio_pdf'),
 
 # URL para carregar notas fiscais via AJAX
     path('ajax/load-notas/', views.load_notas_fiscais, name='ajax_load_notas'),

@@ -3,9 +3,7 @@
 {% block title %}Pesquisar Motoristas{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
+<div class="container mt-4">
             <h2><i class="fas fa-id-card"></i> Pesquisar Motoristas</h2>
             
             <div class="card">
@@ -18,7 +16,7 @@
                     <!-- Formulário de Pesquisa -->
                     <form method="GET" class="mb-4">
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="mb-3">
                                     {{ search_form.nome.label_tag }}
                                     {{ search_form.nome }}
@@ -27,12 +25,21 @@
                                     {% endif %}
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="mb-3">
                                     {{ search_form.cpf.label_tag }}
                                     {{ search_form.cpf }}
                                     {% if search_form.cpf.errors %}
                                         <div class="text-danger">{{ search_form.cpf.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ search_form.rg.label_tag }}
+                                    {{ search_form.rg }}
+                                    {% if search_form.rg.errors %}
+                                        <div class="text-danger">{{ search_form.rg.errors }}</div>
                                     {% endif %}
                                 </div>
                             </div>
@@ -73,6 +80,7 @@
                                         <tr>
                                             <th>Nome</th>
                                             <th>CPF</th>
+                                            <th>RG/RNE</th>
                                             <th>CNH</th>
                                             <th>Telefone</th>
                                             <th>Ações</th>
@@ -83,6 +91,7 @@
                                             <tr>
                                                 <td><strong>{{ motorista.nome }}</strong></td>
                                                 <td>{{ motorista.cpf }}</td>
+                                                <td>{{ motorista.rg|default:"-" }}</td>
                                                 <td>{{ motorista.cnh|default:"-" }}</td>
                                                 <td>{{ motorista.telefone|default:"-" }}</td>
                                                 <td>
@@ -112,16 +121,13 @@
                     {% endif %}
                 </div>
             </div>
-        </div>
-    </div>
-</div>
-
-<div class="container-fluid mt-3">
-    <div class="row">
-        <div class="col-12">
-            <a href="{% url 'notas:adicionar_motorista' %}" class="btn btn-success">
-                <i class="fas fa-plus"></i> Adicionar Novo Motorista
-            </a>
+            
+            <!-- Botão de Adicionar -->
+            <div class="mt-4 text-center">
+                <a href="{% url 'notas:adicionar_motorista' %}" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Adicionar Novo Motorista
+                </a>
+            </div>
         </div>
     </div>
 </div>

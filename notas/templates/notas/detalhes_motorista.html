@@ -27,6 +27,7 @@
                 <div class="col-md-6">
                     <p><strong>Nome Completo:</strong> {{ motorista.nome }}</p>
                     <p><strong>CPF:</strong> {{ motorista.cpf }}</p>
+                    <p><strong>RG/RNE:</strong> {{ motorista.rg|default:"N/A" }}</p>
                     <p><strong>CNH:</strong> {{ motorista.cnh|default:"N/A" }}</p>
                     <p><strong>Código de Segurança CNH:</strong> {{ motorista.codigo_seguranca|default:"N/A" }}</p>
                 </div>

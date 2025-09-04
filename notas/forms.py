@@ -263,6 +263,14 @@ class MotoristaForm(forms.ModelForm):
         required=False, # Mantém como opcional
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+    
+    # Campo RG
+    rg = forms.CharField(
+        label='RG/RNE',
+        max_length=20,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
 
     # >>> NOVOS CAMPOS NO FORMULARIO <<<
     tipo_composicao_motorista = forms.ChoiceField(
@@ -946,6 +954,109 @@ class RomaneioViagemForm(forms.ModelForm):
                 raise forms.ValidationError('Todas as notas fiscais devem pertencer ao cliente selecionado.')
         
         return notas_fiscais
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # Validações específicas do formulário
+        motorista = cleaned_data.get('motorista')
+        veiculo_principal = cleaned_data.get('veiculo_principal')
+        reboque_1 = cleaned_data.get('reboque_1')
+        reboque_2 = cleaned_data.get('reboque_2')
+        
+        # Validação de composição veicular
+        if motorista and veiculo_principal:
+            tipo_composicao_motorista = motorista.tipo_composicao_motorista
+            tipo_veiculo_principal = veiculo_principal.tipo_unidade
+            
+            # Validar se o motorista pode dirigir o tipo de veículo principal
+            if tipo_composicao_motorista == 'Carro' and tipo_veiculo_principal not in ['Carro']:
+                raise forms.ValidationError(
+                    f"O motorista {motorista.nome} está habilitado apenas para dirigir carros, "
+                    f"mas foi selecionado um veículo do tipo {tipo_veiculo_principal}."
+                )
+            elif tipo_composicao_motorista == 'Van' and tipo_veiculo_principal not in ['Van']:
+                raise forms.ValidationError(
+                    f"O motorista {motorista.nome} está habilitado apenas para dirigir vans, "
+                    f"mas foi selecionado um veículo do tipo {tipo_veiculo_principal}."
+                )
+            elif tipo_composicao_motorista == 'Caminhão' and tipo_veiculo_principal not in ['Caminhão']:
+                raise forms.ValidationError(
+                    f"O motorista {motorista.nome} está habilitado apenas para dirigir caminhões, "
+                    f"mas foi selecionado um veículo do tipo {tipo_veiculo_principal}."
+                )
+            elif tipo_composicao_motorista == 'Carreta' and tipo_veiculo_principal not in ['Cavalo']:
+                raise forms.ValidationError(
+                    f"O motorista {motorista.nome} está habilitado para dirigir carretas (cavalo + reboque), "
+                    f"mas foi selecionado um veículo do tipo {tipo_veiculo_principal}."
+                )
+            elif tipo_composicao_motorista == 'Bitrem' and tipo_veiculo_principal not in ['Cavalo']:
+                raise forms.ValidationError(
+                    f"O motorista {motorista.nome} está habilitado para dirigir bitrens (cavalo + 2 reboques), "
+                    f"mas foi selecionado um veículo do tipo {tipo_veiculo_principal}."
+                )
+            
+            # Validar reboques baseado no tipo de composição
+            if tipo_composicao_motorista in ['Carro', 'Van', 'Caminhão']:
+                if reboque_1 or reboque_2:
+                    raise forms.ValidationError(
+                        f"O motorista {motorista.nome} está habilitado para dirigir apenas veículos simples "
+                        f"({tipo_composicao_motorista}), mas foram selecionados reboques."
+                    )
+            elif tipo_composicao_motorista == 'Carreta':
+                if not reboque_1:
+                    raise forms.ValidationError(
+                        f"O motorista {motorista.nome} está habilitado para dirigir carretas, "
+                        f"mas nenhum reboque foi selecionado."
+                    )
+                if reboque_2:
+                    raise forms.ValidationError(
+                        f"O motorista {motorista.nome} está habilitado para dirigir apenas carretas (1 reboque), "
+                        f"mas foram selecionados 2 reboques."
+                    )
+            elif tipo_composicao_motorista == 'Bitrem':
+                if not reboque_1 or not reboque_2:
+                    raise forms.ValidationError(
+                        f"O motorista {motorista.nome} está habilitado para dirigir bitrens, "
+                        f"mas é necessário selecionar 2 reboques."
+                    )
+        
+        # Validar se os reboques são do tipo correto
+        if reboque_1 and reboque_1.tipo_unidade not in ['Reboque', 'Semi-reboque']:
+            raise forms.ValidationError(
+                f"O veículo {reboque_1.placa} não é um reboque ou semi-reboque válido."
+            )
+        
+        if reboque_2 and reboque_2.tipo_unidade not in ['Reboque', 'Semi-reboque']:
+            raise forms.ValidationError(
+                f"O veículo {reboque_2.placa} não é um reboque ou semi-reboque válido."
+            )
+        
+        # Validar se não há reboques duplicados
+        if reboque_1 and reboque_2 and reboque_1 == reboque_2:
+            raise forms.ValidationError("Não é possível usar o mesmo veículo como reboque 1 e reboque 2.")
+        
+        # Validar se o veículo principal não é usado como reboque
+        if veiculo_principal:
+            if reboque_1 and veiculo_principal == reboque_1:
+                raise forms.ValidationError("O veículo principal não pode ser usado como reboque 1.")
+            if reboque_2 and veiculo_principal == reboque_2:
+                raise forms.ValidationError("O veículo principal não pode ser usado como reboque 2.")
+        
+        # Validação de capacidade do veículo (se for uma instância existente)
+        if self.instance and self.instance.pk:
+            # Criar uma instância temporária para validar capacidade
+            temp_romaneio = RomaneioViagem(
+                veiculo_principal=veiculo_principal,
+                reboque_1=reboque_1,
+                reboque_2=reboque_2,
+                peso_total=self.instance.peso_total
+            )
+            capacidade_ok, mensagem_erro = temp_romaneio.validar_capacidade_veiculo()
+            if not capacidade_ok:
+                raise forms.ValidationError(mensagem_erro)
+        
+        return cleaned_data
         
 # --------------------------------------------------------------------------------------
 # NOVO: Formulário para Histórico de Consulta
@@ -1040,6 +1151,12 @@ class MotoristaSearchForm(forms.Form):
         required=False,
         max_length=14,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000.000.000-00'})
+    )
+    rg = forms.CharField(
+        label='RG/RNE',
+        required=False,
+        max_length=20,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'RG/RNE'})
     )
 
 # --------------------------------------------------------------------------------------
