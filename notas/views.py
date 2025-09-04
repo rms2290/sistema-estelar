@@ -499,7 +499,7 @@ def adicionar_romaneio(request):
                         raise e
 
             # Atualizar o status das notas fiscais associadas
-            for nota_fiscal in romaneio.notas_fiscais.all():
+            for nota_fiscal in romaneio.notas_vinculadas.all():
                 if romaneio.status == 'Emitido':
                     nota_fiscal.status = 'Enviada'
                 else:
@@ -580,7 +580,7 @@ def adicionar_romaneio_generico(request):
                         raise e
 
             # Atualizar o status das notas fiscais associadas
-            for nota_fiscal in romaneio.notas_fiscais.all():
+            for nota_fiscal in romaneio.notas_vinculadas.all():
                 if romaneio.status == 'Emitido':
                     nota_fiscal.status = 'Enviada'
                 else:
@@ -641,7 +641,7 @@ def editar_romaneio(request, pk):
             form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
 
         if form.is_valid():
-            notas_antes_salvar = set(romaneio.notas_fiscais.all())
+            notas_antes_salvar = set(romaneio.notas_vinculadas.all())
             
             romaneio.data_emissao = form.cleaned_data['data_romaneio']
             
@@ -653,7 +653,7 @@ def editar_romaneio(request, pk):
             
             form.save()
             
-            notas_depois_salvar = set(romaneio.notas_fiscais.all())
+            notas_depois_salvar = set(romaneio.notas_vinculadas.all())
 
             for nota_fiscal_removida in (notas_antes_salvar - notas_depois_salvar):
                 if not nota_fiscal_removida.romaneios_vinculados.exclude(pk=romaneio.pk).exists():
@@ -709,7 +709,7 @@ def excluir_romaneio(request, pk):
             return redirect('notas:listar_romaneios')
     
     if request.method == 'POST':
-        for nota_fiscal in romaneio.notas_fiscais.all():
+        for nota_fiscal in romaneio.notas_vinculadas.all():
             nota_fiscal.status = 'Depósito'
             nota_fiscal.save()
         
@@ -728,7 +728,7 @@ def detalhes_romaneio(request, pk):
             messages.error(request, 'Você não tem permissão para acessar este romaneio.')
             return redirect('notas:meus_romaneios')
     
-    notas_romaneadas = romaneio.notas_fiscais.all().order_by('nota')
+    notas_romaneadas = romaneio.notas_vinculadas.all().order_by('nota')
 
     context = {
         'romaneio': romaneio,
@@ -1059,7 +1059,7 @@ def imprimir_romaneio_novo(request, pk):
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
     
     # Obter notas fiscais vinculadas ao romaneio
-    notas_romaneadas = romaneio.notas_fiscais.all().order_by('data')
+    notas_romaneadas = romaneio.notas_vinculadas.all().order_by('data')
     
     # Calcular totais
     total_peso = sum(nota.peso for nota in notas_romaneadas)
@@ -1083,7 +1083,7 @@ def gerar_romaneio_pdf(request, pk):
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
     
     # Obter notas fiscais vinculadas ao romaneio
-    notas_romaneadas = romaneio.notas_fiscais.all().order_by('data')
+    notas_romaneadas = romaneio.notas_vinculadas.all().order_by('data')
     
     # Calcular totais
     total_peso = sum(nota.peso for nota in notas_romaneadas)
@@ -1348,7 +1348,7 @@ def totalizador_por_estado(request):
                     }
                 
                 # Adicionar valores das notas fiscais do romaneio
-                for nota in romaneio.notas_fiscais.all():
+                for nota in romaneio.notas_vinculadas.all():
                     estados_agrupados[estado_cliente]['total_valor'] += nota.valor
                 
                 # Contar romaneios únicos (usar set para evitar duplicatas)
@@ -1445,7 +1445,7 @@ def totalizador_por_estado_pdf(request):
                     'romaneios_ids': set()
                 }
             
-            for nota in romaneio.notas_fiscais.all():
+            for nota in romaneio.notas_vinculadas.all():
                 estados_agrupados[estado_cliente]['total_valor'] += nota.valor
             
             estados_agrupados[estado_cliente]['romaneios_ids'].add(romaneio.id)
@@ -1542,7 +1542,7 @@ def totalizador_por_estado_excel(request):
                     'romaneios_ids': set()
                 }
             
-            for nota in romaneio.notas_fiscais.all():
+            for nota in romaneio.notas_vinculadas.all():
                 estados_agrupados[estado_cliente]['total_valor'] += nota.valor
             
             estados_agrupados[estado_cliente]['romaneios_ids'].add(romaneio.id)
@@ -1642,7 +1642,7 @@ def totalizador_por_cliente(request):
                     }
                 
                 # Adicionar valores das notas fiscais do romaneio
-                for nota in romaneio.notas_fiscais.all():
+                for nota in romaneio.notas_vinculadas.all():
                     clientes_agrupados[cliente.id]['total_valor'] += nota.valor
                 
                 # Contar romaneios únicos (usar set para evitar duplicatas)
@@ -1820,7 +1820,7 @@ def totalizador_por_cliente_pdf(request):
                     'estados_envolvidos': set()
                 }
             
-            for nota in romaneio.notas_fiscais.all():
+            for nota in romaneio.notas_vinculadas.all():
                 clientes_agrupados[cliente.id]['total_valor'] += nota.valor
             
             clientes_agrupados[cliente.id]['romaneios_ids'].add(romaneio.id)
@@ -1995,7 +1995,7 @@ def totalizador_por_cliente_excel(request):
                     'estados_envolvidos': set()
                 }
             
-            for nota in romaneio.notas_fiscais.all():
+            for nota in romaneio.notas_vinculadas.all():
                 clientes_agrupados[cliente.id]['total_valor'] += nota.valor
             
             clientes_agrupados[cliente.id]['romaneios_ids'].add(romaneio.id)

@@ -92,4 +92,23 @@ def format_for_input(value, decimal_places=2):
         float_value = float(value)
         return f"{float_value:.{decimal_places}f}"
     except (ValueError, TypeError):
-        return '0.00' 
+        return '0.00'
+
+@register.filter
+def sum_field(queryset, field_name):
+    """
+    Calcula a soma de um campo específico de um queryset
+    """
+    if not queryset:
+        return 0
+    
+    total = 0
+    for item in queryset:
+        try:
+            value = getattr(item, field_name, 0)
+            if value is not None:
+                total += float(value)
+        except (ValueError, TypeError):
+            continue
+    
+    return total 
