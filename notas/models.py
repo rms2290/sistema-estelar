@@ -103,7 +103,7 @@ class NotaFiscal(UpperCaseMixin, models.Model):
     # Relação ManyToMany com RomaneioViagem (para que uma nota possa estar em vários romaneios)
     romaneios = models.ManyToManyField(
         'RomaneioViagem',
-        related_name='notas_vinculadas', # Related_name específico para evitar conflitos
+        related_name='notas_vinculadas', # Related_name para evitar conflito
         blank=True,
         verbose_name="Romaneios Vinculados"
     )

@@ -726,7 +726,7 @@ def detalhes_romaneio(request, pk):
     # Verificar se o usuário tem permissão para ver este romaneio
     if request.user.tipo_usuario == 'cliente' and request.user.cliente:
         # Cliente só pode ver romaneios que contêm suas notas fiscais
-        if not romaneio.notas_fiscais.filter(cliente=request.user.cliente).exists():
+        if not romaneio.notas_vinculadas.filter(cliente=request.user.cliente).exists():
             messages.error(request, 'Você não tem permissão para acessar este romaneio.')
             return redirect('notas:meus_romaneios')
     
@@ -849,7 +849,7 @@ def load_notas_fiscais_para_romaneio(request, cliente_id):
         if romaneio_id:
             try:
                 romaneio_existente = RomaneioViagem.objects.get(pk=romaneio_id)
-                notas_vinculadas = romaneio_existente.notas_fiscais.all()
+                notas_vinculadas = romaneio_existente.notas_vinculadas.all()
                 selected_notas_ids = list(notas_vinculadas.values_list('pk', flat=True))
                 print(f"DEBUG: Encontradas {notas_vinculadas.count()} notas vinculadas ao romaneio {romaneio_id}")
                 
