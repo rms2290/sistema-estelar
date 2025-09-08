@@ -162,7 +162,8 @@
                         </ul>
                     </li>
                     
-                    <!-- Agenda -->
+                    <!-- Agenda - Apenas para Administradores -->
+                    {% if user.is_admin %}
                     <li class="nav-group">
                         <div class="nav-group-header">
                             <i class="fas fa-calendar-alt"></i>
@@ -180,6 +181,7 @@
                             </a></li>
                         </ul>
                     </li>
+                    {% endif %}
                     
                     <!-- Depósito -->
                     <li class="nav-group">
