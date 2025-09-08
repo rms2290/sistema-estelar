@@ -108,8 +108,8 @@
                                                 <td>{{ nota.valor|format_brazilian_currency }}</td>
                                                 <td>{{ nota.status }}</td>
                                                 <td>
-                                                    {% if nota.romaneios.all %}
-                                                        {% for romaneio in nota.romaneios.all %}
+                                                    {% if nota.romaneios_vinculados.all %}
+                                                        {% for romaneio in nota.romaneios_vinculados.all %}
                                                             <a href="{% url 'notas:detalhes_romaneio' romaneio.pk %}">{{ romaneio.codigo }}</a>{% if not forloop.last %}<br>{% endif %}
                                                         {% endfor %}
                                                     {% else %}
