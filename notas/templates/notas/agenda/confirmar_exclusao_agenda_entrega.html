@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="card-title">
+                        <i class="fas fa-exclamation-triangle"></i> {{ title }}
+                    </h3>
+                </div>
+                
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h4><i class="icon fas fa-exclamation-triangle"></i> Atenção!</h4>
+                        Você está prestes a excluir uma entrega agendada. Esta ação não pode ser desfeita.
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Detalhes da Entrega</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Cliente:</strong> {{ agenda_entrega.cliente.razao_social }}</p>
+                                    <p><strong>Data da Entrega:</strong> {{ agenda_entrega.data_entrega|date:"d/m/Y" }}</p>
+                                    <p><strong>Empresa:</strong> {{ agenda_entrega.empresa_entrega }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Quantidade:</strong> {{ agenda_entrega.quantidade }}</p>
+                                    <p><strong>Volume:</strong> {{ agenda_entrega.volume }}</p>
+                                    <p><strong>Status:</strong> 
+                                        {% if agenda_entrega.status == 'Agendada' %}
+                                            <span class="badge badge-warning">{{ agenda_entrega.get_status_display }}</span>
+                                        {% elif agenda_entrega.status == 'Em Andamento' %}
+                                            <span class="badge badge-primary">{{ agenda_entrega.get_status_display }}</span>
+                                        {% elif agenda_entrega.status == 'Concluída' %}
+                                            <span class="badge badge-success">{{ agenda_entrega.get_status_display }}</span>
+                                        {% elif agenda_entrega.status == 'Cancelada' %}
+                                            <span class="badge badge-danger">{{ agenda_entrega.get_status_display }}</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            {% if agenda_entrega.observacoes %}
+                                <div class="row">
+                                    <div class="col-12">
+                                        <p><strong>Observações:</strong></p>
+                                        <p class="text-muted">{{ agenda_entrega.observacoes }}</p>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+                        <div class="form-group text-center">
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="fas fa-trash"></i> Confirmar Exclusão
+                            </button>
+                            <a href="{% url 'notas:listar_agenda_entregas' %}" class="btn btn-secondary btn-lg ml-2">
+                                <i class="fas fa-arrow-left"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

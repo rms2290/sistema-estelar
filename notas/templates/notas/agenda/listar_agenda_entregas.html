@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">
+                        <i class="fas fa-calendar-alt"></i> {{ title }}
+                    </h3>
+                    <a href="{% url 'notas:adicionar_agenda_entrega' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Agendar Nova Entrega
+                    </a>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Filtros -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <form method="get" class="form-inline">
+                                <div class="form-group mr-3">
+                                    <label for="status" class="mr-2">Status:</label>
+                                    <select name="status" id="status" class="form-control">
+                                        <option value="">Todos</option>
+                                        {% for value, label in status_choices %}
+                                            <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>
+                                                {{ label }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group mr-3">
+                                    <label for="data_inicio" class="mr-2" style="color: #333; font-weight: bold;">Data Início:</label>
+                                    <input type="date" name="data_inicio" id="data_inicio" 
+                                           class="form-control" value="{{ data_inicio }}">
+                                </div>
+                                
+                                <div class="form-group" style="margin-bottom: 1rem;">
+                                    <label for="data_fim" class="mr-2" style="color: #333; font-weight: bold;">Data Fim:</label>
+                                    <input type="date" name="data_fim" id="data_fim" 
+                                           class="form-control" value="{{ data_fim }}">
+                                </div>
+                                
+                                <!-- Espaçamento vertical -->
+                                <div style="margin-bottom: 1rem;"></div>
+                                
+                                <button type="submit" class="btn btn-info mr-2">
+                                    <i class="fas fa-search"></i> Filtrar
+                                </button>
+                                
+                                <a href="{% url 'notas:listar_agenda_entregas' %}" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Limpar
+                                </a>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Tabela de Entregas -->
+                    <div class="table-responsive mt-3">
+                        <table class="table table-striped table-hover">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th style="color: white;">Cliente</th>
+                                    <th style="color: white;">Data da Entrega</th>
+                                    <th style="color: white;">Empresa</th>
+                                    <th style="color: white;">Quantidade</th>
+                                    <th style="color: white;">Volume</th>
+                                    <th style="color: white;">Status</th>
+                                    <th style="color: white;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entrega in entregas %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ entrega.cliente.razao_social }}</strong>
+                                        {% if entrega.cliente.nome_fantasia %}
+                                            <br><small class="text-muted">{{ entrega.cliente.nome_fantasia }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-info" style="color: white; font-weight: bold;">
+                                            {{ entrega.data_entrega|date:"d/m/Y"|default:"Data não informada" }}
+                                        </span>
+                                    </td>
+                                    <td>{{ entrega.empresa_entrega }}</td>
+                                    <td>{{ entrega.quantidade }}</td>
+                                    <td>{{ entrega.volume }}</td>
+                                    <td>
+                                        {% if entrega.status == 'Agendada' %}
+                                            <span class="badge badge-warning">{{ entrega.get_status_display }}</span>
+                                        {% elif entrega.status == 'Em Andamento' %}
+                                            <span class="badge badge-primary">{{ entrega.get_status_display }}</span>
+                                        {% elif entrega.status == 'Concluída' %}
+                                            <span class="badge badge-success">{{ entrega.get_status_display }}</span>
+                                        {% elif entrega.status == 'Cancelada' %}
+                                            <span class="badge badge-danger">{{ entrega.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'notas:detalhes_agenda_entrega' entrega.pk %}" 
+                                               class="btn btn-sm btn-info" title="Ver detalhes">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'notas:editar_agenda_entrega' entrega.pk %}" 
+                                               class="btn btn-sm btn-warning" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'notas:alterar_status_agenda' entrega.pk %}" 
+                                               class="btn btn-sm btn-info" title="Alterar Status">
+                                                <i class="fas fa-exchange-alt"></i>
+                                            </a>
+                                            
+                                            <!-- Botões de Status -->
+                                            {% if entrega.status == 'Agendada' %}
+                                                <a href="{% url 'notas:marcar_em_andamento' entrega.pk %}" 
+                                                   class="btn btn-sm btn-primary" title="Marcar como Em Andamento">
+                                                    <i class="fas fa-play"></i>
+                                                </a>
+                                            {% elif entrega.status == 'Em Andamento' %}
+                                                <a href="{% url 'notas:marcar_concluida' entrega.pk %}" 
+                                                   class="btn btn-sm btn-success" title="Marcar como Concluída">
+                                                    <i class="fas fa-check"></i>
+                                                </a>
+                                            {% endif %}
+                                            
+                                            {% if entrega.status != 'Cancelada' %}
+                                                <a href="{% url 'notas:marcar_cancelada' entrega.pk %}" 
+                                                   class="btn btn-sm btn-danger" title="Marcar como Cancelada">
+                                                    <i class="fas fa-times"></i>
+                                                </a>
+                                            {% endif %}
+                                            
+                                            <a href="{% url 'notas:excluir_agenda_entrega' entrega.pk %}" 
+                                               class="btn btn-sm btn-danger" title="Excluir">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">
+                                        <i class="fas fa-calendar-times"></i> Nenhuma entrega encontrada.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Estatísticas no rodapé -->
+                    <div class="row mt-4">
+                        <div class="col-md-2">
+                            <div class="info-box rounded">
+                                <span class="info-box-icon bg-info rounded-left" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-list-alt" style="font-size: 12px;"></i>
+                                </span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Total</span>
+                                    <span class="info-box-number">{{ total_entregas }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="info-box rounded">
+                                <span class="info-box-icon bg-warning rounded-left" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-calendar-alt" style="font-size: 12px;"></i>
+                                </span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Agendadas</span>
+                                    <span class="info-box-number">{{ entregas_agendadas }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="info-box rounded">
+                                <span class="info-box-icon bg-primary rounded-left" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-truck" style="font-size: 12px;"></i>
+                                </span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Em Andamento</span>
+                                    <span class="info-box-number">{{ entregas_em_andamento }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="info-box rounded">
+                                <span class="info-box-icon bg-success rounded-left" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-check" style="font-size: 12px;"></i>
+                                </span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Concluídas</span>
+                                    <span class="info-box-number">{{ entregas_concluidas }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="info-box rounded">
+                                <span class="info-box-icon bg-danger rounded-left" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-times" style="font-size: 12px;"></i>
+                                </span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Canceladas</span>
+                                    <span class="info-box-number">{{ entregas_canceladas }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Espaçamento adicional no final -->
+                    <div class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+# Configuração do cron para o Sistema Estelar
+# Edite com: crontab -e
+
+# Backup diário do banco de dados às 2:00
+0 2 * * * cd /var/www/sistema-estelar && python backup_database.py
+
+# Limpeza de logs antigos semanalmente
+0 3 * * 0 find /var/www/sistema-estelar/logs -name "*.log" -mtime +30 -delete
+
+# Reinicialização do serviço diariamente às 4:00 (opcional)
+0 4 * * * systemctl restart sistema-estelar
+
+# Verificação de espaço em disco diariamente
+0 5 * * * df -h | grep -E '^/dev/' | awk '{if($5+0 > 80) print "ALERTA: Espaço em disco baixo - " $0}' | mail -s "Alerta de Espaço" admin@seu-dominio.com

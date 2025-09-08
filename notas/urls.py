@@ -95,5 +95,27 @@ urlpatterns = [
     path('relatorios/cobranca-mensal/', views.cobranca_mensal, name='cobranca_mensal'),
     path('relatorios/cobranca-carregamento/', views.cobranca_carregamento, name='cobranca_carregamento'),
     
+    # URLs para Agenda de Entregas
+    path('agenda-entregas/', views.listar_agenda_entregas, name='listar_agenda_entregas'),
+    path('agenda-entregas/adicionar/', views.adicionar_agenda_entrega, name='adicionar_agenda_entrega'),
+    path('agenda-entregas/editar/<int:pk>/', views.editar_agenda_entrega, name='editar_agenda_entrega'),
+    path('agenda-entregas/excluir/<int:pk>/', views.excluir_agenda_entrega, name='excluir_agenda_entrega'),
+    path('agenda-entregas/<int:pk>/detalhes/', views.detalhes_agenda_entrega, name='detalhes_agenda_entrega'),
+    path('agenda-entregas/<int:pk>/alterar-status/', views.alterar_status_agenda, name='alterar_status_agenda'),
+    path('agenda-entregas/<int:pk>/em-andamento/', views.marcar_em_andamento, name='marcar_em_andamento'),
+    path('agenda-entregas/<int:pk>/concluida/', views.marcar_concluida, name='marcar_concluida'),
+    path('agenda-entregas/<int:pk>/cancelada/', views.marcar_cancelada, name='marcar_cancelada'),
+    path('widget-agenda-entregas/', views.widget_agenda_entregas, name='widget_agenda_entregas'),
+    path('test-widget-agenda/', views.test_widget_agenda, name='test_widget_agenda'),
+    
+    # URLs para Tarefas (To-Do)
+    path('tarefas/', views.listar_tarefas, name='listar_tarefas'),
+    path('tarefas/adicionar/', views.adicionar_tarefa, name='adicionar_tarefa'),
+    path('tarefas/editar/<int:pk>/', views.editar_tarefa, name='editar_tarefa'),
+    path('tarefas/excluir/<int:pk>/', views.excluir_tarefa, name='excluir_tarefa'),
+    path('tarefas/<int:pk>/detalhes/', views.detalhes_tarefa, name='detalhes_tarefa'),
+    path('tarefas/<int:pk>/finalizar/', views.finalizar_tarefa, name='finalizar_tarefa'),
+    path('tarefas/<int:pk>/reabrir/', views.reabrir_tarefa, name='reabrir_tarefa'),
+    
     path('api/notas-fiscais/<int:cliente_id>/', views.load_notas_fiscais_para_romaneio, name='api_notas_fiscais_para_romaneio'),
 ]

@@ -7,15 +7,17 @@ from django.utils import timezone
 from django.contrib.auth.decorators import login_required, user_passes_test
 import locale
 from decimal import Decimal
+from datetime import datetime, date, timedelta
 
 # Importe todos os seus modelos
-from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, TabelaSeguro 
+from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, TabelaSeguro, AgendaEntrega, Tarefa
 
 # Importe todos os seus formulários
 from .forms import (
     NotaFiscalForm, ClienteForm, MotoristaForm, VeiculoForm, RomaneioViagemForm,
     NotaFiscalSearchForm, ClienteSearchForm, MotoristaSearchForm, HistoricoConsultaForm,
-    VeiculoSearchForm, RomaneioSearchForm, MercadoriaDepositoSearchForm, TabelaSeguroForm # Adicionado o novo formulário
+    VeiculoSearchForm, RomaneioSearchForm, MercadoriaDepositoSearchForm, TabelaSeguroForm,
+    AgendaEntregaForm, TarefaForm, TarefaSearchForm # Adicionados os novos formulários
 )
 
 def formatar_valor_brasileiro(valor, tipo='numero'):
@@ -918,6 +920,8 @@ def login_view(request):
     if request.user.is_authenticated:
         return redirect('notas:dashboard')
     
+    error_message = None
+    
     if request.method == 'POST':
         form = LoginForm(request.POST)
         if form.is_valid():
@@ -934,11 +938,11 @@ def login_view(request):
                 messages.success(request, f'Bem-vindo, {user.get_full_name()}!')
                 return redirect('notas:dashboard')
             else:
-                messages.error(request, 'Nome de usuário ou senha inválidos.')
+                error_message = 'Nome de usuário ou senha inválidos.'
     else:
         form = LoginForm()
     
-    return render(request, 'notas/auth/login.html', {'form': form})
+    return render(request, 'notas/auth/login.html', {'form': form, 'error_message': error_message})
 
 def logout_view(request):
     logout(request)
@@ -2192,6 +2196,24 @@ def dashboard(request):
         valor_deposito=Sum('notas_fiscais__valor', filter=Q(notas_fiscais__status='Depósito'))
     ).filter(valor_deposito__gt=0).order_by('-valor_deposito')[:5]
     
+    # Dados da agenda de entregas
+    hoje = date.today()
+    proxima_semana = hoje + timedelta(days=7)
+    now = datetime.now()
+    proximas_entregas = AgendaEntrega.objects.filter(
+        data_entrega__gte=hoje,
+        data_entrega__lte=proxima_semana,
+        status__in=['Agendada', 'Em Andamento']
+    ).select_related('cliente').order_by('data_entrega')[:5]
+    
+    entregas_hoje = AgendaEntrega.objects.filter(
+        data_entrega=hoje,
+        status__in=['Agendada', 'Em Andamento']
+    ).select_related('cliente').order_by('cliente__razao_social')
+    
+    total_agendadas = AgendaEntrega.objects.filter(status='Agendada').count()
+    total_em_andamento = AgendaEntrega.objects.filter(status='Em Andamento').count()
+    
     context = {
         'title': 'Dashboard - Agência Estelar',
         'user': request.user,
@@ -2217,6 +2239,14 @@ def dashboard(request):
         
         # Top clientes
         'top_clientes_deposito': top_clientes_deposito,
+        
+        # Dados da agenda
+        'proximas_entregas': proximas_entregas,
+        'entregas_hoje': entregas_hoje,
+        'total_agendadas': total_agendadas,
+        'total_em_andamento': total_em_andamento,
+        'hoje': hoje,
+        'now': now,
     }
     return render(request, 'notas/dashboard.html', context)
 
@@ -2590,6 +2620,7 @@ def pesquisar_mercadorias_deposito(request):
 # --------------------------------------------------------------------------------------
 # NOVA VIEW PARA FILTRAR VEÍCULOS BASEADO NO TIPO DE COMPOSIÇÃO
 # --------------------------------------------------------------------------------------
+@login_required
 def filtrar_veiculos_por_composicao(request):
     """View para filtrar veículos baseado no tipo de composição selecionado"""
     if request.method == 'GET' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -2631,3 +2662,442 @@ def filtrar_veiculos_por_composicao(request):
 def procurar_mercadorias_deposito(request):
     """Tela vazia para procurar mercadorias no depósito - para futuros aprimoramentos"""
     return render(request, 'notas/procurar_mercadorias_deposito.html')
+
+# --------------------------------------------------------------------------------------
+# Views para Agenda de Entregas
+# --------------------------------------------------------------------------------------
+@login_required
+@user_passes_test(is_admin)
+def listar_agenda_entregas(request):
+    """Lista todas as entregas agendadas"""
+    from datetime import date, timedelta
+    
+    # Filtros
+    status_filter = request.GET.get('status', '')
+    data_inicio = request.GET.get('data_inicio', '')
+    data_fim = request.GET.get('data_fim', '')
+    
+    # Query base
+    entregas = AgendaEntrega.objects.select_related('cliente', 'usuario_criacao').all()
+    
+    # Aplicar filtros
+    if status_filter:
+        entregas = entregas.filter(status=status_filter)
+    
+    if data_inicio:
+        try:
+            data_inicio_obj = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            entregas = entregas.filter(data_entrega__gte=data_inicio_obj)
+        except ValueError:
+            pass
+    
+    if data_fim:
+        try:
+            data_fim_obj = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            entregas = entregas.filter(data_entrega__lte=data_fim_obj)
+        except ValueError:
+            pass
+    
+    # Ordenar por data de entrega
+    entregas = entregas.order_by('data_entrega', 'cliente__razao_social')
+    
+    # Estatísticas
+    total_entregas = entregas.count()
+    entregas_agendadas = entregas.filter(status='Agendada').count()
+    entregas_em_andamento = entregas.filter(status='Em Andamento').count()
+    entregas_concluidas = entregas.filter(status='Concluída').count()
+    entregas_canceladas = entregas.filter(status='Cancelada').count()
+    
+    # Próximas entregas (próximos 7 dias)
+    hoje = date.today()
+    proxima_semana = hoje + timedelta(days=7)
+    proximas_entregas = entregas.filter(
+        data_entrega__gte=hoje,
+        data_entrega__lte=proxima_semana,
+        status__in=['Agendada', 'Em Andamento']
+    ).order_by('data_entrega')[:10]
+    
+    context = {
+        'title': 'Agenda de Entregas',
+        'entregas': entregas,
+        'proximas_entregas': proximas_entregas,
+        'total_entregas': total_entregas,
+        'entregas_agendadas': entregas_agendadas,
+        'entregas_em_andamento': entregas_em_andamento,
+        'entregas_concluidas': entregas_concluidas,
+        'entregas_canceladas': entregas_canceladas,
+        'status_filter': status_filter,
+        'data_inicio': data_inicio,
+        'data_fim': data_fim,
+        'status_choices': AgendaEntrega.STATUS_ENTREGA_CHOICES,
+    }
+    
+    return render(request, 'notas/agenda/listar_agenda_entregas.html', context)
+
+@login_required
+@user_passes_test(is_admin)
+def adicionar_agenda_entrega(request):
+    """Adiciona uma nova entrega à agenda"""
+    if request.method == 'POST':
+        form = AgendaEntregaForm(request.POST)
+        if form.is_valid():
+            agenda_entrega = form.save(commit=False)
+            agenda_entrega.usuario_criacao = request.user
+            agenda_entrega.save()
+            messages.success(request, 'Entrega agendada com sucesso!')
+            return redirect('notas:listar_agenda_entregas')
+    else:
+        form = AgendaEntregaForm()
+    
+    context = {
+        'title': 'Agendar Nova Entrega',
+        'form': form,
+    }
+    
+    return render(request, 'notas/agenda/adicionar_agenda_entrega.html', context)
+
+@login_required
+@user_passes_test(is_admin)
+def editar_agenda_entrega(request, pk):
+    """Edita uma entrega agendada"""
+    agenda_entrega = get_object_or_404(AgendaEntrega, pk=pk)
+    
+    if request.method == 'POST':
+        form = AgendaEntregaForm(request.POST, instance=agenda_entrega)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Entrega atualizada com sucesso!')
+            return redirect('notas:listar_agenda_entregas')
+    else:
+        form = AgendaEntregaForm(instance=agenda_entrega)
+    
+    context = {
+        'title': f'Editar Entrega - {agenda_entrega.cliente.razao_social}',
+        'form': form,
+        'agenda_entrega': agenda_entrega,
+    }
+    
+    return render(request, 'notas/agenda/editar_agenda_entrega.html', context)
+
+@login_required
+@user_passes_test(is_admin)
+def excluir_agenda_entrega(request, pk):
+    """Exclui uma entrega agendada"""
+    agenda_entrega = get_object_or_404(AgendaEntrega, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            cliente_nome = agenda_entrega.cliente.razao_social
+            data_entrega = agenda_entrega.data_entrega.strftime('%d/%m/%Y')
+            agenda_entrega.delete()
+            messages.success(request, f'Entrega para {cliente_nome} em {data_entrega} excluída com sucesso!')
+        except Exception as e:
+            messages.error(request, f'Não foi possível excluir a entrega: {e}')
+        return redirect('notas:listar_agenda_entregas')
+    
+    context = {
+        'title': 'Confirmar Exclusão',
+        'agenda_entrega': agenda_entrega,
+    }
+    
+    return render(request, 'notas/agenda/confirmar_exclusao_agenda_entrega.html', context)
+
+@login_required
+@user_passes_test(is_admin)
+def detalhes_agenda_entrega(request, pk):
+    """Mostra os detalhes de uma entrega agendada"""
+    agenda_entrega = get_object_or_404(AgendaEntrega, pk=pk)
+    
+    context = {
+        'title': f'Detalhes da Entrega - {agenda_entrega.cliente.razao_social}',
+        'agenda_entrega': agenda_entrega,
+    }
+    
+    return render(request, 'notas/agenda/detalhes_agenda_entrega.html', context)
+
+@login_required
+@user_passes_test(is_admin)
+def alterar_status_agenda(request, pk):
+    """Altera o status de uma entrega agendada"""
+    agenda_entrega = get_object_or_404(AgendaEntrega, pk=pk)
+    
+    if request.method == 'POST':
+        novo_status = request.POST.get('status')
+        if novo_status in [choice[0] for choice in AgendaEntrega.STATUS_ENTREGA_CHOICES]:
+            agenda_entrega.status = novo_status
+            agenda_entrega.save()
+            messages.success(request, f'Status alterado para {agenda_entrega.get_status_display()}!')
+            return redirect('notas:listar_agenda_entregas')
+        else:
+            messages.error(request, 'Status inválido!')
+    
+    context = {
+        'title': f'Alterar Status - {agenda_entrega.cliente.razao_social}',
+        'agenda_entrega': agenda_entrega,
+        'status_choices': AgendaEntrega.STATUS_ENTREGA_CHOICES,
+    }
+    
+    return render(request, 'notas/agenda/alterar_status_agenda.html', context)
+
+@login_required
+@user_passes_test(is_admin)
+def marcar_em_andamento(request, pk):
+    """Marca uma entrega como em andamento"""
+    agenda_entrega = get_object_or_404(AgendaEntrega, pk=pk)
+    agenda_entrega.status = 'Em Andamento'
+    agenda_entrega.save()
+    messages.success(request, 'Entrega marcada como Em Andamento!')
+    return redirect('notas:listar_agenda_entregas')
+
+@login_required
+@user_passes_test(is_admin)
+def marcar_concluida(request, pk):
+    """Marca uma entrega como concluída"""
+    agenda_entrega = get_object_or_404(AgendaEntrega, pk=pk)
+    agenda_entrega.status = 'Concluída'
+    agenda_entrega.save()
+    messages.success(request, 'Entrega marcada como Concluída!')
+    return redirect('notas:listar_agenda_entregas')
+
+@login_required
+@user_passes_test(is_admin)
+def marcar_cancelada(request, pk):
+    """Marca uma entrega como cancelada"""
+    agenda_entrega = get_object_or_404(AgendaEntrega, pk=pk)
+    agenda_entrega.status = 'Cancelada'
+    agenda_entrega.save()
+    messages.success(request, 'Entrega marcada como Cancelada!')
+    return redirect('notas:listar_agenda_entregas')
+
+@login_required
+@user_passes_test(is_admin)
+def widget_agenda_entregas(request):
+    """Widget de agenda de entregas para o dashboard"""
+    from datetime import date, timedelta
+    
+    # Próximas entregas (próximos 7 dias)
+    hoje = date.today()
+    proxima_semana = hoje + timedelta(days=7)
+    
+    proximas_entregas = AgendaEntrega.objects.filter(
+        data_entrega__gte=hoje,
+        data_entrega__lte=proxima_semana,
+        status__in=['Agendada', 'Em Andamento']
+    ).select_related('cliente').order_by('data_entrega')[:5]
+    
+    # Entregas de hoje
+    entregas_hoje = AgendaEntrega.objects.filter(
+        data_entrega=hoje,
+        status__in=['Agendada', 'Em Andamento']
+    ).select_related('cliente').order_by('cliente__razao_social')
+    
+    # Estatísticas rápidas
+    total_agendadas = AgendaEntrega.objects.filter(status='Agendada').count()
+    total_em_andamento = AgendaEntrega.objects.filter(status='Em Andamento').count()
+    
+    context = {
+        'proximas_entregas': proximas_entregas,
+        'entregas_hoje': entregas_hoje,
+        'total_agendadas': total_agendadas,
+        'total_em_andamento': total_em_andamento,
+        'hoje': hoje,
+    }
+    
+    return render(request, 'notas/widgets/widget_agenda_entregas.html', context)
+
+@login_required
+@user_passes_test(is_admin)
+def test_widget_agenda(request):
+    """View de teste para o widget de agenda"""
+    from datetime import date, timedelta
+    
+    # Próximas entregas (próximos 7 dias)
+    hoje = date.today()
+    proxima_semana = hoje + timedelta(days=7)
+    
+    proximas_entregas = AgendaEntrega.objects.filter(
+        data_entrega__gte=hoje,
+        data_entrega__lte=proxima_semana,
+        status__in=['Agendada', 'Em Andamento']
+    ).select_related('cliente').order_by('data_entrega')[:5]
+    
+    # Entregas de hoje
+    entregas_hoje = AgendaEntrega.objects.filter(
+        data_entrega=hoje,
+        status__in=['Agendada', 'Em Andamento']
+    ).select_related('cliente').order_by('cliente__razao_social')
+    
+    # Estatísticas rápidas
+    total_agendadas = AgendaEntrega.objects.filter(status='Agendada').count()
+    total_em_andamento = AgendaEntrega.objects.filter(status='Em Andamento').count()
+    
+    context = {
+        'title': 'Teste Widget Agenda',
+        'proximas_entregas': proximas_entregas,
+        'entregas_hoje': entregas_hoje,
+        'total_agendadas': total_agendadas,
+        'total_em_andamento': total_em_andamento,
+        'hoje': hoje,
+    }
+    
+    return render(request, 'notas/test_widget_agenda.html', context)
+
+
+# =============================================================================
+# VIEWS PARA TAREFAS (TO-DO)
+# =============================================================================
+
+@login_required
+def listar_tarefas(request):
+    """Lista todas as tarefas do usuário logado"""
+    # Formulário de pesquisa
+    search_form = TarefaSearchForm(request.GET)
+    
+    # Query base
+    tarefas = Tarefa.objects.filter(usuario=request.user)
+    
+    # Aplicar filtros se fornecidos
+    if search_form.is_valid():
+        titulo = search_form.cleaned_data.get('titulo')
+        status = search_form.cleaned_data.get('status')
+        prioridade = search_form.cleaned_data.get('prioridade')
+        data_vencimento_inicio = search_form.cleaned_data.get('data_vencimento_inicio')
+        data_vencimento_fim = search_form.cleaned_data.get('data_vencimento_fim')
+        
+        if titulo:
+            tarefas = tarefas.filter(titulo__icontains=titulo)
+        if status:
+            tarefas = tarefas.filter(status=status)
+        if prioridade:
+            tarefas = tarefas.filter(prioridade=prioridade)
+        if data_vencimento_inicio:
+            tarefas = tarefas.filter(data_vencimento__gte=data_vencimento_inicio)
+        if data_vencimento_fim:
+            tarefas = tarefas.filter(data_vencimento__lte=data_vencimento_fim)
+    
+    # Ordenar por prioridade e data de criação
+    tarefas = tarefas.order_by('-prioridade', '-data_criacao')
+    
+    # Estatísticas
+    total_tarefas = Tarefa.objects.filter(usuario=request.user).count()
+    tarefas_pendentes = Tarefa.objects.filter(usuario=request.user, status='pendente').count()
+    tarefas_em_andamento = Tarefa.objects.filter(usuario=request.user, status='em_andamento').count()
+    tarefas_concluidas = Tarefa.objects.filter(usuario=request.user, status='concluida').count()
+    tarefas_canceladas = Tarefa.objects.filter(usuario=request.user, status='cancelada').count()
+    
+    context = {
+        'title': 'Minhas Tarefas',
+        'tarefas': tarefas,
+        'search_form': search_form,
+        'total_tarefas': total_tarefas,
+        'tarefas_pendentes': tarefas_pendentes,
+        'tarefas_em_andamento': tarefas_em_andamento,
+        'tarefas_concluidas': tarefas_concluidas,
+        'tarefas_canceladas': tarefas_canceladas,
+    }
+    
+    return render(request, 'notas/tarefas/listar_tarefas.html', context)
+
+
+@login_required
+def adicionar_tarefa(request):
+    """Adiciona uma nova tarefa"""
+    if request.method == 'POST':
+        form = TarefaForm(request.POST)
+        if form.is_valid():
+            tarefa = form.save(commit=False)
+            tarefa.usuario = request.user
+            tarefa.save()
+            messages.success(request, 'Tarefa criada com sucesso!')
+            return redirect('notas:listar_tarefas')
+    else:
+        form = TarefaForm()
+    
+    context = {
+        'title': 'Adicionar Tarefa',
+        'form': form,
+    }
+    
+    return render(request, 'notas/tarefas/adicionar_tarefa.html', context)
+
+
+@login_required
+def editar_tarefa(request, pk):
+    """Edita uma tarefa existente"""
+    tarefa = get_object_or_404(Tarefa, pk=pk, usuario=request.user)
+    
+    if request.method == 'POST':
+        form = TarefaForm(request.POST, instance=tarefa)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Tarefa atualizada com sucesso!')
+            return redirect('notas:listar_tarefas')
+    else:
+        form = TarefaForm(instance=tarefa)
+    
+    context = {
+        'title': 'Editar Tarefa',
+        'form': form,
+        'tarefa': tarefa,
+    }
+    
+    return render(request, 'notas/tarefas/editar_tarefa.html', context)
+
+
+@login_required
+def excluir_tarefa(request, pk):
+    """Exclui uma tarefa"""
+    tarefa = get_object_or_404(Tarefa, pk=pk, usuario=request.user)
+    
+    if request.method == 'POST':
+        tarefa.delete()
+        messages.success(request, 'Tarefa excluída com sucesso!')
+        return redirect('notas:listar_tarefas')
+    
+    context = {
+        'title': 'Excluir Tarefa',
+        'tarefa': tarefa,
+    }
+    
+    return render(request, 'notas/tarefas/excluir_tarefa.html', context)
+
+
+@login_required
+def detalhes_tarefa(request, pk):
+    """Mostra os detalhes de uma tarefa"""
+    tarefa = get_object_or_404(Tarefa, pk=pk, usuario=request.user)
+    
+    context = {
+        'title': 'Detalhes da Tarefa',
+        'tarefa': tarefa,
+    }
+    
+    return render(request, 'notas/tarefas/detalhes_tarefa.html', context)
+
+
+@login_required
+def finalizar_tarefa(request, pk):
+    """Marca uma tarefa como concluída"""
+    tarefa = get_object_or_404(Tarefa, pk=pk, usuario=request.user)
+    
+    if tarefa.status != 'concluida':
+        tarefa.marcar_como_concluida()
+        messages.success(request, 'Tarefa marcada como concluída!')
+    else:
+        messages.info(request, 'Tarefa já estava concluída.')
+    
+    return redirect('notas:listar_tarefas')
+
+
+@login_required
+def reabrir_tarefa(request, pk):
+    """Reabre uma tarefa concluída"""
+    tarefa = get_object_or_404(Tarefa, pk=pk, usuario=request.user)
+    
+    if tarefa.status == 'concluida':
+        tarefa.marcar_como_pendente()
+        messages.success(request, 'Tarefa reaberta com sucesso!')
+    else:
+        messages.info(request, 'Tarefa não estava concluída.')
+    
+    return redirect('notas:listar_tarefas')

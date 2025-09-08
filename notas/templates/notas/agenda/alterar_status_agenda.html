@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Alterar Status - {{ agenda_entrega.cliente.razao_social }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">
+                        <i class="fas fa-edit"></i> Alterar Status da Entrega
+                    </h3>
+                    <a href="{% url 'notas:listar_agenda_entregas' %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </a>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Informações da Entrega -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">Informações da Entrega</h5>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p><strong>Cliente:</strong> {{ agenda_entrega.cliente.razao_social }}</p>
+                                            <p><strong>Data da Entrega:</strong> {{ agenda_entrega.data_entrega|date:"d/m/Y" }}</p>
+                                            <p><strong>Empresa:</strong> {{ agenda_entrega.empresa_entrega }}</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p><strong>Quantidade:</strong> {{ agenda_entrega.quantidade }}</p>
+                                            <p><strong>Volume:</strong> {{ agenda_entrega.volume }}</p>
+                                            <p><strong>Status Atual:</strong> 
+                                                {% if agenda_entrega.status == 'Agendada' %}
+                                                    <span class="badge badge-warning">{{ agenda_entrega.get_status_display }}</span>
+                                                {% elif agenda_entrega.status == 'Em Andamento' %}
+                                                    <span class="badge badge-primary">{{ agenda_entrega.get_status_display }}</span>
+                                                {% elif agenda_entrega.status == 'Concluída' %}
+                                                    <span class="badge badge-success">{{ agenda_entrega.get_status_display }}</span>
+                                                {% elif agenda_entrega.status == 'Cancelada' %}
+                                                    <span class="badge badge-danger">{{ agenda_entrega.get_status_display }}</span>
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Formulário de Alteração de Status -->
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="status">Novo Status:</label>
+                                    <select name="status" id="status" class="form-control" required>
+                                        {% for value, label in status_choices %}
+                                            <option value="{{ value }}" {% if agenda_entrega.status == value %}selected{% endif %}>
+                                                {{ label }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> Alterar Status
+                                    </button>
+                                    <a href="{% url 'notas:listar_agenda_entregas' %}" class="btn btn-secondary">
+                                        <i class="fas fa-times"></i> Cancelar
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

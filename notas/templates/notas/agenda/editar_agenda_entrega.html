@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-calendar-edit"></i> {{ title }}
+                    </h3>
+                </div>
+                
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.cliente.id_for_label }}">{{ form.cliente.label }}</label>
+                                    {{ form.cliente }}
+                                    {% if form.cliente.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.cliente.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.data_entrega.id_for_label }}" style="color: #333; font-weight: bold;">{{ form.data_entrega.label }}</label>
+                                    {{ form.data_entrega }}
+                                    {% if form.data_entrega.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.data_entrega.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.empresa_entrega.id_for_label }}">{{ form.empresa_entrega.label }}</label>
+                                    {{ form.empresa_entrega }}
+                                    {% if form.empresa_entrega.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.empresa_entrega.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.quantidade.id_for_label }}">{{ form.quantidade.label }}</label>
+                                    {{ form.quantidade }}
+                                    {% if form.quantidade.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.quantidade.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.volume.id_for_label }}">{{ form.volume.label }}</label>
+                                    {{ form.volume }}
+                                    {% if form.volume.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.volume.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+                                    {{ form.status }}
+                                    {% if form.status.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.status.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label for="{{ form.observacoes.id_for_label }}">{{ form.observacoes.label }}</label>
+                                    {{ form.observacoes }}
+                                    {% if form.observacoes.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.observacoes.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Atualizar Entrega
+                            </button>
+                            <a href="{% url 'notas:listar_agenda_entregas' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Voltar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

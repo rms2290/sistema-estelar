@@ -1,14 +1,19 @@
-# Configurações do Django
-SECRET_KEY=sua-chave-secreta-aqui
-DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
+# Configurações de banco de dados
+DB_NAME=sistema_estelar
+DB_USER=postgres
+DB_PASSWORD=sua_senha_aqui
+DB_HOST=localhost
+DB_PORT=5432
 
-# Configurações de Banco de Dados (opcional)
-# DATABASE_URL=sqlite:///db.sqlite3
+# Configurações de segurança
+SECRET_KEY=sua_chave_secreta_muito_longa_e_segura_aqui
 
-# Configurações de Email (opcional)
-# EMAIL_HOST=smtp.gmail.com
-# EMAIL_PORT=587
-# EMAIL_USE_TLS=True
-# EMAIL_HOST_USER=seu-email@gmail.com
-# EMAIL_HOST_PASSWORD=sua-senha 
+# Configurações de email
+EMAIL_HOST_USER=seu_email@dominio.com
+EMAIL_HOST_PASSWORD=sua_senha_do_email
+
+# Configurações de debug
+DEBUG=False
+
+# Configurações de domínio
+ALLOWED_HOSTS=seu-dominio.com.br,www.seu-dominio.com.br

@@ -823,6 +823,97 @@ class Usuario(UpperCaseMixin, AbstractUser):
     # set_password, check_password, get_username, natural_key, is_anonymous, is_authenticated
 
 # --------------------------------------------------------------------------------------
+# Agenda de Entregas
+# --------------------------------------------------------------------------------------
+class AgendaEntrega(UpperCaseMixin, models.Model):
+    """
+    Modelo para agendar entregas de mercadorias futuras
+    """
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.PROTECT,
+        related_name='agenda_entregas',
+        verbose_name="Cliente"
+    )
+    
+    data_entrega = models.DateField(
+        verbose_name="Data da Entrega",
+        help_text="Data prevista para a entrega"
+    )
+    
+    empresa_entrega = models.CharField(
+        max_length=255,
+        verbose_name="Empresa que vai Entregar",
+        help_text="Nome da empresa responsável pela entrega"
+    )
+    
+    quantidade = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Quantidade",
+        help_text="Quantidade de mercadorias a serem entregues"
+    )
+    
+    volume = models.CharField(
+        max_length=100,
+        verbose_name="Volume",
+        help_text="Volume ou tipo de embalagem (ex: 10 caixas, 5 pallets)"
+    )
+    
+    observacoes = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Observações",
+        help_text="Observações adicionais sobre a entrega"
+    )
+    
+    STATUS_ENTREGA_CHOICES = [
+        ('Agendada', 'Agendada'),
+        ('Em Andamento', 'Em Andamento'),
+        ('Concluída', 'Concluída'),
+        ('Cancelada', 'Cancelada'),
+    ]
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_ENTREGA_CHOICES,
+        default='Agendada',
+        verbose_name="Status da Entrega"
+    )
+    
+    data_criacao = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Data de Criação"
+    )
+    
+    data_atualizacao = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Data de Atualização"
+    )
+    
+    usuario_criacao = models.ForeignKey(
+        'Usuario',
+        on_delete=models.PROTECT,
+        related_name='agenda_entregas_criadas',
+        verbose_name="Usuário de Criação",
+        null=True,
+        blank=True
+    )
+    
+    def __str__(self):
+        return f"Entrega para {self.cliente.razao_social} - {self.data_entrega.strftime('%d/%m/%Y')}"
+    
+    class Meta:
+        verbose_name = "Agenda de Entrega"
+        verbose_name_plural = "Agenda de Entregas"
+        ordering = ['data_entrega', 'cliente']
+        indexes = [
+            models.Index(fields=['data_entrega']),
+            models.Index(fields=['status']),
+            models.Index(fields=['cliente']),
+        ]
+
+# --------------------------------------------------------------------------------------
 # Tabela de Seguros
 # --------------------------------------------------------------------------------------
 class TabelaSeguro(models.Model):
@@ -880,3 +971,118 @@ class TabelaSeguro(models.Model):
         verbose_name = "Tabela de Seguro"
         verbose_name_plural = "Tabela de Seguros"
         ordering = ['estado']
+
+
+# --------------------------------------------------------------------------------------
+# Tarefas (To-Do)
+# --------------------------------------------------------------------------------------
+class Tarefa(models.Model):
+    """
+    Modelo para gerenciar tarefas do sistema To-Do
+    """
+    STATUS_CHOICES = [
+        ('pendente', 'Pendente'),
+        ('em_andamento', 'Em Andamento'),
+        ('concluida', 'Concluída'),
+        ('cancelada', 'Cancelada'),
+    ]
+    
+    PRIORIDADE_CHOICES = [
+        ('baixa', 'Baixa'),
+        ('media', 'Média'),
+        ('alta', 'Alta'),
+        ('urgente', 'Urgente'),
+    ]
+    
+    titulo = models.CharField(
+        max_length=200,
+        verbose_name="Título da Tarefa",
+        help_text="Título resumido da tarefa"
+    )
+    
+    descricao = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Descrição",
+        help_text="Descrição detalhada da tarefa"
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pendente',
+        verbose_name="Status"
+    )
+    
+    prioridade = models.CharField(
+        max_length=20,
+        choices=PRIORIDADE_CHOICES,
+        default='media',
+        verbose_name="Prioridade"
+    )
+    
+    data_vencimento = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name="Data de Vencimento",
+        help_text="Data limite para conclusão da tarefa"
+    )
+    
+    data_conclusao = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name="Data de Conclusão",
+        help_text="Data e hora em que a tarefa foi concluída"
+    )
+    
+    data_criacao = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Data de Criação"
+    )
+    
+    data_atualizacao = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Data de Atualização"
+    )
+    
+    usuario = models.ForeignKey(
+        'Usuario',
+        on_delete=models.CASCADE,
+        related_name='tarefas',
+        verbose_name="Usuário"
+    )
+    
+    def __str__(self):
+        return f"{self.titulo} ({self.get_status_display()})"
+    
+    @property
+    def is_vencida(self):
+        """Verifica se a tarefa está vencida"""
+        if self.data_vencimento and self.status != 'concluida':
+            from datetime import date
+            return self.data_vencimento < date.today()
+        return False
+    
+    def marcar_como_concluida(self):
+        """Marca a tarefa como concluída"""
+        from django.utils import timezone
+        self.status = 'concluida'
+        self.data_conclusao = timezone.now()
+        self.save()
+    
+    def marcar_como_pendente(self):
+        """Marca a tarefa como pendente"""
+        self.status = 'pendente'
+        self.data_conclusao = None
+        self.save()
+    
+    class Meta:
+        verbose_name = "Tarefa"
+        verbose_name_plural = "Tarefas"
+        ordering = ['-prioridade', '-data_criacao']
+        indexes = [
+            models.Index(fields=['status']),
+            models.Index(fields=['prioridade']),
+            models.Index(fields=['usuario']),
+            models.Index(fields=['data_vencimento']),
+        ]

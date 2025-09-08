@@ -262,3 +262,4 @@ echo "- Iniciar gunicorn: gunicorn --bind 0.0.0.0:8000 sistema_estelar.wsgi_prod
 echo "- Reiniciar nginx: sudo systemctl restart nginx"
 echo ""
 echo "🌐 Acesse: http://seu-dominio.com.br"
+

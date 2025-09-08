@@ -20,7 +20,6 @@ class AuthenticationMiddleware:
         
         # Se não é pública e o usuário não está autenticado, redirecionar para login
         if not is_public and not request.user.is_authenticated:
-            messages.warning(request, 'Você precisa fazer login para acessar esta página.')
             return redirect('notas:login')
         
         response = self.get_response(request)

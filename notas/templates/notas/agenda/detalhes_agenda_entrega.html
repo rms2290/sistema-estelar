@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">
+                        <i class="fas fa-calendar-check"></i> {{ title }}
+                    </h3>
+                    <div>
+                        <a href="{% url 'notas:editar_agenda_entrega' agenda_entrega.pk %}" class="btn btn-warning">
+                            <i class="fas fa-edit"></i> Editar
+                        </a>
+                        <a href="{% url 'notas:excluir_agenda_entrega' agenda_entrega.pk %}" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Excluir
+                        </a>
+                        <a href="{% url 'notas:listar_agenda_entregas' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Voltar
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-info-circle"></i> Informações da Entrega</h5>
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-borderless">
+                                        <tr>
+                                            <td><strong>Cliente:</strong></td>
+                                            <td>{{ agenda_entrega.cliente.razao_social }}</td>
+                                        </tr>
+                                        {% if agenda_entrega.cliente.nome_fantasia %}
+                                        <tr>
+                                            <td><strong>Nome Fantasia:</strong></td>
+                                            <td>{{ agenda_entrega.cliente.nome_fantasia }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        <tr>
+                                            <td><strong>Data da Entrega:</strong></td>
+                                            <td>
+                                                <span class="badge badge-info">
+                                                    {{ agenda_entrega.data_entrega|date:"d/m/Y" }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Empresa:</strong></td>
+                                            <td>{{ agenda_entrega.empresa_entrega }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Quantidade:</strong></td>
+                                            <td>{{ agenda_entrega.quantidade }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Volume:</strong></td>
+                                            <td>{{ agenda_entrega.volume }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Status:</strong></td>
+                                            <td>
+                                                {% if agenda_entrega.status == 'Agendada' %}
+                                                    <span class="badge badge-warning">{{ agenda_entrega.get_status_display }}</span>
+                                                {% elif agenda_entrega.status == 'Em Andamento' %}
+                                                    <span class="badge badge-primary">{{ agenda_entrega.get_status_display }}</span>
+                                                {% elif agenda_entrega.status == 'Concluída' %}
+                                                    <span class="badge badge-success">{{ agenda_entrega.get_status_display }}</span>
+                                                {% elif agenda_entrega.status == 'Cancelada' %}
+                                                    <span class="badge badge-danger">{{ agenda_entrega.get_status_display }}</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-clock"></i> Informações de Controle</h5>
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-borderless">
+                                        <tr>
+                                            <td><strong>Data de Criação:</strong></td>
+                                            <td>{{ agenda_entrega.data_criacao|date:"d/m/Y H:i" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Última Atualização:</strong></td>
+                                            <td>{{ agenda_entrega.data_atualizacao|date:"d/m/Y H:i" }}</td>
+                                        </tr>
+                                        {% if agenda_entrega.usuario_criacao %}
+                                        <tr>
+                                            <td><strong>Criado por:</strong></td>
+                                            <td>{{ agenda_entrega.usuario_criacao.get_full_name|default:agenda_entrega.usuario_criacao.username }}</td>
+                                        </tr>
+                                        {% endif %}
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if agenda_entrega.observacoes %}
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-sticky-note"></i> Observações</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted">{{ agenda_entrega.observacoes|linebreaks }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Informações do Cliente -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-building"></i> Informações do Cliente</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <table class="table table-borderless">
+                                                <tr>
+                                                    <td><strong>CNPJ:</strong></td>
+                                                    <td>{{ agenda_entrega.cliente.cnpj|default:"Não informado" }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Inscrição Estadual:</strong></td>
+                                                    <td>{{ agenda_entrega.cliente.inscricao_estadual|default:"Não informado" }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Telefone:</strong></td>
+                                                    <td>{{ agenda_entrega.cliente.telefone|default:"Não informado" }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Email:</strong></td>
+                                                    <td>{{ agenda_entrega.cliente.email|default:"Não informado" }}</td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <table class="table table-borderless">
+                                                <tr>
+                                                    <td><strong>Endereço:</strong></td>
+                                                    <td>
+                                                        {% if agenda_entrega.cliente.endereco %}
+                                                            {{ agenda_entrega.cliente.endereco }}
+                                                            {% if agenda_entrega.cliente.numero %}, {{ agenda_entrega.cliente.numero }}{% endif %}
+                                                            {% if agenda_entrega.cliente.complemento %}, {{ agenda_entrega.cliente.complemento }}{% endif %}
+                                                        {% else %}
+                                                            Não informado
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Bairro:</strong></td>
+                                                    <td>{{ agenda_entrega.cliente.bairro|default:"Não informado" }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Cidade/UF:</strong></td>
+                                                    <td>
+                                                        {% if agenda_entrega.cliente.cidade %}
+                                                            {{ agenda_entrega.cliente.cidade }}
+                                                            {% if agenda_entrega.cliente.estado %}/{{ agenda_entrega.cliente.estado }}{% endif %}
+                                                        {% else %}
+                                                            Não informado
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>CEP:</strong></td>
+                                                    <td>{{ agenda_entrega.cliente.cep|default:"Não informado" }}</td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

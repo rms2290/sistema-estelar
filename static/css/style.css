@@ -966,6 +966,17 @@ body::-webkit-scrollbar {
 
 .alert-success { background-color: #28a745; border: none !important; color: #fff; }
 .alert-danger { background-color: #dc3545; border: none !important; color: #fff; }
+
+/* Regra específica para alert-danger na página de login */
+body.login-page .card-footer .alert-danger {
+    background-color: #f8d7da !important;
+    color: #721c24 !important;
+    text-align: center !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+}
 .alert-info { background-color: #17a2b8; border: none !important; color: #fff; }
 .alert-warning { background-color: #ffc107; border: none !important; color: #212529; } /* Texto escuro para warning */
 
@@ -2442,20 +2453,27 @@ td .badge.bg-inativo,
 body.login-page {
     overflow: hidden !important;
     height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
 
 body.login-page .main-wrapper {
     height: 100vh !important;
     overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
 }
 
 body.login-page .main-content {
     height: 100vh !important;
     overflow: hidden !important;
     padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 1 !important;
 }
-
-
 
 /* Centralizar perfeitamente o painel de login */
 body.login-page .container-fluid {
@@ -2463,31 +2481,222 @@ body.login-page .container-fluid {
     justify-content: center !important;
     align-items: center !important;
     height: 100vh !important;
-    width: 100% !important;
-    padding: 0 !important;
+    width: 100vw !important;
+    padding: 20px !important;
     margin: 0 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    box-sizing: border-box !important;
 }
 
 body.login-page .container-fluid .row {
     width: 100% !important;
     max-width: 400px !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     justify-content: center !important;
+    align-items: center !important;
+    display: flex !important;
 }
 
 body.login-page .container-fluid .row .col-md-6 {
     width: 100% !important;
     max-width: 400px !important;
     padding: 0 !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
+    flex: 1 !important;
 }
 
 /* Ajustar o posicionamento do card de login */
 body.login-page .card.mt-5 {
-    margin: 0 !important;
+    margin: 0 auto !important;
     width: 100% !important;
     max-width: 400px !important;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
+    border-radius: 12px !important;
+    position: relative !important;
+    left: 0 !important;
+    right: 0 !important;
+}
+
+/* Garantir que o card header tenha o título centralizado */
+body.login-page .card-header {
+    text-align: center !important;
+    padding: 1.5rem 1.5rem 1rem 1.5rem !important;
+    border-bottom: none !important;
+}
+
+/* Título principal em destaque */
+body.login-page .card-title-main {
+    margin-bottom: 0.5rem !important;
+    font-size: 1.4rem !important;
+    font-weight: 700 !important;
+    color: #007bff !important;
+    line-height: 1.2 !important;
+    letter-spacing: 0.5px !important;
+    text-transform: uppercase !important;
+}
+
+/* Subtítulo menor */
+body.login-page .card-subtitle {
+    font-size: 0.9rem !important;
+    font-weight: 400 !important;
+    color: #6c757d !important;
+    line-height: 1.3 !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* Tagline da empresa */
+body.login-page .card-tagline {
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
+    color: #007bff !important;
+    line-height: 1.2 !important;
+    margin-bottom: 0 !important;
+    font-style: italic !important;
+}
+
+/* Ajustar o corpo do card */
+body.login-page .card-body {
+    padding: 1rem 1.5rem !important;
+}
+
+/* Ajustar o rodapé do card */
+body.login-page .card-footer {
+    text-align: center !important;
+    padding: 0.75rem 1.5rem !important;
+    background-color: var(--card-header-bg) !important;
+    border-top: 1px solid var(--border-color) !important;
+    font-size: 0.8rem !important;
+}
+
+/* Estilizar mensagens de erro no rodapé */
+body.login-page .card-footer .alert {
+    margin-bottom: 0.5rem !important;
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.8rem !important;
+    border-radius: 4px !important;
+    border: none !important;
+    background-color: #f8d7da !important;
+    color: #721c24 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    text-align: center !important;
+}
+
+body.login-page .card-footer .alert i {
+    font-size: 0.75rem !important;
+    flex-shrink: 0 !important;
+}
+
+/* Garantir que o texto da mensagem de erro fique centralizado */
+body.login-page .card-footer .alert {
+    text-align: center !important;
+    word-wrap: break-word !important;
+    white-space: normal !important;
+}
+
+/* Mensagens de erro agora estão no rodapé do card */
+
+/* Garantir centralização absoluta */
+body.login-page {
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+body.login-page .main-wrapper {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+body.login-page .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Ajustar espaçamento dos campos do formulário */
+body.login-page .form-label {
+    font-size: 0.9rem !important;
+    margin-bottom: 0.3rem !important;
+    font-weight: 500 !important;
+}
+
+body.login-page .form-control {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.9rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+body.login-page .btn {
+    padding: 0.6rem 1.2rem !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+}
+
+/* Responsividade para telas menores */
+@media (max-width: 768px) {
+    body.login-page .container-fluid {
+        padding: 15px !important;
+    }
+    
+    body.login-page .card.mt-5 {
+        max-width: 100% !important;
+    }
+    
+    body.login-page .card-header {
+        padding: 1rem 1rem 0.75rem 1rem !important;
+    }
+    
+    body.login-page .card-body {
+        padding: 0.75rem 1rem !important;
+    }
+    
+    body.login-page .card-footer {
+        padding: 0.5rem 1rem !important;
+    }
+    
+    body.login-page .card-title-main {
+        font-size: 1.2rem !important;
+        line-height: 1.1 !important;
+        letter-spacing: 0.3px !important;
+    }
+    
+    body.login-page .card-subtitle {
+        font-size: 0.8rem !important;
+        line-height: 1.2 !important;
+    }
+    
+    body.login-page .card-tagline {
+        font-size: 0.7rem !important;
+        line-height: 1.1 !important;
+    }
+}
+
+@media (max-width: 480px) {
+    body.login-page .container-fluid {
+        padding: 10px !important;
+    }
+    
+    body.login-page .card-title-main {
+        font-size: 1rem !important;
+        line-height: 1.1 !important;
+        letter-spacing: 0.2px !important;
+    }
+    
+    body.login-page .card-subtitle {
+        font-size: 0.75rem !important;
+        line-height: 1.1 !important;
+    }
+    
+    body.login-page .card-tagline {
+        font-size: 0.65rem !important;
+        line-height: 1.1 !important;
+    }
 }
 
 /* =============================================================================

@@ -111,12 +111,112 @@
                 margin-bottom: 8px;
             }
             
+            .table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 8px;
+            }
+            
+            /* Configurações específicas para repetir cabeçalho e rodapé */
+            .table {
+                page-break-inside: auto;
+            }
+            
+            .table thead {
+                display: table-header-group;
+                page-break-after: avoid;
+                page-break-inside: avoid;
+            }
+            
+            .table tfoot {
+                display: table-footer-group;
+                page-break-before: avoid;
+                page-break-inside: avoid;
+            }
+            
+            .table tbody {
+                display: table-row-group;
+            }
+            
             .table th,
             .table td {
                 border: 0.5px solid #ccc;
                 padding: 1px 2px;
                 font-size: 7px;
                 line-height: 1.1;
+            }
+            
+            .table tbody tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+            
+            .table thead tr {
+                page-break-after: avoid;
+                page-break-inside: avoid;
+            }
+            
+            .table tfoot tr {
+                page-break-before: avoid;
+                page-break-inside: avoid;
+            }
+            
+            .table tbody tr:first-child {
+                page-break-before: avoid;
+            }
+            
+            /* Força o navegador a reconhecer thead e tfoot */
+            .table thead tr th {
+                position: sticky;
+                top: 0;
+                z-index: 10;
+            }
+            
+            .table tfoot tr td {
+                position: sticky;
+                bottom: 0;
+                z-index: 10;
+            }
+            
+            /* Força repetição do cabeçalho e rodapé */
+            .table thead tr th {
+                background-color: #f0f0f0 !important;
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
+            
+            .table tfoot tr td {
+                background-color: #f0f0f0 !important;
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
+            
+            /* Solução alternativa para navegadores que não suportam table-header-group */
+            @supports not (display: table-header-group) {
+                .table thead {
+                    display: block;
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    z-index: 1000;
+                    background: white;
+                }
+                
+                .table tfoot {
+                    display: block;
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    z-index: 1000;
+                    background: white;
+                }
+            }
+            
+            /* Força quebra de página específica para cada linha */
+            .table tbody tr:nth-child(20n) {
+                page-break-after: always;
             }
             
             .col-nota {
@@ -333,12 +433,106 @@
             margin-bottom: 20px;
         }
         
+        /* Configurações específicas para repetir cabeçalho e rodapé */
+        .table {
+            page-break-inside: auto;
+        }
+        
+        .table thead {
+            display: table-header-group;
+            page-break-after: avoid;
+            page-break-inside: avoid;
+        }
+        
+        .table tfoot {
+            display: table-footer-group;
+            page-break-before: avoid;
+            page-break-inside: avoid;
+        }
+        
+        .table tbody {
+            display: table-row-group;
+        }
+        
         .table th,
         .table td {
             border: 0.5px solid #ccc;
             padding: 2px 4px;
             font-size: 9px;
             line-height: 1.2;
+        }
+        
+        .table tbody tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+        
+        .table thead tr {
+            page-break-after: avoid;
+            page-break-inside: avoid;
+        }
+        
+        .table tfoot tr {
+            page-break-before: avoid;
+            page-break-inside: avoid;
+        }
+        
+        .table tbody tr:first-child {
+            page-break-before: avoid;
+        }
+        
+        /* Força o navegador a reconhecer thead e tfoot */
+        .table thead tr th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .table tfoot tr td {
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+        }
+        
+        /* Força repetição do cabeçalho e rodapé */
+        .table thead tr th {
+            background-color: #f0f0f0 !important;
+            -webkit-print-color-adjust: exact;
+            color-adjust: exact;
+        }
+        
+        .table tfoot tr td {
+            background-color: #f0f0f0 !important;
+            -webkit-print-color-adjust: exact;
+            color-adjust: exact;
+        }
+        
+        /* Solução alternativa para navegadores que não suportam table-header-group */
+        @supports not (display: table-header-group) {
+            .table thead {
+                display: block;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 1000;
+                background: white;
+            }
+            
+            .table tfoot {
+                display: block;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 1000;
+                background: white;
+            }
+        }
+        
+        /* Força quebra de página específica para cada linha */
+        .table tbody tr:nth-child(20n) {
+            page-break-after: always;
         }
         
         .col-nota {
@@ -592,13 +786,15 @@
                 <td class="col-valor">{{ nota.valor|format_brazilian_currency }}</td>
             </tr>
             {% endfor %}
+        </tbody>
+        <tfoot>
             <tr style="background-color: #f0f0f0; font-weight: bold;">
                 <td class="col-nota" colspan="3"><strong>TOTAL</strong></td>
                 <td class="col-quantidade"><strong>{{ notas_romaneadas|sum_field:'quantidade'|format_brazilian_quantity }}</strong></td>
                 <td class="col-peso"><strong>{{ notas_romaneadas|sum_field:'peso'|format_brazilian_weight }}</strong></td>
                 <td class="col-valor"><strong>{{ notas_romaneadas|sum_field:'valor'|format_brazilian_currency }}</strong></td>
             </tr>
-        </tbody>
+        </tfoot>
     </table>
     
     {% else %}
@@ -634,5 +830,58 @@
                 </div>
             </div>
         </div>
+    
+    <script>
+        // Script para garantir que o cabeçalho e rodapé apareçam em todas as páginas
+        function applyPrintStyles() {
+            const table = document.querySelector('.table');
+            if (table) {
+                const thead = table.querySelector('thead');
+                const tfoot = table.querySelector('tfoot');
+                
+                if (thead) {
+                    thead.style.display = 'table-header-group';
+                    thead.style.pageBreakAfter = 'avoid';
+                    thead.style.pageBreakInside = 'avoid';
+                    thead.style.position = 'sticky';
+                    thead.style.top = '0';
+                    thead.style.zIndex = '1000';
+                }
+                
+                if (tfoot) {
+                    tfoot.style.display = 'table-footer-group';
+                    tfoot.style.pageBreakBefore = 'avoid';
+                    tfoot.style.pageBreakInside = 'avoid';
+                    tfoot.style.position = 'sticky';
+                    tfoot.style.bottom = '0';
+                    tfoot.style.zIndex = '1000';
+                }
+                
+                // Força o reconhecimento das propriedades CSS
+                table.style.pageBreakInside = 'auto';
+            }
+        }
+        
+        // Aplica estilos quando a página carrega
+        document.addEventListener('DOMContentLoaded', applyPrintStyles);
+        
+        // Aplica estilos antes da impressão
+        window.addEventListener('beforeprint', applyPrintStyles);
+        
+        // Aplica estilos quando a impressão é cancelada
+        window.addEventListener('afterprint', applyPrintStyles);
+        
+        // Força aplicação dos estilos a cada 100ms durante a impressão
+        let printInterval;
+        window.addEventListener('beforeprint', function() {
+            printInterval = setInterval(applyPrintStyles, 100);
+        });
+        
+        window.addEventListener('afterprint', function() {
+            if (printInterval) {
+                clearInterval(printInterval);
+            }
+        });
+    </script>
 </body>
 </html>
