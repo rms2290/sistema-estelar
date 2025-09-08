@@ -65,48 +65,46 @@ def formatar_peso_brasileiro(valor):
 # Funções Auxiliares
 # --------------------------------------------------------------------------------------
 def get_next_romaneio_codigo():
-    """Gera o próximo código sequencial de romaneio no formato ROM-AAAA-MM-NNNN."""
-    ano = timezone.now().year
-    mes = timezone.now().month
-    
-    # Buscar todos os romaneios com código no formato correto para o ano/mês atual
-    prefix = f"ROM-{ano:04d}-{mes:02d}-"
+    """Gera o próximo código sequencial de romaneio no formato ROM-NNN."""
+    # Buscar todos os romaneios com código no formato ROM-XXX (excluindo genéricos)
+    prefix = "ROM-"
     last_romaneio = RomaneioViagem.objects.filter(
         codigo__startswith=prefix
+    ).exclude(
+        codigo__startswith="ROM-100-"
     ).order_by('-codigo').first()
 
-    next_sequence = 1
+    next_sequence = 1  # Começa do 001
     if last_romaneio and last_romaneio.codigo:
         try:
+            # Extrair o número do código ROM-XXX
             parts = last_romaneio.codigo.split('-')
-            if len(parts) == 4 and parts[0] == 'ROM' and int(parts[1]) == ano and int(parts[2]) == mes:
-                next_sequence = int(parts[3]) + 1
+            if len(parts) == 2 and parts[0] == 'ROM':
+                next_sequence = int(parts[1]) + 1
         except (ValueError, IndexError):
             pass
 
-    return f"ROM-{ano:04d}-{mes:02d}-{next_sequence:04d}"
+    return f"ROM-{next_sequence:03d}"
 
 def get_next_romaneio_generico_codigo():
-    """Gera o próximo código sequencial de romaneio genérico no formato ROM-GEN-AAAA-MM-NNNN, começando de 100."""
-    ano = timezone.now().year
-    mes = timezone.now().month
-    
-    # Buscar todos os romaneios genéricos com código no formato correto para o ano/mês atual
-    prefix = f"ROM-GEN-{ano:04d}-{mes:02d}-"
+    """Gera o próximo código sequencial de romaneio genérico no formato ROM-100-NNN."""
+    # Buscar todos os romaneios genéricos com código no formato ROM-100-XXX
+    prefix = "ROM-100-"
     last_romaneio = RomaneioViagem.objects.filter(
         codigo__startswith=prefix
     ).order_by('-codigo').first()
 
-    next_sequence = 100  # Começa do 100
+    next_sequence = 1  # Começa do 001
     if last_romaneio and last_romaneio.codigo:
         try:
+            # Extrair o número do código ROM-100-XXX
             parts = last_romaneio.codigo.split('-')
-            if len(parts) == 5 and parts[0] == 'ROM' and parts[1] == 'GEN' and int(parts[2]) == ano and int(parts[3]) == mes:
-                next_sequence = int(parts[4]) + 1
+            if len(parts) == 3 and parts[0] == 'ROM' and parts[1] == '100':
+                next_sequence = int(parts[2]) + 1
         except (ValueError, IndexError):
             pass
 
-    return f"ROM-GEN-{ano:04d}-{mes:02d}-{next_sequence:04d}"
+    return f"ROM-100-{next_sequence:03d}"
 
 # --------------------------------------------------------------------------------------
 # Views para Cliente
@@ -2546,6 +2544,7 @@ def listar_romaneios(request):
     if search_performed and search_form.is_valid():
         queryset = RomaneioViagem.objects.all()
         codigo = search_form.cleaned_data.get('codigo')
+        tipo_romaneio = search_form.cleaned_data.get('tipo_romaneio')
         cliente = search_form.cleaned_data.get('cliente')
         motorista = search_form.cleaned_data.get('motorista')
         veiculo_principal = search_form.cleaned_data.get('veiculo_principal')
@@ -2555,6 +2554,13 @@ def listar_romaneios(request):
         
         if codigo:
             queryset = queryset.filter(codigo__icontains=codigo)
+        if tipo_romaneio:
+            if tipo_romaneio == 'normal':
+                # Romaneios normais: formato ROM-XXX (excluindo genéricos)
+                queryset = queryset.filter(codigo__startswith='ROM-').exclude(codigo__startswith='ROM-100-')
+            elif tipo_romaneio == 'generico':
+                # Romaneios genéricos: formato ROM-100-XXX
+                queryset = queryset.filter(codigo__startswith='ROM-100-')
         if cliente:
             queryset = queryset.filter(cliente=cliente)
         if motorista:

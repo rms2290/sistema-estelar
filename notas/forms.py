@@ -1208,7 +1208,17 @@ class RomaneioSearchForm(forms.Form):
         label='Código do Romaneio',
         required=False,
         max_length=20,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ROM-AAAA-MM-NNNN'})
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ROM-001 ou ROM-100-001'})
+    )
+    tipo_romaneio = forms.ChoiceField(
+        label='Tipo de Romaneio',
+        choices=[
+            ('', 'Todos'),
+            ('normal', 'Romaneio Normal'),
+            ('generico', 'Romaneio Genérico')
+        ],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
     )
     cliente = forms.ModelChoiceField(
         queryset=Cliente.objects.filter(status='Ativo').order_by('razao_social'),

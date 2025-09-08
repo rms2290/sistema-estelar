@@ -1013,17 +1013,17 @@ body.login-page .card-footer .alert-danger {
 
 /* --- Ajustes Específicos para Checkboxes de Notas Fiscais no Romaneio --- */
 .notes-checkbox-container {
-    padding: 10px;
+    padding: 15px;
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
-    border-radius: 8px; /* Cantos mais arredondados */
-    max-height: 400px; /* Aumenta a altura máxima para mais notas */
-    overflow-y: auto; /* Adiciona scroll se muitas notas */
-    overflow-x: hidden; /* Previne scroll horizontal no container */
-    color: var(--secondary-text-color); /* Cor de texto padrão para o container */
-    width: 100%; /* Garante que ocupe toda a largura disponível */
-    box-sizing: border-box; /* Garante que padding não cause overflow */
+    border-radius: 8px;
+    max-height: none; /* Remove altura máxima para evitar scroll interno */
+    overflow: visible; /* Remove scroll interno */
+    color: var(--secondary-text-color);
+    width: 100%;
+    box-sizing: border-box;
 }
+
 
 /* Cabeçalho das "colunas" das notas dentro do container de checkboxes */
 .notes-checkbox-container .notes-header-row {
@@ -2722,8 +2722,6 @@ body {
     box-sizing: border-box !important;
 }
 
-
-
 /* 2. Remover scroll do main-wrapper */
 .main-wrapper {
     overflow: hidden !important;
@@ -2732,7 +2730,7 @@ body {
     box-sizing: border-box !important;
 }
 
-/* 3. Permitir scroll apenas no main-content */
+/* 3. Permitir scroll no main-content */
 .main-content {
     overflow-y: auto !important;
     overflow-x: hidden !important;
@@ -2761,21 +2759,28 @@ body {
 }
 
 .card-body {
-    overflow: hidden !important;
+    overflow: visible !important; /* Permite que o conteúdo interno tenha scroll */
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
 }
 
 /* 6. Ajustar especificamente o container de notas fiscais */
-.notes-checkbox-container {
+/* Garantir que apenas o container de notas tenha scroll */
+#notas-fiscais-container {
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    max-height: 400px !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-    padding: 10px !important;
+    max-height: 350px !important;
+}
+
+/* Remover scroll de outros elementos que podem interferir */
+.mb-3 {
+    overflow: visible !important;
+}
+
+/* Garantir que o card não interfira com o scroll das notas */
+.card .card-body .mb-3 {
+    overflow: visible !important;
 }
 
 /* 7. Garantir que as linhas de notas não causem overflow */
