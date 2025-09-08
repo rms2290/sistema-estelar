@@ -33,9 +33,10 @@
     </div>
 
     {# Notas Fiscais Associadas ao Romaneio #}
+    <!-- DEBUG: notas_romaneadas count: {{ notas_romaneadas|length }} -->
     {% if notas_romaneadas %}
     <div class="card card-body mt-4">
-        <h3>Notas Fiscais Vinculadas a este Romaneio</h3>
+        <h3>Notas Fiscais Vinculadas a este Romaneio ({{ notas_romaneadas|length }} notas)</h3>
         <table class="table table-striped table-hover">
             <thead>
                 <tr>

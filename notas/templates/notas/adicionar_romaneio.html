@@ -63,6 +63,10 @@
                             <div id="notas-fiscais-container" class="notes-checkbox-container"> 
                                 <p class="text-info">Selecione um cliente para carregar as notas fiscais.</p>
                             </div>
+                            <!-- Campo oculto para o formulário - será preenchido pelo JavaScript -->
+                            <div id="hidden-notas-fiscais" style="display: none;">
+                                <!-- Os checkboxes serão criados dinamicamente pelo JavaScript -->
+                            </div>
                             {% if form.notas_fiscais.errors %}
                                 <div class="text-danger">{{ form.notas_fiscais.errors }}</div>
                             {% endif %}

@@ -403,6 +403,50 @@
             return `${pesoFormatado} kg`;
         }
         
+        // Função para sincronizar checkboxes com o campo do formulário
+        function sincronizarComCampoFormulario(notasContainer) {
+            const checkboxes = notasContainer.querySelectorAll('.form-check-input:checked');
+            const hiddenContainer = document.getElementById('hidden-notas-fiscais');
+            
+            console.log(`DEBUG: Sincronizando ${checkboxes.length} notas selecionadas`);
+            
+            if (hiddenContainer) {
+                // Limpar checkboxes ocultos existentes
+                hiddenContainer.innerHTML = '';
+                
+                // Criar checkboxes ocultos para cada nota selecionada
+                checkboxes.forEach(checkbox => {
+                    const hiddenCheckbox = document.createElement('input');
+                    hiddenCheckbox.type = 'checkbox';
+                    hiddenCheckbox.name = 'notas_fiscais';
+                    hiddenCheckbox.value = checkbox.value;
+                    hiddenCheckbox.checked = true;
+                    hiddenCheckbox.style.display = 'none';
+                    hiddenContainer.appendChild(hiddenCheckbox);
+                    
+                    console.log(`DEBUG: Criado checkbox oculto para nota ${checkbox.value}`);
+                });
+                
+                console.log(`DEBUG: Total de ${checkboxes.length} checkboxes ocultos criados`);
+            } else {
+                console.log('DEBUG: Container hidden-notas-fiscais não encontrado!');
+            }
+        }
+
+        // Event listener para sincronizar antes do envio do formulário
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    console.log('DEBUG: Formulário sendo enviado, sincronizando notas...');
+                    const notasContainer = document.getElementById('notas-fiscais-container');
+                    if (notasContainer) {
+                        sincronizarComCampoFormulario(notasContainer);
+                    }
+                });
+            }
+        });
+
         // NOVO: Função para calcular e atualizar os totais - AGORA RECEBE ELEMENTOS COMO ARGUMENTOS
         function calcularEAtualizarTotais(notasContainer, totalPesoElement, totalValorElement) {
             const notas = notasContainer.querySelectorAll('.form-check-input:checked');
@@ -519,6 +563,8 @@
                         checkboxes.forEach(checkbox => {
                             checkbox.addEventListener('change', () => {
                                 calcularEAtualizarTotais(notasContainer, totalPesoElement, totalValorElement);
+                                // Sincronizar com o campo do formulário
+                                sincronizarComCampoFormulario(notasContainer);
                             });
                         });
                         
@@ -588,6 +634,8 @@
                 checkboxes.forEach(checkbox => {
                     checkbox.addEventListener('change', () => {
                         calcularEAtualizarTotais(notasContainer, totalPesoElement, totalValorElement);
+                        // Sincronizar com o campo do formulário
+                        sincronizarComCampoFormulario(notasContainer);
                     });
                 });
                 
@@ -644,4 +692,5 @@
 
     </script>
 </body>
+</html>
 </html>

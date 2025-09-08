@@ -459,6 +459,9 @@ def detalhes_veiculo(request, pk):
 
 def adicionar_romaneio(request):
     if request.method == 'POST':
+        print(f"DEBUG POST: Dados recebidos: {request.POST}")
+        print(f"DEBUG POST: notas_fiscais no POST: {request.POST.getlist('notas_fiscais')}")
+        
         form = RomaneioViagemForm(request.POST)
         
         # Configurar o queryset das notas fiscais baseado no cliente selecionado
@@ -474,7 +477,12 @@ def adicionar_romaneio(request):
         else:
             form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
 
+        print(f"DEBUG POST: Form válido: {form.is_valid()}")
+        if not form.is_valid():
+            print(f"DEBUG POST: Erros do form: {form.errors}")
+        
         if form.is_valid():
+            print(f"DEBUG POST: Form válido! Notas selecionadas: {form.cleaned_data.get('notas_fiscais', [])}")
             romaneio = form.save(commit=False)
             
             # Tentar salvar com código único (proteção contra concorrência)
@@ -490,7 +498,9 @@ def adicionar_romaneio(request):
                         romaneio.status = 'Salvo'
 
                     romaneio.save()
+                    print(f"DEBUG POST: Romaneio salvo com ID {romaneio.id}")
                     form.save_m2m() # Salva a relação ManyToMany
+                    print(f"DEBUG POST: Relações ManyToMany salvas. Notas vinculadas: {romaneio.notas_vinculadas.count()}")
                     break  # Sucesso, sair do loop
                 except IntegrityError as e:
                     if 'codigo' in str(e) and tentativa < max_tentativas - 1:
