@@ -263,3 +263,4 @@ echo "- Reiniciar nginx: sudo systemctl restart nginx"
 echo ""
 echo "🌐 Acesse: http://seu-dominio.com.br"
 
+

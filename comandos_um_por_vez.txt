@@ -72,3 +72,4 @@ gunicorn --config gunicorn.conf.py sistema_estelar.wsgi_production:application
 curl http://localhost:8000
 curl http://localhost
 
+

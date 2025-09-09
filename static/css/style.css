@@ -1,4 +1,4 @@
-/* F:\ESTELAR - PYTHON\sistema_estelar\static\css\style.css - v1.8 - Menu lateral branco apenas no tema dark */
+/* F:\ESTELAR - PYTHON\sistema_estelar\static\css\style.css - v1.9 - Correções do menu após deploy */
 
 /* Importação de fontes estilizadas */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Cinzel:wght@400;600&display=swap');
@@ -201,6 +201,7 @@ body::-webkit-scrollbar {
     flex-shrink: 0;
     margin: 10px;
     margin-right: 0;
+    z-index: 1000;
 }
 
 /* Estado colapsado da sidebar */

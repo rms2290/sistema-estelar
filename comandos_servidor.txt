@@ -99,3 +99,4 @@ curl http://localhost
 sudo tail -f /var/log/supervisor/sistema-estelar.log
 sudo tail -f /var/log/nginx/error.log
 
+

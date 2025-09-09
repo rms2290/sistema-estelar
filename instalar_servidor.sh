@@ -165,3 +165,4 @@ echo "- Reiniciar app: sudo supervisorctl restart sistema-estelar"
 echo "- Ver logs: sudo tail -f /var/log/supervisor/sistema-estelar.log"
 echo "- Ver logs nginx: sudo tail -f /var/log/nginx/error.log"
 
+

@@ -187,3 +187,4 @@ stderr_logfile=/var/log/supervisor/sistema-estelar_error.log
 if __name__ == "__main__":
     main()
 
+
