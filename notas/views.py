@@ -1042,8 +1042,8 @@ def minhas_notas_fiscais(request):
     elif status_filter == 'enviada':
         notas_fiscais = notas_fiscais.filter(status='Enviada')
     
-    # Ordenar por data mais recente
-    notas_fiscais = notas_fiscais.order_by('-data')
+    # Ordenar por data crescente
+    notas_fiscais = notas_fiscais.order_by('data')
     
     # Calcular totais
     total_peso = sum(nota.peso for nota in notas_fiscais if nota.peso)
@@ -2464,7 +2464,7 @@ def listar_notas_fiscais(request):
         if data:
             queryset = queryset.filter(data=data)
         
-        notas_fiscais = queryset.order_by('-data', '-nota')
+        notas_fiscais = queryset.order_by('data', 'nota')
     
     context = {
         'notas_fiscais': notas_fiscais,

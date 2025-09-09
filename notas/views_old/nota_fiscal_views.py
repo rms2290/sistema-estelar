@@ -26,7 +26,7 @@ def listar_notas_fiscais(request):
         if data:
             queryset = queryset.filter(data=data)
         
-        notas_fiscais = queryset.order_by('-data', '-nota')
+        notas_fiscais = queryset.order_by('data', 'nota')
     
     context = {
         'notas_fiscais': notas_fiscais,

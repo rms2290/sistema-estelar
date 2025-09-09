@@ -67,7 +67,7 @@ def minhas_notas_fiscais(request):
     from ..models import NotaFiscal
     
     if request.user.tipo_usuario == 'cliente' and request.user.cliente:
-        notas_fiscais = NotaFiscal.objects.filter(cliente=request.user.cliente)
+        notas_fiscais = NotaFiscal.objects.filter(cliente=request.user.cliente).order_by('data')
     else:
         notas_fiscais = NotaFiscal.objects.none()
     
