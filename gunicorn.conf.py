@@ -43,6 +43,9 @@ limit_request_field_size = 8190
 
 # OTIMIZAÇÃO: Usar /tmp em vez de /dev/shm para economizar memória
 worker_tmp_dir = "/tmp"
+<<<<<<< HEAD
 
 # OTIMIZAÇÃO: Configurações de memória
 worker_memory_limit = 200 * 1024 * 1024  # 200MB por worker
+=======
+>>>>>>> 9dbd378d77f484d21ab31e7dc3a853efbf7e7e9d

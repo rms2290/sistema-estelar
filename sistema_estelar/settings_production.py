@@ -6,11 +6,25 @@ from .settings import *
 
 # Configurações de segurança para produção
 DEBUG = False
+<<<<<<< HEAD
 ALLOWED_HOSTS = ['*']  # Substitua pelo seu domínio
+=======
+ALLOWED_HOSTS = [
+    'agenciaestelar.online', 
+    'www.agenciaestelar.online', 
+    '191.252.113.245',
+    'vps61227.publiccloud.com.br', 
+    'www.vps61227.publiccloud.com.br', 
+    'vps61227OO', 
+    'localhost', 
+    '127.0.0.1'
+]
+>>>>>>> 9dbd378d77f484d21ab31e7dc3a853efbf7e7e9d
 
 # Configurações de banco de dados para produção
 DATABASES = {
     'default': {
+<<<<<<< HEAD
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('DB_NAME', 'sistema_estelar'),
         'USER': os.environ.get('DB_USER', 'postgres'),
@@ -25,6 +39,13 @@ DATABASES = {
     }
 }
 
+=======
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'CONN_MAX_AGE': 60,
+    }
+}
+>>>>>>> 9dbd378d77f484d21ab31e7dc3a853efbf7e7e9d
 # Configurações de arquivos estáticos
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
@@ -115,6 +136,7 @@ DECIMAL_SEPARATOR = ','
 # OTIMIZAÇÃO: Configurações de arquivos estáticos
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+<<<<<<< HEAD
 # OTIMIZAÇÃO: Configurações de middleware otimizadas
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -128,6 +150,8 @@ MIDDLEWARE = [
     # Removido: 'notas.middleware.AuthenticationMiddleware' para economizar memória
 ]
 
+=======
+>>>>>>> 9dbd378d77f484d21ab31e7dc3a853efbf7e7e9d
 # OTIMIZAÇÃO: Configurações de sessão
 SESSION_COOKIE_AGE = 1800  # 30 minutos (reduzido de 1 hora)
 SESSION_SAVE_EVERY_REQUEST = False
