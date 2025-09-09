@@ -1,0 +1,5 @@
+[33m39b9073[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m fix: Corrigir problema do menu desconfigurado após deploy
+[33m156d148[m Otimizar consumo de memória para servidor 2GB
+[33md6f2885[m Limpar todos os dados do sistema - sistema zerado
+[33mb700344[m Corrigir status de notas fiscais e remover menu Agenda para funcionários
+[33m0dcc48e[m Ajustar sistema de códigos de romaneios e otimizar interface de scroll
