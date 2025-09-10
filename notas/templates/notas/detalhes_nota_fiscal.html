@@ -50,7 +50,7 @@
                         <td>{{ romaneio.codigo }}</td>
                         <td>{{ romaneio.get_status_display }}</td>
                         <td>{{ romaneio.motorista.nome }}</td>
-                        <td>{{ romaneio.veiculo.placa }}</td>
+                        <td>{{ romaneio.get_composicao_veicular }}</td>
                         <td>{{ romaneio.data_emissao|date:"d/m/Y" }}</td>
                     </tr>
                 {% endfor %}

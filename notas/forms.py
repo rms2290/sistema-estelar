@@ -820,7 +820,7 @@ class RomaneioViagemForm(forms.ModelForm):
 
     # Composição veicular
     veiculo_principal = forms.ModelChoiceField(
-        queryset=Veiculo.objects.filter(tipo_unidade__in=['Carro', 'Van', 'Caminhão', 'Cavalo']).order_by('placa'),
+        queryset=Veiculo.objects.filter(tipo_unidade__in=['CARRO', 'VAN', 'CAMINHÃO', 'CAVALO']).order_by('placa'),
         label='Veículo Principal',
         required=True,
         empty_label="--- Selecione o veículo principal ---",
@@ -828,7 +828,7 @@ class RomaneioViagemForm(forms.ModelForm):
     )
     
     reboque_1 = forms.ModelChoiceField(
-        queryset=Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa'),
+        queryset=Veiculo.objects.filter(tipo_unidade__in=['REBOQUE', 'SEMI-REBOQUE']).order_by('placa'),
         label='Reboque 1 (Opcional)',
         required=False,
         empty_label="--- Selecione o reboque 1 ---",
@@ -836,7 +836,7 @@ class RomaneioViagemForm(forms.ModelForm):
     )
     
     reboque_2 = forms.ModelChoiceField(
-        queryset=Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa'),
+        queryset=Veiculo.objects.filter(tipo_unidade__in=['REBOQUE', 'SEMI-REBOQUE']).order_by('placa'),
         label='Reboque 2 (Opcional)',
         required=False,
         empty_label="--- Selecione o reboque 2 ---",
@@ -854,9 +854,9 @@ class RomaneioViagemForm(forms.ModelForm):
         # Querysets para ModelChoiceFields
         self.fields['cliente'].queryset = Cliente.objects.filter(status='Ativo').order_by('razao_social')
         self.fields['motorista'].queryset = Motorista.objects.all().order_by('nome')
-        self.fields['veiculo_principal'].queryset = Veiculo.objects.filter(tipo_unidade__in=['Carro', 'Van', 'Caminhão', 'Cavalo']).order_by('placa')
-        self.fields['reboque_1'].queryset = Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa')
-        self.fields['reboque_2'].queryset = Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa')
+        self.fields['veiculo_principal'].queryset = Veiculo.objects.filter(tipo_unidade__in=['CARRO', 'VAN', 'CAMINHÃO', 'CAVALO']).order_by('placa')
+        self.fields['reboque_1'].queryset = Veiculo.objects.filter(tipo_unidade__in=['REBOQUE', 'SEMI-REBOQUE']).order_by('placa')
+        self.fields['reboque_2'].queryset = Veiculo.objects.filter(tipo_unidade__in=['REBOQUE', 'SEMI-REBOQUE']).order_by('placa')
 
         # Lógica para edição (preencher notas_fiscais e data_romaneio)
         if self.instance and self.instance.pk:

@@ -28,7 +28,7 @@
         <p><strong>Data de Emissão:</strong> {{ romaneio.data_emissao|date:"d/m/Y H:i" }}</p>
         <p><strong>Cliente:</strong> {{ romaneio.cliente.razao_social }}</p>
         <p><strong>Motorista:</strong> {{ romaneio.motorista.nome }}</p>
-                                <p><strong>Composição Veicular:</strong> {{ romaneio.get_composicao_veicular }}</p>
+        <p><strong>Composição Veicular:</strong> {{ romaneio.get_composicao_veicular }}</p>
         <p><strong>Observações:</strong> {{ romaneio.observacoes|default:"N/A" }}</p>
     </div>
 

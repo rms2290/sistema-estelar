@@ -73,23 +73,23 @@
                     {{ form.motorista }}
                     {% if form.motorista.errors %}<div class="text-danger">{{ form.motorista.errors }}</div>{% endif %}
                 </div>
-                                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.veiculo_principal.id_for_label }}" class="form-label">{{ form.veiculo_principal.label }}:</label>
-                                {{ form.veiculo_principal }}
-                                {% if form.veiculo_principal.errors %}<div class="text-danger">{{ form.veiculo_principal.errors }}</div>{% endif %}
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.reboque_1.id_for_label }}" class="form-label">{{ form.reboque_1.label }}:</label>
-                                {{ form.reboque_1 }}
-                                {% if form.reboque_1.errors %}<div class="text-danger">{{ form.reboque_1.errors }}</div>{% endif %}
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.reboque_2.id_for_label }}" class="form-label">{{ form.reboque_2.label }}:</label>
-                                {{ form.reboque_2 }}
-                                {% if form.reboque_2.errors %}<div class="text-danger">{{ form.reboque_2.errors }}</div>{% endif %}
-                            </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.veiculo_principal.id_for_label }}" class="form-label">{{ form.veiculo_principal.label }}:</label>
+                    {{ form.veiculo_principal }}
+                    {% if form.veiculo_principal.errors %}<div class="text-danger">{{ form.veiculo_principal.errors }}</div>{% endif %}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.reboque_1.id_for_label }}" class="form-label">{{ form.reboque_1.label }}:</label>
+                    {{ form.reboque_1 }}
+                    {% if form.reboque_1.errors %}<div class="text-danger">{{ form.reboque_1.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.reboque_2.id_for_label }}" class="form-label">{{ form.reboque_2.label }}:</label>
+                    {{ form.reboque_2 }}
+                    {% if form.reboque_2.errors %}<div class="text-danger">{{ form.reboque_2.errors }}</div>{% endif %}
+                </div>
             </div>
         </div>
 

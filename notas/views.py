@@ -1106,11 +1106,24 @@ def imprimir_romaneio_novo(request, pk):
     total_peso = sum(nota.peso for nota in notas_romaneadas)
     total_valor = sum(nota.valor for nota in notas_romaneadas)
     
+    # Dividir notas em grupos de 20 para multipágina
+    notas_list = list(notas_romaneadas)
+    notas_paginas = []
+    for i in range(0, len(notas_list), 20):
+        pagina = notas_list[i:i + 20]
+        notas_paginas.append(pagina)
+    
+    # Adicionar parâmetro de versão para forçar reload
+    import time
+    version = int(time.time())
+    
     return render(request, 'notas/visualizar_romaneio_para_impressao.html', {
         'romaneio': romaneio,
         'notas_romaneadas': notas_romaneadas,
+        'notas_paginas': notas_paginas,
         'total_peso': total_peso,
-        'total_valor': total_valor
+        'total_valor': total_valor,
+        'version': version
     })
 
 @login_required
