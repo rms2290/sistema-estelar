@@ -272,34 +272,7 @@ class MotoristaForm(forms.ModelForm):
         widget=forms.TextInput(attrs={'class': 'form-control'})
     )
 
-    # >>> NOVOS CAMPOS NO FORMULARIO <<<
-    tipo_composicao_motorista = forms.ChoiceField(
-        label='Tipo de Composição que Dirige',
-        choices=Motorista.TIPO_COMPOSICAO_MOTORISTA_CHOICES, # Usar as escolhas do modelo
-        required=True, # É obrigatório para o motorista definir o tipo
-        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_tipo_composicao_motorista_select'}) # ID para JS
-    )
-    veiculo_principal = forms.ModelChoiceField(
-        queryset=Veiculo.objects.all().order_by('placa'),  # Inicialmente todos os veículos
-        label='Veículo Principal (Placa 1)',
-        required=False,
-        empty_label="--- Selecione o Veículo Principal ---",
-        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_veiculo_principal_select'})
-    )
-    reboque_1 = forms.ModelChoiceField(
-        queryset=Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa'), # Filtrar por tipo de unidade
-        label='Reboque 1 (Placa 2)',
-        required=False,
-        empty_label="--- Selecione o Reboque 1 ---",
-        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_reboque_1_select'})
-    )
-    reboque_2 = forms.ModelChoiceField(
-        queryset=Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque']).order_by('placa'), # Filtrar por tipo de unidade
-        label='Reboque 2 (Placa 3)',
-        required=False,
-        empty_label="--- Selecione o Reboque 2 ---",
-        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_reboque_2_select'})
-    )
+    # >>> CAMPOS DE VEÍCULOS REMOVIDOS <<<
     
     # Sobrescrever campos de texto para uppercase
     nome = UpperCaseCharField(
@@ -383,23 +356,13 @@ class MotoristaForm(forms.ModelForm):
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control'})
     )
+    
+    observacoes = forms.CharField(
+        label='Observações',
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Digite observações sobre o motorista...'})
+    )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Definir os filtros de veículos baseados no tipo de composição
-        self.fields['veiculo_principal'].queryset = Veiculo.objects.all().order_by('placa')
-        
-        # Se temos uma instância (edição), filtrar baseado no tipo de composição atual
-        if self.instance and self.instance.pk:
-            tipo_composicao = self.instance.tipo_composicao_motorista
-            if tipo_composicao in ['Carro']:
-                self.fields['veiculo_principal'].queryset = Veiculo.objects.filter(tipo_unidade='Carro').order_by('placa')
-            elif tipo_composicao in ['Van']:
-                self.fields['veiculo_principal'].queryset = Veiculo.objects.filter(tipo_unidade='Van').order_by('placa')
-            elif tipo_composicao in ['Caminhão']:
-                self.fields['veiculo_principal'].queryset = Veiculo.objects.filter(tipo_unidade='Caminhão').order_by('placa')
-            elif tipo_composicao in ['Carreta', 'Bitrem']:
-                self.fields['veiculo_principal'].queryset = Veiculo.objects.filter(tipo_unidade='Cavalo').order_by('placa')
 
     class Meta:
         model = Motorista
@@ -411,17 +374,13 @@ class MotoristaForm(forms.ModelForm):
             'endereco', 'numero', 'bairro', 'cidade', 'estado', 'cep',
             'data_nascimento',
             'numero_consulta', # Manter por enquanto
-            'tipo_composicao_motorista', # <<< NOVO CAMPO
-            'veiculo_principal', # <<< NOVO CAMPO
-            'reboque_1', # <<< NOVO CAMPO
-            'reboque_2', # <<< NOVO CAMPO
+            'observacoes',
         ]
         widgets = {
             'vencimento_cnh': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'uf_emissao_cnh': forms.Select(attrs={'class': 'form-control'}), 
             'estado': forms.Select(attrs={'class': 'form-control'}), 
             'data_nascimento': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            # veiculo_principal, reboque_1, reboque_2 já tem widgets definidos acima
         }
 
     # MÉTODO CLEAN_CPF (VERSÃO ÚNICA E CORRETA)

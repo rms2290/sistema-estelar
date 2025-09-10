@@ -177,131 +177,27 @@
                 {% endif %}
             </div>
 
-            {# NOVO BLOCO: Composição Veicular no cadastro do Motorista #}
-            <div class="col-12 mt-3 mb-2"><h3><i class="fas fa-car"></i> Composição Veicular que Dirige</h3></div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="{{ form.tipo_composicao_motorista.id_for_label }}" class="form-label">
-                        <i class="fas fa-truck"></i> {{ form.tipo_composicao_motorista.label }}:
-                    </label>
-                    {{ form.tipo_composicao_motorista }}
-                    {% if form.tipo_composicao_motorista.errors %}<div class="text-danger">{{ form.tipo_composicao_motorista.errors }}</div>{% endif %}
-                </div>
-                <div class="col-md-6 mb-3" id="veiculo_principal_div">
-                    <label for="{{ form.veiculo_principal.id_for_label }}" class="form-label">
-                        <i class="fas fa-car"></i> {{ form.veiculo_principal.label }}:
-                    </label>
-                    {{ form.veiculo_principal }}
-                    {% if form.veiculo_principal.errors %}<div class="text-danger">{{ form.veiculo_principal.errors }}</div>{% endif %}
-                </div>
-                <div class="col-md-6 mb-3 d-none" id="reboque_1_div"> {# Inicialmente oculto #}
-                    <label for="{{ form.reboque_1.id_for_label }}" class="form-label">
-                        <i class="fas fa-truck"></i> {{ form.reboque_1.label }}:
-                    </label>
-                    {{ form.reboque_1 }}
-                    {% if form.reboque_1.errors %}<div class="text-danger">{{ form.reboque_1.errors }}</div>{% endif %}
-                </div>
-                <div class="col-md-6 mb-3 d-none" id="reboque_2_div"> {# Inicialmente oculto #}
-                    <label for="{{ form.reboque_2.id_for_label }}" class="form-label">
-                        <i class="fas fa-truck"></i> {{ form.reboque_2.label }}:
-                    </label>
-                    {{ form.reboque_2 }}
-                    {% if form.reboque_2.errors %}<div class="text-danger">{{ form.reboque_2.errors }}</div>{% endif %}
-                </div>
-            </div>
-            {# FIM DO NOVO BLOCO #}
 
         </div> {# Fim do card-body de Dados do Motorista #}
+
+        {# Campo de Observações #}
+        <div class="card card-body mb-4">
+            <h3><i class="fas fa-sticky-note"></i> Observações</h3>
+            <div class="row">
+                <div class="col-12 mb-3">
+                    <label for="{{ form.observacoes.id_for_label }}" class="form-label">
+                        <i class="fas fa-comment"></i> {{ form.observacoes.label }}:
+                    </label>
+                    {{ form.observacoes }}
+                    {% if form.observacoes.errors %}<div class="text-danger">{{ form.observacoes.errors }}</div>{% endif %}
+                    <div class="form-text">Informações adicionais sobre o motorista (opcional).</div>
+                </div>
+            </div>
+        </div>
 
         <button type="submit" class="btn btn-success mt-3">Salvar</button>
         <a href="{% url 'notas:listar_motoristas' %}" class="btn btn-secondary mt-3">Cancelar</a>
     </form>
 
-    {# JavaScript para mostrar/ocultar reboques baseado no tipo de composição #}
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const tipoComposicaoSelect = document.getElementById('id_tipo_composicao_motorista_select');
-            const veiculoPrincipalDiv = document.getElementById('veiculo_principal_div');
-            const reboque1Div = document.getElementById('reboque_1_div');
-            const reboque2Div = document.getElementById('reboque_2_div');
-            const veiculoPrincipalSelect = document.getElementById('id_veiculo_principal_select');
-            const reboque1Select = document.getElementById('id_reboque_1_select');
-            const reboque2Select = document.getElementById('id_reboque_2_select');
-
-            // Função para filtrar veículos via AJAX
-            function filterVehiclesAjax() {
-                const selectedType = tipoComposicaoSelect.value;
-                
-                if (!selectedType) return;
-                
-                // Fazer requisição AJAX para filtrar veículos
-                fetch(`{% url 'notas:ajax_filtrar_veiculos' %}?tipo_composicao=${encodeURIComponent(selectedType)}`, {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.veiculos) {
-                        // Limpar opções atuais
-                        veiculoPrincipalSelect.innerHTML = '<option value="">--- Selecione o Veículo Principal ---</option>';
-                        
-                        // Adicionar novas opções filtradas
-                        data.veiculos.forEach(veiculo => {
-                            const option = document.createElement('option');
-                            option.value = veiculo.id;
-                            option.textContent = veiculo.text;
-                            veiculoPrincipalSelect.appendChild(option);
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Erro ao filtrar veículos:', error);
-                });
-            }
-
-            function toggleReboques() {
-                const selectedType = tipoComposicaoSelect.value;
-                
-                // Reset visibility for all reboque fields
-                reboque1Div.classList.add('d-none');
-                reboque2Div.classList.add('d-none');
-                
-                // Show/hide based on selected type
-                if (selectedType === 'Carro') {
-                    // Carro: apenas veículo principal (carro)
-                    reboque1Div.classList.add('d-none');
-                    reboque2Div.classList.add('d-none');
-                } else if (selectedType === 'Van') {
-                    // Van: apenas veículo principal (van)
-                    reboque1Div.classList.add('d-none');
-                    reboque2Div.classList.add('d-none');
-                } else if (selectedType === 'Caminhão') {
-                    // Caminhão: apenas veículo principal (caminhão)
-                    reboque1Div.classList.add('d-none');
-                    reboque2Div.classList.add('d-none');
-                } else if (selectedType === 'Carreta') {
-                    // Carreta: veículo principal (cavalo) + reboque 1
-                    reboque1Div.classList.remove('d-none');
-                    reboque2Div.classList.add('d-none');
-                } else if (selectedType === 'Bitrem') {
-                    // Bitrem: veículo principal (cavalo) + reboque 1 + reboque 2
-                    reboque1Div.classList.remove('d-none');
-                    reboque2Div.classList.remove('d-none');
-                }
-                
-                // Filter vehicles based on composition type
-                filterVehiclesAjax();
-            }
-
-            // Bind event listener
-            if (tipoComposicaoSelect) {
-                tipoComposicaoSelect.addEventListener('change', toggleReboques);
-                // Trigger on page load to set initial state
-                toggleReboques();
-            }
-        });
-    </script>
 </div>
 {% endblock %}

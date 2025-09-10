@@ -891,13 +891,13 @@ def load_notas_fiscais_para_romaneio(request, cliente_id):
                 print(f"DEBUG: Encontradas {notas_fiscais.count()} notas vinculadas ao romaneio {romaneio_id}")
                 
                 # Combine as notas em depósito com as já vinculadas (evitando duplicatas)
-                notas_fiscais = (notas_deposito | notas_fiscais).distinct().order_by('data', 'nota')
+                notas_fiscais = (notas_deposito | notas_fiscais).distinct().order_by('nota')
             except RomaneioViagem.DoesNotExist:
                 print(f"DEBUG: Romaneio {romaneio_id} não encontrado")
                 pass # Romaneio não encontrado, apenas notas em depósito
         else:
             # Se for um novo romaneio, apenas notas em depósito
-            notas_fiscais = notas_deposito.order_by('data', 'nota')
+            notas_fiscais = notas_deposito.order_by('nota')
             print(f"DEBUG: Usando apenas notas em depósito para novo romaneio")
             
     print(f"DEBUG: Total de notas fiscais retornadas: {notas_fiscais.count()}")
@@ -2464,7 +2464,7 @@ def listar_notas_fiscais(request):
         if data:
             queryset = queryset.filter(data=data)
         
-        notas_fiscais = queryset.order_by('data', 'nota')
+        notas_fiscais = queryset.order_by('nota')
     
     context = {
         'notas_fiscais': notas_fiscais,
@@ -2644,7 +2644,7 @@ def pesquisar_mercadorias_deposito(request):
         if data_fim:
             queryset = queryset.filter(data__lte=data_fim)
         
-        notas_fiscais = queryset.order_by('data', 'nota')
+        notas_fiscais = queryset.order_by('nota')
         
         # Calcular totais apenas quando há resultados
         total_peso = sum(nota.peso for nota in notas_fiscais)

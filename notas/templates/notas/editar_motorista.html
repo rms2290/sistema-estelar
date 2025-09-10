@@ -108,59 +108,6 @@
         </div>
     </div>
 
-    {# JavaScript para mostrar/ocultar reboques baseado no tipo de composição #}
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const tipoComposicaoSelect = document.getElementById('id_tipo_composicao_motorista_select');
-            const reboque1Field = document.getElementById('id_reboque_1');
-            const reboque2Field = document.getElementById('id_reboque_2');
-            
-            // Encontrar os containers dos campos de reboque
-            let reboque1Div = null;
-            let reboque2Div = null;
-            
-            if (reboque1Field) {
-                reboque1Div = reboque1Field.closest('.form-group') || reboque1Field.parentElement;
-            }
-            if (reboque2Field) {
-                reboque2Div = reboque2Field.closest('.form-group') || reboque2Field.parentElement;
-            }
-
-            function toggleReboques() {
-                const selectedType = tipoComposicaoSelect ? tipoComposicaoSelect.value : '';
-                
-                // Reset visibility for all reboque fields
-                if (reboque1Div) {
-                    reboque1Div.style.display = 'none';
-                }
-                if (reboque2Div) {
-                    reboque2Div.style.display = 'none';
-                }
-                
-                // Show/hide based on selected type
-                if (selectedType === 'Carreta') {
-                    if (reboque1Div) {
-                        reboque1Div.style.display = 'block';
-                    }
-                } else if (selectedType === 'Bi-trem') {
-                    if (reboque1Div) {
-                        reboque1Div.style.display = 'block';
-                    }
-                    if (reboque2Div) {
-                        reboque2Div.style.display = 'block';
-                    }
-                }
-                // 'Simples', 'Carro', 'Van', 'Truck' show only veiculo_principal (default visible)
-            }
-
-            // Bind event listener
-            if (tipoComposicaoSelect) {
-                tipoComposicaoSelect.addEventListener('change', toggleReboques);
-                // Trigger on page load to set initial state
-                toggleReboques();
-            }
-        });
-    </script>
 
 {# Inclua os scripts do Bootstrap (se estiver usando) para o modal funcionar #}
 {# Certifique-se que você tem o Bootstrap CSS no head e o JS no final do body do seu base.html #}

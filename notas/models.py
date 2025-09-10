@@ -140,6 +140,7 @@ class Motorista(UpperCaseMixin, models.Model):
     cep = models.CharField(max_length=9, blank=True, null=True, verbose_name="CEP")
     data_nascimento = models.DateField(blank=True, null=True, verbose_name="Data de Nascimento") 
     numero_consulta = models.CharField(max_length=50, blank=True, null=True, verbose_name="Número da Última Consulta")
+    observacoes = models.TextField(blank=True, null=True, verbose_name="Observações")
 
     # >>> NOVOS CAMPOS PARA A COMPOSIÇÃO VEICULAR NO MOTORISTA <<<
     TIPO_COMPOSICAO_MOTORISTA_CHOICES = [
