@@ -94,16 +94,14 @@
                                     <td>
                                         {% if entrega.status == 'Agendada' %}
                                             <span class="badge badge-warning">{{ entrega.get_status_display }}</span>
-                                        {% elif entrega.status == 'Em Andamento' %}
-                                            <span class="badge badge-primary">{{ entrega.get_status_display }}</span>
-                                        {% elif entrega.status == 'Concluída' %}
+                                        {% elif entrega.status == 'Entregue' %}
                                             <span class="badge badge-success">{{ entrega.get_status_display }}</span>
                                         {% elif entrega.status == 'Cancelada' %}
                                             <span class="badge badge-danger">{{ entrega.get_status_display }}</span>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <div class="btn-group" role="group">
+                                        <div class="d-flex gap-1">
                                             <a href="{% url 'notas:detalhes_agenda_entrega' entrega.pk %}" 
                                                class="btn btn-sm btn-info" title="Ver detalhes">
                                                 <i class="fas fa-eye"></i>
@@ -119,13 +117,8 @@
                                             
                                             <!-- Botões de Status -->
                                             {% if entrega.status == 'Agendada' %}
-                                                <a href="{% url 'notas:marcar_em_andamento' entrega.pk %}" 
-                                                   class="btn btn-sm btn-primary" title="Marcar como Em Andamento">
-                                                    <i class="fas fa-play"></i>
-                                                </a>
-                                            {% elif entrega.status == 'Em Andamento' %}
-                                                <a href="{% url 'notas:marcar_concluida' entrega.pk %}" 
-                                                   class="btn btn-sm btn-success" title="Marcar como Concluída">
+                                                <a href="{% url 'notas:marcar_entregue' entrega.pk %}" 
+                                                   class="btn btn-sm btn-success" title="Marcar como Entregue">
                                                     <i class="fas fa-check"></i>
                                                 </a>
                                             {% endif %}
@@ -155,64 +148,6 @@
                         </table>
                     </div>
                     
-                    <!-- Estatísticas no rodapé -->
-                    <div class="row mt-4">
-                        <div class="col-md-2">
-                            <div class="info-box rounded">
-                                <span class="info-box-icon bg-info rounded-left" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
-                                    <i class="fas fa-list-alt" style="font-size: 12px;"></i>
-                                </span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">Total</span>
-                                    <span class="info-box-number">{{ total_entregas }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="info-box rounded">
-                                <span class="info-box-icon bg-warning rounded-left" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
-                                    <i class="fas fa-calendar-alt" style="font-size: 12px;"></i>
-                                </span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">Agendadas</span>
-                                    <span class="info-box-number">{{ entregas_agendadas }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="info-box rounded">
-                                <span class="info-box-icon bg-primary rounded-left" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
-                                    <i class="fas fa-truck" style="font-size: 12px;"></i>
-                                </span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">Em Andamento</span>
-                                    <span class="info-box-number">{{ entregas_em_andamento }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="info-box rounded">
-                                <span class="info-box-icon bg-success rounded-left" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
-                                    <i class="fas fa-check" style="font-size: 12px;"></i>
-                                </span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">Concluídas</span>
-                                    <span class="info-box-number">{{ entregas_concluidas }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="info-box rounded">
-                                <span class="info-box-icon bg-danger rounded-left" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
-                                    <i class="fas fa-times" style="font-size: 12px;"></i>
-                                </span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">Canceladas</span>
-                                    <span class="info-box-number">{{ entregas_canceladas }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     
                     <!-- Espaçamento adicional no final -->
                     <div class="mt-4"></div>

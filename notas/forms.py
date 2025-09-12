@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import datetime, timedelta
 import re
-from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, Usuario, TabelaSeguro, AgendaEntrega, Tarefa
+from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, Usuario, TabelaSeguro, AgendaEntrega
 from validate_docbr import CNPJ, CPF
 
 # Custom form field that automatically converts text to uppercase
@@ -1563,61 +1563,6 @@ class AgendaEntregaForm(forms.ModelForm):
         return quantidade
 
 
-# --------------------------------------------------------------------------------------
-# Formulário para Tarefas (To-Do)
-# --------------------------------------------------------------------------------------
-class TarefaForm(forms.ModelForm):
-    """Formulário para gerenciar tarefas do sistema To-Do"""
-    
-    titulo = UpperCaseCharField(
-        label='Título da Tarefa',
-        max_length=200,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Digite o título da tarefa'
-        })
-    )
-    
-    descricao = forms.CharField(
-        label='Descrição',
-        required=False,
-        widget=forms.Textarea(attrs={
-            'class': 'form-control',
-            'rows': 4,
-            'placeholder': 'Descrição detalhada da tarefa (opcional)'
-        })
-    )
-    
-    prioridade = forms.ChoiceField(
-        choices=Tarefa.PRIORIDADE_CHOICES,
-        label='Prioridade',
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    data_vencimento = forms.DateField(
-        label='Data de Vencimento',
-        required=False,
-        widget=forms.DateInput(attrs={
-            'class': 'form-control',
-            'type': 'date'
-        })
-    )
-    
-    status = forms.ChoiceField(
-        choices=Tarefa.STATUS_CHOICES,
-        label='Status',
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    class Meta:
-        model = Tarefa
-        fields = ['titulo', 'descricao', 'prioridade', 'data_vencimento', 'status']
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Tornar campos opcionais
-        self.fields['data_vencimento'].required = False
-        self.fields['descricao'].required = False
 
 
 class MercadoriaDepositoSearchForm(forms.Form):
@@ -1674,43 +1619,4 @@ class MercadoriaDepositoSearchForm(forms.Form):
             'class': 'form-control',
             'type': 'date'
         })
-    )
-
-class TarefaSearchForm(forms.Form):
-    """Formulário de pesquisa para tarefas"""
-    
-    titulo = UpperCaseCharField(
-        label='Título da Tarefa',
-        required=False,
-        max_length=200,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Digite o título da tarefa'
-        })
-    )
-    
-    status = forms.ChoiceField(
-        label='Status',
-        choices=[('', 'Todos')] + Tarefa.STATUS_CHOICES,
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    prioridade = forms.ChoiceField(
-        label='Prioridade',
-        choices=[('', 'Todas')] + Tarefa.PRIORIDADE_CHOICES,
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    data_vencimento_inicio = forms.DateField(
-        label='Data de Vencimento (Início)',
-        required=False,
-        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
-    )
-    
-    data_vencimento_fim = forms.DateField(
-        label='Data de Vencimento (Fim)',
-        required=False,
-        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
     )

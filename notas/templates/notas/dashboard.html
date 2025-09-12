@@ -5,6 +5,7 @@
 {% block title %}Dashboard - Agência Estelar{% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="dashboard-container">
     <div class="dashboard-header">
         <h1><i class="fas fa-chart-line"></i> Dashboard - Sistema Estelar</h1>
@@ -43,59 +44,59 @@
             </div>
         </div>
 
-        <!-- Widget de Estatísticas Gerais -->
-        <div class="widget widget-stats">
+        <!-- Widget de Entregas Agendadas -->
+        <div class="widget widget-deliveries">
             <div class="widget-header">
-                <h3><i class="fas fa-chart-bar"></i> Estatísticas Gerais</h3>
+                <h3><i class="fas fa-truck"></i> Entregas Agendadas</h3>
             </div>
             <div class="widget-content">
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-icon">
-                            <i class="fas fa-file-invoice"></i>
+                {% if entregas_agendadas %}
+                    <div class="deliveries-list">
+                        {% for entrega in entregas_agendadas %}
+                        <div class="delivery-item">
+                            <div class="delivery-info">
+                                <div class="delivery-client">
+                                    <strong>{{ entrega.cliente.razao_social }}</strong>
+                                </div>
+                                <div class="delivery-company">
+                                    <i class="fas fa-building"></i>
+                                    <span class="detail-label">Emp:</span>
+                                    <span class="detail-value">{{ entrega.empresa_entrega }}</span>
+                                </div>
+                                <div class="delivery-details">
+                                    <span class="delivery-quantity">
+                                        <i class="fas fa-layer-group"></i>
+                                        <span class="detail-label">Qtd:</span>
+                                        <span class="detail-value">{{ entrega.quantidade|format_brazilian_quantity }}</span>
+                                    </span>
+                                    <span class="delivery-volume">
+                                        <i class="fas fa-weight-hanging"></i>
+                                        <span class="detail-label">Vol:</span>
+                                        <span class="detail-value">{{ entrega.volume }}</span>
+                                    </span>
+                                </div>
+                                <div class="delivery-date">
+                                    <i class="fas fa-calendar"></i>
+                                    <span class="detail-label">Data:</span>
+                                    <span class="detail-value">{{ entrega.data_entrega|date:"d/m/Y" }}</span>
+                                </div>
+                            </div>
+                            <div class="delivery-actions">
+                                <button class="btn btn-success btn-sm marcar-entregue-btn" 
+                                        data-entrega-id="{{ entrega.pk }}"
+                                        title="Marcar como Entregue">
+                                    <i class="fas fa-check"></i> Entregue
+                                </button>
+                            </div>
                         </div>
-                        <div class="stat-info">
-                            <span class="stat-number">{{ total_notas }}</span>
-                            <span class="stat-label">Notas Fiscais</span>
-                        </div>
+                        {% endfor %}
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-icon">
-                            <i class="fas fa-building"></i>
-                        </div>
-                        <div class="stat-info">
-                            <span class="stat-number">{{ total_clientes }}</span>
-                            <span class="stat-label">Clientes</span>
-                        </div>
+                {% else %}
+                    <div class="no-data">
+                        <i class="fas fa-truck fa-3x text-muted mb-3"></i>
+                        <p>Nenhuma entrega agendada</p>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-icon">
-                            <i class="fas fa-user-tie"></i>
-                        </div>
-                        <div class="stat-info">
-                            <span class="stat-number">{{ total_motoristas }}</span>
-                            <span class="stat-label">Motoristas</span>
-                        </div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-icon">
-                            <i class="fas fa-truck"></i>
-                        </div>
-                        <div class="stat-info">
-                            <span class="stat-number">{{ total_veiculos }}</span>
-                            <span class="stat-label">Veículos</span>
-                        </div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-icon">
-                            <i class="fas fa-clipboard-list"></i>
-                        </div>
-                        <div class="stat-info">
-                            <span class="stat-number">{{ total_romaneios }}</span>
-                            <span class="stat-label">Romaneios</span>
-                        </div>
-                    </div>
-                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -376,48 +377,139 @@
 .btn-warning { background: #f39c12; }
 .btn-danger { background: #e74c3c; }
 
-/* Stats Widget */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 1rem;
+/* Deliveries Widget */
+.deliveries-list {
+    max-height: 400px;
+    overflow-y: auto;
 }
 
-.stat-item {
+.delivery-item {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     padding: 1rem;
+    margin-bottom: 0.75rem;
     background: #f8f9fa;
     border-radius: 8px;
-    transition: background 0.3s ease;
+    border-left: 4px solid #3498db;
+    transition: all 0.3s ease;
 }
 
-.stat-item:hover {
+.delivery-item:hover {
     background: #e9ecef;
+    transform: translateX(2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.stat-icon {
-    margin-right: 1rem;
-    font-size: 1.5rem;
-    color: #3498db;
+.delivery-info {
+    flex: 1;
 }
 
-.stat-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.stat-number {
-    font-size: 1.5rem;
-    font-weight: bold;
+.delivery-client {
+    font-size: 1rem;
     color: #2c3e50;
-    line-height: 1;
+    margin-bottom: 0.25rem;
 }
 
-.stat-label {
-    font-size: 0.8rem;
-    color: #7f8c8d;
-    margin-top: 0.25rem;
+.delivery-company {
+    font-size: 0.85rem;
+    color: #5a6c7d;
+    background: #e3f2fd;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+    border-left: 3px solid #2196f3;
+}
+
+.delivery-company i {
+    color: #2196f3;
+    font-size: 0.9rem;
+}
+
+.delivery-details {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.delivery-quantity,
+.delivery-volume {
+    font-size: 0.85rem;
+    color: #5a6c7d;
+    background: #e9ecef;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.delivery-quantity {
+    background: #e8f5e8;
+    border-left: 3px solid #27ae60;
+}
+
+.delivery-quantity i {
+    color: #27ae60;
+    font-size: 0.9rem;
+}
+
+.delivery-volume {
+    background: #fff3cd;
+    border-left: 3px solid #f39c12;
+}
+
+.delivery-volume i {
+    color: #f39c12;
+    font-size: 0.9rem;
+}
+
+.detail-label {
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-value {
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.delivery-date {
+    font-size: 0.85rem;
+    color: #5a6c7d;
+    background: #f3e5f5;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-left: 3px solid #9c27b0;
+}
+
+.delivery-date i {
+    color: #9c27b0;
+    font-size: 0.9rem;
+}
+
+.delivery-actions {
+    margin-left: 1rem;
+}
+
+.delivery-actions .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.delivery-actions .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Reports Widget */
@@ -696,6 +788,127 @@ function showTab(tabName) {
     
     // Add active class to clicked button
     event.target.classList.add('active');
+}
+
+// Função para marcar entrega como entregue via AJAX
+document.addEventListener('DOMContentLoaded', function() {
+    const marcarEntregueBtns = document.querySelectorAll('.marcar-entregue-btn');
+    
+    marcarEntregueBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const entregaId = this.getAttribute('data-entrega-id');
+            
+            if (confirm('Deseja marcar esta entrega como entregue?')) {
+                // Desabilitar o botão durante a requisição
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+                
+                // Fazer requisição AJAX
+                fetch(`/notas/agenda-entregas/${entregaId}/entregue/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => {
+                    if (response.ok) {
+                        // Remover o item da lista
+                        const deliveryItem = this.closest('.delivery-item');
+                        deliveryItem.style.opacity = '0.5';
+                        deliveryItem.style.transform = 'translateX(-10px)';
+                        
+                        setTimeout(() => {
+                            deliveryItem.remove();
+                            
+                            // Verificar se não há mais entregas
+                            const deliveriesList = document.querySelector('.deliveries-list');
+                            if (deliveriesList && deliveriesList.children.length === 0) {
+                                deliveriesList.innerHTML = `
+                                    <div class="no-data">
+                                        <i class="fas fa-truck fa-3x text-muted mb-3"></i>
+                                        <p>Nenhuma entrega agendada</p>
+                                    </div>
+                                `;
+                            }
+                        }, 500);
+                        
+                        // Mostrar mensagem de sucesso
+                        showNotification('Entrega marcada como entregue com sucesso!', 'success');
+                    } else {
+                        throw new Error('Erro ao marcar entrega como entregue');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    showNotification('Erro ao marcar entrega como entregue. Tente novamente.', 'error');
+                    
+                    // Reabilitar o botão
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-check"></i> Entregue';
+                });
+            }
+        });
+    });
+});
+
+// Função para mostrar notificações
+function showNotification(message, type) {
+    // Criar elemento de notificação
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    // Adicionar estilos
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#27ae60' : '#e74c3c'};
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+        animation: slideIn 0.3s ease;
+    `;
+    
+    // Adicionar CSS para animação
+    if (!document.querySelector('#notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notification-styles';
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // Adicionar ao DOM
+    document.body.appendChild(notification);
+    
+    // Remover após 3 segundos
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
 }
 </script>
 {% endblock %} 

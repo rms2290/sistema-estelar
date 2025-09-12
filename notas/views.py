@@ -10,14 +10,14 @@ from decimal import Decimal
 from datetime import datetime, date, timedelta
 
 # Importe todos os seus modelos
-from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, TabelaSeguro, AgendaEntrega, Tarefa
+from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, TabelaSeguro, AgendaEntrega
 
 # Importe todos os seus formulários
 from .forms import (
     NotaFiscalForm, ClienteForm, MotoristaForm, VeiculoForm, RomaneioViagemForm,
     NotaFiscalSearchForm, ClienteSearchForm, MotoristaSearchForm, HistoricoConsultaForm,
     VeiculoSearchForm, RomaneioSearchForm, MercadoriaDepositoSearchForm, TabelaSeguroForm,
-    AgendaEntregaForm, TarefaForm, TarefaSearchForm, MercadoriaDepositoSearchForm # Adicionados os novos formulários
+    AgendaEntregaForm, MercadoriaDepositoSearchForm # Adicionados os novos formulários
 )
 
 def formatar_valor_brasileiro(valor, tipo='numero'):
@@ -2261,6 +2261,11 @@ def dashboard(request):
         status__in=['Agendada', 'Em Andamento']
     ).select_related('cliente').order_by('cliente__razao_social')
     
+    # Entregas agendadas para o dashboard (apenas status 'Agendada')
+    entregas_agendadas = AgendaEntrega.objects.filter(
+        status='Agendada'
+    ).select_related('cliente').order_by('data_entrega')[:10]
+    
     total_agendadas = AgendaEntrega.objects.filter(status='Agendada').count()
     total_em_andamento = AgendaEntrega.objects.filter(status='Em Andamento').count()
     
@@ -2293,6 +2298,7 @@ def dashboard(request):
         # Dados da agenda
         'proximas_entregas': proximas_entregas,
         'entregas_hoje': entregas_hoje,
+        'entregas_agendadas': entregas_agendadas,
         'total_agendadas': total_agendadas,
         'total_em_andamento': total_em_andamento,
         'hoje': hoje,
@@ -2859,8 +2865,7 @@ def listar_agenda_entregas(request):
     # Estatísticas
     total_entregas = entregas.count()
     entregas_agendadas = entregas.filter(status='Agendada').count()
-    entregas_em_andamento = entregas.filter(status='Em Andamento').count()
-    entregas_concluidas = entregas.filter(status='Concluída').count()
+    entregas_entregues = entregas.filter(status='Entregue').count()
     entregas_canceladas = entregas.filter(status='Cancelada').count()
     
     # Próximas entregas (próximos 7 dias)
@@ -2878,8 +2883,7 @@ def listar_agenda_entregas(request):
         'proximas_entregas': proximas_entregas,
         'total_entregas': total_entregas,
         'entregas_agendadas': entregas_agendadas,
-        'entregas_em_andamento': entregas_em_andamento,
-        'entregas_concluidas': entregas_concluidas,
+        'entregas_entregues': entregas_entregues,
         'entregas_canceladas': entregas_canceladas,
         'status_filter': status_filter,
         'data_inicio': data_inicio,
@@ -3016,6 +3020,26 @@ def marcar_concluida(request, pk):
 
 @login_required
 @user_passes_test(is_admin)
+def marcar_entregue(request, pk):
+    """Marca uma entrega como entregue"""
+    agenda_entrega = get_object_or_404(AgendaEntrega, pk=pk)
+    agenda_entrega.status = 'Entregue'
+    agenda_entrega.save()
+    
+    # Se for uma requisição AJAX, retornar JSON
+    if request.headers.get('Content-Type') == 'application/json' or request.method == 'POST':
+        from django.http import JsonResponse
+        return JsonResponse({
+            'success': True,
+            'message': 'Entrega marcada como Entregue!'
+        })
+    
+    # Se for uma requisição normal, redirecionar
+    messages.success(request, 'Entrega marcada como Entregue!')
+    return redirect('notas:listar_agenda_entregas')
+
+@login_required
+@user_passes_test(is_admin)
 def marcar_cancelada(request, pk):
     """Marca uma entrega como cancelada"""
     agenda_entrega = get_object_or_404(AgendaEntrega, pk=pk)
@@ -3099,160 +3123,3 @@ def test_widget_agenda(request):
 
 
 # =============================================================================
-# VIEWS PARA TAREFAS (TO-DO)
-# =============================================================================
-
-@login_required
-def listar_tarefas(request):
-    """Lista todas as tarefas do usuário logado"""
-    # Formulário de pesquisa
-    search_form = TarefaSearchForm(request.GET)
-    
-    # Query base
-    tarefas = Tarefa.objects.filter(usuario=request.user)
-    
-    # Aplicar filtros se fornecidos
-    if search_form.is_valid():
-        titulo = search_form.cleaned_data.get('titulo')
-        status = search_form.cleaned_data.get('status')
-        prioridade = search_form.cleaned_data.get('prioridade')
-        data_vencimento_inicio = search_form.cleaned_data.get('data_vencimento_inicio')
-        data_vencimento_fim = search_form.cleaned_data.get('data_vencimento_fim')
-        
-        if titulo:
-            tarefas = tarefas.filter(titulo__icontains=titulo)
-        if status:
-            tarefas = tarefas.filter(status=status)
-        if prioridade:
-            tarefas = tarefas.filter(prioridade=prioridade)
-        if data_vencimento_inicio:
-            tarefas = tarefas.filter(data_vencimento__gte=data_vencimento_inicio)
-        if data_vencimento_fim:
-            tarefas = tarefas.filter(data_vencimento__lte=data_vencimento_fim)
-    
-    # Ordenar por prioridade e data de criação
-    tarefas = tarefas.order_by('-prioridade', '-data_criacao')
-    
-    # Estatísticas
-    total_tarefas = Tarefa.objects.filter(usuario=request.user).count()
-    tarefas_pendentes = Tarefa.objects.filter(usuario=request.user, status='pendente').count()
-    tarefas_em_andamento = Tarefa.objects.filter(usuario=request.user, status='em_andamento').count()
-    tarefas_concluidas = Tarefa.objects.filter(usuario=request.user, status='concluida').count()
-    tarefas_canceladas = Tarefa.objects.filter(usuario=request.user, status='cancelada').count()
-    
-    context = {
-        'title': 'Minhas Tarefas',
-        'tarefas': tarefas,
-        'search_form': search_form,
-        'total_tarefas': total_tarefas,
-        'tarefas_pendentes': tarefas_pendentes,
-        'tarefas_em_andamento': tarefas_em_andamento,
-        'tarefas_concluidas': tarefas_concluidas,
-        'tarefas_canceladas': tarefas_canceladas,
-    }
-    
-    return render(request, 'notas/tarefas/listar_tarefas.html', context)
-
-
-@login_required
-def adicionar_tarefa(request):
-    """Adiciona uma nova tarefa"""
-    if request.method == 'POST':
-        form = TarefaForm(request.POST)
-        if form.is_valid():
-            tarefa = form.save(commit=False)
-            tarefa.usuario = request.user
-            tarefa.save()
-            messages.success(request, 'Tarefa criada com sucesso!')
-            return redirect('notas:listar_tarefas')
-    else:
-        form = TarefaForm()
-    
-    context = {
-        'title': 'Adicionar Tarefa',
-        'form': form,
-    }
-    
-    return render(request, 'notas/tarefas/adicionar_tarefa.html', context)
-
-
-@login_required
-def editar_tarefa(request, pk):
-    """Edita uma tarefa existente"""
-    tarefa = get_object_or_404(Tarefa, pk=pk, usuario=request.user)
-    
-    if request.method == 'POST':
-        form = TarefaForm(request.POST, instance=tarefa)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Tarefa atualizada com sucesso!')
-            return redirect('notas:listar_tarefas')
-    else:
-        form = TarefaForm(instance=tarefa)
-    
-    context = {
-        'title': 'Editar Tarefa',
-        'form': form,
-        'tarefa': tarefa,
-    }
-    
-    return render(request, 'notas/tarefas/editar_tarefa.html', context)
-
-
-@login_required
-def excluir_tarefa(request, pk):
-    """Exclui uma tarefa"""
-    tarefa = get_object_or_404(Tarefa, pk=pk, usuario=request.user)
-    
-    if request.method == 'POST':
-        tarefa.delete()
-        messages.success(request, 'Tarefa excluída com sucesso!')
-        return redirect('notas:listar_tarefas')
-    
-    context = {
-        'title': 'Excluir Tarefa',
-        'tarefa': tarefa,
-    }
-    
-    return render(request, 'notas/tarefas/excluir_tarefa.html', context)
-
-
-@login_required
-def detalhes_tarefa(request, pk):
-    """Mostra os detalhes de uma tarefa"""
-    tarefa = get_object_or_404(Tarefa, pk=pk, usuario=request.user)
-    
-    context = {
-        'title': 'Detalhes da Tarefa',
-        'tarefa': tarefa,
-    }
-    
-    return render(request, 'notas/tarefas/detalhes_tarefa.html', context)
-
-
-@login_required
-def finalizar_tarefa(request, pk):
-    """Marca uma tarefa como concluída"""
-    tarefa = get_object_or_404(Tarefa, pk=pk, usuario=request.user)
-    
-    if tarefa.status != 'concluida':
-        tarefa.marcar_como_concluida()
-        messages.success(request, 'Tarefa marcada como concluída!')
-    else:
-        messages.info(request, 'Tarefa já estava concluída.')
-    
-    return redirect('notas:listar_tarefas')
-
-
-@login_required
-def reabrir_tarefa(request, pk):
-    """Reabre uma tarefa concluída"""
-    tarefa = get_object_or_404(Tarefa, pk=pk, usuario=request.user)
-    
-    if tarefa.status == 'concluida':
-        tarefa.marcar_como_pendente()
-        messages.success(request, 'Tarefa reaberta com sucesso!')
-    else:
-        messages.info(request, 'Tarefa não estava concluída.')
-    
-    return redirect('notas:listar_tarefas')
