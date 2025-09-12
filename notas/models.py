@@ -99,6 +99,16 @@ class NotaFiscal(UpperCaseMixin, models.Model):
         ('Enviada', 'Enviada'),
     ]
     status = models.CharField(max_length=20, default='Depósito', choices=STATUS_NF_CHOICES, verbose_name="Status da NF")
+    
+    # Campo para localização no depósito
+    LOCAL_CHOICES = [
+        ('1', 'Galpão 1'),
+        ('2', 'Galpão 2'),
+        ('3', 'Galpão 3'),
+        ('4', 'Galpão 4'),
+        ('5', 'Galpão 5'),
+    ]
+    local = models.CharField(max_length=10, choices=LOCAL_CHOICES, blank=True, null=True, verbose_name="Local")
 
     # Relação ManyToMany com RomaneioViagem (para que uma nota possa estar em vários romaneios)
     romaneios = models.ManyToManyField(

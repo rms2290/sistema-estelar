@@ -121,6 +121,7 @@
                                             <th>Quantidade</th>
                                             <th>Peso (kg)</th>
                                             <th>Valor (R$)</th>
+                                            <th>Local</th>
                                             <th>Ações</th>
                                         </tr>
                                     </thead>
@@ -136,6 +137,13 @@
                                                 <td>{{ mercadoria.quantidade|format_brazilian_quantity }}</td>
                                                 <td>{{ mercadoria.peso|format_brazilian_weight }}</td>
                                                 <td>{{ mercadoria.valor|format_brazilian_currency }}</td>
+                                                <td>
+                                                    {% if mercadoria.local %}
+                                                        <span class="badge bg-primary">Galpão {{ mercadoria.local }}</span>
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
                                                 <td>
                                                     <a href="{% url 'notas:detalhes_nota_fiscal' mercadoria.pk %}" 
                                                        class="btn btn-info btn-sm" title="Ver Detalhes">

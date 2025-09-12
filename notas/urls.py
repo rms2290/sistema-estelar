@@ -13,6 +13,7 @@ urlpatterns = [
     path('editar/<int:pk>/', views.editar_nota_fiscal, name='editar_nota_fiscal'),
     path('excluir/<int:pk>/', views.excluir_nota_fiscal, name='excluir_nota_fiscal'),
     path('notas/<int:pk>/detalhes/', views.detalhes_nota_fiscal, name='detalhes_nota_fiscal'),
+    path('buscar-mercadorias/', views.buscar_mercadorias_deposito, name='buscar_mercadorias_deposito'),
 
 # Novas URLs para Clientes
     path('clientes/', views.listar_clientes, name='listar_clientes'),

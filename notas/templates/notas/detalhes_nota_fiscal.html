@@ -27,6 +27,17 @@
         <p><strong>Quantidade:</strong> {{ nota.quantidade|format_brazilian_quantity }}</p>
         <p><strong>Peso (kg):</strong> {{ nota.peso|format_brazilian_weight }}</p>
         <p><strong>Valor (R$):</strong> {{ nota.valor|format_brazilian_currency }}</p>
+        <p><strong>Localização:</strong> 
+            {% if nota.local %}
+                <span class="badge bg-primary fs-6">
+                    <i class="fas fa-warehouse"></i> {{ nota.get_local_display }}
+                </span>
+            {% else %}
+                <span class="text-muted">
+                    <i class="fas fa-question-circle"></i> Não informado
+                </span>
+            {% endif %}
+        </p>
         <p><strong>Status:</strong> {{ nota.get_status_display }}</p>
     </div>
 

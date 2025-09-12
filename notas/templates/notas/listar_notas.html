@@ -47,6 +47,17 @@
                             </div>
                         </div>
                         <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ search_form.local.label_tag }}
+                                    {{ search_form.local }}
+                                    {% if search_form.local.errors %}
+                                        <div class="text-danger">{{ search_form.local.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-search"></i> Buscar
@@ -88,6 +99,7 @@
                                             <th>Quantidade</th>
                                             <th>Peso (kg)</th>
                                             <th>Valor (R$)</th>
+                                            <th>Local</th>
                                             <th>Status</th>
                                             <th>Romaneio</th>
                                             <th>Ações</th>
@@ -106,6 +118,13 @@
                                                 <td>{{ nota.quantidade|format_brazilian_quantity }}</td>
                                                 <td>{{ nota.peso|format_brazilian_weight }}</td>
                                                 <td>{{ nota.valor|format_brazilian_currency }}</td>
+                                                <td>
+                                                    {% if nota.local %}
+                                                        <span class="badge bg-primary">Galpão {{ nota.local }}</span>
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
                                                 <td>{{ nota.status }}</td>
                                                 <td>
                                                     {% if nota.romaneios_vinculados.all %}

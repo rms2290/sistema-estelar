@@ -69,6 +69,14 @@ class NotaFiscalForm(forms.ModelForm):
         max_length=200,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome da Mercadoria'})
     )
+    
+    # Campo local
+    local = forms.ChoiceField(
+        label='Local',
+        choices=[('', '--- Selecione o galpão ---')] + NotaFiscal.LOCAL_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
 
     class Meta:
         model = NotaFiscal
@@ -1077,6 +1085,12 @@ class NotaFiscalSearchForm(forms.Form):
         required=False,
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
     )
+    local = forms.ChoiceField(
+        label='Local',
+        choices=[('', 'Todos os galpões')] + NotaFiscal.LOCAL_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
 
 class ClienteSearchForm(forms.Form):
     razao_social = UpperCaseCharField(
@@ -1605,6 +1619,63 @@ class TarefaForm(forms.ModelForm):
         self.fields['data_vencimento'].required = False
         self.fields['descricao'].required = False
 
+
+class MercadoriaDepositoSearchForm(forms.Form):
+    """Formulário de pesquisa para mercadorias no depósito"""
+    
+    cliente = forms.ModelChoiceField(
+        queryset=Cliente.objects.filter(status='Ativo').order_by('razao_social'),
+        label='Cliente',
+        required=False,
+        empty_label="--- Todos os clientes ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    mercadoria = UpperCaseCharField(
+        label='Mercadoria',
+        required=False,
+        max_length=200,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Digite o nome da mercadoria'
+        })
+    )
+    
+    local = forms.ChoiceField(
+        label='Galpão',
+        choices=[('', 'Todos os galpões')] + NotaFiscal.LOCAL_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    status = forms.ChoiceField(
+        label='Status',
+        choices=[
+            ('', 'Todos os status'),
+            ('Depósito', 'No Depósito'),
+            ('Enviada', 'Enviada'),
+        ],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    data_inicio = forms.DateField(
+        label='Data Início',
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        })
+    )
+    
+    data_fim = forms.DateField(
+        label='Data Fim',
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        })
+    )
 
 class TarefaSearchForm(forms.Form):
     """Formulário de pesquisa para tarefas"""

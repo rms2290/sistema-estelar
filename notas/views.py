@@ -17,7 +17,7 @@ from .forms import (
     NotaFiscalForm, ClienteForm, MotoristaForm, VeiculoForm, RomaneioViagemForm,
     NotaFiscalSearchForm, ClienteSearchForm, MotoristaSearchForm, HistoricoConsultaForm,
     VeiculoSearchForm, RomaneioSearchForm, MercadoriaDepositoSearchForm, TabelaSeguroForm,
-    AgendaEntregaForm, TarefaForm, TarefaSearchForm # Adicionados os novos formulários
+    AgendaEntregaForm, TarefaForm, TarefaSearchForm, MercadoriaDepositoSearchForm # Adicionados os novos formulários
 )
 
 def formatar_valor_brasileiro(valor, tipo='numero'):
@@ -2469,6 +2469,7 @@ def listar_notas_fiscais(request):
         nota = search_form.cleaned_data.get('nota')
         cliente = search_form.cleaned_data.get('cliente')
         data = search_form.cleaned_data.get('data')
+        local = search_form.cleaned_data.get('local')
         
         if nota:
             queryset = queryset.filter(nota__icontains=nota)
@@ -2476,6 +2477,8 @@ def listar_notas_fiscais(request):
             queryset = queryset.filter(cliente=cliente)
         if data:
             queryset = queryset.filter(data=data)
+        if local:
+            queryset = queryset.filter(local=local)
         
         notas_fiscais = queryset.order_by('nota')
     
@@ -2485,6 +2488,89 @@ def listar_notas_fiscais(request):
         'search_performed': search_performed,
     }
     return render(request, 'notas/listar_notas.html', context)
+
+@login_required
+def buscar_mercadorias_deposito(request):
+    """Busca mercadorias no depósito com foco na localização"""
+    search_form = MercadoriaDepositoSearchForm(request.GET)
+    mercadorias = NotaFiscal.objects.none()
+    search_performed = bool(request.GET)
+    
+    # Estatísticas gerais
+    total_mercadorias = NotaFiscal.objects.count()
+    mercadorias_deposito = NotaFiscal.objects.filter(status='Depósito').count()
+    mercadorias_enviadas = NotaFiscal.objects.filter(status='Enviada').count()
+    
+    # Contagem por galpão
+    contagem_galpoes = {}
+    galpoes_com_mercadorias = set()  # Para destacar galpões com mercadorias do cliente pesquisado
+    galpoes_info = []  # Lista com informações dos galpões
+    
+    for choice in NotaFiscal.LOCAL_CHOICES:
+        codigo = choice[0]
+        nome = choice[1]
+        contagem = NotaFiscal.objects.filter(local=codigo, status='Depósito').count()
+        contagem_galpoes[nome] = contagem
+        galpoes_info.append({
+            'codigo': codigo,
+            'nome': nome,
+            'quantidade': contagem
+        })
+
+    if search_performed and search_form.is_valid():
+        queryset = NotaFiscal.objects.all()
+        cliente = search_form.cleaned_data.get('cliente')
+        mercadoria = search_form.cleaned_data.get('mercadoria')
+        local = search_form.cleaned_data.get('local')
+        status = search_form.cleaned_data.get('status')
+        data_inicio = search_form.cleaned_data.get('data_inicio')
+        data_fim = search_form.cleaned_data.get('data_fim')
+        
+        if cliente:
+            queryset = queryset.filter(cliente=cliente)
+        if mercadoria:
+            queryset = queryset.filter(mercadoria__icontains=mercadoria)
+        if local:
+            # Quando um galpão específico é selecionado, mostrar apenas notas com status "Depósito"
+            queryset = queryset.filter(local=local, status='Depósito')
+            # Agrupar por cliente para mostrar resumo consolidado
+            from django.db.models import Sum, Count
+            mercadorias = queryset.values('cliente__razao_social', 'cliente__id').annotate(
+                valor_total=Sum('valor'),
+                peso_total=Sum('peso'),
+                quantidade_total=Sum('quantidade'),
+                total_notas=Count('id')
+            ).order_by('cliente__razao_social')
+        elif status:
+            queryset = queryset.filter(status=status)
+        if data_inicio:
+            queryset = queryset.filter(data__gte=data_inicio)
+        if data_fim:
+            queryset = queryset.filter(data__lte=data_fim)
+        
+        # Se não foi filtrado por galpão específico, mostrar lista normal
+        if not local:
+            mercadorias = queryset.order_by('local', 'cliente__razao_social', 'mercadoria')
+        
+        # Identificar galpões com mercadorias do cliente pesquisado (apenas status "Depósito")
+        if cliente:
+            galpoes_com_mercadorias = set()
+            for mercadoria in mercadorias:
+                if mercadoria.local and mercadoria.status == 'Depósito':
+                    galpoes_com_mercadorias.add(mercadoria.local)
+    
+    context = {
+        'mercadorias': mercadorias,
+        'search_form': search_form,
+        'search_performed': search_performed,
+        'total_mercadorias': total_mercadorias,
+        'mercadorias_deposito': mercadorias_deposito,
+        'mercadorias_enviadas': mercadorias_enviadas,
+        'contagem_galpoes': contagem_galpoes,
+        'galpoes_com_mercadorias': list(galpoes_com_mercadorias),
+        'galpoes_info': galpoes_info,
+    }
+    return render(request, 'notas/buscar_mercadorias_deposito.html', context)
 
 @login_required
 def listar_clientes(request):
