@@ -2496,10 +2496,6 @@ def buscar_mercadorias_deposito(request):
     mercadorias = NotaFiscal.objects.none()
     search_performed = bool(request.GET)
     
-    # Estatísticas gerais
-    total_mercadorias = NotaFiscal.objects.count()
-    mercadorias_deposito = NotaFiscal.objects.filter(status='Depósito').count()
-    mercadorias_enviadas = NotaFiscal.objects.filter(status='Enviada').count()
     
     # Contagem por galpão
     contagem_galpoes = {}
@@ -2518,11 +2514,12 @@ def buscar_mercadorias_deposito(request):
         })
 
     if search_performed and search_form.is_valid():
-        queryset = NotaFiscal.objects.all()
+        # Na tela de busca por localização, sempre filtrar apenas status "Depósito"
+        queryset = NotaFiscal.objects.filter(status='Depósito')
         cliente = search_form.cleaned_data.get('cliente')
         mercadoria = search_form.cleaned_data.get('mercadoria')
+        nota = search_form.cleaned_data.get('nota')
         local = search_form.cleaned_data.get('local')
-        status = search_form.cleaned_data.get('status')
         data_inicio = search_form.cleaned_data.get('data_inicio')
         data_fim = search_form.cleaned_data.get('data_fim')
         
@@ -2530,10 +2527,16 @@ def buscar_mercadorias_deposito(request):
             queryset = queryset.filter(cliente=cliente)
         if mercadoria:
             queryset = queryset.filter(mercadoria__icontains=mercadoria)
+        if nota:
+            queryset = queryset.filter(nota__icontains=nota)
+        if data_inicio:
+            queryset = queryset.filter(data__gte=data_inicio)
+        if data_fim:
+            queryset = queryset.filter(data__lte=data_fim)
+        
+        # Se foi filtrado por galpão específico, agrupar por cliente
         if local:
-            # Quando um galpão específico é selecionado, mostrar apenas notas com status "Depósito"
-            queryset = queryset.filter(local=local, status='Depósito')
-            # Agrupar por cliente para mostrar resumo consolidado
+            queryset = queryset.filter(local=local)
             from django.db.models import Sum, Count
             mercadorias = queryset.values('cliente__razao_social', 'cliente__id').annotate(
                 valor_total=Sum('valor'),
@@ -2541,31 +2544,39 @@ def buscar_mercadorias_deposito(request):
                 quantidade_total=Sum('quantidade'),
                 total_notas=Count('id')
             ).order_by('cliente__razao_social')
-        elif status:
-            queryset = queryset.filter(status=status)
-        if data_inicio:
-            queryset = queryset.filter(data__gte=data_inicio)
-        if data_fim:
-            queryset = queryset.filter(data__lte=data_fim)
-        
-        # Se não foi filtrado por galpão específico, mostrar lista normal
-        if not local:
+        # Se foi filtrado por cliente (sem galpão específico), agrupar por galpão
+        elif cliente:
+            from django.db.models import Sum, Count
+            mercadorias = queryset.values('local', 'cliente__razao_social', 'cliente__id').annotate(
+                valor_total=Sum('valor'),
+                peso_total=Sum('peso'),
+                quantidade_total=Sum('quantidade'),
+                total_notas=Count('id')
+            ).order_by('local', 'cliente__razao_social')
+        else:
+            # Busca geral, mostrar lista normal
             mercadorias = queryset.order_by('local', 'cliente__razao_social', 'mercadoria')
         
         # Identificar galpões com mercadorias do cliente pesquisado (apenas status "Depósito")
         if cliente:
             galpoes_com_mercadorias = set()
-            for mercadoria in mercadorias:
-                if mercadoria.local and mercadoria.status == 'Depósito':
-                    galpoes_com_mercadorias.add(mercadoria.local)
+            # Se foi filtrado por galpão específico ou cliente, mercadorias é um queryset de dicionários
+            if local or cliente:
+                # Para galpão específico ou cliente, usar o queryset original para identificar galpões
+                cliente_mercadorias = NotaFiscal.objects.filter(cliente=cliente, status='Depósito')
+                for mercadoria in cliente_mercadorias:
+                    if mercadoria.local:
+                        galpoes_com_mercadorias.add(mercadoria.local)
+            else:
+                # Para busca geral, mercadorias são objetos
+                for mercadoria in mercadorias:
+                    if mercadoria.local and mercadoria.status == 'Depósito':
+                        galpoes_com_mercadorias.add(mercadoria.local)
     
     context = {
         'mercadorias': mercadorias,
         'search_form': search_form,
         'search_performed': search_performed,
-        'total_mercadorias': total_mercadorias,
-        'mercadorias_deposito': mercadorias_deposito,
-        'mercadorias_enviadas': mercadorias_enviadas,
         'contagem_galpoes': contagem_galpoes,
         'galpoes_com_mercadorias': list(galpoes_com_mercadorias),
         'galpoes_info': galpoes_info,

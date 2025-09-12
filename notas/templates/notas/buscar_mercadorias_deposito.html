@@ -8,47 +8,6 @@
 <div class="container mt-4">
     <h2><i class="fas fa-warehouse"></i> Buscar Mercadorias no Depósito</h2>
     
-    <!-- Estatísticas Gerais -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Total de Mercadorias</h5>
-                    <h3>{{ total_mercadorias }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white">
-                <div class="card-body text-center">
-                    <h5 class="card-title">No Depósito</h5>
-                    <h3>{{ mercadorias_deposito }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Enviadas</h5>
-                    <h3>{{ mercadorias_enviadas }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-white">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Taxa de Ocupação</h5>
-                    <h3>
-                        {% if total_mercadorias > 0 %}
-                            {{ mercadorias_deposito|floatformat:0 }}%
-                        {% else %}
-                            0%
-                        {% endif %}
-                    </h3>
-                </div>
-            </div>
-        </div>
-    </div>
 
 
     <!-- Contagem por Galpão -->
@@ -91,12 +50,13 @@
         <div class="card-header">
             <h5 class="card-title mb-0">
                 <i class="fas fa-search"></i> Filtros de Busca
+                <small class="text-muted ms-2">(Mostra apenas mercadorias no depósito)</small>
             </h5>
         </div>
         <div class="card-body">
             <form method="GET" class="mb-4">
                 <div class="row">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="mb-3">
                             {{ search_form.cliente.label_tag }}
                             {{ search_form.cliente }}
@@ -105,7 +65,7 @@
                             {% endif %}
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="mb-3">
                             {{ search_form.mercadoria.label_tag }}
                             {{ search_form.mercadoria }}
@@ -114,7 +74,16 @@
                             {% endif %}
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            {{ search_form.nota.label_tag }}
+                            {{ search_form.nota }}
+                            {% if search_form.nota.errors %}
+                                <div class="text-danger">{{ search_form.nota.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
                         <div class="mb-3">
                             {{ search_form.local.label_tag }}
                             {{ search_form.local }}
@@ -125,16 +94,7 @@
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-md-3">
-                        <div class="mb-3">
-                            {{ search_form.status.label_tag }}
-                            {{ search_form.status }}
-                            {% if search_form.status.errors %}
-                                <div class="text-danger">{{ search_form.status.errors }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-3">
+                    <div class="col-md-6">
                         <div class="mb-3">
                             {{ search_form.data_inicio.label_tag }}
                             {{ search_form.data_inicio }}
@@ -143,7 +103,7 @@
                             {% endif %}
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-6">
                         <div class="mb-3">
                             {{ search_form.data_fim.label_tag }}
                             {{ search_form.data_fim }}
@@ -152,11 +112,13 @@
                             {% endif %}
                         </div>
                     </div>
-                    <div class="col-md-3">
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
                         <div class="mb-3">
                             <label class="form-label">&nbsp;</label>
                             <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-primary flex-fill">
+                                <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-search"></i> Buscar
                                 </button>
                                 <a href="{% url 'notas:buscar_mercadorias_deposito' %}" class="btn btn-secondary">
@@ -227,6 +189,79 @@
                                                class="btn btn-info btn-sm" title="Ver Detalhes">
                                                 <i class="fas fa-eye"></i> Ver Notas
                                             </a>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4">
+                                            <div class="alert alert-warning mb-0">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                                <strong>Nenhuma mercadoria encontrada</strong><br>
+                                                {% if search_form.cleaned_data.cliente %}
+                                                    O cliente <strong>{{ search_form.cleaned_data.cliente.razao_social }}</strong> não possui mercadorias no <strong>Galpão {{ search_form.cleaned_data.local }}</strong>.
+                                                {% else %}
+                                                    Não há mercadorias no <strong>Galpão {{ search_form.cleaned_data.local }}</strong>.
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        {% elif search_form.cleaned_data.cliente %}
+                            <!-- Tabela resumida por galpão quando cliente específico é selecionado -->
+                            <thead>
+                                <tr>
+                                    <th>Localização</th>
+                                    <th>Cliente</th>
+                                    <th>Valor Total</th>
+                                    <th>Peso Total</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in mercadorias %}
+                                    <tr>
+                                        <td>
+                                            {% if item.local %}
+                                                <span class="badge bg-primary fs-6">
+                                                    <i class="fas fa-warehouse"></i> Galpão {{ item.local }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">
+                                                    <i class="fas fa-question-circle"></i> Não informado
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <strong>{{ item.cliente__razao_social }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ item.total_notas }} nota{{ item.total_notas|pluralize }}</small>
+                                        </td>
+                                        <td>
+                                            <strong class="text-success">{{ item.valor_total|format_brazilian_currency }}</strong>
+                                        </td>
+                                        <td>
+                                            <strong class="text-info">{{ item.peso_total|format_brazilian_weight }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success">No Depósito</span>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'notas:listar_notas_fiscais' %}?cliente={{ item.cliente__id }}&local={{ item.local }}" 
+                                               class="btn btn-info btn-sm" title="Ver Detalhes">
+                                                <i class="fas fa-eye"></i> Ver Notas
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4">
+                                            <div class="alert alert-warning mb-0">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                                <strong>Nenhuma mercadoria encontrada</strong><br>
+                                                O cliente <strong>{{ search_form.cleaned_data.cliente.razao_social }}</strong> não possui mercadorias no depósito.
+                                            </div>
                                         </td>
                                     </tr>
                                 {% endfor %}

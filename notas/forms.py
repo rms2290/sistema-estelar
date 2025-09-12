@@ -1641,20 +1641,19 @@ class MercadoriaDepositoSearchForm(forms.Form):
         })
     )
     
+    nota = UpperCaseCharField(
+        label='Número da Nota',
+        required=False,
+        max_length=50,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Digite o número da nota fiscal'
+        })
+    )
+    
     local = forms.ChoiceField(
         label='Galpão',
         choices=[('', 'Todos os galpões')] + NotaFiscal.LOCAL_CHOICES,
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    status = forms.ChoiceField(
-        label='Status',
-        choices=[
-            ('', 'Todos os status'),
-            ('Depósito', 'No Depósito'),
-            ('Enviada', 'Enviada'),
-        ],
         required=False,
         widget=forms.Select(attrs={'class': 'form-control'})
     )
