@@ -1522,9 +1522,9 @@ h6 { font-size: 0.9rem !important; }
     margin-bottom: 10px; /* Reduzindo margin */
 }
 
-/* Reduzindo tamanhos de ícones */
+/* Tamanhos de ícones */
 .fas, .far, .fab {
-    font-size: 0.9em; /* Reduzindo tamanho dos ícones */
+    font-size: 1em; /* Tamanho normal dos ícones */
 }
 
 /* Ajustes para responsividade */
@@ -1879,7 +1879,7 @@ h6 { font-size: 0.9rem; }
 
 /* Padronização de ícones */
 .fas, .far, .fab {
-    font-size: 0.9em;
+    font-size: 1em;
     margin-right: 0.25rem;
 }
 
