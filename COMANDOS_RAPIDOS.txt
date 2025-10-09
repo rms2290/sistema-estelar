@@ -1,0 +1,222 @@
+================================================================================
+  COMANDOS RAPIDOS - DEPLOY SISTEMA ESTELAR NA LOCAWEB
+================================================================================
+
+CREDENCIAIS:
+  Username: admin
+  Password: 123456
+
+================================================================================
+  OPCAO 1: DEPLOY AUTOMATICO (RECOMENDADO)
+================================================================================
+
+1. CONECTAR AO SERVIDOR:
+   ssh seu_usuario@seu_servidor.com.br
+
+2. IR PARA O DIRETORIO DO PROJETO:
+   cd /caminho/para/sistema-estelar
+   
+   (Se nao souber o caminho, use: find ~ -name "manage.py" -type f)
+
+3. EXECUTAR DIAGNOSTICO (OPCIONAL):
+   bash diagnostico_servidor.sh
+
+4. ATUALIZAR CODIGO:
+   git pull origin main
+
+5. EXECUTAR DEPLOY AUTOMATICO:
+   bash deploy_atualizacao.sh
+
+PRONTO! O script faz tudo automaticamente.
+
+================================================================================
+  OPCAO 2: DEPLOY MANUAL (PASSO A PASSO)
+================================================================================
+
+1. CONECTAR:
+   ssh seu_usuario@seu_servidor.com.br
+
+2. IR PARA O PROJETO:
+   cd /caminho/para/sistema-estelar
+
+3. FAZER BACKUP:
+   mkdir -p backups
+   cp db.sqlite3 backups/db_backup_$(date +%Y%m%d_%H%M%S).sqlite3
+
+4. ATUALIZAR CODIGO:
+   git pull origin main
+
+5. ATIVAR AMBIENTE:
+   source venv/bin/activate
+
+6. INSTALAR DEPENDENCIAS:
+   pip install -r requirements_production.txt
+
+7. MIGRAR BANCO:
+   python manage.py migrate
+
+8. COLETAR ESTATICOS:
+   python manage.py collectstatic --noinput
+
+9. REINICIAR GUNICORN:
+   sudo supervisorctl restart sistema-estelar
+   
+   OU:
+   
+   pkill -f gunicorn
+   sleep 2
+   nohup gunicorn --bind 127.0.0.1:8000 --workers 3 sistema_estelar.wsgi:application > logs/gunicorn.log 2>&1 &
+
+10. REINICIAR NGINX:
+    sudo systemctl reload nginx
+
+11. TESTAR:
+    curl -I http://localhost:8000
+    tail -50 logs/gunicorn.log
+
+================================================================================
+  COMANDOS UTEIS
+================================================================================
+
+VER LOGS EM TEMPO REAL:
+  tail -f logs/gunicorn.log
+
+VER ULTIMAS 100 LINHAS:
+  tail -100 logs/gunicorn.log
+
+VERIFICAR SE GUNICORN ESTA RODANDO:
+  ps aux | grep gunicorn
+
+VERIFICAR PROCESSOS PYTHON:
+  ps aux | grep python
+
+MATAR GUNICORN:
+  pkill -f gunicorn
+
+INICIAR GUNICORN:
+  gunicorn --bind 127.0.0.1:8000 --workers 3 sistema_estelar.wsgi:application
+
+VERIFICAR NGINX:
+  sudo systemctl status nginx
+  sudo nginx -t
+
+VERIFICAR SUPERVISOR:
+  sudo supervisorctl status
+
+LISTAR DIRETORIOS:
+  ls -la
+
+VER ONDE ESTOU:
+  pwd
+
+LOCALIZAR PROJETO:
+  find ~ -name "manage.py" -type f 2>/dev/null
+
+================================================================================
+  SOLUCAO DE PROBLEMAS RAPIDA
+================================================================================
+
+ERRO 502 BAD GATEWAY:
+  # Gunicorn provavelmente nao esta rodando
+  ps aux | grep gunicorn
+  gunicorn --bind 127.0.0.1:8000 sistema_estelar.wsgi:application
+
+CSS/IMAGENS NAO CARREGAM:
+  python manage.py collectstatic --clear --noinput
+  chmod -R 755 staticfiles/
+
+ERRO DE PERMISSAO:
+  chmod 664 db.sqlite3
+  chmod 755 logs/ media/ staticfiles/
+
+GUNICORN NAO INICIA:
+  tail -100 logs/gunicorn.log
+  # Ver o erro e corrigir
+
+AMBIENTE VIRTUAL NAO ATIVA:
+  ls -la venv/bin/activate
+  source venv/bin/activate
+
+================================================================================
+  CHECKLIST RAPIDO
+================================================================================
+
+□ Conectei ao servidor via SSH
+□ Estou no diretorio correto (tem manage.py)
+□ Atualizei o codigo (git pull)
+□ Ativei o ambiente virtual
+□ Instalei as dependencias
+□ Executei as migracoes
+□ Coletei os arquivos estaticos
+□ Reiniciei o Gunicorn
+□ Reiniciei o Nginx
+□ Testei no navegador
+□ Fiz login com admin/123456
+□ Alterei a senha do admin
+
+================================================================================
+  TESTES RAPIDOS
+================================================================================
+
+TESTAR SE O SITE ESTA NO AR:
+  curl -I http://localhost:8000
+  # Deve retornar HTTP 200 ou 302
+
+TESTAR NO NAVEGADOR:
+  http://seu-dominio.com.br
+  
+FAZER LOGIN:
+  Username: admin
+  Password: 123456
+
+TESTAR FUNCIONALIDADES:
+  - Cadastrar cliente
+  - Cadastrar motorista
+  - Cadastrar veiculo
+  - Criar nota fiscal
+  - Criar romaneio
+  - Imprimir romaneio
+  - Verificar relatorio
+
+================================================================================
+  ARQUIVOS DE AJUDA
+================================================================================
+
+PASSO_A_PASSO_LOCAWEB.md
+  → Guia detalhado com explicacoes completas
+
+GUIA_DEPLOY_ATUALIZACAO.md
+  → Guia tecnico completo com troubleshooting
+
+deploy_atualizacao.sh
+  → Script automatizado de deploy
+
+diagnostico_servidor.sh
+  → Verifica configuracao do servidor
+
+RESUMO_DEPLOY.txt
+  → Resumo executivo
+
+================================================================================
+  SUPORTE
+================================================================================
+
+Se tiver problemas:
+
+1. Execute o diagnostico:
+   bash diagnostico_servidor.sh
+
+2. Veja os logs:
+   tail -100 logs/gunicorn.log
+   tail -100 logs/django.log
+
+3. Consulte:
+   PASSO_A_PASSO_LOCAWEB.md
+   (secao TROUBLESHOOTING)
+
+4. Copie a mensagem de erro completa
+
+================================================================================
+  BOA SORTE! 🚀
+================================================================================
+
