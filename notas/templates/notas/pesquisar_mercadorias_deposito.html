@@ -77,6 +77,12 @@
                                 <a href="{% url 'notas:pesquisar_mercadorias_deposito' %}" class="btn btn-secondary">
                                     <i class="fas fa-times"></i> Limpar
                                 </a>
+                                {% if search_performed and mercadorias %}
+                                    <a href="{% url 'notas:imprimir_relatorio_mercadorias_deposito' %}?{{ request.GET.urlencode }}" 
+                                       class="btn btn-success" target="_blank">
+                                        <i class="fas fa-print"></i> Imprimir Relatório
+                                    </a>
+                                {% endif %}
                             </div>
                         </div>
                     </form>

@@ -2778,6 +2778,63 @@ def pesquisar_mercadorias_deposito(request):
     }
     return render(request, 'notas/pesquisar_mercadorias_deposito.html', context)
 
+@login_required
+def imprimir_relatorio_mercadorias_deposito(request):
+    """Imprime relatório de mercadorias no depósito"""
+    search_form = MercadoriaDepositoSearchForm(request.GET)
+    search_performed = bool(request.GET)
+
+    # Inicializar com queryset vazio
+    notas_fiscais = NotaFiscal.objects.none()
+    total_peso = 0
+    total_valor = 0
+    
+    if search_performed and search_form.is_valid():
+        # Buscar notas em depósito apenas quando há pesquisa válida
+        queryset = NotaFiscal.objects.filter(status='Depósito')
+        
+        cliente = search_form.cleaned_data.get('cliente')
+        mercadoria = search_form.cleaned_data.get('mercadoria')
+        fornecedor = search_form.cleaned_data.get('fornecedor')
+        data_inicio = search_form.cleaned_data.get('data_inicio')
+        data_fim = search_form.cleaned_data.get('data_fim')
+        
+        if cliente:
+            queryset = queryset.filter(cliente=cliente)
+        if mercadoria:
+            queryset = queryset.filter(mercadoria__icontains=mercadoria)
+        if fornecedor:
+            queryset = queryset.filter(fornecedor__icontains=fornecedor)
+        if data_inicio:
+            queryset = queryset.filter(data__gte=data_inicio)
+        if data_fim:
+            queryset = queryset.filter(data__lte=data_fim)
+        
+        notas_fiscais = queryset.order_by('nota')
+        
+        # Calcular totais apenas quando há resultados
+        total_peso = sum(nota.peso for nota in notas_fiscais)
+        total_valor = sum(nota.valor for nota in notas_fiscais)
+    elif search_performed:
+        # Se o formulário não for válido, mostrar mensagem de erro
+        messages.warning(request, f'Erro na validação do formulário: {search_form.errors}.')
+    
+    context = {
+        'mercadorias': notas_fiscais,
+        'search_form': search_form,
+        'search_performed': search_performed,
+        'total_peso': total_peso,
+        'total_valor': total_valor,
+        'filtros_aplicados': {
+            'cliente': search_form.cleaned_data.get('cliente') if search_form.is_valid() else None,
+            'mercadoria': search_form.cleaned_data.get('mercadoria') if search_form.is_valid() else None,
+            'fornecedor': search_form.cleaned_data.get('fornecedor') if search_form.is_valid() else None,
+            'data_inicio': search_form.cleaned_data.get('data_inicio') if search_form.is_valid() else None,
+            'data_fim': search_form.cleaned_data.get('data_fim') if search_form.is_valid() else None,
+        }
+    }
+    return render(request, 'notas/imprimir_relatorio_mercadorias_deposito.html', context)
+
 # --------------------------------------------------------------------------------------
 # NOVA VIEW PARA FILTRAR VEÍCULOS BASEADO NO TIPO DE COMPOSIÇÃO
 # --------------------------------------------------------------------------------------

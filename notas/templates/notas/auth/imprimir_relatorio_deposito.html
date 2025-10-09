@@ -291,16 +291,17 @@
         }
         
         .print-button {
-            position: fixed;
-            top: 20px;
-            right: 20px;
+            display: block;
+            margin: 30px auto;
             background-color: #007bff;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 15px 30px;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 16px;
+            text-align: center;
+            width: fit-content;
         }
         
         .print-button:hover {
@@ -315,10 +316,6 @@
     </style>
 </head>
 <body>
-    <button class="print-button no-print" onclick="window.print()">
-        <i class="fas fa-print"></i> Imprimir
-    </button>
-    
     <div class="date-info">
         Data do relatório: {% now "d/m/Y H:i" %}
     </div>
@@ -329,6 +326,11 @@
         <p>Sistema de Gestão de Armazenamento</p>
     </div>
     
+    <!-- Título do Relatório -->
+    <div class="report-title">
+        RELATÓRIO DE NOTAS FISCAIS EM DEPÓSITO
+    </div>
+    
     <!-- Dados do Cliente -->
     {% if cliente %}
     <div class="client-info">
@@ -337,11 +339,6 @@
         <p><strong>CNPJ:</strong> {{ cliente.cnpj }}</p>
     </div>
     {% endif %}
-    
-    <!-- Título do Relatório -->
-    <div class="report-title">
-        RELATÓRIO DE NOTAS FISCAIS EM DEPÓSITO
-    </div>
     
     <!-- Tabela de Notas -->
     {% if notas_fiscais %}
@@ -399,5 +396,10 @@
         <p>Relatório gerado pelo Sistema Estelar</p>
         <p>Data de emissão: {% now "d/m/Y" %}</p>
     </div>
+    
+    <!-- Botão de Impressão -->
+    <button class="print-button no-print" onclick="window.print()">
+        <i class="fas fa-print"></i> Imprimir
+    </button>
 </body>
 </html> 

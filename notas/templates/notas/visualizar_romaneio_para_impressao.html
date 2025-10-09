@@ -542,16 +542,17 @@
         }
         
         .print-button {
-            position: fixed;
-            top: 20px;
-            right: 20px;
+            display: block;
+            margin: 30px auto;
             background-color: #007bff;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 15px 30px;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 16px;
+            text-align: center;
+            width: fit-content;
         }
         
         .print-button:hover {
@@ -722,5 +723,10 @@
         // Aplica estilos antes da impressão
         window.addEventListener('beforeprint', ensurePrintLayout);
     </script>
+    
+    <!-- Botão de Impressão -->
+    <button class="print-button" onclick="window.print()">
+        <i class="fas fa-print"></i> Imprimir
+    </button>
 </body>
 </html>

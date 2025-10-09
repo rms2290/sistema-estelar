@@ -70,8 +70,8 @@
 
     {# Botões de Ação: Imprimir, Editar, Excluir e Voltar #}
     <div class="mt-4 d-flex gap-2">
-        {% if romaneio.status == 'Emitido' %}
-            {# Botão Imprimir, aparece APENAS se o status for 'Emitido' #}
+        {% if romaneio.status == 'Emitido' or user.is_cliente %}
+            {# Botão Imprimir, aparece se o status for 'Emitido' ou se for cliente #}
             <a href="{% url 'notas:imprimir_romaneio_novo' romaneio.pk %}" target="_blank" class="btn btn-primary">
                 <i class="fas fa-print"></i> Imprimir Romaneio
             </a>
