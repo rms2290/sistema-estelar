@@ -48,7 +48,7 @@
                         <div class="print-section-top">
                             <h4>Informações do Cliente</h4>
                             <p><strong>Razão Social:</strong> {{ nota.cliente.razao_social }}</p>
-                            <p><strong>CNPJ:</strong> {{ nota.cliente.cnpj }}</p>
+                            <p><strong>CNPJ:</strong> {{ nota.cliente.cnpj|format_cnpj }}</p>
                             <p><strong>Endereço:</strong> {{ nota.cliente.endereco }}, {{ nota.cliente.cidade }} - {{ nota.cliente.estado }}</p>
                             <p><strong>CEP:</strong> {{ nota.cliente.cep }}</p>
                         </div>

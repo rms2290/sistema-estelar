@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load format_filters %}
 
 {% block title %}{{ title }}{% endblock %}
 
@@ -138,7 +139,7 @@
                                             <table class="table table-borderless">
                                                 <tr>
                                                     <td><strong>CNPJ:</strong></td>
-                                                    <td>{{ agenda_entrega.cliente.cnpj|default:"Não informado" }}</td>
+                                                    <td>{{ agenda_entrega.cliente.cnpj|format_cnpj|default:"Não informado" }}</td>
                                                 </tr>
                                                 <tr>
                                                     <td><strong>Inscrição Estadual:</strong></td>
@@ -146,7 +147,7 @@
                                                 </tr>
                                                 <tr>
                                                     <td><strong>Telefone:</strong></td>
-                                                    <td>{{ agenda_entrega.cliente.telefone|default:"Não informado" }}</td>
+                                                    <td>{{ agenda_entrega.cliente.telefone|format_telefone|default:"Não informado" }}</td>
                                                 </tr>
                                                 <tr>
                                                     <td><strong>Email:</strong></td>

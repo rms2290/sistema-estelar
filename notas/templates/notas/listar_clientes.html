@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load format_filters %}
 
 {% block title %}Pesquisar Clientes{% endblock %}
 
@@ -80,8 +81,8 @@
                                         {% for cliente in clientes %}
                                             <tr>
                                                 <td><strong>{{ cliente.razao_social }}</strong></td>
-                                                <td>{{ cliente.cnpj }}</td>
-                                                <td>{{ cliente.telefone|default:"-" }}</td>
+                                                <td>{{ cliente.cnpj|format_cnpj }}</td>
+                                                <td>{{ cliente.telefone|format_telefone|default:"-" }}</td>
                                                 <td>
                                                     <span class="badge {% if cliente.status == 'Ativo' %}bg-ativo{% else %}bg-inativo{% endif %}">
                                                         {{ cliente.get_status_display|upper }}

@@ -239,7 +239,7 @@
                             <div class="client-rank">{{ forloop.counter }}º</div>
                             <div class="client-info">
                                 <span class="client-name">{{ cliente.razao_social }}</span>
-                                <span class="client-cnpj">{{ cliente.cnpj }}</span>
+                                <span class="client-cnpj">{{ cliente.cnpj|format_cnpj }}</span>
                             </div>
                             <div class="client-value">
                                 {{ cliente.valor_deposito|format_brazilian_currency }}

@@ -361,7 +361,7 @@
     <div class="client-info">
         <h3>Dados do Cliente</h3>
         <p><strong>Razão Social:</strong> {{ filtros_aplicados.cliente.razao_social }}</p>
-        <p><strong>CNPJ:</strong> {{ filtros_aplicados.cliente.cnpj }}</p>
+        <p><strong>CNPJ:</strong> {{ filtros_aplicados.cliente.cnpj|format_cnpj }}</p>
     </div>
     {% endif %}
     

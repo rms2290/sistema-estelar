@@ -123,7 +123,7 @@
                                             <tr>
                                                 <td class="ps-4">
                                                     <strong>{{ item.cliente.razao_social }}</strong>
-                                                    <small class="text-muted d-block">{{ item.cliente.cnpj }}</small>
+                                                    <small class="text-muted d-block">{{ item.cliente.cnpj|format_cnpj }}</small>
                                                 </td>
                                                 <td class="text-center">
                                                     <span class="badge bg-info">{{ item.quantidade_romaneios }}</span>

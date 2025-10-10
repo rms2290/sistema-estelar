@@ -622,7 +622,7 @@
                 <div class="cliente-info">
                     <h3>DADOS DO CLIENTE</h3>
                     <p><strong>NOME:</strong> {{ romaneio.cliente.razao_social }}</p>
-                    <p><strong>CNPJ:</strong> {{ romaneio.cliente.cnpj|default:"N/A" }}</p>
+                    <p><strong>CNPJ:</strong> {{ romaneio.cliente.cnpj|format_cnpj|default:"N/A" }}</p>
                     <p><strong>ENDEREÇO:</strong> 
                         {% if romaneio.cliente.endereco %}
                             {{ romaneio.cliente.endereco }}{% if romaneio.cliente.numero %}, {{ romaneio.cliente.numero }}{% endif %}{% if romaneio.cliente.bairro %} - {{ romaneio.cliente.bairro }}{% endif %}

@@ -1,6 +1,7 @@
 from django import template
 from django.template.defaultfilters import floatformat
 import locale
+from notas.utils.formatters import formatar_cnpj, formatar_cpf, formatar_telefone
 
 register = template.Library()
 
@@ -111,4 +112,25 @@ def sum_field(queryset, field_name):
         except (ValueError, TypeError):
             continue
     
-    return total 
+    return total
+
+@register.filter
+def format_cnpj(value):
+    """
+    Formata um CNPJ no padrão brasileiro (00.000.000/0000-00)
+    """
+    return formatar_cnpj(value)
+
+@register.filter
+def format_cpf(value):
+    """
+    Formata um CPF no padrão brasileiro (000.000.000-00)
+    """
+    return formatar_cpf(value)
+
+@register.filter
+def format_telefone(value):
+    """
+    Formata um telefone no padrão brasileiro
+    """
+    return formatar_telefone(value) 
