@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from django.db.models import Q, Max 
+from django.db.models import Q, Max, Sum 
 from django.db import IntegrityError
 from django.contrib import messages
 from django.utils import timezone
@@ -10,7 +10,7 @@ from decimal import Decimal
 from datetime import datetime, date, timedelta
 
 # Importe todos os seus modelos
-from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, TabelaSeguro, AgendaEntrega
+from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, TabelaSeguro, AgendaEntrega, DespesaCarregamento, CobrancaCarregamento
 
 # Importe todos os seus formulários
 from .forms import (
@@ -510,16 +510,17 @@ def adicionar_romaneio(request):
 
             # Atualizar o status das notas fiscais associadas
             for nota_fiscal in romaneio.notas_fiscais.all():
-                # Verificar se a nota está vinculada a outros romaneios emitidos
+                # Se a nota está vinculada a qualquer romaneio, deve ter status "Enviada"
+                # Verificar se há outros romaneios emitidos além do atual
                 outros_romaneios_emitidos = nota_fiscal.romaneios_vinculados.exclude(pk=romaneio.pk).filter(status='Emitido')
-                if outros_romaneios_emitidos.exists():
-                    # Se está vinculada a outros romaneios emitidos, manter como Enviada
+                if outros_romaneios_emitidos.exists() or romaneio.status == 'Emitido':
+                    # Se está vinculada a romaneios emitidos, manter como Enviada
                     nota_fiscal.status = 'Enviada'
-                elif romaneio.status == 'Emitido':
-                    # Se o romaneio atual foi emitido e não há outros emitidos, colocar como Enviada
+                elif nota_fiscal.romaneios.exists():
+                    # Se está vinculada a qualquer romaneio (mesmo que não emitido), colocar como Enviada
                     nota_fiscal.status = 'Enviada'
                 else:
-                    # Se o romaneio atual não foi emitido e não há outros emitidos, colocar como Depósito
+                    # Se não está vinculada a nenhum romaneio, colocar como Depósito
                     nota_fiscal.status = 'Depósito'
                 nota_fiscal.save()
 
@@ -598,16 +599,17 @@ def adicionar_romaneio_generico(request):
 
             # Atualizar o status das notas fiscais associadas
             for nota_fiscal in romaneio.notas_fiscais.all():
-                # Verificar se a nota está vinculada a outros romaneios emitidos
+                # Se a nota está vinculada a qualquer romaneio, deve ter status "Enviada"
+                # Verificar se há outros romaneios emitidos além do atual
                 outros_romaneios_emitidos = nota_fiscal.romaneios_vinculados.exclude(pk=romaneio.pk).filter(status='Emitido')
-                if outros_romaneios_emitidos.exists():
-                    # Se está vinculada a outros romaneios emitidos, manter como Enviada
+                if outros_romaneios_emitidos.exists() or romaneio.status == 'Emitido':
+                    # Se está vinculada a romaneios emitidos, manter como Enviada
                     nota_fiscal.status = 'Enviada'
-                elif romaneio.status == 'Emitido':
-                    # Se o romaneio atual foi emitido e não há outros emitidos, colocar como Enviada
+                elif nota_fiscal.romaneios.exists():
+                    # Se está vinculada a qualquer romaneio (mesmo que não emitido), colocar como Enviada
                     nota_fiscal.status = 'Enviada'
                 else:
-                    # Se o romaneio atual não foi emitido e não há outros emitidos, colocar como Depósito
+                    # Se não está vinculada a nenhum romaneio, colocar como Depósito
                     nota_fiscal.status = 'Depósito'
                 nota_fiscal.save()
 
@@ -680,24 +682,23 @@ def editar_romaneio(request, pk):
             notas_depois_salvar = set(romaneio.notas_fiscais.all())
 
             for nota_fiscal_removida in (notas_antes_salvar - notas_depois_salvar):
-                # Verificar se a nota está vinculada a outros romaneios emitidos
-                outros_romaneios_emitidos = nota_fiscal_removida.romaneios_vinculados.exclude(pk=romaneio.pk).filter(status='Emitido')
-                if not outros_romaneios_emitidos.exists():
-                    # Se não há outros romaneios emitidos, colocar de volta para Depósito
+                # Verificar se a nota ainda está vinculada a outros romaneios
+                if not nota_fiscal_removida.romaneios.exists():
+                    # Se não está vinculada a nenhum romaneio, colocar de volta para Depósito
                     nota_fiscal_removida.status = 'Depósito'
+                    nota_fiscal_removida.save()
+                else:
+                    # Se ainda está vinculada a outros romaneios, manter como Enviada
+                    nota_fiscal_removida.status = 'Enviada'
                     nota_fiscal_removida.save()
             
             for nota_fiscal_atualizada in notas_depois_salvar:
-                # Verificar se a nota está vinculada a outros romaneios emitidos
-                outros_romaneios_emitidos = nota_fiscal_atualizada.romaneios_vinculados.exclude(pk=romaneio.pk).filter(status='Emitido')
-                if outros_romaneios_emitidos.exists():
-                    # Se está vinculada a outros romaneios emitidos, manter como Enviada
-                    nota_fiscal_atualizada.status = 'Enviada'
-                elif romaneio.status == 'Emitido':
-                    # Se o romaneio atual foi emitido e não há outros emitidos, colocar como Enviada
+                # Se a nota está vinculada a qualquer romaneio, deve ter status "Enviada"
+                if nota_fiscal_atualizada.romaneios.exists():
+                    # Se está vinculada a qualquer romaneio, colocar como Enviada
                     nota_fiscal_atualizada.status = 'Enviada'
                 else:
-                    # Se o romaneio atual não foi emitido e não há outros emitidos, colocar como Depósito
+                    # Se não está vinculada a nenhum romaneio, colocar como Depósito
                     nota_fiscal_atualizada.status = 'Depósito'
                 nota_fiscal_atualizada.save()
 
@@ -1029,7 +1030,8 @@ def minhas_notas_fiscais(request):
     # Obter parâmetro de filtro
     status_filter = request.GET.get('status', 'deposito')  # Padrão agora é 'deposito'
     
-    if request.user.tipo_usuario == 'cliente' and request.user.cliente:
+    # Verificar se o usuário é cliente e tem cliente associado
+    if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente:
         # Cliente vê apenas suas notas
         notas_fiscais = NotaFiscal.objects.filter(cliente=request.user.cliente)
     else:
@@ -1041,6 +1043,7 @@ def minhas_notas_fiscais(request):
         notas_fiscais = notas_fiscais.filter(status='Depósito')
     elif status_filter == 'enviada':
         notas_fiscais = notas_fiscais.filter(status='Enviada')
+    # Se status_filter for vazio ou outro valor, mostrar todas as notas do cliente
     
     # Ordenar por data crescente
     notas_fiscais = notas_fiscais.order_by('data')
@@ -1062,7 +1065,7 @@ def imprimir_nota_fiscal(request, pk):
     nota = get_object_or_404(NotaFiscal, pk=pk)
     
     # Verificar se o usuário tem permissão para ver esta nota
-    if request.user.tipo_usuario == 'cliente' and request.user.cliente != nota.cliente:
+    if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente != nota.cliente:
         messages.error(request, 'Você não tem permissão para acessar esta nota fiscal.')
         return redirect('notas:minhas_notas_fiscais')
     
@@ -1074,7 +1077,7 @@ def imprimir_nota_fiscal(request, pk):
 @user_passes_test(is_cliente)
 def imprimir_relatorio_deposito(request):
     # Obter apenas notas em depósito do cliente
-    if request.user.tipo_usuario == 'cliente' and request.user.cliente:
+    if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente:
         notas_fiscais = NotaFiscal.objects.filter(
             cliente=request.user.cliente,
             status='Depósito'
@@ -2190,8 +2193,495 @@ def cobranca_mensal(request):
 @login_required
 @user_passes_test(is_admin)
 def cobranca_carregamento(request):
-    """View para o relatório de cobrança de carregamento."""
-    return render(request, 'notas/relatorios/cobranca_carregamento.html')
+    """Lista todas as cobranças de carregamento"""
+    cobrancas = CobrancaCarregamento.objects.all().prefetch_related('romaneios', 'cliente')
+    
+    # Filtros
+    cliente_id = request.GET.get('cliente')
+    status_cobranca = request.GET.get('status')
+    data_inicio = request.GET.get('data_inicio')
+    data_fim = request.GET.get('data_fim')
+    
+    # Por padrão, mostrar apenas cobranças pendentes
+    # Se o usuário selecionar explicitamente um status, usar o selecionado
+    if status_cobranca:
+        cobrancas = cobrancas.filter(status=status_cobranca)
+    else:
+        # Se não houver filtro de status, mostrar apenas pendentes
+        cobrancas = cobrancas.filter(status='Pendente')
+    
+    if cliente_id:
+        cobrancas = cobrancas.filter(cliente_id=cliente_id)
+    
+    if data_inicio:
+        cobrancas = cobrancas.filter(criado_em__date__gte=data_inicio)
+    
+    if data_fim:
+        cobrancas = cobrancas.filter(criado_em__date__lte=data_fim)
+    
+    clientes = Cliente.objects.filter(status='Ativo').order_by('razao_social')
+    
+    context = {
+        'cobrancas': cobrancas,
+        'clientes': clientes,
+    }
+    return render(request, 'notas/relatorios/cobranca_carregamento.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+def criar_cobranca_carregamento(request):
+    """Cria uma nova cobrança de carregamento"""
+    if request.method == 'POST':
+        try:
+            cliente_id = request.POST.get('cliente')
+            romaneios_ids = request.POST.getlist('romaneios')
+            valor_carregamento = request.POST.get('valor_carregamento', '0') or '0'
+            valor_cte_manifesto = request.POST.get('valor_cte_manifesto', '0') or '0'
+            data_vencimento = request.POST.get('data_vencimento') or None
+            observacoes = request.POST.get('observacoes', '')
+            
+            if not cliente_id or not romaneios_ids:
+                messages.error(request, 'Cliente e pelo menos um romaneio são obrigatórios!')
+                return redirect('notas:criar_cobranca_carregamento')
+            
+            cliente = Cliente.objects.get(pk=cliente_id)
+            
+            cobranca = CobrancaCarregamento.objects.create(
+                cliente=cliente,
+                valor_carregamento=valor_carregamento,
+                valor_cte_manifesto=valor_cte_manifesto,
+                data_vencimento=data_vencimento,
+                observacoes=observacoes
+            )
+            
+            # Associar romaneios
+            for romaneio_id in romaneios_ids:
+                romaneio = RomaneioViagem.objects.get(pk=romaneio_id)
+                cobranca.romaneios.add(romaneio)
+            
+            messages.success(request, 'Cobrança criada com sucesso!')
+            return redirect('notas:cobranca_carregamento')
+            
+        except Exception as e:
+            messages.error(request, f'Erro ao criar cobrança: {str(e)}')
+    
+    # GET - Mostrar formulário
+    clientes = Cliente.objects.filter(status='Ativo').order_by('razao_social')
+    cliente_id = request.GET.get('cliente')
+    romaneios = None
+    
+    if cliente_id:
+        # Buscar todos os romaneios emitidos do cliente (pode ter múltiplos CNPJs)
+        romaneios = RomaneioViagem.objects.filter(
+            cliente_id=cliente_id,
+            status='Emitido'
+        ).order_by('-data_emissao')
+    
+    context = {
+        'clientes': clientes,
+        'romaneios': romaneios,
+        'cliente_selecionado_id': cliente_id,
+    }
+    return render(request, 'notas/criar_cobranca_carregamento.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+def editar_cobranca_carregamento(request, cobranca_id):
+    """Edita uma cobrança de carregamento"""
+    cobranca = get_object_or_404(CobrancaCarregamento, pk=cobranca_id)
+    
+    if request.method == 'POST':
+        try:
+            romaneios_ids = request.POST.getlist('romaneios')
+            cobranca.valor_carregamento = request.POST.get('valor_carregamento', '0') or '0'
+            cobranca.valor_cte_manifesto = request.POST.get('valor_cte_manifesto', '0') or '0'
+            cobranca.data_vencimento = request.POST.get('data_vencimento') or None
+            cobranca.observacoes = request.POST.get('observacoes', '')
+            cobranca.save()
+            
+            # Atualizar romaneios
+            cobranca.romaneios.clear()
+            for romaneio_id in romaneios_ids:
+                romaneio = RomaneioViagem.objects.get(pk=romaneio_id)
+                cobranca.romaneios.add(romaneio)
+            
+            messages.success(request, 'Cobrança atualizada com sucesso!')
+            return redirect('notas:cobranca_carregamento')
+            
+        except Exception as e:
+            messages.error(request, f'Erro ao atualizar cobrança: {str(e)}')
+    
+    # GET - Mostrar formulário
+    clientes = Cliente.objects.filter(status='Ativo').order_by('razao_social')
+    romaneios_cliente = RomaneioViagem.objects.filter(
+        cliente=cobranca.cliente,
+        status='Emitido'
+    ).order_by('-data_emissao')
+    
+    context = {
+        'cobranca': cobranca,
+        'clientes': clientes,
+        'romaneios': romaneios_cliente,
+        'romaneios_selecionados': list(cobranca.romaneios.values_list('id', flat=True)),
+    }
+    return render(request, 'notas/editar_cobranca_carregamento.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+def baixar_cobranca_carregamento(request, cobranca_id):
+    """Baixa uma cobrança (marca como paga)"""
+    cobranca = get_object_or_404(CobrancaCarregamento, pk=cobranca_id)
+    
+    if request.method == 'POST':
+        cobranca.status = 'Baixado'
+        cobranca.data_baixa = timezone.now().date()
+        cobranca.save()
+        messages.success(request, 'Cobrança baixada com sucesso!')
+        return redirect('notas:cobranca_carregamento')
+    
+    return render(request, 'notas/confirmar_baixa_cobranca.html', {'cobranca': cobranca})
+
+
+@login_required
+@user_passes_test(is_admin)
+def excluir_cobranca_carregamento(request, cobranca_id):
+    """Exclui uma cobrança"""
+    cobranca = get_object_or_404(CobrancaCarregamento, pk=cobranca_id)
+    
+    if request.method == 'POST':
+        cobranca.delete()
+        messages.success(request, 'Cobrança excluída com sucesso!')
+        return redirect('notas:cobranca_carregamento')
+    
+    return render(request, 'notas/confirmar_exclusao_cobranca.html', {'cobranca': cobranca})
+
+
+@login_required
+@user_passes_test(is_admin)
+def gerar_relatorio_consolidado_cobranca_pdf(request):
+    """Gera relatório PDF consolidado com cobranças pendentes do cliente selecionado"""
+    from django.http import HttpResponse
+    from .utils.relatorios import gerar_relatorio_pdf_consolidado_cobranca
+    
+    # Buscar cobranças pendentes do cliente selecionado (se houver)
+    cliente_id = request.GET.get('cliente')
+    
+    cobrancas_pendentes = CobrancaCarregamento.objects.filter(
+        status='Pendente'
+    )
+    
+    # Filtrar por cliente se selecionado
+    if cliente_id:
+        cobrancas_pendentes = cobrancas_pendentes.filter(cliente_id=cliente_id)
+        cliente = get_object_or_404(Cliente, pk=cliente_id)
+        nome_arquivo = f"relatorio_consolidado_{cliente.razao_social.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf"
+    else:
+        # Se não houver cliente selecionado, mostrar mensagem
+        from django.contrib import messages
+        messages.warning(request, 'Por favor, selecione um cliente nos filtros para gerar o relatório consolidado.')
+        return redirect('notas:cobranca_carregamento')
+    
+    cobrancas_pendentes = cobrancas_pendentes.select_related('cliente').prefetch_related(
+        'romaneios__motorista',
+        'romaneios__veiculo_principal',
+        'romaneios__reboque_1',
+        'romaneios__reboque_2'
+    ).order_by('criado_em')
+    
+    # Verificar se há cobranças pendentes
+    if not cobrancas_pendentes.exists():
+        from django.contrib import messages
+        messages.info(request, f'O cliente {cliente.razao_social} não possui cobranças pendentes.')
+        return redirect('notas:cobranca_carregamento')
+    
+    # Gerar PDF
+    pdf_content = gerar_relatorio_pdf_consolidado_cobranca(cobrancas_pendentes, cliente_selecionado=cliente if cliente_id else None)
+    
+    # Criar resposta com inline para visualização no navegador
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="{nome_arquivo}"'
+    response.write(pdf_content)
+    return response
+
+
+@login_required
+@user_passes_test(is_cliente)
+def minhas_cobrancas_carregamento(request):
+    """Lista as cobranças de carregamento do cliente logado"""
+    # Verificar se o usuário é cliente e tem cliente associado
+    if request.user.tipo_usuario.upper() != 'CLIENTE' or not request.user.cliente:
+        messages.error(request, 'Acesso negado. Esta área é exclusiva para clientes.')
+        return redirect('notas:dashboard')
+    
+    # Buscar cobranças apenas do cliente logado
+    cobrancas = CobrancaCarregamento.objects.filter(
+        cliente=request.user.cliente
+    ).prefetch_related('romaneios', 'cliente').order_by('-criado_em')
+    
+    # Filtros
+    status_cobranca = request.GET.get('status')
+    data_inicio = request.GET.get('data_inicio')
+    data_fim = request.GET.get('data_fim')
+    
+    if status_cobranca:
+        cobrancas = cobrancas.filter(status=status_cobranca)
+    
+    if data_inicio:
+        cobrancas = cobrancas.filter(criado_em__date__gte=data_inicio)
+    
+    if data_fim:
+        cobrancas = cobrancas.filter(criado_em__date__lte=data_fim)
+    
+    context = {
+        'cobrancas': cobrancas,
+    }
+    return render(request, 'notas/auth/minhas_cobrancas_carregamento.html', context)
+
+
+@login_required
+@user_passes_test(is_cliente)
+def gerar_relatorio_cobranca_carregamento_pdf_cliente(request, cobranca_id):
+    """Gera relatório PDF para uma cobrança de carregamento - Versão Cliente"""
+    from django.http import HttpResponse
+    from .utils.relatorios import gerar_relatorio_pdf_cobranca_carregamento
+    
+    cobranca = get_object_or_404(
+        CobrancaCarregamento.objects.select_related('cliente').prefetch_related(
+            'romaneios__motorista',
+            'romaneios__veiculo_principal',
+            'romaneios__reboque_1',
+            'romaneios__reboque_2'
+        ),
+        pk=cobranca_id
+    )
+    
+    # Verificar se o cliente logado tem permissão para ver esta cobrança
+    if request.user.tipo_usuario.upper() == 'CLIENTE' and cobranca.cliente != request.user.cliente:
+        messages.error(request, 'Você não tem permissão para acessar esta cobrança.')
+        return redirect('notas:minhas_cobrancas_carregamento')
+    
+    # Gerar PDF
+    pdf_content = gerar_relatorio_pdf_cobranca_carregamento(cobranca)
+    
+    # Nome do arquivo
+    nome_arquivo = f"cobranca_carregamento_{cobranca.id}_{cobranca.cliente.razao_social.replace(' ', '_')}.pdf"
+    
+    # Criar resposta com inline para visualização no navegador
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="{nome_arquivo}"'
+    response.write(pdf_content)
+    return response
+
+
+@login_required
+@user_passes_test(is_admin)
+def gerar_relatorio_cobranca_carregamento_pdf(request, cobranca_id):
+    """Gera relatório PDF para uma cobrança de carregamento - Versão Admin"""
+    from django.http import HttpResponse
+    from .utils.relatorios import gerar_relatorio_pdf_cobranca_carregamento
+    
+    cobranca = get_object_or_404(
+        CobrancaCarregamento.objects.select_related('cliente').prefetch_related(
+            'romaneios__motorista',
+            'romaneios__veiculo_principal',
+            'romaneios__reboque_1',
+            'romaneios__reboque_2'
+        ),
+        pk=cobranca_id
+    )
+    
+    # Gerar PDF
+    pdf_content = gerar_relatorio_pdf_cobranca_carregamento(cobranca)
+    
+    # Nome do arquivo
+    nome_arquivo = f"cobranca_carregamento_{cobranca.id}_{cobranca.cliente.razao_social.replace(' ', '_')}.pdf"
+    
+    # Criar resposta com inline para visualização no navegador
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="{nome_arquivo}"'
+    response.write(pdf_content)
+    return response
+
+
+@login_required
+@user_passes_test(is_admin)
+def carregar_romaneios_cliente(request, cliente_id):
+    """Carrega romaneios emitidos de um cliente via AJAX"""
+    try:
+        romaneios = RomaneioViagem.objects.filter(
+            cliente_id=cliente_id,
+            status='Emitido'
+        ).order_by('-data_emissao')
+        
+        romaneios_data = []
+        for romaneio in romaneios:
+            romaneios_data.append({
+                'id': romaneio.id,
+                'codigo': romaneio.codigo,
+                'data_emissao': romaneio.data_emissao.strftime('%d/%m/%Y'),
+                'cliente': romaneio.cliente.razao_social,
+            })
+        
+        return JsonResponse({'romaneios': romaneios_data})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@user_passes_test(is_admin)
+def gerenciar_despesas_romaneio(request, romaneio_id):
+    """Gerencia as despesas de um romaneio específico"""
+    romaneio = get_object_or_404(RomaneioViagem, pk=romaneio_id)
+    despesas = romaneio.despesas.all()
+    
+    if request.method == 'POST':
+        # Processar múltiplas despesas
+        despesas_criadas = 0
+        erros = []
+        
+        # Verificar se é um formulário de múltiplas despesas
+        tipos = request.POST.getlist('tipo_despesa[]')
+        valores = request.POST.getlist('valor[]')
+        datas_vencimento = request.POST.getlist('data_vencimento[]')
+        observacoes_list = request.POST.getlist('observacoes[]')
+        
+        if tipos:
+            # Processar múltiplas despesas
+            for i, tipo in enumerate(tipos):
+                if tipo and i < len(valores) and valores[i]:
+                    try:
+                        valor = valores[i]
+                        data_vencimento = datas_vencimento[i] if i < len(datas_vencimento) else ''
+                        observacoes = observacoes_list[i] if i < len(observacoes_list) else ''
+                        
+                        DespesaCarregamento.objects.create(
+                            romaneio=romaneio,
+                            tipo_despesa=tipo,
+                            valor=valor,
+                            data_vencimento=data_vencimento or None,
+                            observacoes=observacoes
+                        )
+                        despesas_criadas += 1
+                    except Exception as e:
+                        erros.append(f'Erro ao adicionar {tipo}: {str(e)}')
+            
+            if despesas_criadas > 0:
+                if despesas_criadas == 1:
+                    messages.success(request, f'{despesas_criadas} despesa adicionada com sucesso!')
+                else:
+                    messages.success(request, f'{despesas_criadas} despesas adicionadas com sucesso!')
+            
+            if erros:
+                for erro in erros:
+                    messages.error(request, erro)
+        else:
+            # Compatibilidade com formulário antigo (uma despesa)
+            tipo = request.POST.get('tipo_despesa')
+            valor = request.POST.get('valor')
+            data_vencimento = request.POST.get('data_vencimento')
+            observacoes = request.POST.get('observacoes')
+            
+            if tipo and valor:
+                try:
+                    DespesaCarregamento.objects.create(
+                        romaneio=romaneio,
+                        tipo_despesa=tipo,
+                        valor=valor,
+                        data_vencimento=data_vencimento or None,
+                        observacoes=observacoes
+                    )
+                    messages.success(request, 'Despesa adicionada com sucesso!')
+                except Exception as e:
+                    messages.error(request, f'Erro ao adicionar despesa: {str(e)}')
+        
+        return redirect('notas:gerenciar_despesas_romaneio', romaneio_id=romaneio_id)
+    
+    total_pendente = despesas.filter(status='Pendente').aggregate(
+        total=Sum('valor')
+    )['total'] or 0
+    
+    total_baixado = despesas.filter(status='Baixado').aggregate(
+        total=Sum('valor')
+    )['total'] or 0
+    
+    # Calcular totais por tipo de despesa
+    total_carregamento = despesas.filter(tipo_despesa='Carregamento').aggregate(
+        total=Sum('valor')
+    )['total'] or 0
+    
+    # Unificar CTE e Manifesto em CTE/Manifesto
+    total_cte_manifesto = (
+        despesas.filter(tipo_despesa='CTE').aggregate(total=Sum('valor'))['total'] or 0
+    ) + (
+        despesas.filter(tipo_despesa='Manifesto').aggregate(total=Sum('valor'))['total'] or 0
+    ) + (
+        despesas.filter(tipo_despesa='CTE/Manifesto').aggregate(total=Sum('valor'))['total'] or 0
+    )
+    
+    context = {
+        'romaneio': romaneio,
+        'despesas': despesas,
+        'total_pendente': total_pendente,
+        'total_baixado': total_baixado,
+        'total_carregamento': total_carregamento,
+        'total_cte_manifesto': total_cte_manifesto,
+    }
+    return render(request, 'notas/gerenciar_despesas_romaneio.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+def baixar_despesa(request, despesa_id):
+    """Baixa uma despesa (marca como paga)"""
+    despesa = get_object_or_404(DespesaCarregamento, pk=despesa_id)
+    
+    if request.method == 'POST':
+        despesa.status = 'Baixado'
+        despesa.data_baixa = timezone.now().date()
+        despesa.save()
+        messages.success(request, 'Despesa baixada com sucesso!')
+        return redirect('notas:gerenciar_despesas_romaneio', romaneio_id=despesa.romaneio.id)
+    
+    return render(request, 'notas/confirmar_baixa_despesa.html', {'despesa': despesa})
+
+
+@login_required
+@user_passes_test(is_admin)
+def editar_despesa(request, despesa_id):
+    """Edita uma despesa"""
+    despesa = get_object_or_404(DespesaCarregamento, pk=despesa_id)
+    
+    if request.method == 'POST':
+        try:
+            despesa.tipo_despesa = request.POST.get('tipo_despesa')
+            despesa.valor = request.POST.get('valor')
+            despesa.data_vencimento = request.POST.get('data_vencimento') or None
+            despesa.observacoes = request.POST.get('observacoes')
+            despesa.save()
+            messages.success(request, 'Despesa atualizada com sucesso!')
+        except Exception as e:
+            messages.error(request, f'Erro ao atualizar despesa: {str(e)}')
+        return redirect('notas:gerenciar_despesas_romaneio', romaneio_id=despesa.romaneio.id)
+    
+    return render(request, 'notas/editar_despesa.html', {'despesa': despesa})
+
+
+@login_required
+@user_passes_test(is_admin)
+def excluir_despesa(request, despesa_id):
+    """Exclui uma despesa"""
+    despesa = get_object_or_404(DespesaCarregamento, pk=despesa_id)
+    romaneio_id = despesa.romaneio.id
+    
+    if request.method == 'POST':
+        despesa.delete()
+        messages.success(request, 'Despesa excluída com sucesso!')
+        return redirect('notas:gerenciar_despesas_romaneio', romaneio_id=romaneio_id)
+    
+    return render(request, 'notas/confirmar_exclusao_despesa.html', {'despesa': despesa})
 
 @login_required
 def dashboard(request):
