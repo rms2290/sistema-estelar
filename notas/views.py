@@ -1076,7 +1076,8 @@ def minhas_notas_fiscais(request):
         notas_fiscais = NotaFiscal.objects.filter(cliente=request.user.cliente)
     else:
         # Admin e funcionários veem todas as notas
-        notas_fiscais = NotaFiscal.objects.all()
+        # OTIMIZAÇÃO: Usar select_related para evitar N+1 queries
+        notas_fiscais = NotaFiscal.objects.select_related('cliente').all()
     
     # Aplicar filtro por status
     if status_filter == 'deposito':
@@ -1088,9 +1089,14 @@ def minhas_notas_fiscais(request):
     # Ordenar por data crescente
     notas_fiscais = notas_fiscais.order_by('data')
     
-    # Calcular totais
-    total_peso = sum(nota.peso for nota in notas_fiscais if nota.peso)
-    total_valor = sum(nota.valor for nota in notas_fiscais if nota.valor)
+    # Calcular totais usando aggregate (mais eficiente em memória)
+    from django.db.models import Sum
+    totais = notas_fiscais.aggregate(
+        total_peso=Sum('peso'),
+        total_valor=Sum('valor')
+    )
+    total_peso = totais['total_peso'] or 0
+    total_valor = totais['total_valor'] or 0
     
     return render(request, 'notas/auth/minhas_notas.html', {
         'notas_fiscais': notas_fiscais,
@@ -1126,9 +1132,13 @@ def imprimir_relatorio_deposito(request):
         # Admin e funcionários veem todas as notas em depósito
         notas_fiscais = NotaFiscal.objects.filter(status='Depósito').order_by('data')
 
-    # Calcular totais
-    total_peso = sum(nota.peso for nota in notas_fiscais)
-    total_valor = sum(nota.valor for nota in notas_fiscais)
+    # Calcular totais usando aggregate (mais eficiente em memória)
+    totais = notas_fiscais.aggregate(
+        total_peso=Sum('peso'),
+        total_valor=Sum('valor')
+    )
+    total_peso = totais['total_peso'] or 0
+    total_valor = totais['total_valor'] or 0
 
     return render(request, 'notas/auth/imprimir_relatorio_deposito.html', {
         'notas_fiscais': notas_fiscais,
@@ -1145,9 +1155,13 @@ def imprimir_romaneio_novo(request, pk):
     # Obter notas fiscais vinculadas ao romaneio
     notas_romaneadas = romaneio.notas_fiscais.all().order_by('data')
     
-    # Calcular totais
-    total_peso = sum(nota.peso for nota in notas_romaneadas)
-    total_valor = sum(nota.valor for nota in notas_romaneadas)
+    # Calcular totais usando aggregate (mais eficiente em memória)
+    totais = notas_romaneadas.aggregate(
+        total_peso=Sum('peso'),
+        total_valor=Sum('valor')
+    )
+    total_peso = totais['total_peso'] or 0
+    total_valor = totais['total_valor'] or 0
     
     # Dividir notas em grupos de 20 para multipágina
     notas_list = list(notas_romaneadas)
@@ -1182,9 +1196,13 @@ def gerar_romaneio_pdf(request, pk):
     # Obter notas fiscais vinculadas ao romaneio
     notas_romaneadas = romaneio.notas_fiscais.all().order_by('data')
     
-    # Calcular totais
-    total_peso = sum(nota.peso for nota in notas_romaneadas)
-    total_valor = sum(nota.valor for nota in notas_romaneadas)
+    # Calcular totais usando aggregate (mais eficiente em memória)
+    totais = notas_romaneadas.aggregate(
+        total_peso=Sum('peso'),
+        total_valor=Sum('valor')
+    )
+    total_peso = totais['total_peso'] or 0
+    total_valor = totais['total_valor'] or 0
     
     # Renderizar template
     template = get_template('notas/visualizar_romaneio_para_impressao.html')
@@ -1243,7 +1261,10 @@ def meus_romaneios(request):
         ).distinct().order_by('-data_emissao')
     else:
         # Admin e funcionários veem todos os romaneios
-        romaneios = RomaneioViagem.objects.all().order_by('-data_emissao')
+        # OTIMIZAÇÃO: Usar select_related para evitar N+1 queries
+        romaneios = RomaneioViagem.objects.select_related(
+            'cliente', 'motorista', 'veiculo_principal'
+        ).order_by('-data_emissao')
     
     return render(request, 'notas/auth/meus_romaneios.html', {
         'romaneios': romaneios
@@ -3292,9 +3313,13 @@ def pesquisar_mercadorias_deposito(request):
         
         notas_fiscais = queryset.order_by('nota')
         
-        # Calcular totais apenas quando há resultados
-        total_peso = sum(nota.peso for nota in notas_fiscais)
-        total_valor = sum(nota.valor for nota in notas_fiscais)
+        # Calcular totais apenas quando há resultados usando aggregate (mais eficiente)
+        totais = notas_fiscais.aggregate(
+            total_peso=Sum('peso'),
+            total_valor=Sum('valor')
+        )
+        total_peso = totais['total_peso'] or 0
+        total_valor = totais['total_valor'] or 0
     elif search_performed:
         # Se o formulário não for válido, mostrar mensagem de erro
         messages.warning(request, f'Erro na validação do formulário: {search_form.errors}.')
@@ -3342,9 +3367,13 @@ def imprimir_relatorio_mercadorias_deposito(request):
         
         notas_fiscais = queryset.order_by('nota')
         
-        # Calcular totais apenas quando há resultados
-        total_peso = sum(nota.peso for nota in notas_fiscais)
-        total_valor = sum(nota.valor for nota in notas_fiscais)
+        # Calcular totais apenas quando há resultados usando aggregate (mais eficiente)
+        totais = notas_fiscais.aggregate(
+            total_peso=Sum('peso'),
+            total_valor=Sum('valor')
+        )
+        total_peso = totais['total_peso'] or 0
+        total_valor = totais['total_valor'] or 0
     elif search_performed:
         # Se o formulário não for válido, mostrar mensagem de erro
         messages.warning(request, f'Erro na validação do formulário: {search_form.errors}.')

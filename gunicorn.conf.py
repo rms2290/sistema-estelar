@@ -8,15 +8,16 @@ import os
 bind = "0.0.0.0:8000"
 
 # OTIMIZAÇÃO: Reduzir número de workers para economizar memória
-# Para 2GB RAM: máximo 2-3 workers
-workers = 2  # Reduzido de multiprocessing.cpu_count() * 2 + 1
+# Para servidores com pouca RAM (1-2GB): usar 1 worker
+# Para servidores com mais RAM (2-4GB): usar 2 workers
+workers = 1  # Reduzido para 1 worker para economizar memória
 
 worker_class = "sync"
 worker_connections = 1000
 
 # OTIMIZAÇÃO: Reduzir max_requests para liberar memória mais frequentemente
-max_requests = 500  # Reduzido de 1000
-max_requests_jitter = 50  # Reduzido de 100
+max_requests = 300  # Reduzido para reiniciar workers mais frequentemente e liberar memória
+max_requests_jitter = 30  # Reduzido para variação menor
 
 timeout = 30
 keepalive = 2
