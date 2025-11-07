@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirmar Exclusão de Despesa - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0">
+                <i class="fas fa-exclamation-triangle"></i> Confirmar Exclusão de Despesa
+            </h4>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-danger">
+                <h5 class="alert-heading">
+                    <i class="fas fa-exclamation-triangle"></i> Atenção!
+                </h5>
+                <p class="mb-0">
+                    Você está prestes a excluir permanentemente a seguinte despesa. Esta ação não pode ser desfeita!
+                </p>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th width="200">Romaneio:</th>
+                            <td><strong>{{ despesa.romaneio.codigo }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Tipo de Despesa:</th>
+                            <td><span class="badge bg-secondary">{{ despesa.get_tipo_despesa_display }}</span></td>
+                        </tr>
+                        <tr>
+                            <th>Valor:</th>
+                            <td><strong>R$ {{ despesa.valor|floatformat:2 }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                {% if despesa.status == 'Pendente' %}
+                                <span class="badge bg-warning">Pendente</span>
+                                {% else %}
+                                <span class="badge bg-success">Baixado</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Cliente:</th>
+                            <td>{{ despesa.romaneio.cliente.razao_social }}</td>
+                        </tr>
+                        {% if despesa.data_vencimento %}
+                        <tr>
+                            <th>Vencimento:</th>
+                            <td>{{ despesa.data_vencimento|date:"d/m/Y" }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if despesa.observacoes %}
+                        <tr>
+                            <th>Observações:</th>
+                            <td>{{ despesa.observacoes }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <p class="text-danger">
+                <i class="fas fa-exclamation-circle"></i> 
+                <strong>Esta ação é irreversível!</strong> Tem certeza que deseja excluir esta despesa?
+            </p>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Sim, Excluir Despesa
+                    </button>
+                    <a href="{% url 'notas:gerenciar_despesas_romaneio' despesa.romaneio.id %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

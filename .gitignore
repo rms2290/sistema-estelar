@@ -147,3 +147,20 @@ Thumbs.db
 # Django specific
 staticfiles/
 media/
+
+# Cache and logs
+cache/
+logs/
+*.log
+nohup.out
+gunicorn.log
+
+# Backup files
+*.bak
+*.backup
+dados_arquivados/backups/
+
+# Temporary files
+*.tmp
+*.temp
+*~

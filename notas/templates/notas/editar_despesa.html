@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Editar Despesa - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4>
+                <i class="fas fa-edit"></i> Editar Despesa
+            </h4>
+            <small class="text-muted">
+                Romaneio: <strong>{{ despesa.romaneio.codigo }}</strong> | 
+                Cliente: {{ despesa.romaneio.cliente.razao_social }}
+            </small>
+        </div>
+        <div class="card-body">
+            <!-- Mensagens -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Informações da Despesa</h5>
+                    <table class="table table-borderless">
+                        <tr>
+                            <th width="200">Status Atual:</th>
+                            <td>
+                                {% if despesa.status == 'Pendente' %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-clock"></i> Pendente
+                                </span>
+                                {% else %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle"></i> Baixado
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if despesa.data_baixa %}
+                        <tr>
+                            <th>Data de Baixa:</th>
+                            <td>{{ despesa.data_baixa|date:"d/m/Y" }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <form method="POST">
+                {% csrf_token %}
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-edit"></i> Dados da Despesa</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-tag"></i> Tipo de Despesa <span class="text-danger">*</span>
+                                </label>
+                                <select name="tipo_despesa" class="form-select" required>
+                                    <option value="Carregamento" {% if despesa.tipo_despesa == 'Carregamento' %}selected{% endif %}>Carregamento</option>
+                                    <option value="CTE/Manifesto" {% if despesa.tipo_despesa == 'CTE' or despesa.tipo_despesa == 'Manifesto' or despesa.tipo_despesa == 'CTE/Manifesto' %}selected{% endif %}>CTE/Manifesto</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-dollar-sign"></i> Valor (R$) <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" name="valor" step="0.01" min="0" class="form-control" 
+                                       value="{{ despesa.valor }}" required>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-calendar"></i> Vencimento
+                                </label>
+                                <input type="date" name="data_vencimento" class="form-control" 
+                                       value="{% if despesa.data_vencimento %}{{ despesa.data_vencimento|date:'Y-m-d' }}{% endif %}">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-info-circle"></i> Status
+                                </label>
+                                <input type="text" class="form-control" 
+                                       value="{{ despesa.get_status_display }}" disabled>
+                                <small class="text-muted">Status não pode ser alterado aqui</small>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-comment"></i> Observações
+                                </label>
+                                <textarea name="observacoes" class="form-control" rows="3" 
+                                          placeholder="Observações (opcional)">{{ despesa.observacoes|default:'' }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Salvar Alterações
+                    </button>
+                    <a href="{% url 'notas:gerenciar_despesas_romaneio' despesa.romaneio.id %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                </div>
+            </form>
+
+            {% if despesa.status == 'Pendente' %}
+            <div class="mt-3">
+                <a href="{% url 'notas:baixar_despesa' despesa.id %}" class="btn btn-success">
+                    <i class="fas fa-check"></i> Baixar Despesa
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

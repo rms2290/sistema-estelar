@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirmar Exclusão de Cobrança - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0">
+                <i class="fas fa-exclamation-triangle"></i> Confirmar Exclusão de Cobrança
+            </h4>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-danger">
+                <h5 class="alert-heading">
+                    <i class="fas fa-exclamation-triangle"></i> Atenção!
+                </h5>
+                <p class="mb-0">
+                    Você está prestes a excluir permanentemente a seguinte cobrança. Esta ação não pode ser desfeita!
+                </p>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th width="200">Cliente:</th>
+                            <td><strong>{{ cobranca.cliente.razao_social }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Romaneios:</th>
+                            <td>
+                                {% for romaneio in cobranca.romaneios.all %}
+                                    <span class="badge bg-secondary">{{ romaneio.codigo }}</span>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Valor Total:</th>
+                            <td><strong>R$ {{ cobranca.valor_total|floatformat:2 }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                {% if cobranca.status == 'Pendente' %}
+                                <span class="badge bg-warning">Pendente</span>
+                                {% else %}
+                                <span class="badge bg-success">Baixado</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <p class="text-danger">
+                <i class="fas fa-exclamation-circle"></i> 
+                <strong>Esta ação é irreversível!</strong> Tem certeza que deseja excluir esta cobrança?
+            </p>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Sim, Excluir Cobrança
+                    </button>
+                    <a href="{% url 'notas:cobranca_carregamento' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

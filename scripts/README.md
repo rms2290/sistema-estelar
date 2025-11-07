@@ -250,3 +250,7 @@ Se algum script apresentar problemas:
 
 **🌟 Sistema Estelar** - Scripts Auxiliares
 
+
+
+
+

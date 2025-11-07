@@ -59,6 +59,9 @@
                             <li><a class="dropdown-item" href="{% url 'notas:meus_romaneios' %}">
                                 <i class="fas fa-truck"></i> Meus Romaneios
                             </a></li>
+                            <li><a class="dropdown-item" href="{% url 'notas:minhas_cobrancas_carregamento' %}">
+                                <i class="fas fa-truck-loading"></i> Minhas Cobranças
+                            </a></li>
                             {% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{% url 'notas:logout' %}">
@@ -254,6 +257,11 @@
                     <li class="nav-item">
                         <a href="{% url 'notas:meus_romaneios' %}">
                             <i class="fas fa-truck"></i> Meus Romaneios
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'notas:minhas_cobrancas_carregamento' %}">
+                            <i class="fas fa-truck-loading"></i> Minhas Cobranças
                         </a>
                     </li>
                     {% endif %}
