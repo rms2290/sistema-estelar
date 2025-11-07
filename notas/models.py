@@ -315,7 +315,7 @@ class RomaneioViagem(UpperCaseMixin, models.Model):
         max_length=20, 
         unique=True, 
         verbose_name="Código do Romaneio",
-        help_text="Código único do romaneio (ex: ROM-2024-01-0001)"
+        help_text="Código único do romaneio (ex: ROM-001, ROM-002, ROM-003...)"
     )
     
     STATUS_ROMANEIO_CHOICES = [
@@ -666,29 +666,55 @@ class RomaneioViagem(UpperCaseMixin, models.Model):
         }
     
     def gerar_codigo_automatico(self):
-        """Gera código automático para o romaneio"""
+        """Gera código automático para o romaneio no formato ROM-NNN (sequencial sem resetar)"""
         if self.codigo:
             return
         
-        ano_atual = timezone.now().year
-        mes_atual = timezone.now().month
+        # Buscar todos os romaneios (exceto genéricos ROM-100-XXX)
+        romaneios = RomaneioViagem.objects.exclude(
+            codigo__startswith="ROM-100-"
+        ).exclude(
+            codigo__isnull=True
+        ).exclude(
+            codigo=""
+        )
         
-        # Buscar último romaneio do mês
-        ultimo_romaneio = RomaneioViagem.objects.filter(
-            codigo__startswith=f"ROM-{ano_atual}-{mes_atual:02d}"
-        ).order_by('-codigo').first()
+        max_sequence = 0
         
-        if ultimo_romaneio:
-            # Extrair número sequencial
+        # Extrair números de todos os formatos possíveis
+        for romaneio in romaneios:
+            if not romaneio.codigo:
+                continue
+                
             try:
-                numero_atual = int(ultimo_romaneio.codigo.split('-')[-1])
-                novo_numero = numero_atual + 1
+                parts = romaneio.codigo.split('-')
+                
+                # Formato ROM-XXX (formato simples)
+                if len(parts) == 2 and parts[0] == 'ROM':
+                    num = int(parts[1])
+                    max_sequence = max(max_sequence, num)
+                
+                # Formato ROM-YYYY-MM-XXXX (formato com data)
+                elif len(parts) == 4 and parts[0] == 'ROM':
+                    num = int(parts[3])
+                    max_sequence = max(max_sequence, num)
+                
+                # Formato ROM-YYYY-MM-XXXX (caso tenha menos partes mas ainda seja numérico)
+                elif len(parts) >= 2 and parts[0] == 'ROM':
+                    # Tentar extrair o último número
+                    for part in reversed(parts[1:]):
+                        if part.isdigit():
+                            num = int(part)
+                            max_sequence = max(max_sequence, num)
+                            break
+                            
             except (ValueError, IndexError):
-                novo_numero = 1
-        else:
-            novo_numero = 1
+                continue
         
-        self.codigo = f"ROM-{ano_atual}-{mes_atual:02d}-{novo_numero:04d}"
+        # Próximo número sequencial (nunca reseta)
+        next_sequence = max_sequence + 1
+        
+        self.codigo = f"ROM-{next_sequence:03d}"
     
     def save(self, *args, **kwargs):
         # Gerar código automático se não existir
@@ -719,6 +745,178 @@ class RomaneioViagem(UpperCaseMixin, models.Model):
             models.Index(fields=['motorista']),
             models.Index(fields=['data_emissao']),
         ]
+
+# --------------------------------------------------------------------------------------
+# MODELO: DespesaCarregamento (para gerenciar despesas de carregamento)
+# --------------------------------------------------------------------------------------
+class DespesaCarregamento(models.Model):
+    """
+    Modelo para gerenciar despesas de carregamento (Carregamento, CTE/Manifesto)
+    vinculadas a um romaneio
+    """
+    TIPO_DESPESA_CHOICES = [
+        ('Carregamento', 'Carregamento'),
+        ('CTE/Manifesto', 'CTE/Manifesto'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('Pendente', 'Pendente'),
+        ('Baixado', 'Baixado'),
+    ]
+    
+    romaneio = models.ForeignKey(
+        RomaneioViagem,
+        on_delete=models.CASCADE,
+        related_name='despesas',
+        verbose_name="Romaneio"
+    )
+    
+    tipo_despesa = models.CharField(
+        max_length=20,
+        choices=TIPO_DESPESA_CHOICES,
+        verbose_name="Tipo de Despesa"
+    )
+    
+    valor = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Valor (R$)"
+    )
+    
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default='Pendente',
+        verbose_name="Status"
+    )
+    
+    data_vencimento = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Data de Vencimento"
+    )
+    
+    data_baixa = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Data de Baixa"
+    )
+    
+    observacoes = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Observações"
+    )
+    
+    criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Data de Criação")
+    atualizado_em = models.DateTimeField(auto_now=True, verbose_name="Data de Atualização")
+    
+    class Meta:
+        verbose_name = "Despesa de Carregamento"
+        verbose_name_plural = "Despesas de Carregamento"
+        ordering = ['-criado_em']
+        indexes = [
+            models.Index(fields=['romaneio']),
+            models.Index(fields=['status']),
+            models.Index(fields=['tipo_despesa']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_tipo_despesa_display()} - {self.romaneio.codigo} - R$ {self.valor}"
+
+# --------------------------------------------------------------------------------------
+# MODELO: CobrancaCarregamento (Nova estrutura - agrupa múltiplos romaneios)
+# --------------------------------------------------------------------------------------
+class CobrancaCarregamento(models.Model):
+    """
+    Modelo para gerenciar cobranças de carregamento agrupando múltiplos romaneios
+    de um cliente (que pode ter múltiplos CNPJs)
+    """
+    STATUS_CHOICES = [
+        ('Pendente', 'Pendente'),
+        ('Baixado', 'Baixado'),
+    ]
+    
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.PROTECT,
+        related_name='cobrancas_carregamento',
+        verbose_name="Cliente"
+    )
+    
+    romaneios = models.ManyToManyField(
+        RomaneioViagem,
+        related_name='cobrancas_vinculadas',
+        verbose_name="Romaneios",
+        help_text="Selecione os romaneios que fazem parte desta cobrança"
+    )
+    
+    valor_carregamento = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        verbose_name="Valor Carregamento (R$)"
+    )
+    
+    valor_cte_manifesto = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        verbose_name="Valor CTE/Manifesto (R$)"
+    )
+    
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default='Pendente',
+        verbose_name="Status"
+    )
+    
+    data_vencimento = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Data de Vencimento"
+    )
+    
+    data_baixa = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Data de Baixa"
+    )
+    
+    observacoes = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Observações"
+    )
+    
+    criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Data de Criação")
+    atualizado_em = models.DateTimeField(auto_now=True, verbose_name="Data de Atualização")
+    
+    class Meta:
+        verbose_name = "Cobrança de Carregamento"
+        verbose_name_plural = "Cobranças de Carregamento"
+        ordering = ['-criado_em']
+        indexes = [
+            models.Index(fields=['cliente']),
+            models.Index(fields=['status']),
+            models.Index(fields=['data_vencimento']),
+        ]
+    
+    def __str__(self):
+        romaneios_str = ", ".join([r.codigo for r in self.romaneios.all()[:3]])
+        if self.romaneios.count() > 3:
+            romaneios_str += f" (+{self.romaneios.count() - 3} mais)"
+        return f"Cobrança {self.id} - {self.cliente.razao_social} - {romaneios_str}"
+    
+    @property
+    def valor_total(self):
+        """Calcula o valor total da cobrança"""
+        return self.valor_carregamento + self.valor_cte_manifesto
+    
+    def get_romaneios_display(self):
+        """Retorna string com os códigos dos romaneios"""
+        return ", ".join([r.codigo for r in self.romaneios.all()])
 
 # --------------------------------------------------------------------------------------
 # NOVO MODELO: HistoricoConsulta (para registrar cada consulta de risco)

@@ -65,45 +65,85 @@ def formatar_peso_brasileiro(valor):
 # Funções Auxiliares
 # --------------------------------------------------------------------------------------
 def get_next_romaneio_codigo():
-    """Gera o próximo código sequencial de romaneio no formato ROM-NNN."""
-    # Buscar todos os romaneios com código no formato ROM-XXX (excluindo genéricos)
-    prefix = "ROM-"
-    last_romaneio = RomaneioViagem.objects.filter(
-        codigo__startswith=prefix
-    ).exclude(
+    """Gera o próximo código sequencial de romaneio no formato ROM-NNN (sequencial sem resetar)."""
+    # Buscar todos os romaneios (exceto genéricos ROM-100-XXX)
+    romaneios = RomaneioViagem.objects.exclude(
         codigo__startswith="ROM-100-"
-    ).order_by('-codigo').first()
-
-    next_sequence = 1  # Começa do 001
-    if last_romaneio and last_romaneio.codigo:
+    ).exclude(
+        codigo__isnull=True
+    ).exclude(
+        codigo=""
+    )
+    
+    max_sequence = 0
+    
+    # Extrair números de todos os formatos possíveis
+    for romaneio in romaneios:
+        if not romaneio.codigo:
+            continue
+            
         try:
-            # Extrair o número do código ROM-XXX
-            parts = last_romaneio.codigo.split('-')
+            parts = romaneio.codigo.split('-')
+            
+            # Formato ROM-XXX (formato simples)
             if len(parts) == 2 and parts[0] == 'ROM':
-                next_sequence = int(parts[1]) + 1
+                num = int(parts[1])
+                max_sequence = max(max_sequence, num)
+            
+            # Formato ROM-YYYY-MM-XXXX (formato com data)
+            elif len(parts) == 4 and parts[0] == 'ROM':
+                num = int(parts[3])
+                max_sequence = max(max_sequence, num)
+            
+            # Formato ROM-YYYY-MM-XXXX (caso tenha menos partes mas ainda seja numérico)
+            elif len(parts) >= 2 and parts[0] == 'ROM':
+                # Tentar extrair o último número
+                for part in reversed(parts[1:]):
+                    if part.isdigit():
+                        num = int(part)
+                        max_sequence = max(max_sequence, num)
+                        break
+                        
         except (ValueError, IndexError):
-            pass
-
+            continue
+    
+    # Próximo número sequencial (nunca reseta)
+    next_sequence = max_sequence + 1
+    
     return f"ROM-{next_sequence:03d}"
 
 def get_next_romaneio_generico_codigo():
-    """Gera o próximo código sequencial de romaneio genérico no formato ROM-100-NNN."""
-    # Buscar todos os romaneios genéricos com código no formato ROM-100-XXX
-    prefix = "ROM-100-"
-    last_romaneio = RomaneioViagem.objects.filter(
-        codigo__startswith=prefix
-    ).order_by('-codigo').first()
-
-    next_sequence = 1  # Começa do 001
-    if last_romaneio and last_romaneio.codigo:
+    """Gera o próximo código sequencial de romaneio genérico no formato ROM-100-NNN (sequencial sem resetar)."""
+    # Buscar todos os romaneios genéricos
+    romaneios_genericos = RomaneioViagem.objects.filter(
+        codigo__startswith="ROM-100-"
+    ).exclude(
+        codigo__isnull=True
+    ).exclude(
+        codigo=""
+    )
+    
+    max_sequence = 0
+    
+    # Extrair números de todos os romaneios genéricos
+    for romaneio in romaneios_genericos:
+        if not romaneio.codigo:
+            continue
+            
         try:
-            # Extrair o número do código ROM-100-XXX
-            parts = last_romaneio.codigo.split('-')
+            parts = romaneio.codigo.split('-')
+            
+            # Formato ROM-100-XXX
             if len(parts) == 3 and parts[0] == 'ROM' and parts[1] == '100':
-                next_sequence = int(parts[2]) + 1
+                num = int(parts[2])
+                max_sequence = max(max_sequence, num)
+                
         except (ValueError, IndexError):
-            pass
-
+            continue
+    
+    # Próximo número sequencial (nunca reseta)
+    next_sequence = max_sequence + 1
+    
     return f"ROM-100-{next_sequence:03d}"
 
 # --------------------------------------------------------------------------------------
