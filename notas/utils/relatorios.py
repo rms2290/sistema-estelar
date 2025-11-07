@@ -3,9 +3,12 @@ Utilitários para geração de relatórios em PDF e Excel
 """
 
 import io
+import os
+import tempfile
 from datetime import datetime
 from decimal import Decimal
 from django.http import HttpResponse
+from django.conf import settings
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
@@ -31,6 +34,63 @@ def format_brazilian_currency(value):
         return f"R$ {formatted}"
     except (ValueError, TypeError):
         return str(value)
+
+
+def get_logo_path():
+    """Retorna o caminho da logo Estelar"""
+    # Tentar encontrar a logo em diferentes formatos
+    logo_paths = [
+        os.path.join(settings.BASE_DIR, 'static', 'logo-estelar.png'),
+        os.path.join(settings.BASE_DIR, 'static', 'logo-estelar.jpg'),
+        os.path.join(settings.BASE_DIR, 'static', 'logo-estelar.svg'),
+    ]
+    
+    for path in logo_paths:
+        if os.path.exists(path):
+            return path
+    
+    return None
+
+
+def add_logo_to_story(story, para_style, width=4*cm):
+    """Adiciona a logo Estelar ao story do PDF"""
+    logo_path = get_logo_path()
+    if logo_path and os.path.exists(logo_path):
+        try:
+            # Se for SVG, tentar converter usando svglib
+            if logo_path.endswith('.svg'):
+                try:
+                    from svglib.svglib import svg2rlg
+                    
+                    drawing = svg2rlg(logo_path)
+                    if drawing:
+                        # Escalar o drawing para o tamanho desejado
+                        if drawing.width > 0:
+                            scale = width / drawing.width
+                            drawing.width = width
+                            drawing.height = drawing.height * scale
+                            drawing.scale(scale, scale)
+                        
+                        # Adicionar o drawing diretamente ao story (ReportLab suporta isso)
+                        story.append(drawing)
+                        story.append(Spacer(1, 10))
+                        return True
+                    else:
+                        return False
+                except (ImportError, Exception):
+                    # Se svglib não estiver disponível ou houver erro, pular logo
+                    return False
+            else:
+                # PNG, JPG ou outros formatos suportados
+                logo_img = Image(logo_path, width=width, height=width * 0.3)
+                logo_img.hAlign = 'CENTER'
+                story.append(logo_img)
+                story.append(Spacer(1, 10))
+                return True
+        except Exception:
+            # Se houver erro ao carregar a imagem, continuar sem ela
+            return False
+    return False
 
 
 def gerar_relatorio_pdf_totalizador_estado(resultados, data_inicial, data_final, total_geral, total_seguro_geral):
@@ -684,3 +744,401 @@ def gerar_relatorio_excel_totalizador_cliente(lista_hierarquica, data_inicial, d
     buffer.seek(0)
     
     return buffer.getvalue()
+
+
+def gerar_relatorio_pdf_cobranca_carregamento(cobranca):
+    """
+    Gera relatório PDF para Cobrança de Carregamento - Formato Minimalista Profissional
+    """
+    buffer = io.BytesIO()
+    
+    # Criar documento PDF
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=2.5*cm,
+        leftMargin=2.5*cm,
+        topMargin=2.5*cm,
+        bottomMargin=2.5*cm
+    )
+    
+    # Definir metadados do PDF (título da aba)
+    doc.title = "Relatório Cobrança"
+    
+    # Estilos
+    styles = getSampleStyleSheet()
+    
+    # Estilo para título principal
+    title_style = ParagraphStyle(
+        'TitleStyle',
+        parent=styles['Heading1'],
+        fontSize=20,
+        spaceAfter=30,
+        alignment=TA_CENTER,
+        textColor=colors.black,
+        fontName='Helvetica-Bold',
+        leading=24
+    )
+    
+    # Estilo para subtítulo/seção
+    section_style = ParagraphStyle(
+        'SectionStyle',
+        parent=styles['Normal'],
+        fontSize=11,
+        spaceAfter=12,
+        spaceBefore=20,
+        alignment=TA_LEFT,
+        textColor=colors.black,
+        fontName='Helvetica-Bold',
+        leading=14
+    )
+    
+    # Estilo para texto normal
+    para_style = ParagraphStyle(
+        'ParaStyle',
+        parent=styles['Normal'],
+        fontSize=10,
+        spaceAfter=8,
+        alignment=TA_LEFT,
+        textColor=colors.black,
+        leading=13
+    )
+    
+    # Estilo para informações secundárias
+    info_style = ParagraphStyle(
+        'InfoStyle',
+        parent=styles['Normal'],
+        fontSize=9,
+        spaceAfter=6,
+        alignment=TA_LEFT,
+        textColor=colors.black,
+        leading=12
+    )
+    
+    # Conteúdo do relatório
+    story = []
+    
+    # Título principal
+    story.append(Paragraph("COBRANÇA DE CARREGAMENTO", title_style))
+    story.append(Spacer(1, 25))
+    
+    # Informações do Cliente
+    story.append(Paragraph("CLIENTE", section_style))
+    story.append(Paragraph(cobranca.cliente.razao_social, para_style))
+    if cobranca.cliente.cnpj:
+        story.append(Paragraph(f"CNPJ: {cobranca.cliente.cnpj}", info_style))
+    story.append(Spacer(1, 20))
+    
+    # Romaneios - formato minimalista
+    story.append(Paragraph("ROMANEIOS", section_style))
+    
+    romaneios_list = []
+    for romaneio in cobranca.romaneios.all().select_related('motorista', 'veiculo_principal', 'reboque_1', 'reboque_2'):
+        data_emissao = romaneio.data_emissao.strftime('%d/%m/%Y') if romaneio.data_emissao else '-'
+        motorista_nome = romaneio.motorista.nome if romaneio.motorista else '-'
+        
+        placas = []
+        if romaneio.veiculo_principal:
+            placas.append(romaneio.veiculo_principal.placa)
+        if romaneio.reboque_1:
+            placas.append(romaneio.reboque_1.placa)
+        if romaneio.reboque_2:
+            placas.append(romaneio.reboque_2.placa)
+        placas_str = ' / '.join(placas) if placas else '-'
+        
+        romaneio_info = f"<b>{romaneio.codigo}</b> • {data_emissao}"
+        if motorista_nome != '-':
+            romaneio_info += f" • {motorista_nome}"
+        if placas_str != '-':
+            romaneio_info += f" • {placas_str}"
+        
+        romaneios_list.append(romaneio_info)
+    
+    for romaneio_info in romaneios_list:
+        story.append(Paragraph(romaneio_info, para_style))
+    
+    story.append(Spacer(1, 25))
+    
+    # Valores - formato minimalista
+    story.append(Paragraph("VALORES", section_style))
+    
+    # Tabela de valores simplificada
+    valores_data = [
+        ['Carregamento', format_brazilian_currency(cobranca.valor_carregamento)],
+        ['CTE/Manifesto', format_brazilian_currency(cobranca.valor_cte_manifesto)],
+    ]
+    
+    valores_table = Table(valores_data, colWidths=[10*cm, 6*cm])
+    valores_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica'),
+        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor('#ecf0f1')),
+    ]))
+    
+    story.append(valores_table)
+    story.append(Spacer(1, 5))
+    
+    # Total destacado
+    total_data = [['TOTAL', format_brazilian_currency(cobranca.valor_total)]]
+    total_table = Table(total_data, colWidths=[10*cm, 6*cm])
+    total_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 12),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('TOPPADDING', (0, 0), (-1, -1), 12),
+        ('LINEABOVE', (0, 0), (-1, 0), 1, colors.black),
+        ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+    ]))
+    
+    story.append(total_table)
+    story.append(Spacer(1, 25))
+    
+    # Informações adicionais
+    if cobranca.data_vencimento or cobranca.status or cobranca.data_baixa:
+        story.append(Paragraph("INFORMAÇÕES ADICIONAIS", section_style))
+        
+        info_items = []
+        if cobranca.data_vencimento:
+            info_items.append(f"Vencimento: {cobranca.data_vencimento.strftime('%d/%m/%Y')}")
+        info_items.append(f"Status: {cobranca.get_status_display()}")
+        if cobranca.data_baixa:
+            info_items.append(f"Baixa: {cobranca.data_baixa.strftime('%d/%m/%Y')}")
+        
+        for item in info_items:
+            story.append(Paragraph(item, info_style))
+        
+        story.append(Spacer(1, 20))
+    
+    # Observações
+    if cobranca.observacoes:
+        story.append(Paragraph("OBSERVAÇÕES", section_style))
+        story.append(Paragraph(cobranca.observacoes, para_style))
+        story.append(Spacer(1, 20))
+    
+    # Rodapé minimalista
+    data_geracao = datetime.now().strftime('%d/%m/%Y às %H:%M')
+    story.append(Spacer(1, 30))
+    linha_rodape = Table([['']], colWidths=[13*cm], rowHeights=[0.3*cm])
+    linha_rodape.setStyle(TableStyle([
+        ('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.HexColor('#ecf0f1')),
+    ]))
+    story.append(linha_rodape)
+    story.append(Spacer(1, 8))
+    story.append(Paragraph(f"Gerado em {data_geracao}", info_style))
+    
+    # Construir PDF
+    doc.build(story)
+    
+    # Obter conteúdo do buffer
+    pdf_content = buffer.getvalue()
+    buffer.close()
+    
+    return pdf_content
+
+
+def gerar_relatorio_pdf_consolidado_cobranca(cobrancas_pendentes, cliente_selecionado=None):
+    """
+    Gera relatório PDF consolidado com cobranças pendentes - Formato Minimalista Profissional
+    """
+    buffer = io.BytesIO()
+    
+    # Criar documento PDF
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=2.5*cm,
+        leftMargin=2.5*cm,
+        topMargin=2.5*cm,
+        bottomMargin=2.5*cm
+    )
+    
+    # Definir metadados do PDF (título da aba)
+    doc.title = "Relatório Cobrança"
+    
+    # Estilos
+    styles = getSampleStyleSheet()
+    
+    # Estilo para título principal
+    title_style = ParagraphStyle(
+        'TitleStyle',
+        parent=styles['Heading1'],
+        fontSize=20,
+        spaceAfter=30,
+        alignment=TA_CENTER,
+        textColor=colors.black,
+        fontName='Helvetica-Bold',
+        leading=24
+    )
+    
+    # Estilo para subtítulo/seção
+    section_style = ParagraphStyle(
+        'SectionStyle',
+        parent=styles['Normal'],
+        fontSize=11,
+        spaceAfter=12,
+        spaceBefore=20,
+        alignment=TA_LEFT,
+        textColor=colors.black,
+        fontName='Helvetica-Bold',
+        leading=14
+    )
+    
+    # Estilo para texto normal
+    para_style = ParagraphStyle(
+        'ParaStyle',
+        parent=styles['Normal'],
+        fontSize=10,
+        spaceAfter=8,
+        alignment=TA_LEFT,
+        textColor=colors.black,
+        leading=13
+    )
+    
+    # Estilo para informações secundárias
+    info_style = ParagraphStyle(
+        'InfoStyle',
+        parent=styles['Normal'],
+        fontSize=9,
+        spaceAfter=6,
+        alignment=TA_LEFT,
+        textColor=colors.black,
+        leading=12
+    )
+    
+    # Conteúdo do relatório
+    story = []
+    
+    # Título principal
+    story.append(Paragraph("COBRANÇAS PENDENTES", title_style))
+    story.append(Spacer(1, 25))
+    
+    # Informações do Cliente
+    if cliente_selecionado:
+        story.append(Paragraph("CLIENTE", section_style))
+        story.append(Paragraph(cliente_selecionado.razao_social, para_style))
+        if cliente_selecionado.cnpj:
+            story.append(Paragraph(f"CNPJ: {cliente_selecionado.cnpj}", info_style))
+        story.append(Spacer(1, 25))
+    
+    # Calcular totais
+    total_carregamento = sum([c.valor_carregamento for c in cobrancas_pendentes])
+    total_cte_manifesto = sum([c.valor_cte_manifesto for c in cobrancas_pendentes])
+    total_geral = total_carregamento + total_cte_manifesto
+    
+    # Tabela de cobranças - formato minimalista
+    story.append(Paragraph("COBRANÇAS", section_style))
+    
+    cobrancas_data = []
+    for cobranca in cobrancas_pendentes:
+        romaneios_codigos = [r.codigo for r in cobranca.romaneios.all()]
+        romaneios_str = ', '.join(romaneios_codigos[:3])
+        if len(romaneios_codigos) > 3:
+            romaneios_str += f" (+{len(romaneios_codigos) - 3})"
+        
+        data_cobranca = cobranca.criado_em.strftime('%d/%m/%Y') if cobranca.criado_em else '-'
+        
+        cobrancas_data.append([
+            romaneios_str,
+            data_cobranca,
+            format_brazilian_currency(cobranca.valor_carregamento),
+            format_brazilian_currency(cobranca.valor_cte_manifesto),
+            format_brazilian_currency(cobranca.valor_total)
+        ])
+    
+    # Cabeçalho da tabela
+    header_data = [['Romaneio', 'Data', 'Carregamento', 'CTE/Manifesto', 'Total']]
+    header_table = Table(header_data, colWidths=[4*cm, 2.5*cm, 2.5*cm, 2.5*cm, 2.5*cm])
+    header_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, 0), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('TOPPADDING', (0, 0), (-1, 0), 8),
+        ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+    ]))
+    story.append(header_table)
+    
+    # Dados das cobranças
+    if cobrancas_data:
+        dados_table = Table(cobrancas_data, colWidths=[4*cm, 2.5*cm, 2.5*cm, 2.5*cm, 2.5*cm])
+        dados_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+            ('ALIGN', (2, 0), (-1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor('#ecf0f1')),
+        ]))
+        story.append(dados_table)
+    
+    story.append(Spacer(1, 10))
+    
+    # Total consolidado
+    total_data = [
+        ['Total Carregamento', format_brazilian_currency(total_carregamento)],
+        ['Total CTE/Manifesto', format_brazilian_currency(total_cte_manifesto)],
+    ]
+    
+    total_table = Table(total_data, colWidths=[10*cm, 4*cm])
+    total_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica'),
+        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor('#ecf0f1')),
+    ]))
+    story.append(total_table)
+    story.append(Spacer(1, 5))
+    
+    # Total geral destacado
+    total_geral_data = [['TOTAL GERAL', format_brazilian_currency(total_geral)]]
+    total_geral_table = Table(total_geral_data, colWidths=[10*cm, 4*cm])
+    total_geral_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 12),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('TOPPADDING', (0, 0), (-1, -1), 12),
+        ('LINEABOVE', (0, 0), (-1, 0), 1, colors.black),
+        ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+    ]))
+    story.append(total_geral_table)
+    story.append(Spacer(1, 30))
+    
+    # Rodapé minimalista
+    data_geracao = datetime.now().strftime('%d/%m/%Y às %H:%M')
+    linha_rodape = Table([['']], colWidths=[13*cm], rowHeights=[0.3*cm])
+    linha_rodape.setStyle(TableStyle([
+        ('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.HexColor('#ecf0f1')),
+    ]))
+    story.append(linha_rodape)
+    story.append(Spacer(1, 8))
+    story.append(Paragraph(f"Gerado em {data_geracao}", info_style))
+    
+    # Construir PDF
+    doc.build(story)
+    
+    # Obter conteúdo do buffer
+    pdf_content = buffer.getvalue()
+    buffer.close()
+    
+    return pdf_content

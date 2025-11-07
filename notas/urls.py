@@ -72,6 +72,8 @@ urlpatterns = [
     path('minhas-notas/<int:pk>/imprimir/', views.imprimir_nota_fiscal, name='imprimir_nota_fiscal'),
     path('minhas-notas/imprimir-relatorio-deposito/', views.imprimir_relatorio_deposito, name='imprimir_relatorio_deposito'),
     path('meus-romaneios/', views.meus_romaneios, name='meus_romaneios'),
+    path('minhas-cobrancas-carregamento/', views.minhas_cobrancas_carregamento, name='minhas_cobrancas_carregamento'),
+    path('minhas-cobrancas-carregamento/<int:cobranca_id>/gerar-pdf/', views.gerar_relatorio_cobranca_carregamento_pdf_cliente, name='gerar_relatorio_cobranca_carregamento_pdf_cliente'),
     
     # URLs para Gerenciamento de Usuários (apenas administradores)
     path('usuarios/', views.listar_usuarios, name='listar_usuarios'),
@@ -96,6 +98,21 @@ urlpatterns = [
     path('relatorios/fechamento-frete/', views.fechamento_frete, name='fechamento_frete'),
     path('relatorios/cobranca-mensal/', views.cobranca_mensal, name='cobranca_mensal'),
     path('relatorios/cobranca-carregamento/', views.cobranca_carregamento, name='cobranca_carregamento'),
+    
+    # URLs para nova estrutura de cobrança de carregamento
+    path('cobranca-carregamento/criar/', views.criar_cobranca_carregamento, name='criar_cobranca_carregamento'),
+    path('cobranca-carregamento/<int:cobranca_id>/editar/', views.editar_cobranca_carregamento, name='editar_cobranca_carregamento'),
+    path('cobranca-carregamento/<int:cobranca_id>/baixar/', views.baixar_cobranca_carregamento, name='baixar_cobranca_carregamento'),
+    path('cobranca-carregamento/<int:cobranca_id>/excluir/', views.excluir_cobranca_carregamento, name='excluir_cobranca_carregamento'),
+    path('cobranca-carregamento/<int:cobranca_id>/gerar-pdf/', views.gerar_relatorio_cobranca_carregamento_pdf, name='gerar_relatorio_cobranca_carregamento_pdf'),
+    path('cobranca-carregamento/relatorio-consolidado/', views.gerar_relatorio_consolidado_cobranca_pdf, name='gerar_relatorio_consolidado_cobranca'),
+    path('api/romaneios-cliente/<int:cliente_id>/', views.carregar_romaneios_cliente, name='carregar_romaneios_cliente'),
+    
+    # URLs para gerenciamento de despesas de carregamento (antiga estrutura - mantida para compatibilidade)
+    path('romaneios/<int:romaneio_id>/despesas/', views.gerenciar_despesas_romaneio, name='gerenciar_despesas_romaneio'),
+    path('despesas/<int:despesa_id>/baixar/', views.baixar_despesa, name='baixar_despesa'),
+    path('despesas/<int:despesa_id>/editar/', views.editar_despesa, name='editar_despesa'),
+    path('despesas/<int:despesa_id>/excluir/', views.excluir_despesa, name='excluir_despesa'),
     
     # URLs para Agenda de Entregas
     path('agenda-entregas/', views.listar_agenda_entregas, name='listar_agenda_entregas'),
