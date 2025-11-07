@@ -41,8 +41,9 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 
 # Configurações de sessão
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+# Desabilitado para HTTP (habilitar quando tiver HTTPS)
+SESSION_COOKIE_SECURE = False  # True quando tiver HTTPS
+CSRF_COOKIE_SECURE = False  # True quando tiver HTTPS
 
 # OTIMIZAÇÃO: Cache em arquivo em vez de memória
 CACHES = {
