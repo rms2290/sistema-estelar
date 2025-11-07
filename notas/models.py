@@ -912,7 +912,9 @@ class CobrancaCarregamento(models.Model):
     @property
     def valor_total(self):
         """Calcula o valor total da cobrança"""
-        return self.valor_carregamento + self.valor_cte_manifesto
+        carregamento = self.valor_carregamento or 0
+        cte_manifesto = self.valor_cte_manifesto or 0
+        return carregamento + cte_manifesto
     
     def get_romaneios_display(self):
         """Retorna string com os códigos dos romaneios"""
