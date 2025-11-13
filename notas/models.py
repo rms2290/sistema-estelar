@@ -1,7 +1,61 @@
 from django.db import models
-from django.db.models import UniqueConstraint
+from django.db.models import UniqueConstraint, Q
 from django.utils import timezone
 from django.contrib.auth.models import BaseUserManager, AbstractUser
+from django.core.exceptions import ValidationError
+
+# --------------------------------------------------------------------------------------
+# Mixin para Soft Delete (Exclusão Suave)
+# --------------------------------------------------------------------------------------
+class SoftDeleteManager(models.Manager):
+    """Manager que exclui automaticamente registros com deleted_at não nulo"""
+    def get_queryset(self):
+        return super().get_queryset().filter(deleted_at__isnull=True)
+
+class SoftDeleteMixin(models.Model):
+    """Mixin que adiciona funcionalidade de soft delete aos modelos"""
+    deleted_at = models.DateTimeField(null=True, blank=True, verbose_name="Data de Exclusão")
+    deleted_by = models.ForeignKey(
+        'Usuario', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='%(class)s_excluidos',
+        verbose_name="Excluído por"
+    )
+    
+    # Managers
+    objects = SoftDeleteManager()  # Manager padrão (exclui soft deleted)
+    all_objects = models.Manager()  # Manager para ver todos (incluindo soft deleted)
+    
+    class Meta:
+        abstract = True
+    
+    @property
+    def is_deleted(self):
+        """Retorna True se o registro foi excluído (soft delete)"""
+        return self.deleted_at is not None
+    
+    def soft_delete(self, user=None):
+        """Marca o registro como excluído sem removê-lo do banco"""
+        self.deleted_at = timezone.now()
+        if user:
+            self.deleted_by = user
+        self.save(update_fields=['deleted_at', 'deleted_by'])
+    
+    def restore(self):
+        """Restaura um registro soft deleted"""
+        self.deleted_at = None
+        self.deleted_by = None
+        self.save(update_fields=['deleted_at', 'deleted_by'])
+    
+    def delete(self, *args, **kwargs):
+        """Override do delete padrão - usa soft delete por padrão"""
+        # Se usar force_delete=True, exclui permanentemente
+        if kwargs.pop('force_delete', False):
+            return super().delete(*args, **kwargs)
+        # Senão, usa soft delete
+        self.soft_delete(user=kwargs.pop('user', None))
 
 # Custom save method mixin for uppercase text fields
 class UpperCaseMixin:
@@ -50,7 +104,7 @@ class UsuarioManager(BaseUserManager):
 # --------------------------------------------------------------------------------------
 # Clientes
 # --------------------------------------------------------------------------------------
-class Cliente(UpperCaseMixin, models.Model):
+class Cliente(UpperCaseMixin, SoftDeleteMixin, models.Model):
     razao_social = models.CharField(max_length=255, unique=True, verbose_name="Razão Social") # Adicionado unique=True
     cnpj = models.CharField(max_length=18, unique=True, blank=True, null=True, verbose_name="CNPJ")
     nome_fantasia = models.CharField(max_length=255, blank=True, null=True, verbose_name="Nome Fantasia")
@@ -84,7 +138,7 @@ class Cliente(UpperCaseMixin, models.Model):
 # --------------------------------------------------------------------------------------
 # Notas Fiscal
 # --------------------------------------------------------------------------------------
-class NotaFiscal(UpperCaseMixin, models.Model):
+class NotaFiscal(UpperCaseMixin, SoftDeleteMixin, models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='notas_fiscais', verbose_name="Cliente")
     nota = models.CharField(max_length=50, verbose_name="Número da Nota")
     data = models.DateField(verbose_name="Data de Emissão") # Nome 'data' mantido, era o que o Django esperava
@@ -120,6 +174,33 @@ class NotaFiscal(UpperCaseMixin, models.Model):
 
     def __str__(self):
         return f"Nota {self.nota} - Cliente: {self.cliente.razao_social}"
+    
+    @property
+    def status_calculado(self):
+        """Retorna o status correto baseado nos romaneios vinculados"""
+        # Verificar através do related_name 'romaneios_vinculados' (do campo notas_fiscais no RomaneioViagem)
+        # Este é o campo usado no template e no código
+        try:
+            # Usar romaneios_vinculados primeiro (related_name do campo notas_fiscais no RomaneioViagem)
+            if hasattr(self, 'romaneios_vinculados') and self.romaneios_vinculados.exists():
+                return 'Enviada'
+            # Fallback para o campo romaneios direto (ManyToMany no NotaFiscal)
+            if hasattr(self, 'romaneios') and self.romaneios.exists():
+                return 'Enviada'
+        except:
+            pass
+        
+        # Caso contrário, status deve ser "Depósito"
+        return 'Depósito'
+    
+    def corrigir_status(self):
+        """Corrige o status da nota fiscal baseado nos romaneios vinculados"""
+        status_correto = self.status_calculado
+        if self.status != status_correto:
+            self.status = status_correto
+            self.save(update_fields=['status'])
+            return True  # Retorna True se foi corrigido
+        return False  # Retorna False se já estava correto
 
     class Meta:
         verbose_name = "Nota Fiscal"
@@ -132,7 +213,7 @@ class NotaFiscal(UpperCaseMixin, models.Model):
 # --------------------------------------------------------------------------------------
 # Motorista
 # --------------------------------------------------------------------------------------
-class Motorista(UpperCaseMixin, models.Model):
+class Motorista(UpperCaseMixin, SoftDeleteMixin, models.Model):
     nome = models.CharField(max_length=255, verbose_name="Nome Completo")
     cpf = models.CharField(max_length=14, unique=True, verbose_name="CPF") # Ex: 000.000.000-00
     rg = models.CharField(max_length=20, blank=True, null=True, verbose_name="RG/RNE")
@@ -245,7 +326,7 @@ class PlacaVeiculo(models.Model):
 # --------------------------------------------------------------------------------------
 # Veículos
 # --------------------------------------------------------------------------------------
-class Veiculo(UpperCaseMixin, models.Model):
+class Veiculo(UpperCaseMixin, SoftDeleteMixin, models.Model):
     # Tipo da UNIDADE de Veículo (para menubar)
     TIPO_UNIDADE_CHOICES = [
         ('Carro', 'Carro'),
@@ -303,7 +384,7 @@ class Veiculo(UpperCaseMixin, models.Model):
 # --------------------------------------------------------------------------------------
 # NOVO MODELO: Romaneio de Viagem
 # --------------------------------------------------------------------------------------
-class RomaneioViagem(UpperCaseMixin, models.Model):
+class RomaneioViagem(UpperCaseMixin, SoftDeleteMixin, models.Model):
     """
     Novo modelo de Romaneio de Viagem com estrutura mais robusta
     """
@@ -1181,5 +1262,107 @@ class TabelaSeguro(models.Model):
         verbose_name = "Tabela de Seguro"
         verbose_name_plural = "Tabela de Seguros"
         ordering = ['estado']
+
+
+# --------------------------------------------------------------------------------------
+# Log de Auditoria
+# --------------------------------------------------------------------------------------
+class AuditoriaLog(models.Model):
+    """Registra todas as ações importantes do sistema para auditoria"""
+    
+    ACTION_CHOICES = [
+        ('CREATE', 'Criação'),
+        ('UPDATE', 'Edição'),
+        ('DELETE', 'Exclusão'),
+        ('SOFT_DELETE', 'Exclusão Suave'),
+        ('RESTORE', 'Restauração'),
+        ('VIEW', 'Visualização'),
+        ('LOGIN', 'Login'),
+        ('LOGOUT', 'Logout'),
+        ('EXPORT', 'Exportação'),
+        ('IMPORT', 'Importação'),
+        ('IMPERSONATE', 'Impersonação'),
+        ('END_IMPERSONATE', 'Fim de Impersonação'),
+    ]
+    
+    usuario = models.ForeignKey(
+        'Usuario',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='acoes_auditadas',
+        verbose_name="Usuário"
+    )
+    
+    acao = models.CharField(
+        max_length=20,
+        choices=ACTION_CHOICES,
+        verbose_name="Ação"
+    )
+    
+    modelo = models.CharField(
+        max_length=100,
+        verbose_name="Modelo",
+        help_text="Nome do modelo afetado (ex: Cliente, NotaFiscal)"
+    )
+    
+    objeto_id = models.IntegerField(
+        null=True,
+        blank=True,
+        verbose_name="ID do Objeto",
+        help_text="ID do registro afetado"
+    )
+    
+    descricao = models.TextField(
+        verbose_name="Descrição",
+        help_text="Descrição detalhada da ação realizada"
+    )
+    
+    dados_anteriores = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name="Dados Anteriores",
+        help_text="Estado do objeto antes da mudança (para updates/deletes)"
+    )
+    
+    dados_novos = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name="Dados Novos",
+        help_text="Estado do objeto depois da mudança (para creates/updates)"
+    )
+    
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        verbose_name="Endereço IP"
+    )
+    
+    user_agent = models.CharField(
+        max_length=500,
+        blank=True,
+        verbose_name="User Agent",
+        help_text="Informações do navegador/cliente"
+    )
+    
+    data_hora = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Data e Hora"
+    )
+    
+    def __str__(self):
+        usuario_nome = self.usuario.username if self.usuario else "Sistema"
+        return f"{self.get_acao_display()} - {self.modelo} - {usuario_nome} - {self.data_hora.strftime('%d/%m/%Y %H:%M')}"
+    
+    class Meta:
+        verbose_name = "Log de Auditoria"
+        verbose_name_plural = "Logs de Auditoria"
+        ordering = ['-data_hora']
+        indexes = [
+            models.Index(fields=['usuario', 'data_hora']),
+            models.Index(fields=['modelo', 'acao']),
+            models.Index(fields=['objeto_id', 'modelo']),
+            models.Index(fields=['acao', 'data_hora']),
+        ]
 
 

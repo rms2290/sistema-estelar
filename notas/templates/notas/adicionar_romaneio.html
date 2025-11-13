@@ -134,17 +134,9 @@
                 </div>
 
                 {# Botões de ação #}
-                <div class="d-flex justify-content-end gap-2">
-                    <button type="submit" name="salvar" class="btn btn-secondary">
-                        <i class="fas fa-save"></i> Salvar Romaneio
-                    </button>
-                    <button type="submit" name="emitir" class="btn btn-success">
-                        <i class="fas fa-paper-plane"></i> Emitir Romaneio
-                    </button>
-                    <a href="{% url 'notas:listar_romaneios' %}" class="btn btn-danger">
-                        <i class="fas fa-times"></i> Cancelar
-                    </a>
-                </div>
+                <button type="submit" name="salvar" class="btn btn-secondary me-2">Salvar Romaneio</button>
+                <button type="submit" name="emitir" class="btn btn-success me-2">Emitir Romaneio</button>
+                <a href="{% url 'notas:listar_romaneios' %}" class="btn btn-secondary">Cancelar</a>
             </form>
         </div>
     </div>

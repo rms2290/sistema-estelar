@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from .models import Cliente, NotaFiscal, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, Usuario, TabelaSeguro, TipoVeiculo, PlacaVeiculo
+from .models import Cliente, NotaFiscal, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, Usuario, TabelaSeguro, TipoVeiculo, PlacaVeiculo, AuditoriaLog
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
@@ -248,3 +248,38 @@ class PlacaVeiculoAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+@admin.register(AuditoriaLog)
+class AuditoriaLogAdmin(admin.ModelAdmin):
+    list_display = ['data_hora', 'acao', 'modelo', 'usuario', 'descricao_curta', 'ip_address']
+    list_filter = ['acao', 'modelo', 'data_hora', 'usuario']
+    search_fields = ['descricao', 'modelo', 'usuario__username', 'ip_address']
+    readonly_fields = ['data_hora', 'usuario', 'acao', 'modelo', 'objeto_id', 'descricao', 
+                       'dados_anteriores', 'dados_novos', 'ip_address', 'user_agent']
+    date_hierarchy = 'data_hora'
+    ordering = ['-data_hora']
+    
+    fieldsets = (
+        ('Informações da Ação', {
+            'fields': ('acao', 'modelo', 'objeto_id', 'descricao', 'data_hora')
+        }),
+        ('Usuário e Ambiente', {
+            'fields': ('usuario', 'ip_address', 'user_agent')
+        }),
+        ('Dados Detalhados', {
+            'fields': ('dados_anteriores', 'dados_novos'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def descricao_curta(self, obj):
+        return obj.descricao[:50] + '...' if len(obj.descricao) > 50 else obj.descricao
+    descricao_curta.short_description = 'Descrição'
+    
+    def has_add_permission(self, request):
+        # Logs são criados automaticamente, não devem ser criados manualmente
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        # Logs não devem ser deletados para manter auditoria
+        return False

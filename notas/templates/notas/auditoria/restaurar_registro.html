@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Restaurar {{ modelo_nome }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2><i class="fas fa-undo"></i> Restaurar {{ modelo_nome }}</h2>
+    
+    <div class="card">
+        <div class="card-header bg-warning">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-exclamation-triangle"></i> Confirmar Restauração
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <i class="fas fa-info-circle"></i> 
+                <strong>Atenção!</strong> Você está prestes a restaurar este registro excluído.
+                Após a restauração, o registro voltará a aparecer normalmente no sistema.
+            </div>
+            
+            <!-- Informações do Registro -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h5>Informações do Registro</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>ID:</th>
+                            <td>{{ registro.pk }}</td>
+                        </tr>
+                        <tr>
+                            <th>Descrição:</th>
+                            <td><strong>{{ registro }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Excluído em:</th>
+                            <td>{{ registro.deleted_at|date:"d/m/Y H:i:s" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Excluído por:</th>
+                            <td>{{ registro.deleted_by.username|default:"Sistema" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Formulário de Restauração -->
+            <form method="POST">
+                {% csrf_token %}
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'notas:listar_registros_excluidos' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-undo"></i> Confirmar Restauração
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

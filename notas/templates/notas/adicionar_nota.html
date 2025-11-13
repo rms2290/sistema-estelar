@@ -95,35 +95,17 @@
         </div>
 
         {# Botões de ação #}
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <button type="submit" name="salvar_e_sair" class="btn btn-success me-2">
-                    <i class="fas fa-save"></i> Salvar e Sair
-                </button>
-                <button type="submit" name="salvar_e_adicionar" class="btn btn-info me-2">
-                    <i class="fas fa-plus"></i> Salvar e Adicionar Outra
-                </button>
-                <a href="{% url 'notas:listar_notas_fiscais' %}" class="btn btn-secondary">Cancelar</a>
-            </div>
-            <div class="text-muted small">
-                <i class="fas fa-info-circle"></i> Dica: Pressione <kbd>Enter</kbd> para salvar e adicionar outra nota | 
-                <i class="fas fa-keyboard"></i> Campo data é pulado na navegação por <kbd>Tab</kbd>
-            </div>
-        </div>
+        <button type="submit" name="salvar_e_sair" class="btn btn-success me-2">Salvar</button>
+        <button type="submit" name="salvar_e_adicionar" class="btn btn-info me-2">Salvar e Adicionar +</button>
+        <a href="{% url 'notas:listar_notas_fiscais' %}" class="btn btn-secondary">Cancelar</a>
     </form>
 
-    {# JavaScript para o comportamento da tecla Enter e navegação por tab #}
+    {# JavaScript para o comportamento da tecla Enter #}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const notaFiscalForm = document.getElementById('notaFiscalForm');
             const salvarEAdicionarBtn = document.querySelector('button[name="salvar_e_adicionar"]');
             const campoNota = document.getElementById('{{ form.nota.id_for_label }}');
-            const campoData = document.getElementById('{{ form.data.id_for_label }}');
-
-            // Adicionar tabindex="-1" ao campo data para que seja pulado na navegação por tab
-            if (campoData) {
-                campoData.setAttribute('tabindex', '-1');
-            }
 
             // Focar no campo nota se a flag estiver presente
             {% if focus_nota %}
@@ -139,81 +121,11 @@
                 notaFiscalForm.addEventListener('keydown', function(event) {
                     // Verifica se a tecla Enter foi pressionada e não é em um textarea
                     if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
-                        event.preventDefault(); // Impede o envio padrão do formulário
-                        
-                        // Verifica se o formulário é válido antes de enviar
-                        if (notaFiscalForm.checkValidity()) {
-                            salvarEAdicionarBtn.click(); // Simula o clique no botão "Salvar e Adicionar Outra"
-                        } else {
-                            // Se o formulário não é válido, deixa o navegador mostrar as validações
-                            return;
-                        }
+                        event.preventDefault(); // Impede o envio padrão do formulário (que seria o primeiro botão submit)
+                        salvarEAdicionarBtn.click(); // Simula o clique no botão "Salvar e Adicionar +"
                     }
                 });
             }
-
-            // Adicionar comportamento para melhorar a experiência do usuário
-            const camposNumericos = document.querySelectorAll('input[type="number"]');
-            camposNumericos.forEach(function(campo) {
-                campo.addEventListener('keydown', function(event) {
-                    if (event.key === 'Enter') {
-                        event.preventDefault();
-                        // Move para o próximo campo ou submete o formulário
-                        const inputs = Array.from(notaFiscalForm.querySelectorAll('input, select, textarea'));
-                        const currentIndex = inputs.indexOf(this);
-                        const nextInput = inputs[currentIndex + 1];
-                        
-                        if (nextInput) {
-                            nextInput.focus();
-                        } else {
-                            // Se for o último campo, submete o formulário
-                            salvarEAdicionarBtn.click();
-                        }
-                    }
-                });
-            });
-
-            // Função para navegar entre campos pulando o campo data
-            function navigateToNextField(currentField, forward = true) {
-                const allFields = Array.from(notaFiscalForm.querySelectorAll('input, select, textarea'));
-                const currentIndex = allFields.indexOf(currentField);
-                
-                if (forward) {
-                    // Navegação para frente (Tab)
-                    let nextIndex = currentIndex + 1;
-                    while (nextIndex < allFields.length && allFields[nextIndex] === campoData) {
-                        nextIndex++;
-                    }
-                    
-                    if (nextIndex < allFields.length) {
-                        allFields[nextIndex].focus();
-                    } else {
-                        // Se chegou ao final, submete o formulário
-                        salvarEAdicionarBtn.click();
-                    }
-                } else {
-                    // Navegação para trás (Shift+Tab)
-                    let prevIndex = currentIndex - 1;
-                    while (prevIndex >= 0 && allFields[prevIndex] === campoData) {
-                        prevIndex--;
-                    }
-                    
-                    if (prevIndex >= 0) {
-                        allFields[prevIndex].focus();
-                    }
-                }
-            }
-
-            // Adicionar listener para Tab em todos os campos exceto o campo data
-            const camposNavegacao = notaFiscalForm.querySelectorAll('input:not([id="{{ form.data.id_for_label }}"]), select, textarea');
-            camposNavegacao.forEach(function(campo) {
-                campo.addEventListener('keydown', function(event) {
-                    if (event.key === 'Tab') {
-                        event.preventDefault();
-                        navigateToNextField(this, !event.shiftKey);
-                    }
-                });
-            });
         });
     </script>
 </div>

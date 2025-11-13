@@ -100,6 +100,13 @@ class NotaFiscalForm(forms.ModelForm):
             return int(peso)
         return peso
     
+    def clean_local(self):
+        """Converte string vazia em None para o campo local"""
+        local = self.cleaned_data.get('local')
+        if local == '':
+            return None
+        return local
+    
     # >>> NOVO MÉTODO CLEAN PARA VALIDAR UNICIDADE COMPOSTA E EXIBIR MENSAGEM <<<
     def clean(self):
         cleaned_data = super().clean() # Chama o clean original do ModelForm
@@ -1404,6 +1411,30 @@ class CadastroUsuarioForm(forms.ModelForm):
         if commit:
             user.save()
         return user
+
+class ConfirmarSenhaExclusaoForm(forms.Form):
+    """Formulário para confirmar senha antes de excluir um registro"""
+    senha = forms.CharField(
+        label='Confirme sua senha para excluir',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Digite sua senha',
+            'autocomplete': 'current-password',
+            'autofocus': True
+        }),
+        required=True,
+        help_text='Por segurança, é necessário confirmar sua senha para excluir este registro.'
+    )
+    
+    def __init__(self, user=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+    
+    def clean_senha(self):
+        senha = self.cleaned_data.get('senha')
+        if self.user and not self.user.check_password(senha):
+            raise ValidationError('Senha incorreta. Por favor, tente novamente.')
+        return senha
 
 class AlterarSenhaForm(forms.Form):
     senha_atual = forms.CharField(

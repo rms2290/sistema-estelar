@@ -195,9 +195,29 @@
             </div>
         </div>
 
-        <button type="submit" class="btn btn-success mt-3">Salvar</button>
-        <a href="{% url 'notas:listar_motoristas' %}" class="btn btn-secondary mt-3">Cancelar</a>
+        {# Botões de ação #}
+        <button type="submit" name="salvar_e_sair" class="btn btn-success me-2">Salvar</button>
+        <button type="submit" name="salvar_e_adicionar" class="btn btn-info me-2">Salvar e Adicionar +</button>
+        <a href="{% url 'notas:listar_motoristas' %}" class="btn btn-secondary">Cancelar</a>
     </form>
+
+    {# JavaScript para o comportamento da tecla Enter #}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const motoristaForm = document.querySelector('form');
+            const salvarEAdicionarBtn = document.querySelector('button[name="salvar_e_adicionar"]');
+
+            if (motoristaForm && salvarEAdicionarBtn) {
+                motoristaForm.addEventListener('keydown', function(event) {
+                    // Verifica se a tecla Enter foi pressionada e não é em um textarea
+                    if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
+                        event.preventDefault(); // Impede o envio padrão do formulário (que seria o primeiro botão submit)
+                        salvarEAdicionarBtn.click(); // Simula o clique no botão "Salvar e Adicionar +"
+                    }
+                });
+            }
+        });
+    </script>
 
 </div>
 {% endblock %}

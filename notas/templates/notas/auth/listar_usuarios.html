@@ -53,6 +53,25 @@
                                             <a href="{% url 'notas:editar_usuario' usuario.pk %}" class="btn btn-sm btn-outline-primary" title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </a>
+                                            {% if usuario != user and admin_original and admin_original.is_admin %}
+                                                {% if is_impersonando %}
+                                                    {% if usuario_impersonado and usuario.pk != usuario_impersonado.pk %}
+                                                    <a href="{% url 'notas:impersonar_usuario' usuario.pk %}" 
+                                                       class="btn btn-sm btn-outline-info" 
+                                                       title="Trocar para este usuário"
+                                                       onclick="return confirm('Você está prestes a trocar de usuário para {{ usuario.username }}. A impersonação atual será encerrada. Deseja continuar?');">
+                                                        <i class="fas fa-user-secret"></i> Trocar para
+                                                    </a>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <a href="{% url 'notas:impersonar_usuario' usuario.pk %}" 
+                                                       class="btn btn-sm btn-outline-info" 
+                                                       title="Fazer login como este usuário"
+                                                       onclick="return confirm('Você está prestes a fazer login como {{ usuario.username }}. Deseja continuar?');">
+                                                        <i class="fas fa-user-secret"></i> Login como
+                                                    </a>
+                                                {% endif %}
+                                            {% endif %}
                                             {% if usuario != user %}
                                             <a href="{% url 'notas:excluir_usuario' usuario.pk %}" class="btn btn-sm btn-outline-danger" title="Excluir">
                                                 <i class="fas fa-trash"></i>

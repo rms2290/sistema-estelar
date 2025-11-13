@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}Registros Excluídos{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2><i class="fas fa-trash-restore"></i> Registros Excluídos</h2>
+    
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-filter"></i> Filtros
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-6">
+                    <label for="modelo" class="form-label">Tipo de Registro</label>
+                    <select name="modelo" id="modelo" class="form-select">
+                        <option value="todos" {% if modelo_tipo == 'todos' %}selected{% endif %}>Todos</option>
+                        <option value="cliente" {% if modelo_tipo == 'cliente' %}selected{% endif %}>Clientes</option>
+                        <option value="notafiscal" {% if modelo_tipo == 'notafiscal' %}selected{% endif %}>Notas Fiscais</option>
+                        <option value="motorista" {% if modelo_tipo == 'motorista' %}selected{% endif %}>Motoristas</option>
+                        <option value="veiculo" {% if modelo_tipo == 'veiculo' %}selected{% endif %}>Veículos</option>
+                        <option value="romaneio" {% if modelo_tipo == 'romaneio' %}selected{% endif %}>Romaneios</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Filtrar
+                        </button>
+                        <a href="{% url 'notas:listar_registros_excluidos' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Limpar
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Estatísticas -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Total de Registros Excluídos</h5>
+                    <h3>{{ total_excluidos }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Lista de Registros Excluídos -->
+    {% if registros_excluidos %}
+        {% for modelo_key, dados in registros_excluidos.items %}
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-trash"></i> {{ dados.nome }} ({{ dados.total }} excluído{{ dados.total|pluralize }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Descrição</th>
+                                    <th>Excluído em</th>
+                                    <th>Excluído por</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for registro in dados.registros %}
+                                    <tr>
+                                        <td>{{ registro.pk }}</td>
+                                        <td>
+                                            <strong>{{ registro }}</strong>
+                                        </td>
+                                        <td>
+                                            {{ registro.deleted_at|date:"d/m/Y H:i:s" }}
+                                        </td>
+                                        <td>
+                                            {{ registro.deleted_by.username|default:"Sistema" }}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'notas:restaurar_registro' modelo_key registro.pk %}" 
+                                               class="btn btn-sm btn-success" 
+                                               title="Restaurar">
+                                                <i class="fas fa-undo"></i> Restaurar
+                                            </a>
+                                            <span class="badge bg-secondary" title="Registro excluído - Restaure para ver detalhes">
+                                                <i class="fas fa-ban"></i> Excluído
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if dados.total > dados.registros|length %}
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle"></i> 
+                            Mostrando {{ dados.registros|length }} de {{ dados.total }} registro{{ dados.total|pluralize }} excluído{{ dados.total|pluralize }}.
+                            Use o filtro para ver registros específicos.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="card">
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    {% if modelo_tipo == 'todos' %}
+                        Nenhum registro excluído encontrado no sistema.
+                    {% else %}
+                        Nenhum registro excluído encontrado para o tipo selecionado.
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    
+    <!-- Link para Logs de Auditoria -->
+    <div class="mt-4">
+        <a href="{% url 'notas:listar_logs_auditoria' %}" class="btn btn-secondary">
+            <i class="fas fa-history"></i> Ver Logs de Auditoria
+        </a>
+    </div>
+</div>
+{% endblock %}
+

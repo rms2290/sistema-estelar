@@ -80,6 +80,8 @@ urlpatterns = [
     path('usuarios/cadastrar/', views.cadastrar_usuario, name='cadastrar_usuario'),
     path('usuarios/editar/<int:pk>/', views.editar_usuario, name='editar_usuario'),
     path('usuarios/excluir/<int:pk>/', views.excluir_usuario, name='excluir_usuario'),
+    path('usuarios/impersonar/<int:pk>/', views.impersonar_usuario, name='impersonar_usuario'),
+    path('usuarios/encerrar-impersonacao/', views.encerrar_impersonacao, name='encerrar_impersonacao'),
     
     # URLs para Tabela de Seguros
     path('tabela-seguros/', views.listar_tabela_seguros, name='listar_tabela_seguros'),
@@ -128,6 +130,11 @@ urlpatterns = [
     path('widget-agenda-entregas/', views.widget_agenda_entregas, name='widget_agenda_entregas'),
     path('test-widget-agenda/', views.test_widget_agenda, name='test_widget_agenda'),
     
+    # URLs para Logs de Auditoria (apenas administradores)
+    path('auditoria/logs/', views.listar_logs_auditoria, name='listar_logs_auditoria'),
+    path('auditoria/logs/<int:pk>/', views.detalhes_log_auditoria, name='detalhes_log_auditoria'),
+    path('auditoria/registros-excluidos/', views.listar_registros_excluidos, name='listar_registros_excluidos'),
+    path('auditoria/restaurar/<str:modelo>/<int:pk>/', views.restaurar_registro, name='restaurar_registro'),
     
     path('api/notas-fiscais/<int:cliente_id>/', views.load_notas_fiscais_para_romaneio, name='api_notas_fiscais_para_romaneio'),
 ]

@@ -38,13 +38,36 @@
         
         <!-- Área do Usuário -->
         <div class="user-area">
+            {% if user.is_authenticated %}
+                <!-- Alerta de Impersonação -->
+                {% if request.session.admin_original_id %}
+                <div class="alert alert-warning mb-0 me-2" style="padding: 0.25rem 0.5rem; font-size: 0.875rem;">
+                    <i class="fas fa-user-secret"></i> 
+                    <strong>Modo Impersonação:</strong> Você está logado como <strong>{{ user.username }}</strong>
+                    <a href="{% url 'notas:encerrar_impersonacao' %}" class="btn btn-sm btn-warning ms-2">
+                        <i class="fas fa-times"></i> Voltar ao Admin
+                    </a>
+                </div>
+                {% endif %}
+            {% endif %}
             <div class="user-info">
                 {% if user.is_authenticated %}
                     <div class="dropdown">
                         <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-user"></i> {{ user.get_full_name|default:user.username }}
+                            {% if request.session.admin_original_id %}
+                                <span class="badge bg-warning text-dark ms-1">
+                                    <i class="fas fa-user-secret"></i> Impersonando
+                                </span>
+                            {% endif %}
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            {% if request.session.admin_original_id %}
+                            <li><a class="dropdown-item text-warning" href="{% url 'notas:encerrar_impersonacao' %}">
+                                <i class="fas fa-user-secret"></i> <strong>Encerrar Impersonação</strong>
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            {% endif %}
                             <li><a class="dropdown-item" href="{% url 'notas:perfil' %}">
                                 <i class="fas fa-user-circle"></i> Meu Perfil
                             </a></li>
@@ -234,6 +257,22 @@
                             </a></li>
                             <li><a href="{% url 'notas:listar_tabela_seguros' %}">
                                 <i class="fas fa-shield-alt"></i> Tabela de Seguros
+                            </a></li>
+                        </ul>
+                    </li>
+                    
+                    <!-- Auditoria -->
+                    <li class="nav-group">
+                        <div class="nav-group-header">
+                            <i class="fas fa-clipboard-list"></i>
+                            <span>Auditoria</span>
+                        </div>
+                        <ul class="nav-submenu">
+                            <li><a href="{% url 'notas:listar_logs_auditoria' %}">
+                                <i class="fas fa-history"></i> Logs de Auditoria
+                            </a></li>
+                            <li><a href="{% url 'notas:listar_registros_excluidos' %}">
+                                <i class="fas fa-trash-restore"></i> Registros Excluídos
                             </a></li>
                         </ul>
                     </li>
