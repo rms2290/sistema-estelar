@@ -1,61 +1,7 @@
 from django.db import models
-from django.db.models import UniqueConstraint, Q
+from django.db.models import UniqueConstraint
 from django.utils import timezone
 from django.contrib.auth.models import BaseUserManager, AbstractUser
-from django.core.exceptions import ValidationError
-
-# --------------------------------------------------------------------------------------
-# Mixin para Soft Delete (Exclusão Suave)
-# --------------------------------------------------------------------------------------
-class SoftDeleteManager(models.Manager):
-    """Manager que exclui automaticamente registros com deleted_at não nulo"""
-    def get_queryset(self):
-        return super().get_queryset().filter(deleted_at__isnull=True)
-
-class SoftDeleteMixin(models.Model):
-    """Mixin que adiciona funcionalidade de soft delete aos modelos"""
-    deleted_at = models.DateTimeField(null=True, blank=True, verbose_name="Data de Exclusão")
-    deleted_by = models.ForeignKey(
-        'Usuario', 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True,
-        related_name='%(class)s_excluidos',
-        verbose_name="Excluído por"
-    )
-    
-    # Managers
-    objects = SoftDeleteManager()  # Manager padrão (exclui soft deleted)
-    all_objects = models.Manager()  # Manager para ver todos (incluindo soft deleted)
-    
-    class Meta:
-        abstract = True
-    
-    @property
-    def is_deleted(self):
-        """Retorna True se o registro foi excluído (soft delete)"""
-        return self.deleted_at is not None
-    
-    def soft_delete(self, user=None):
-        """Marca o registro como excluído sem removê-lo do banco"""
-        self.deleted_at = timezone.now()
-        if user:
-            self.deleted_by = user
-        self.save(update_fields=['deleted_at', 'deleted_by'])
-    
-    def restore(self):
-        """Restaura um registro soft deleted"""
-        self.deleted_at = None
-        self.deleted_by = None
-        self.save(update_fields=['deleted_at', 'deleted_by'])
-    
-    def delete(self, *args, **kwargs):
-        """Override do delete padrão - usa soft delete por padrão"""
-        # Se usar force_delete=True, exclui permanentemente
-        if kwargs.pop('force_delete', False):
-            return super().delete(*args, **kwargs)
-        # Senão, usa soft delete
-        self.soft_delete(user=kwargs.pop('user', None))
 
 # Custom save method mixin for uppercase text fields
 class UpperCaseMixin:
@@ -70,7 +16,7 @@ class UpperCaseMixin:
                         'email', 'password', 'username', 'cpf', 'cnpj', 
                         'cnh', 'chassi', 'renavam', 'placa', 'cep',
                         'telefone', 'rntrc', 'numero_consulta', 'tipo_usuario',
-                        'status'  # Adicionado para não converter status para maiúsculo
+                        'status', 'rg'  # Adicionado para não converter status e RG para maiúsculo
                     ]
                     if field.name not in exclude_fields:
                         setattr(self, field.name, value.upper())
@@ -104,7 +50,7 @@ class UsuarioManager(BaseUserManager):
 # --------------------------------------------------------------------------------------
 # Clientes
 # --------------------------------------------------------------------------------------
-class Cliente(UpperCaseMixin, SoftDeleteMixin, models.Model):
+class Cliente(UpperCaseMixin, models.Model):
     razao_social = models.CharField(max_length=255, unique=True, verbose_name="Razão Social") # Adicionado unique=True
     cnpj = models.CharField(max_length=18, unique=True, blank=True, null=True, verbose_name="CNPJ")
     nome_fantasia = models.CharField(max_length=255, blank=True, null=True, verbose_name="Nome Fantasia")
@@ -138,7 +84,7 @@ class Cliente(UpperCaseMixin, SoftDeleteMixin, models.Model):
 # --------------------------------------------------------------------------------------
 # Notas Fiscal
 # --------------------------------------------------------------------------------------
-class NotaFiscal(UpperCaseMixin, SoftDeleteMixin, models.Model):
+class NotaFiscal(UpperCaseMixin, models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='notas_fiscais', verbose_name="Cliente")
     nota = models.CharField(max_length=50, verbose_name="Número da Nota")
     data = models.DateField(verbose_name="Data de Emissão") # Nome 'data' mantido, era o que o Django esperava
@@ -174,33 +120,6 @@ class NotaFiscal(UpperCaseMixin, SoftDeleteMixin, models.Model):
 
     def __str__(self):
         return f"Nota {self.nota} - Cliente: {self.cliente.razao_social}"
-    
-    @property
-    def status_calculado(self):
-        """Retorna o status correto baseado nos romaneios vinculados"""
-        # Verificar através do related_name 'romaneios_vinculados' (do campo notas_fiscais no RomaneioViagem)
-        # Este é o campo usado no template e no código
-        try:
-            # Usar romaneios_vinculados primeiro (related_name do campo notas_fiscais no RomaneioViagem)
-            if hasattr(self, 'romaneios_vinculados') and self.romaneios_vinculados.exists():
-                return 'Enviada'
-            # Fallback para o campo romaneios direto (ManyToMany no NotaFiscal)
-            if hasattr(self, 'romaneios') and self.romaneios.exists():
-                return 'Enviada'
-        except:
-            pass
-        
-        # Caso contrário, status deve ser "Depósito"
-        return 'Depósito'
-    
-    def corrigir_status(self):
-        """Corrige o status da nota fiscal baseado nos romaneios vinculados"""
-        status_correto = self.status_calculado
-        if self.status != status_correto:
-            self.status = status_correto
-            self.save(update_fields=['status'])
-            return True  # Retorna True se foi corrigido
-        return False  # Retorna False se já estava correto
 
     class Meta:
         verbose_name = "Nota Fiscal"
@@ -213,7 +132,7 @@ class NotaFiscal(UpperCaseMixin, SoftDeleteMixin, models.Model):
 # --------------------------------------------------------------------------------------
 # Motorista
 # --------------------------------------------------------------------------------------
-class Motorista(UpperCaseMixin, SoftDeleteMixin, models.Model):
+class Motorista(UpperCaseMixin, models.Model):
     nome = models.CharField(max_length=255, verbose_name="Nome Completo")
     cpf = models.CharField(max_length=14, unique=True, verbose_name="CPF") # Ex: 000.000.000-00
     rg = models.CharField(max_length=20, blank=True, null=True, verbose_name="RG/RNE")
@@ -326,7 +245,7 @@ class PlacaVeiculo(models.Model):
 # --------------------------------------------------------------------------------------
 # Veículos
 # --------------------------------------------------------------------------------------
-class Veiculo(UpperCaseMixin, SoftDeleteMixin, models.Model):
+class Veiculo(UpperCaseMixin, models.Model):
     # Tipo da UNIDADE de Veículo (para menubar)
     TIPO_UNIDADE_CHOICES = [
         ('Carro', 'Carro'),
@@ -384,7 +303,7 @@ class Veiculo(UpperCaseMixin, SoftDeleteMixin, models.Model):
 # --------------------------------------------------------------------------------------
 # NOVO MODELO: Romaneio de Viagem
 # --------------------------------------------------------------------------------------
-class RomaneioViagem(UpperCaseMixin, SoftDeleteMixin, models.Model):
+class RomaneioViagem(UpperCaseMixin, models.Model):
     """
     Novo modelo de Romaneio de Viagem com estrutura mais robusta
     """
@@ -396,7 +315,7 @@ class RomaneioViagem(UpperCaseMixin, SoftDeleteMixin, models.Model):
         max_length=20, 
         unique=True, 
         verbose_name="Código do Romaneio",
-        help_text="Código único do romaneio (ex: ROM-001, ROM-002, ROM-003...)"
+        help_text="Código único do romaneio (ex: ROM-2024-01-0001)"
     )
     
     STATUS_ROMANEIO_CHOICES = [
@@ -747,55 +666,29 @@ class RomaneioViagem(UpperCaseMixin, SoftDeleteMixin, models.Model):
         }
     
     def gerar_codigo_automatico(self):
-        """Gera código automático para o romaneio no formato ROM-NNN (sequencial sem resetar)"""
+        """Gera código automático para o romaneio"""
         if self.codigo:
             return
         
-        # Buscar todos os romaneios (exceto genéricos ROM-100-XXX)
-        romaneios = RomaneioViagem.objects.exclude(
-            codigo__startswith="ROM-100-"
-        ).exclude(
-            codigo__isnull=True
-        ).exclude(
-            codigo=""
-        )
+        ano_atual = timezone.now().year
+        mes_atual = timezone.now().month
         
-        max_sequence = 0
+        # Buscar último romaneio do mês
+        ultimo_romaneio = RomaneioViagem.objects.filter(
+            codigo__startswith=f"ROM-{ano_atual}-{mes_atual:02d}"
+        ).order_by('-codigo').first()
         
-        # Extrair números de todos os formatos possíveis
-        for romaneio in romaneios:
-            if not romaneio.codigo:
-                continue
-                
+        if ultimo_romaneio:
+            # Extrair número sequencial
             try:
-                parts = romaneio.codigo.split('-')
-                
-                # Formato ROM-XXX (formato simples)
-                if len(parts) == 2 and parts[0] == 'ROM':
-                    num = int(parts[1])
-                    max_sequence = max(max_sequence, num)
-                
-                # Formato ROM-YYYY-MM-XXXX (formato com data)
-                elif len(parts) == 4 and parts[0] == 'ROM':
-                    num = int(parts[3])
-                    max_sequence = max(max_sequence, num)
-                
-                # Formato ROM-YYYY-MM-XXXX (caso tenha menos partes mas ainda seja numérico)
-                elif len(parts) >= 2 and parts[0] == 'ROM':
-                    # Tentar extrair o último número
-                    for part in reversed(parts[1:]):
-                        if part.isdigit():
-                            num = int(part)
-                            max_sequence = max(max_sequence, num)
-                            break
-                            
+                numero_atual = int(ultimo_romaneio.codigo.split('-')[-1])
+                novo_numero = numero_atual + 1
             except (ValueError, IndexError):
-                continue
+                novo_numero = 1
+        else:
+            novo_numero = 1
         
-        # Próximo número sequencial (nunca reseta)
-        next_sequence = max_sequence + 1
-        
-        self.codigo = f"ROM-{next_sequence:03d}"
+        self.codigo = f"ROM-{ano_atual}-{mes_atual:02d}-{novo_numero:04d}"
     
     def save(self, *args, **kwargs):
         # Gerar código automático se não existir
@@ -826,180 +719,6 @@ class RomaneioViagem(UpperCaseMixin, SoftDeleteMixin, models.Model):
             models.Index(fields=['motorista']),
             models.Index(fields=['data_emissao']),
         ]
-
-# --------------------------------------------------------------------------------------
-# MODELO: DespesaCarregamento (para gerenciar despesas de carregamento)
-# --------------------------------------------------------------------------------------
-class DespesaCarregamento(models.Model):
-    """
-    Modelo para gerenciar despesas de carregamento (Carregamento, CTE/Manifesto)
-    vinculadas a um romaneio
-    """
-    TIPO_DESPESA_CHOICES = [
-        ('Carregamento', 'Carregamento'),
-        ('CTE/Manifesto', 'CTE/Manifesto'),
-    ]
-    
-    STATUS_CHOICES = [
-        ('Pendente', 'Pendente'),
-        ('Baixado', 'Baixado'),
-    ]
-    
-    romaneio = models.ForeignKey(
-        RomaneioViagem,
-        on_delete=models.CASCADE,
-        related_name='despesas',
-        verbose_name="Romaneio"
-    )
-    
-    tipo_despesa = models.CharField(
-        max_length=20,
-        choices=TIPO_DESPESA_CHOICES,
-        verbose_name="Tipo de Despesa"
-    )
-    
-    valor = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        verbose_name="Valor (R$)"
-    )
-    
-    status = models.CharField(
-        max_length=10,
-        choices=STATUS_CHOICES,
-        default='Pendente',
-        verbose_name="Status"
-    )
-    
-    data_vencimento = models.DateField(
-        null=True,
-        blank=True,
-        verbose_name="Data de Vencimento"
-    )
-    
-    data_baixa = models.DateField(
-        null=True,
-        blank=True,
-        verbose_name="Data de Baixa"
-    )
-    
-    observacoes = models.TextField(
-        blank=True,
-        null=True,
-        verbose_name="Observações"
-    )
-    
-    criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Data de Criação")
-    atualizado_em = models.DateTimeField(auto_now=True, verbose_name="Data de Atualização")
-    
-    class Meta:
-        verbose_name = "Despesa de Carregamento"
-        verbose_name_plural = "Despesas de Carregamento"
-        ordering = ['-criado_em']
-        indexes = [
-            models.Index(fields=['romaneio']),
-            models.Index(fields=['status']),
-            models.Index(fields=['tipo_despesa']),
-        ]
-    
-    def __str__(self):
-        return f"{self.get_tipo_despesa_display()} - {self.romaneio.codigo} - R$ {self.valor}"
-
-# --------------------------------------------------------------------------------------
-# MODELO: CobrancaCarregamento (Nova estrutura - agrupa múltiplos romaneios)
-# --------------------------------------------------------------------------------------
-class CobrancaCarregamento(models.Model):
-    """
-    Modelo para gerenciar cobranças de carregamento agrupando múltiplos romaneios
-    de um cliente (que pode ter múltiplos CNPJs)
-    """
-    STATUS_CHOICES = [
-        ('Pendente', 'Pendente'),
-        ('Baixado', 'Baixado'),
-    ]
-    
-    cliente = models.ForeignKey(
-        Cliente,
-        on_delete=models.PROTECT,
-        related_name='cobrancas_carregamento',
-        verbose_name="Cliente"
-    )
-    
-    romaneios = models.ManyToManyField(
-        RomaneioViagem,
-        related_name='cobrancas_vinculadas',
-        verbose_name="Romaneios",
-        help_text="Selecione os romaneios que fazem parte desta cobrança"
-    )
-    
-    valor_carregamento = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0.00,
-        verbose_name="Valor Carregamento (R$)"
-    )
-    
-    valor_cte_manifesto = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0.00,
-        verbose_name="Valor CTE/Manifesto (R$)"
-    )
-    
-    status = models.CharField(
-        max_length=10,
-        choices=STATUS_CHOICES,
-        default='Pendente',
-        verbose_name="Status"
-    )
-    
-    data_vencimento = models.DateField(
-        null=True,
-        blank=True,
-        verbose_name="Data de Vencimento"
-    )
-    
-    data_baixa = models.DateField(
-        null=True,
-        blank=True,
-        verbose_name="Data de Baixa"
-    )
-    
-    observacoes = models.TextField(
-        blank=True,
-        null=True,
-        verbose_name="Observações"
-    )
-    
-    criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Data de Criação")
-    atualizado_em = models.DateTimeField(auto_now=True, verbose_name="Data de Atualização")
-    
-    class Meta:
-        verbose_name = "Cobrança de Carregamento"
-        verbose_name_plural = "Cobranças de Carregamento"
-        ordering = ['-criado_em']
-        indexes = [
-            models.Index(fields=['cliente']),
-            models.Index(fields=['status']),
-            models.Index(fields=['data_vencimento']),
-        ]
-    
-    def __str__(self):
-        romaneios_str = ", ".join([r.codigo for r in self.romaneios.all()[:3]])
-        if self.romaneios.count() > 3:
-            romaneios_str += f" (+{self.romaneios.count() - 3} mais)"
-        return f"Cobrança {self.id} - {self.cliente.razao_social} - {romaneios_str}"
-    
-    @property
-    def valor_total(self):
-        """Calcula o valor total da cobrança"""
-        carregamento = self.valor_carregamento or 0
-        cte_manifesto = self.valor_cte_manifesto or 0
-        return carregamento + cte_manifesto
-    
-    def get_romaneios_display(self):
-        """Retorna string com os códigos dos romaneios"""
-        return ", ".join([r.codigo for r in self.romaneios.all()])
 
 # --------------------------------------------------------------------------------------
 # NOVO MODELO: HistoricoConsulta (para registrar cada consulta de risco)
@@ -1262,107 +981,5 @@ class TabelaSeguro(models.Model):
         verbose_name = "Tabela de Seguro"
         verbose_name_plural = "Tabela de Seguros"
         ordering = ['estado']
-
-
-# --------------------------------------------------------------------------------------
-# Log de Auditoria
-# --------------------------------------------------------------------------------------
-class AuditoriaLog(models.Model):
-    """Registra todas as ações importantes do sistema para auditoria"""
-    
-    ACTION_CHOICES = [
-        ('CREATE', 'Criação'),
-        ('UPDATE', 'Edição'),
-        ('DELETE', 'Exclusão'),
-        ('SOFT_DELETE', 'Exclusão Suave'),
-        ('RESTORE', 'Restauração'),
-        ('VIEW', 'Visualização'),
-        ('LOGIN', 'Login'),
-        ('LOGOUT', 'Logout'),
-        ('EXPORT', 'Exportação'),
-        ('IMPORT', 'Importação'),
-        ('IMPERSONATE', 'Impersonação'),
-        ('END_IMPERSONATE', 'Fim de Impersonação'),
-    ]
-    
-    usuario = models.ForeignKey(
-        'Usuario',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='acoes_auditadas',
-        verbose_name="Usuário"
-    )
-    
-    acao = models.CharField(
-        max_length=20,
-        choices=ACTION_CHOICES,
-        verbose_name="Ação"
-    )
-    
-    modelo = models.CharField(
-        max_length=100,
-        verbose_name="Modelo",
-        help_text="Nome do modelo afetado (ex: Cliente, NotaFiscal)"
-    )
-    
-    objeto_id = models.IntegerField(
-        null=True,
-        blank=True,
-        verbose_name="ID do Objeto",
-        help_text="ID do registro afetado"
-    )
-    
-    descricao = models.TextField(
-        verbose_name="Descrição",
-        help_text="Descrição detalhada da ação realizada"
-    )
-    
-    dados_anteriores = models.JSONField(
-        null=True,
-        blank=True,
-        verbose_name="Dados Anteriores",
-        help_text="Estado do objeto antes da mudança (para updates/deletes)"
-    )
-    
-    dados_novos = models.JSONField(
-        null=True,
-        blank=True,
-        verbose_name="Dados Novos",
-        help_text="Estado do objeto depois da mudança (para creates/updates)"
-    )
-    
-    ip_address = models.GenericIPAddressField(
-        null=True,
-        blank=True,
-        verbose_name="Endereço IP"
-    )
-    
-    user_agent = models.CharField(
-        max_length=500,
-        blank=True,
-        verbose_name="User Agent",
-        help_text="Informações do navegador/cliente"
-    )
-    
-    data_hora = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name="Data e Hora"
-    )
-    
-    def __str__(self):
-        usuario_nome = self.usuario.username if self.usuario else "Sistema"
-        return f"{self.get_acao_display()} - {self.modelo} - {usuario_nome} - {self.data_hora.strftime('%d/%m/%Y %H:%M')}"
-    
-    class Meta:
-        verbose_name = "Log de Auditoria"
-        verbose_name_plural = "Logs de Auditoria"
-        ordering = ['-data_hora']
-        indexes = [
-            models.Index(fields=['usuario', 'data_hora']),
-            models.Index(fields=['modelo', 'acao']),
-            models.Index(fields=['objeto_id', 'modelo']),
-            models.Index(fields=['acao', 'data_hora']),
-        ]
 
 

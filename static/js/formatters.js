@@ -137,8 +137,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Função para detectar o tipo de campo baseado no nome, id ou placeholder
+    // Função para detectar o tipo de campo baseado no nome, id, placeholder ou data-format
     function detectarTipoCampo(campo) {
+        // Verificar primeiro o atributo data-format (prioridade)
+        if (campo.hasAttribute && campo.hasAttribute('data-format')) {
+            const dataFormat = campo.getAttribute('data-format');
+            if (dataFormat === 'cpf' || dataFormat === 'cnpj' || dataFormat === 'telefone' || dataFormat === 'cep' || dataFormat === 'cpf_cnpj') {
+                return dataFormat;
+            }
+        }
+        
         const nome = campo.name ? campo.name.toLowerCase() : '';
         const id = campo.id ? campo.id.toLowerCase() : '';
         const placeholder = campo.placeholder ? campo.placeholder.toLowerCase() : '';
@@ -153,8 +161,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return 'telefone';
         }
         
-        // Verificar CPF
-        if (nome.includes('cpf') || id.includes('cpf') || placeholder.includes('cpf')) {
+        // Verificar CPF (verificar antes de cpf_cnpj para evitar conflito)
+        if ((nome.includes('cpf') && !nome.includes('cnpj')) || (id.includes('cpf') && !id.includes('cnpj')) || (placeholder.includes('cpf') && !placeholder.includes('cnpj'))) {
             return 'cpf';
         }
         

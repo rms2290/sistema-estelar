@@ -116,7 +116,20 @@ TIME_ZONE = 'America/Sao_Paulo'
 
 USE_I18N = True
 
+USE_L10N = True  # Habilita localização (formato de datas, números, etc.)
+
 USE_TZ = True
+
+# Formato de data padrão para o Brasil
+DATE_INPUT_FORMATS = [
+    '%d/%m/%Y',  # DD/MM/YYYY
+    '%Y-%m-%d',  # YYYY-MM-DD (formato ISO para inputs HTML5)
+    '%d/%m/%y',  # DD/MM/YY
+]
+
+DATE_FORMAT = 'd/m/Y'  # Formato de exibição padrão
+
+DATETIME_FORMAT = 'd/m/Y H:i'  # Formato de data/hora padrão
 
 
 # Static files (CSS, JavaScript, Images)

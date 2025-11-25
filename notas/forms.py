@@ -2,7 +2,8 @@ from django import forms
 from django.db.models import Q
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+from dateutil.relativedelta import relativedelta
 import re
 from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, Usuario, TabelaSeguro, AgendaEntrega
 from validate_docbr import CNPJ, CPF
@@ -99,13 +100,6 @@ class NotaFiscalForm(forms.ModelForm):
         if peso is not None:
             return int(peso)
         return peso
-    
-    def clean_local(self):
-        """Converte string vazia em None para o campo local"""
-        local = self.cleaned_data.get('local')
-        if local == '':
-            return None
-        return local
     
     # >>> NOVO MÉTODO CLEAN PARA VALIDAR UNICIDADE COMPOSTA E EXIBIR MENSAGEM <<<
     def clean(self):
@@ -278,14 +272,6 @@ class MotoristaForm(forms.ModelForm):
         required=False, # Mantém como opcional
         widget=forms.Select(attrs={'class': 'form-control'})
     )
-    
-    # Campo RG
-    rg = forms.CharField(
-        label='RG/RNE',
-        max_length=20,
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
-    )
 
     # >>> CAMPOS DE VEÍCULOS REMOVIDOS <<<
     
@@ -299,7 +285,11 @@ class MotoristaForm(forms.ModelForm):
     cpf = forms.CharField(
         label='CPF',
         max_length=14,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000.000.000-00'})
+        widget=forms.TextInput(attrs={
+            'class': 'form-control', 
+            'placeholder': '000.000.000-00',
+            'data-format': 'cpf'  # Garantir que o formatter detecte este campo
+        })
     )
     
     cnh = forms.CharField(
@@ -378,12 +368,34 @@ class MotoristaForm(forms.ModelForm):
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Digite observações sobre o motorista...'})
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Garantir que os campos de data sejam formatados corretamente quando há uma instância
+        if self.instance and self.instance.pk:
+            # Se há uma instância (edição), formatar as datas para o formato HTML5 date (YYYY-MM-DD)
+            # Isso garante que os valores sejam exibidos corretamente nos campos de input
+            if hasattr(self.instance, 'data_nascimento') and self.instance.data_nascimento:
+                # Definir o valor inicial e também o valor do widget
+                data_nasc_str = self.instance.data_nascimento.strftime('%Y-%m-%d')
+                self.fields['data_nascimento'].initial = data_nasc_str
+                # Garantir que o widget tenha o valor correto
+                if 'data_nascimento' not in self.initial:
+                    self.initial['data_nascimento'] = data_nasc_str
+            
+            if hasattr(self.instance, 'vencimento_cnh') and self.instance.vencimento_cnh:
+                # Definir o valor inicial e também o valor do widget
+                vencimento_str = self.instance.vencimento_cnh.strftime('%Y-%m-%d')
+                self.fields['vencimento_cnh'].initial = vencimento_str
+                # Garantir que o widget tenha o valor correto
+                if 'vencimento_cnh' not in self.initial:
+                    self.initial['vencimento_cnh'] = vencimento_str
 
     class Meta:
         model = Motorista
         # AJUSTADO: Adicionado os novos campos
         fields = [
-            'nome', 'cpf', 'cnh',
+            'nome', 'cpf', 'rg', 'cnh',
             'codigo_seguranca', 'vencimento_cnh', 'uf_emissao_cnh',
             'telefone',
             'endereco', 'numero', 'bairro', 'cidade', 'estado', 'cep',
@@ -392,10 +404,17 @@ class MotoristaForm(forms.ModelForm):
             'observacoes',
         ]
         widgets = {
-            'vencimento_cnh': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'rg': forms.TextInput(attrs={'class': 'form-control'}),
+            'vencimento_cnh': forms.DateInput(
+                attrs={'class': 'form-control', 'type': 'date'},
+                format='%Y-%m-%d'
+            ),
             'uf_emissao_cnh': forms.Select(attrs={'class': 'form-control'}), 
             'estado': forms.Select(attrs={'class': 'form-control'}), 
-            'data_nascimento': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'data_nascimento': forms.DateInput(
+                attrs={'class': 'form-control', 'type': 'date'},
+                format='%Y-%m-%d'
+            ),
         }
 
     # MÉTODO CLEAN_CPF (VERSÃO ÚNICA E CORRETA)
@@ -441,9 +460,11 @@ class MotoristaForm(forms.ModelForm):
     def clean(self):
         """
         Validação personalizada para garantir que os veículos sejam diferentes
+        e validar conflitos entre datas de nascimento e vencimento da CNH
         """
         cleaned_data = super().clean()
         
+        # Validações de veículos
         veiculo_principal = cleaned_data.get('veiculo_principal')
         reboque_1 = cleaned_data.get('reboque_1')
         reboque_2 = cleaned_data.get('reboque_2')
@@ -478,7 +499,89 @@ class MotoristaForm(forms.ModelForm):
             if not reboque_1 or not reboque_2:
                 raise forms.ValidationError("Para composição Bi-trem, é obrigatório selecionar tanto o Reboque 1 quanto o Reboque 2.")
         
+        # Validações de datas (apenas se ambas as datas estiverem preenchidas)
+        # IMPORTANTE: Se estamos editando e o campo não foi preenchido, preservar o valor existente
+        data_nascimento = cleaned_data.get('data_nascimento')
+        vencimento_cnh = cleaned_data.get('vencimento_cnh')
+        
+        # Se estamos editando e o campo não foi preenchido, usar o valor existente
+        if self.instance and self.instance.pk:
+            if not data_nascimento and self.instance.data_nascimento:
+                data_nascimento = self.instance.data_nascimento
+                cleaned_data['data_nascimento'] = data_nascimento
+            if not vencimento_cnh and self.instance.vencimento_cnh:
+                vencimento_cnh = self.instance.vencimento_cnh
+                cleaned_data['vencimento_cnh'] = vencimento_cnh
+        
+        hoje = date.today()
+        
+        # Validar data de nascimento (apenas se preenchida)
+        if data_nascimento:
+            # Data de nascimento não pode ser no futuro
+            if data_nascimento > hoje:
+                raise forms.ValidationError({
+                    'data_nascimento': 'A data de nascimento não pode ser no futuro.'
+                })
+            
+            # Verificar se a data de nascimento não é muito recente (menos de 16 anos)
+            # Isso evita cadastros de pessoas muito jovens, mas permite flexibilidade
+            idade_minima_absoluta = hoje - relativedelta(years=16)
+            if data_nascimento > idade_minima_absoluta:
+                raise forms.ValidationError({
+                    'data_nascimento': 'A data de nascimento indica que a pessoa tem menos de 16 anos. Verifique os dados.'
+                })
+        
+        # Validar vencimento da CNH (apenas se preenchido)
+        if vencimento_cnh:
+            # Vencimento da CNH não pode ser anterior à data de nascimento (se ambas estiverem preenchidas)
+            if data_nascimento and vencimento_cnh < data_nascimento:
+                raise forms.ValidationError({
+                    'vencimento_cnh': 'A data de vencimento da CNH não pode ser anterior à data de nascimento.'
+                })
+            
+            # Se há data de nascimento, verificar se o motorista teria pelo menos 18 anos na data de vencimento
+            if data_nascimento:
+                # Calcular idade na data de vencimento da CNH
+                idade_na_vencimento = relativedelta(vencimento_cnh, data_nascimento)
+                anos_na_vencimento = idade_na_vencimento.years
+                
+                if anos_na_vencimento < 18:
+                    raise forms.ValidationError({
+                        'vencimento_cnh': f'O motorista teria apenas {anos_na_vencimento} anos na data de vencimento da CNH. É necessário ter pelo menos 18 anos para dirigir.'
+                    })
+        
         return cleaned_data
+
+    def save(self, commit=True):
+        """
+        Sobrescreve o método save para garantir que campos vazios sejam salvos como None
+        ao invés de string vazia, especialmente para campos opcionais.
+        IMPORTANTE: Preserva valores existentes de campos de data se não foram alterados.
+        """
+        motorista = super().save(commit=False)
+        
+        # Se estamos editando uma instância existente, preservar valores de data se não foram alterados
+        if self.instance and self.instance.pk:
+            # Se o campo de data não foi preenchido no formulário, manter o valor existente
+            if not self.cleaned_data.get('data_nascimento') and self.instance.data_nascimento:
+                motorista.data_nascimento = self.instance.data_nascimento
+            if not self.cleaned_data.get('vencimento_cnh') and self.instance.vencimento_cnh:
+                motorista.vencimento_cnh = self.instance.vencimento_cnh
+        
+        # Garantir que campos vazios sejam None ao invés de string vazia
+        # IMPORTANTE: Não incluir campos de data aqui, eles são tratados acima
+        campos_opcionais = ['rg', 'cnh', 'codigo_seguranca', 'telefone', 'endereco', 
+                           'numero', 'complemento', 'bairro', 'cidade', 'estado', 'cep',
+                           'numero_consulta', 'observacoes', 'uf_emissao_cnh']
+        
+        for campo in campos_opcionais:
+            valor = getattr(motorista, campo, None)
+            if valor == '' or valor == '---' or (isinstance(valor, str) and valor.strip() == ''):
+                setattr(motorista, campo, None)
+        
+        if commit:
+            motorista.save()
+        return motorista
 
 # --------------------------------------------------------------------------------------
 # Novo formulário para Veículos
@@ -1130,7 +1233,11 @@ class MotoristaSearchForm(forms.Form):
         label='CPF',
         required=False,
         max_length=14,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000.000.000-00'})
+        widget=forms.TextInput(attrs={
+            'class': 'form-control', 
+            'placeholder': '000.000.000-00',
+            'data-format': 'cpf'  # Garantir que o formatter detecte este campo
+        })
     )
     rg = forms.CharField(
         label='RG/RNE',
@@ -1411,30 +1518,6 @@ class CadastroUsuarioForm(forms.ModelForm):
         if commit:
             user.save()
         return user
-
-class ConfirmarSenhaExclusaoForm(forms.Form):
-    """Formulário para confirmar senha antes de excluir um registro"""
-    senha = forms.CharField(
-        label='Confirme sua senha para excluir',
-        widget=forms.PasswordInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Digite sua senha',
-            'autocomplete': 'current-password',
-            'autofocus': True
-        }),
-        required=True,
-        help_text='Por segurança, é necessário confirmar sua senha para excluir este registro.'
-    )
-    
-    def __init__(self, user=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.user = user
-    
-    def clean_senha(self):
-        senha = self.cleaned_data.get('senha')
-        if self.user and not self.user.check_password(senha):
-            raise ValidationError('Senha incorreta. Por favor, tente novamente.')
-        return senha
 
 class AlterarSenhaForm(forms.Form):
     senha_atual = forms.CharField(

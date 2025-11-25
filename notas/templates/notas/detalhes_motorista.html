@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load format_filters %}
 
 {% block title %}Detalhes do Motorista - {{ motorista.nome }}{% endblock %}
 
@@ -26,7 +27,7 @@
             <div class="row">
                 <div class="col-md-6">
                     <p><strong>Nome Completo:</strong> {{ motorista.nome }}</p>
-                    <p><strong>CPF:</strong> {{ motorista.cpf }}</p>
+                    <p><strong>CPF:</strong> {{ motorista.cpf|format_cpf|default:"N/A" }}</p>
                     <p><strong>RG/RNE:</strong> {{ motorista.rg|default:"N/A" }}</p>
                     <p><strong>CNH:</strong> {{ motorista.cnh|default:"N/A" }}</p>
                     <p><strong>Código de Segurança CNH:</strong> {{ motorista.codigo_seguranca|default:"N/A" }}</p>
@@ -35,7 +36,7 @@
                     <p><strong>Vencimento CNH:</strong> {{ motorista.vencimento_cnh|date:"d/m/Y"|default:"N/A" }}</p>
                     <p><strong>UF de Emissão CNH:</strong> {{ motorista.uf_emissao_cnh|default:"N/A" }}</p>
                     <p><strong>Data de Nascimento:</strong> {{ motorista.data_nascimento|date:"d/m/Y"|default:"N/A" }}</p>
-                    <p><strong>Telefone:</strong> {{ motorista.telefone|default:"N/A" }}</p>
+                    <p><strong>Telefone:</strong> {{ motorista.telefone|format_telefone|default:"N/A" }}</p>
                 </div>
             </div>
         </div>

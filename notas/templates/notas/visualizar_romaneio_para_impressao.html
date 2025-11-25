@@ -693,7 +693,7 @@
                     <div class="signature-line"></div>
                     <div class="driver-details">
                         <div class="driver-field"><strong>MOTORISTA:</strong> {{ romaneio.motorista.nome|default:"_________________" }}</div>
-                        <div class="driver-field"><strong>CPF:</strong> {{ romaneio.motorista.cpf|default:"_________________" }}</div>
+                        <div class="driver-field"><strong>CPF:</strong> {{ romaneio.motorista.cpf|format_cpf|default:"_________________" }}</div>
                         <div class="driver-field"><strong>CNH:</strong> {{ romaneio.motorista.cnh|default:"_________________" }}</div>
                     </div>
                 </div>

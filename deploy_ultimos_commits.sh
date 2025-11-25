@@ -6,7 +6,11 @@
 
 echo "========================================================="
 echo "  DEPLOY SISTEMA ESTELAR - ÚLTIMOS COMMITS"
+echo "  VERSÃO PROTEGIDA - BANCO DE DADOS SEGURO"
 echo "========================================================="
+echo ""
+log_info "Este script inclui proteções para evitar que o banco de"
+log_info "dados seja enviado ou sobrescrito durante o deploy."
 echo ""
 
 # Cores para output
@@ -39,6 +43,69 @@ NUM_COMMITS=${1:-2}
 
 log_info "Diretorio correto verificado!"
 log_info "Fazendo deploy dos ultimos $NUM_COMMITS commits..."
+
+# ============================================================
+# VERIFICAÇÕES DE SEGURANÇA - PROTEÇÃO DO BANCO DE DADOS
+# ============================================================
+echo ""
+log_warning "=== VERIFICAÇÕES DE SEGURANÇA ==="
+
+# Verificação 1: Verificar se db.sqlite3 está no .gitignore
+log_info "1. Verificando .gitignore..."
+if [ -f ".gitignore" ]; then
+    if grep -q "db.sqlite3" .gitignore; then
+        log_info "✓ db.sqlite3 está no .gitignore (correto)."
+    else
+        log_error "✗ db.sqlite3 NÃO está no .gitignore!"
+        log_error "   Isso pode causar upload acidental do banco de dados."
+        log_error "   Adicione 'db.sqlite3' ao .gitignore antes de continuar."
+        exit 1
+    fi
+else
+    log_error ".gitignore não encontrado!"
+    exit 1
+fi
+
+# Verificação 2: Verificar se db.sqlite3 está sendo commitado
+log_info "2. Verificando se db.sqlite3 está sendo commitado..."
+if git diff --cached --name-only 2>/dev/null | grep -q "db.sqlite3"; then
+    log_error "✗ ERRO CRÍTICO: db.sqlite3 está no staging area!"
+    log_error "   Cancele o commit e remova db.sqlite3 do staging:"
+    log_error "   git reset HEAD db.sqlite3"
+    exit 1
+fi
+
+# Verificação 3: Verificar se db.sqlite3 está nos commits que serão aplicados
+log_info "3. Verificando commits que serão aplicados..."
+COMMITS_TO_CHECK=$(git log --oneline -$NUM_COMMITS --format="%H")
+for commit_hash in $COMMITS_TO_CHECK; do
+    if git diff-tree --no-commit-id --name-only -r "$commit_hash" 2>/dev/null | grep -q "db.sqlite3"; then
+        log_error "✗ ERRO CRÍTICO: O commit $commit_hash contém db.sqlite3!"
+        log_error "   Este commit não pode ser aplicado pois contém o banco de dados."
+        log_error "   Remova db.sqlite3 do commit antes de fazer deploy."
+        exit 1
+    fi
+done
+log_info "✓ Nenhum commit contém db.sqlite3."
+
+# Verificação 4: Proteger o banco de dados antes de operações git
+log_info "4. Protegendo banco de dados local..."
+if [ -f "db.sqlite3" ]; then
+    DB_SIZE=$(stat -f%z db.sqlite3 2>/dev/null || stat -c%s db.sqlite3 2>/dev/null || echo "0")
+    log_info "   Tamanho do banco: $DB_SIZE bytes"
+    if [ "$DB_SIZE" -lt 1000 ]; then
+        log_warning "⚠️  Banco de dados muito pequeno - pode estar vazio ou corrompido!"
+    fi
+    # Criar backup de segurança antes de qualquer operação git
+    PROTECT_BACKUP="backups/db_protect_$(date +%Y%m%d_%H%M%S).sqlite3"
+    cp db.sqlite3 "$PROTECT_BACKUP"
+    log_info "   Backup de proteção criado: $PROTECT_BACKUP"
+else
+    log_warning "   Banco de dados não encontrado (será criado nas migrações)."
+fi
+
+log_info "=== VERIFICAÇÕES DE SEGURANÇA CONCLUÍDAS ==="
+echo ""
 
 # 1. Backup do banco de dados
 log_info "Fazendo backup do banco de dados..."
@@ -98,23 +165,60 @@ log_info "Preparando para aplicar commits especificos..."
 # Salvar a posição atual
 ORIGINAL_HEAD=$(git rev-parse HEAD)
 
-# Fazer reset para o commit base
+# Fazer reset para o commit base (protegendo o banco de dados)
 log_info "Resetando para commit base..."
+if [ -f "db.sqlite3" ]; then
+    # Fazer backup temporário do banco antes do reset
+    TEMP_DB_BACKUP="db.sqlite3.temp_backup"
+    cp db.sqlite3 "$TEMP_DB_BACKUP"
+    log_info "Banco de dados protegido antes do reset."
+fi
+
 if git reset --hard "$BASE_COMMIT" 2>/dev/null; then
     log_info "Reset para commit base realizado!"
+    # Restaurar o banco de dados se foi afetado
+    if [ -f "$TEMP_DB_BACKUP" ]; then
+        if [ ! -f "db.sqlite3" ] || [ "$(stat -f%z db.sqlite3 2>/dev/null || stat -c%s db.sqlite3 2>/dev/null || echo "0")" -lt "$(stat -f%z "$TEMP_DB_BACKUP" 2>/dev/null || stat -c%s "$TEMP_DB_BACKUP" 2>/dev/null || echo "0")" ]; then
+            log_warning "Banco de dados pode ter sido afetado. Restaurando backup..."
+            cp "$TEMP_DB_BACKUP" db.sqlite3
+            log_info "Banco de dados restaurado!"
+        fi
+        rm -f "$TEMP_DB_BACKUP"
+    fi
 else
     log_warning "Nao foi possivel fazer reset. Tentando pull direto..."
     git checkout "$CURRENT_BRANCH"
+    # Restaurar backup se necessário
+    if [ -f "$TEMP_DB_BACKUP" ]; then
+        cp "$TEMP_DB_BACKUP" db.sqlite3 2>/dev/null || true
+        rm -f "$TEMP_DB_BACKUP"
+    fi
 fi
 
-# 9. Aplicar os commits específicos usando cherry-pick
+# 9. Aplicar os commits específicos usando cherry-pick (protegendo o banco)
 log_info "Aplicando commits especificos..."
+if [ -f "db.sqlite3" ]; then
+    # Backup antes de aplicar commits
+    PRE_CHERRY_DB="db.sqlite3.pre_cherry"
+    cp db.sqlite3 "$PRE_CHERRY_DB"
+fi
+
 for commit_hash in $COMMIT_HASHES; do
     commit_info=$(git log -1 --format="%h %s" "$commit_hash" 2>/dev/null)
     if [ -n "$commit_info" ]; then
         log_info "Aplicando commit: $commit_info"
         if git cherry-pick "$commit_hash" 2>/dev/null; then
             log_info "Commit aplicado com sucesso!"
+            # Verificar se o banco foi afetado
+            if [ -f "$PRE_CHERRY_DB" ] && [ -f "db.sqlite3" ]; then
+                ORIG_SIZE=$(stat -f%z "$PRE_CHERRY_DB" 2>/dev/null || stat -c%s "$PRE_CHERRY_DB" 2>/dev/null || echo "0")
+                NEW_SIZE=$(stat -f%z db.sqlite3 2>/dev/null || stat -c%s db.sqlite3 2>/dev/null || echo "0")
+                if [ "$NEW_SIZE" -lt "$ORIG_SIZE" ] && [ "$ORIG_SIZE" -gt 1000 ]; then
+                    log_warning "⚠️  Banco de dados pode ter sido afetado. Restaurando..."
+                    cp "$PRE_CHERRY_DB" db.sqlite3
+                    log_info "Banco de dados restaurado!"
+                fi
+            fi
         else
             log_error "Falha ao aplicar commit $commit_hash!"
             log_warning "Tentando continuar com os outros commits..."
@@ -124,6 +228,9 @@ for commit_hash in $COMMIT_HASHES; do
         log_warning "Commit $commit_hash nao encontrado. Pulando..."
     fi
 done
+
+# Limpar backup temporário
+rm -f "$PRE_CHERRY_DB" 2>/dev/null || true
 
 # 10. Ativar ambiente virtual
 log_info "Ativando ambiente virtual..."
@@ -278,6 +385,41 @@ echo "  RESUMO DOS COMMITS APLICADOS"
 echo "========================================================="
 git log --oneline -$NUM_COMMITS
 
+# 23. Verificação final do banco de dados
+echo ""
+echo "========================================================="
+echo "  VERIFICAÇÃO FINAL DO BANCO DE DADOS"
+echo "========================================================="
+if [ -f "db.sqlite3" ]; then
+    FINAL_SIZE=$(stat -f%z db.sqlite3 2>/dev/null || stat -c%s db.sqlite3 2>/dev/null || echo "0")
+    log_info "Banco de dados: PRESENTE"
+    log_info "Tamanho: $FINAL_SIZE bytes"
+    
+    # Verificar se o banco foi comprometido
+    if [ "$FINAL_SIZE" -lt 1000 ]; then
+        log_warning "⚠️  Banco de dados muito pequeno - verifique se está correto!"
+    else
+        log_info "✓ Banco de dados parece estar intacto."
+    fi
+    
+    # Verificar se há backup de proteção
+    PROTECT_BACKUPS=$(ls -1 backups/db_protect_*.sqlite3 2>/dev/null | wc -l)
+    if [ "$PROTECT_BACKUPS" -gt 0 ]; then
+        log_info "✓ Backups de proteção criados: $PROTECT_BACKUPS"
+        log_info "   Localização: backups/db_protect_*.sqlite3"
+    fi
+else
+    log_warning "Banco de dados não encontrado (será criado nas migrações)."
+fi
+
+# Verificar se db.sqlite3 ainda está no .gitignore
+if git check-ignore db.sqlite3 >/dev/null 2>&1; then
+    log_info "✓ db.sqlite3 está sendo ignorado pelo Git (correto)."
+else
+    log_error "✗ db.sqlite3 NÃO está sendo ignorado pelo Git!"
+    log_error "   Adicione 'db.sqlite3' ao .gitignore imediatamente!"
+fi
+
 # Finalizar
 echo ""
 echo "========================================================="
@@ -285,10 +427,17 @@ echo "  DEPLOY CONCLUIDO!"
 echo "========================================================="
 echo ""
 log_info "Commits aplicados: $NUM_COMMITS"
+log_info "✓ Proteções de banco de dados ativadas"
+log_info "✓ Banco de dados protegido durante todo o processo"
+log_info ""
 log_info "Proximos passos:"
 echo "   1. Acesse o sistema no navegador"
 echo "   2. Teste as funcionalidades principais"
 echo "   3. Monitore os logs: tail -f logs/gunicorn.log"
+echo "   4. Verifique se os dados de produção estão corretos"
 echo ""
 echo "========================================================="
+
+
+
 

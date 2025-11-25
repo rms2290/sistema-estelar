@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from django.db.models import Q, Max, Sum, Count 
+from django.db.models import Q, Max 
 from django.db import IntegrityError
 from django.contrib import messages
 from django.utils import timezone
@@ -10,20 +10,14 @@ from decimal import Decimal
 from datetime import datetime, date, timedelta
 
 # Importe todos os seus modelos
-from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, TabelaSeguro, AgendaEntrega, DespesaCarregamento, CobrancaCarregamento, AuditoriaLog
-
-# Importe utilitários de auditoria
-from .utils.auditoria import (
-    registrar_exclusao, registrar_criacao, registrar_edicao,
-    registrar_login, registrar_logout, registrar_restauracao
-)
+from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, TabelaSeguro, AgendaEntrega
 
 # Importe todos os seus formulários
 from .forms import (
     NotaFiscalForm, ClienteForm, MotoristaForm, VeiculoForm, RomaneioViagemForm,
     NotaFiscalSearchForm, ClienteSearchForm, MotoristaSearchForm, HistoricoConsultaForm,
     VeiculoSearchForm, RomaneioSearchForm, MercadoriaDepositoSearchForm, TabelaSeguroForm,
-    AgendaEntregaForm, MercadoriaDepositoSearchForm, ConfirmarSenhaExclusaoForm # Adicionados os novos formulários
+    AgendaEntregaForm, MercadoriaDepositoSearchForm # Adicionados os novos formulários
 )
 
 def formatar_valor_brasileiro(valor, tipo='numero'):
@@ -71,85 +65,45 @@ def formatar_peso_brasileiro(valor):
 # Funções Auxiliares
 # --------------------------------------------------------------------------------------
 def get_next_romaneio_codigo():
-    """Gera o próximo código sequencial de romaneio no formato ROM-NNN (sequencial sem resetar)."""
-    # Buscar todos os romaneios (exceto genéricos ROM-100-XXX)
-    romaneios = RomaneioViagem.objects.exclude(
+    """Gera o próximo código sequencial de romaneio no formato ROM-NNN."""
+    # Buscar todos os romaneios com código no formato ROM-XXX (excluindo genéricos)
+    prefix = "ROM-"
+    last_romaneio = RomaneioViagem.objects.filter(
+        codigo__startswith=prefix
+    ).exclude(
         codigo__startswith="ROM-100-"
-    ).exclude(
-        codigo__isnull=True
-    ).exclude(
-        codigo=""
-    )
-    
-    max_sequence = 0
-    
-    # Extrair números de todos os formatos possíveis
-    for romaneio in romaneios:
-        if not romaneio.codigo:
-            continue
-            
+    ).order_by('-codigo').first()
+
+    next_sequence = 1  # Começa do 001
+    if last_romaneio and last_romaneio.codigo:
         try:
-            parts = romaneio.codigo.split('-')
-            
-            # Formato ROM-XXX (formato simples)
+            # Extrair o número do código ROM-XXX
+            parts = last_romaneio.codigo.split('-')
             if len(parts) == 2 and parts[0] == 'ROM':
-                num = int(parts[1])
-                max_sequence = max(max_sequence, num)
-            
-            # Formato ROM-YYYY-MM-XXXX (formato com data)
-            elif len(parts) == 4 and parts[0] == 'ROM':
-                num = int(parts[3])
-                max_sequence = max(max_sequence, num)
-            
-            # Formato ROM-YYYY-MM-XXXX (caso tenha menos partes mas ainda seja numérico)
-            elif len(parts) >= 2 and parts[0] == 'ROM':
-                # Tentar extrair o último número
-                for part in reversed(parts[1:]):
-                    if part.isdigit():
-                        num = int(part)
-                        max_sequence = max(max_sequence, num)
-                        break
-                        
+                next_sequence = int(parts[1]) + 1
         except (ValueError, IndexError):
-            continue
-    
-    # Próximo número sequencial (nunca reseta)
-    next_sequence = max_sequence + 1
-    
+            pass
+
     return f"ROM-{next_sequence:03d}"
 
 def get_next_romaneio_generico_codigo():
-    """Gera o próximo código sequencial de romaneio genérico no formato ROM-100-NNN (sequencial sem resetar)."""
-    # Buscar todos os romaneios genéricos
-    romaneios_genericos = RomaneioViagem.objects.filter(
-        codigo__startswith="ROM-100-"
-    ).exclude(
-        codigo__isnull=True
-    ).exclude(
-        codigo=""
-    )
-    
-    max_sequence = 0
-    
-    # Extrair números de todos os romaneios genéricos
-    for romaneio in romaneios_genericos:
-        if not romaneio.codigo:
-            continue
-            
+    """Gera o próximo código sequencial de romaneio genérico no formato ROM-100-NNN."""
+    # Buscar todos os romaneios genéricos com código no formato ROM-100-XXX
+    prefix = "ROM-100-"
+    last_romaneio = RomaneioViagem.objects.filter(
+        codigo__startswith=prefix
+    ).order_by('-codigo').first()
+
+    next_sequence = 1  # Começa do 001
+    if last_romaneio and last_romaneio.codigo:
         try:
-            parts = romaneio.codigo.split('-')
-            
-            # Formato ROM-100-XXX
+            # Extrair o número do código ROM-100-XXX
+            parts = last_romaneio.codigo.split('-')
             if len(parts) == 3 and parts[0] == 'ROM' and parts[1] == '100':
-                num = int(parts[2])
-                max_sequence = max(max_sequence, num)
-                
+                next_sequence = int(parts[2]) + 1
         except (ValueError, IndexError):
-            continue
-    
-    # Próximo número sequencial (nunca reseta)
-    next_sequence = max_sequence + 1
-    
+            pass
+
     return f"ROM-100-{next_sequence:03d}"
 
 # --------------------------------------------------------------------------------------
@@ -161,14 +115,7 @@ def adicionar_cliente(request):
         if form.is_valid():
             form.save()
             messages.success(request, 'Cliente adicionado com sucesso!')
-            
-            if 'salvar_e_adicionar' in request.POST:
-                # Retorna para a mesma página com formulário limpo
-                form = ClienteForm()
-                return render(request, 'notas/adicionar_cliente.html', {'form': form})
-            else:
-                # Redireciona para a lista de clientes
-                return redirect('notas:listar_clientes')
+            return redirect('notas:listar_clientes')
         else:
             messages.error(request, 'Houve um erro ao adicionar o cliente. Verifique os campos.')
     else:
@@ -193,41 +140,21 @@ def editar_cliente(request, pk):
 
 @login_required
 def excluir_cliente(request, pk):
-    """Exclui um cliente (apenas administradores)"""
-    cliente = get_object_or_404(Cliente.all_objects, pk=pk)  # Usa all_objects para permitir ver soft deleted
+    cliente = get_object_or_404(Cliente, pk=pk)
     
     # Verificar se o usuário é administrador
     if not request.user.is_admin:
         messages.error(request, 'Apenas administradores podem excluir clientes cadastrados.')
         return redirect('notas:listar_clientes')
     
-    form = ConfirmarSenhaExclusaoForm(user=request.user)
-    
     if request.method == 'POST':
-        form = ConfirmarSenhaExclusaoForm(user=request.user, data=request.POST)
-        
-        if form.is_valid():
-            try:
-                cliente_str = str(cliente)
-                
-                # Fazer soft delete
-                cliente.soft_delete(user=request.user)
-                
-                # Registrar log de auditoria
-                registrar_exclusao(
-                    usuario=request.user,
-                    instancia=cliente,
-                    request=request,
-                    descricao=f'Cliente "{cliente_str}" excluído suavemente (senha confirmada)',
-                    soft_delete=True
-                )
-                
-                messages.success(request, 'Cliente excluído com sucesso!')
-                return redirect('notas:listar_clientes')
-            except Exception as e:
-                messages.error(request, f'Não foi possível excluir o cliente: {e}')
-    
-    return render(request, 'notas/excluir_cliente.html', {'cliente': cliente, 'form': form})
+        try:
+            cliente.delete()
+            messages.success(request, 'Cliente excluído com sucesso!')
+        except Exception as e:
+            messages.error(request, f'Não foi possível excluir o cliente: {e}')
+        return redirect('notas:listar_clientes')
+    return render(request, 'notas/excluir_cliente.html', {'cliente': cliente})
 
 def detalhes_cliente(request, pk):
     cliente = get_object_or_404(Cliente, pk=pk)
@@ -276,8 +203,7 @@ def adicionar_nota_fiscal(request):
                     'focus_nota': True  # Flag para focar no campo nota
                 })
             else:
-                # Salvar e sair - redireciona para a lista
-                return redirect('notas:listar_notas_fiscais')
+                return redirect('notas:detalhes_nota_fiscal', pk=nota_fiscal.pk)
 
         else:
             messages.error(request, 'Houve um erro ao adicionar a nota fiscal. Verifique os campos.')
@@ -299,48 +225,15 @@ def editar_nota_fiscal(request, pk):
         form = NotaFiscalForm(instance=nota)
     return render(request, 'notas/editar_nota.html', {'form': form, 'nota': nota})
 
-@login_required
 def excluir_nota_fiscal(request, pk):
-    """Exclui uma nota fiscal (apenas administradores)"""
-    nota = get_object_or_404(NotaFiscal.all_objects, pk=pk)  # Usa all_objects para permitir ver soft deleted
-    
-    # Verificar se o usuário é administrador
-    if not request.user.is_admin:
-        messages.error(request, 'Apenas administradores podem excluir notas fiscais.')
-        return redirect('notas:listar_notas_fiscais')
-    
-    form = ConfirmarSenhaExclusaoForm(user=request.user)
-    
+    nota = get_object_or_404(NotaFiscal, pk=pk)
     if request.method == 'POST':
-        form = ConfirmarSenhaExclusaoForm(user=request.user, data=request.POST)
-        
-        if form.is_valid():
-            try:
-                # Salvar dados antes de excluir para o log
-                nota_str = str(nota)
-                
-                # Desvincular de romaneios
-                for romaneio in nota.romaneios_vinculados.all():
-                    romaneio.notas_fiscais.remove(nota)
-                
-                # Fazer soft delete (não remove permanentemente)
-                nota.soft_delete(user=request.user)
-                
-                # Registrar log de auditoria
-                registrar_exclusao(
-                    usuario=request.user,
-                    instancia=nota,
-                    request=request,
-                    descricao=f'Nota Fiscal "{nota_str}" excluída suavemente (senha confirmada)',
-                    soft_delete=True
-                )
-                
-                messages.success(request, 'Nota fiscal excluída com sucesso!')
-                return redirect('notas:listar_notas_fiscais')
-            except Exception as e:
-                messages.error(request, f'Não foi possível excluir a nota fiscal: {e}')
-    
-    return render(request, 'notas/excluir_nota.html', {'nota': nota, 'form': form})
+        for romaneio in nota.romaneios_vinculados.all():
+            romaneio.notas_fiscais.remove(nota)
+        nota.delete()
+        messages.success(request, 'Nota fiscal excluída com sucesso!')
+        return redirect('notas:listar_notas_fiscais')
+    return render(request, 'notas/excluir_nota.html', {'nota': nota})
 
 def detalhes_nota_fiscal(request, pk):
     nota = get_object_or_404(NotaFiscal, pk=pk)
@@ -360,22 +253,21 @@ def adicionar_motorista(request):
     if request.method == 'POST':
         form = MotoristaForm(request.POST)
         if form.is_valid():
-            motorista = form.save()
-            messages.success(request, 'Motorista adicionado com sucesso!')
-            
-            if 'salvar_e_adicionar' in request.POST:
-                # Retorna para a mesma página com formulário limpo
-                form = MotoristaForm()
-                context = {
-                    'form': form,
-                    'historico_consultas': None,  # Não há histórico para motoristas novos
-                }
-                return render(request, 'notas/adicionar_motorista.html', context)
-            else:
-                # Salvar e sair - redireciona para a lista
+            try:
+                motorista = form.save()
+                # Verificar se os dados foram salvos corretamente
+                motorista.refresh_from_db()
+                messages.success(request, 'Motorista adicionado com sucesso!')
                 return redirect('notas:listar_motoristas')
+            except Exception as e:
+                messages.error(request, f'Erro ao salvar motorista: {str(e)}')
         else:
-            messages.error(request, 'Houve um erro ao adicionar o motorista. Verifique os campos.')
+            # Exibir erros do formulário para debug
+            error_messages = []
+            for field, errors in form.errors.items():
+                for error in errors:
+                    error_messages.append(f'{field}: {error}')
+            messages.error(request, f'Houve um erro ao adicionar o motorista. Verifique os campos. Erros: {", ".join(error_messages)}')
     else:
         form = MotoristaForm()
     
@@ -462,41 +354,21 @@ def registrar_consulta_motorista(request, pk):
 
 @login_required
 def excluir_motorista(request, pk):
-    """Exclui um motorista (apenas administradores)"""
-    motorista = get_object_or_404(Motorista.all_objects, pk=pk)  # Usa all_objects para permitir ver soft deleted
+    motorista = get_object_or_404(Motorista, pk=pk)
     
     # Verificar se o usuário é administrador
     if not request.user.is_admin:
         messages.error(request, 'Apenas administradores podem excluir motoristas cadastrados.')
         return redirect('notas:listar_motoristas')
     
-    form = ConfirmarSenhaExclusaoForm(user=request.user)
-    
     if request.method == 'POST':
-        form = ConfirmarSenhaExclusaoForm(user=request.user, data=request.POST)
-        
-        if form.is_valid():
-            try:
-                motorista_str = str(motorista)
-                
-                # Fazer soft delete
-                motorista.soft_delete(user=request.user)
-                
-                # Registrar log de auditoria
-                registrar_exclusao(
-                    usuario=request.user,
-                    instancia=motorista,
-                    request=request,
-                    descricao=f'Motorista "{motorista_str}" excluído suavemente (senha confirmada)',
-                    soft_delete=True
-                )
-                
-                messages.success(request, 'Motorista excluído com sucesso!')
-                return redirect('notas:listar_motoristas')
-            except Exception as e:
-                messages.error(request, f'Não foi possível excluir o motorista: {e}')
-    
-    return render(request, 'notas/confirmar_exclusao_motorista.html', {'motorista': motorista, 'form': form})
+        try:
+            motorista.delete()
+            messages.success(request, 'Motorista excluído com sucesso!')
+        except Exception as e:
+            messages.error(request, f'Não foi possível excluir o motorista: {e}')
+        return redirect('notas:listar_motoristas')
+    return render(request, 'notas/confirmar_exclusao_motorista.html', {'motorista': motorista})
 
 def detalhes_motorista(request, pk):
     motorista = get_object_or_404(Motorista, pk=pk)
@@ -518,17 +390,7 @@ def adicionar_veiculo(request): # Esta view é para adicionar UMA UNIDADE de Ve�
         if form.is_valid():
             form.save()
             messages.success(request, 'Unidade de Veículo cadastrada com sucesso!')
-            
-            if 'salvar_e_adicionar' in request.POST:
-                # Retorna para a mesma página com formulário limpo
-                form = VeiculoForm()
-                context = {
-                    'form': form,
-                }
-                return render(request, 'notas/adicionar_veiculo.html', context)
-            else:
-                # Salvar e sair - redireciona para a lista
-                return redirect('notas:listar_veiculos')
+            return redirect('notas:listar_veiculos') # Redireciona para a pesquisa de unidades
         else:
             messages.error(request, 'Houve um erro ao cadastrar a unidade de veículo. Verifique os campos.')
     else:
@@ -555,73 +417,41 @@ def editar_veiculo(request, pk):
 
 @login_required
 def excluir_veiculo(request, pk):
-    """Exclui um veículo (apenas administradores)"""
-    veiculo = get_object_or_404(Veiculo.all_objects, pk=pk)  # Usa all_objects para permitir ver soft deleted
+    veiculo = get_object_or_404(Veiculo, pk=pk)
     
     # Verificar se o usuário é administrador
     if not is_admin(request.user):
         messages.error(request, 'Apenas administradores podem excluir veículos cadastrados.')
         return redirect('notas:listar_veiculos')
     
-    form = ConfirmarSenhaExclusaoForm(user=request.user)
-    
     if request.method == 'POST':
-        form = ConfirmarSenhaExclusaoForm(user=request.user, data=request.POST)
-        
-        if form.is_valid():
-            try:
-                veiculo_str = str(veiculo)
-                
-                # Verificar se o veículo está sendo usado em romaneios
-                romaneios_principal = veiculo.romaneios_veiculo_principal.all()
-                romaneios_reboque1 = veiculo.romaneios_reboque_1.all()
-                romaneios_reboque2 = veiculo.romaneios_reboque_2.all()
-                
-                # Verificar se está sendo usado como veículo principal (não pode ser NULL)
-                if romaneios_principal.exists():
-                    messages.error(
-                        request, 
-                        f'Não é possível excluir este veículo. Ele está sendo usado como veículo principal em {romaneios_principal.count()} romaneio(s). '
-                        f'Primeiro, altere o veículo principal desses romaneios antes de excluir.'
-                    )
-                    return render(request, 'notas/confirmar_exclusao_veiculo.html', {'veiculo': veiculo, 'form': form})
-                
-                # Desvincular apenas dos reboques (que podem ser NULL)
-                total_reboques = romaneios_reboque1.count() + romaneios_reboque2.count()
-                
-                if total_reboques > 0:
-                    # Desvincular o veículo dos reboques
-                    for romaneio in romaneios_reboque1:
-                        romaneio.reboque_1 = None
-                        romaneio.save()
-                    for romaneio in romaneios_reboque2:
-                        romaneio.reboque_2 = None
-                        romaneio.save()
-                    messages.warning(request, f'Veículo desvinculado de {total_reboques} romaneio(s) (como reboque) antes da exclusão.')
-                
-                # Fazer soft delete
-                veiculo.soft_delete(user=request.user)
-                
-                # Registrar log de auditoria
-                descricao_log = f'Veículo "{veiculo_str}" excluído suavemente'
-                if total_reboques > 0:
-                    descricao_log += f' (desvinculado de {total_reboques} romaneio(s) como reboque)'
-                descricao_log += ' (senha confirmada)'
-                
-                registrar_exclusao(
-                    usuario=request.user,
-                    instancia=veiculo,
-                    request=request,
-                    descricao=descricao_log,
-                    soft_delete=True
-                )
-                
-                messages.success(request, 'Unidade de Veículo excluída com sucesso!')
-                return redirect('notas:listar_veiculos')
-            except Exception as e:
-                messages.error(request, f'Não foi possível excluir o veículo: {str(e)}')
-    
-    return render(request, 'notas/confirmar_exclusao_veiculo.html', {'veiculo': veiculo, 'form': form})
+        try:
+            # Verificar se o veículo está sendo usado em romaneios
+            romaneios_principal = veiculo.romaneios_veiculo_principal.all()
+            romaneios_reboque1 = veiculo.romaneios_reboque_1.all()
+            romaneios_reboque2 = veiculo.romaneios_reboque_2.all()
+            
+            total_romaneios = romaneios_principal.count() + romaneios_reboque1.count() + romaneios_reboque2.count()
+            
+            if total_romaneios > 0:
+                # Desvincular o veículo dos romaneios
+                for romaneio in romaneios_principal:
+                    romaneio.veiculo_principal = None
+                    romaneio.save()
+                for romaneio in romaneios_reboque1:
+                    romaneio.reboque_1 = None
+                    romaneio.save()
+                for romaneio in romaneios_reboque2:
+                    romaneio.reboque_2 = None
+                    romaneio.save()
+                messages.warning(request, f'Veículo desvinculado de {total_romaneios} romaneio(s) antes da exclusão.')
+            
+            veiculo.delete()
+            messages.success(request, 'Unidade de Veículo excluída com sucesso!')
+        except Exception as e:
+            messages.error(request, f'Não foi possível excluir o veículo: {str(e)}')
+        return redirect('notas:listar_veiculos')
+    return render(request, 'notas/confirmar_exclusao_veiculo.html', {'veiculo': veiculo})
 
 def detalhes_veiculo(request, pk):
     veiculo = get_object_or_404(Veiculo, pk=pk)
@@ -690,17 +520,16 @@ def adicionar_romaneio(request):
 
             # Atualizar o status das notas fiscais associadas
             for nota_fiscal in romaneio.notas_fiscais.all():
-                # Se a nota está vinculada a qualquer romaneio, deve ter status "Enviada"
-                # Verificar se há outros romaneios emitidos além do atual
+                # Verificar se a nota está vinculada a outros romaneios emitidos
                 outros_romaneios_emitidos = nota_fiscal.romaneios_vinculados.exclude(pk=romaneio.pk).filter(status='Emitido')
-                if outros_romaneios_emitidos.exists() or romaneio.status == 'Emitido':
-                    # Se está vinculada a romaneios emitidos, manter como Enviada
+                if outros_romaneios_emitidos.exists():
+                    # Se está vinculada a outros romaneios emitidos, manter como Enviada
                     nota_fiscal.status = 'Enviada'
-                elif nota_fiscal.romaneios.exists():
-                    # Se está vinculada a qualquer romaneio (mesmo que não emitido), colocar como Enviada
+                elif romaneio.status == 'Emitido':
+                    # Se o romaneio atual foi emitido e não há outros emitidos, colocar como Enviada
                     nota_fiscal.status = 'Enviada'
                 else:
-                    # Se não está vinculada a nenhum romaneio, colocar como Depósito
+                    # Se o romaneio atual não foi emitido e não há outros emitidos, colocar como Depósito
                     nota_fiscal.status = 'Depósito'
                 nota_fiscal.save()
 
@@ -779,17 +608,16 @@ def adicionar_romaneio_generico(request):
 
             # Atualizar o status das notas fiscais associadas
             for nota_fiscal in romaneio.notas_fiscais.all():
-                # Se a nota está vinculada a qualquer romaneio, deve ter status "Enviada"
-                # Verificar se há outros romaneios emitidos além do atual
+                # Verificar se a nota está vinculada a outros romaneios emitidos
                 outros_romaneios_emitidos = nota_fiscal.romaneios_vinculados.exclude(pk=romaneio.pk).filter(status='Emitido')
-                if outros_romaneios_emitidos.exists() or romaneio.status == 'Emitido':
-                    # Se está vinculada a romaneios emitidos, manter como Enviada
+                if outros_romaneios_emitidos.exists():
+                    # Se está vinculada a outros romaneios emitidos, manter como Enviada
                     nota_fiscal.status = 'Enviada'
-                elif nota_fiscal.romaneios.exists():
-                    # Se está vinculada a qualquer romaneio (mesmo que não emitido), colocar como Enviada
+                elif romaneio.status == 'Emitido':
+                    # Se o romaneio atual foi emitido e não há outros emitidos, colocar como Enviada
                     nota_fiscal.status = 'Enviada'
                 else:
-                    # Se não está vinculada a nenhum romaneio, colocar como Depósito
+                    # Se o romaneio atual não foi emitido e não há outros emitidos, colocar como Depósito
                     nota_fiscal.status = 'Depósito'
                 nota_fiscal.save()
 
@@ -862,23 +690,24 @@ def editar_romaneio(request, pk):
             notas_depois_salvar = set(romaneio.notas_fiscais.all())
 
             for nota_fiscal_removida in (notas_antes_salvar - notas_depois_salvar):
-                # Verificar se a nota ainda está vinculada a outros romaneios
-                if not nota_fiscal_removida.romaneios.exists():
-                    # Se não está vinculada a nenhum romaneio, colocar de volta para Depósito
+                # Verificar se a nota está vinculada a outros romaneios emitidos
+                outros_romaneios_emitidos = nota_fiscal_removida.romaneios_vinculados.exclude(pk=romaneio.pk).filter(status='Emitido')
+                if not outros_romaneios_emitidos.exists():
+                    # Se não há outros romaneios emitidos, colocar de volta para Depósito
                     nota_fiscal_removida.status = 'Depósito'
-                    nota_fiscal_removida.save()
-                else:
-                    # Se ainda está vinculada a outros romaneios, manter como Enviada
-                    nota_fiscal_removida.status = 'Enviada'
                     nota_fiscal_removida.save()
             
             for nota_fiscal_atualizada in notas_depois_salvar:
-                # Se a nota está vinculada a qualquer romaneio, deve ter status "Enviada"
-                if nota_fiscal_atualizada.romaneios.exists():
-                    # Se está vinculada a qualquer romaneio, colocar como Enviada
+                # Verificar se a nota está vinculada a outros romaneios emitidos
+                outros_romaneios_emitidos = nota_fiscal_atualizada.romaneios_vinculados.exclude(pk=romaneio.pk).filter(status='Emitido')
+                if outros_romaneios_emitidos.exists():
+                    # Se está vinculada a outros romaneios emitidos, manter como Enviada
+                    nota_fiscal_atualizada.status = 'Enviada'
+                elif romaneio.status == 'Emitido':
+                    # Se o romaneio atual foi emitido e não há outros emitidos, colocar como Enviada
                     nota_fiscal_atualizada.status = 'Enviada'
                 else:
-                    # Se não está vinculada a nenhum romaneio, colocar como Depósito
+                    # Se o romaneio atual não foi emitido e não há outros emitidos, colocar como Depósito
                     nota_fiscal_atualizada.status = 'Depósito'
                 nota_fiscal_atualizada.save()
 
@@ -914,50 +743,29 @@ def editar_romaneio(request, pk):
 
 @login_required
 def excluir_romaneio(request, pk):
-    """Exclui um romaneio (apenas administradores)"""
-    romaneio = get_object_or_404(RomaneioViagem.all_objects, pk=pk)  # Usa all_objects para permitir ver soft deleted
+    romaneio = get_object_or_404(RomaneioViagem, pk=pk)
     
-    # Verificar se o usuário é administrador (agora TODOS os romaneios exigem admin)
-    if not request.user.is_admin:
-        messages.error(request, 'Apenas administradores podem excluir romaneios.')
-        return redirect('notas:listar_romaneios')
-    
-    form = ConfirmarSenhaExclusaoForm(user=request.user)
+    # Verificar se o romaneio foi emitido
+    if romaneio.status == 'Emitido':
+        # Se foi emitido, apenas administradores podem excluir
+        if not request.user.is_admin:
+            messages.error(request, 'Apenas administradores podem excluir romaneios que já foram emitidos.')
+            return redirect('notas:listar_romaneios')
     
     if request.method == 'POST':
-        form = ConfirmarSenhaExclusaoForm(user=request.user, data=request.POST)
+        # Antes de excluir o romaneio, verificar se as notas estão vinculadas a outros romaneios emitidos
+        for nota_fiscal in romaneio.notas_fiscais.all():
+            # Verificar se a nota está vinculada a outros romaneios emitidos
+            outros_romaneios_emitidos = nota_fiscal.romaneios_vinculados.exclude(pk=romaneio.pk).filter(status='Emitido')
+            if not outros_romaneios_emitidos.exists():
+                # Se não há outros romaneios emitidos, colocar de volta para Depósito
+                nota_fiscal.status = 'Depósito'
+                nota_fiscal.save()
         
-        if form.is_valid():
-            try:
-                romaneio_str = str(romaneio)
-                
-                # Antes de excluir o romaneio, verificar se as notas estão vinculadas a outros romaneios emitidos
-                for nota_fiscal in romaneio.notas_fiscais.all():
-                    # Verificar se a nota está vinculada a outros romaneios emitidos
-                    outros_romaneios_emitidos = nota_fiscal.romaneios_vinculados.exclude(pk=romaneio.pk).filter(status='Emitido')
-                    if not outros_romaneios_emitidos.exists():
-                        # Se não há outros romaneios emitidos, colocar de volta para Depósito
-                        nota_fiscal.status = 'Depósito'
-                        nota_fiscal.save()
-                
-                # Fazer soft delete
-                romaneio.soft_delete(user=request.user)
-                
-                # Registrar log de auditoria
-                registrar_exclusao(
-                    usuario=request.user,
-                    instancia=romaneio,
-                    request=request,
-                    descricao=f'Romaneio "{romaneio_str}" ({romaneio.status}) excluído suavemente (senha confirmada)',
-                    soft_delete=True
-                )
-                
-                messages.success(request, 'Romaneio excluído com sucesso! Notas fiscais associadas foram atualizadas conforme necessário.')
-                return redirect('notas:listar_romaneios')
-            except Exception as e:
-                messages.error(request, f'Não foi possível excluir o romaneio: {e}')
-    
-    return render(request, 'notas/confirmar_exclusao_romaneio.html', {'romaneio': romaneio, 'form': form})
+        romaneio.delete()
+        messages.success(request, 'Romaneio excluído com sucesso! Notas fiscais associadas foram atualizadas conforme necessário.')
+        return redirect('notas:listar_romaneios')
+    return render(request, 'notas/confirmar_exclusao_romaneio.html', {'romaneio': romaneio})
 
 def detalhes_romaneio(request, pk):
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
@@ -1170,14 +978,6 @@ def login_view(request):
             
             if user is not None and user.is_active:
                 login(request, user)
-                
-                # Registrar log de auditoria de login
-                try:
-                    registrar_login(user, request=request)
-                except Exception as e:
-                    # Se falhar ao registrar log, não interrompe o login
-                    pass
-                
                 # Atualizar último acesso
                 user.ultimo_acesso = timezone.now()
                 user.save()
@@ -1192,60 +992,6 @@ def login_view(request):
     return render(request, 'notas/auth/login.html', {'form': form, 'error_message': error_message})
 
 def logout_view(request):
-    # Verificar se está em modo de impersonação
-    if 'admin_original_id' in request.session:
-        # Se estiver impersonando, voltar ao admin original usando a função definida abaixo
-        admin_original_id = request.session.get('admin_original_id')
-        usuario_impersonado_id = request.session.get('usuario_impersonado_id')
-        
-        try:
-            admin_original = Usuario.objects.get(pk=admin_original_id)
-            usuario_impersonado = Usuario.objects.get(pk=usuario_impersonado_id) if usuario_impersonado_id else None
-            
-            # Fazer logout do usuário impersonado
-            from django.contrib.auth import logout, login
-            logout(request)
-            
-            # Fazer login como admin original
-            login(request, admin_original)
-            
-            # Limpar sessão de impersonação
-            del request.session['admin_original_id']
-            if 'usuario_impersonado_id' in request.session:
-                del request.session['usuario_impersonado_id']
-            if 'impersonacao_iniciada_em' in request.session:
-                del request.session['impersonacao_iniciada_em']
-            
-            # Registrar log de auditoria
-            try:
-                from .utils.auditoria import registrar_log_auditoria
-                registrar_log_auditoria(
-                    usuario=admin_original,
-                    acao='END_IMPERSONATE',
-                    modelo='Usuario',
-                    objeto_id=usuario_impersonado.pk if usuario_impersonado else None,
-                    descricao=f'Administrador {admin_original.username} encerrou a impersonação de {usuario_impersonado.username if usuario_impersonado else "usuário"}',
-                    request=request
-                )
-            except Exception:
-                pass
-            
-            messages.success(request, f'Você voltou a fazer login como {admin_original.username}.')
-            return redirect('notas:dashboard')
-        except Usuario.DoesNotExist:
-            logout(request)
-            messages.error(request, 'Administrador original não encontrado. Você foi desconectado.')
-            return redirect('notas:login')
-    
-    # Registrar log de auditoria de logout antes de fazer logout
-    if request.user.is_authenticated:
-        try:
-            registrar_logout(request.user, request=request)
-        except Exception as e:
-            # Se falhar ao registrar log, não interrompe o logout
-            pass
-    
-    from django.contrib.auth import logout
     logout(request)
     messages.info(request, 'Você foi desconectado com sucesso.')
     return redirect('notas:login')
@@ -1293,33 +1039,25 @@ def minhas_notas_fiscais(request):
     # Obter parâmetro de filtro
     status_filter = request.GET.get('status', 'deposito')  # Padrão agora é 'deposito'
     
-    # Verificar se o usuário é cliente e tem cliente associado
-    if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente:
+    if request.user.tipo_usuario == 'cliente' and request.user.cliente:
         # Cliente vê apenas suas notas
         notas_fiscais = NotaFiscal.objects.filter(cliente=request.user.cliente)
     else:
         # Admin e funcionários veem todas as notas
-        # OTIMIZAÇÃO: Usar select_related para evitar N+1 queries
-        notas_fiscais = NotaFiscal.objects.select_related('cliente').all()
+        notas_fiscais = NotaFiscal.objects.all()
     
     # Aplicar filtro por status
     if status_filter == 'deposito':
         notas_fiscais = notas_fiscais.filter(status='Depósito')
     elif status_filter == 'enviada':
         notas_fiscais = notas_fiscais.filter(status='Enviada')
-    # Se status_filter for vazio ou outro valor, mostrar todas as notas do cliente
     
     # Ordenar por data crescente
     notas_fiscais = notas_fiscais.order_by('data')
     
-    # Calcular totais usando aggregate (mais eficiente em memória)
-    from django.db.models import Sum
-    totais = notas_fiscais.aggregate(
-        total_peso=Sum('peso'),
-        total_valor=Sum('valor')
-    )
-    total_peso = totais['total_peso'] or 0
-    total_valor = totais['total_valor'] or 0
+    # Calcular totais
+    total_peso = sum(nota.peso for nota in notas_fiscais if nota.peso)
+    total_valor = sum(nota.valor for nota in notas_fiscais if nota.valor)
     
     return render(request, 'notas/auth/minhas_notas.html', {
         'notas_fiscais': notas_fiscais,
@@ -1334,7 +1072,7 @@ def imprimir_nota_fiscal(request, pk):
     nota = get_object_or_404(NotaFiscal, pk=pk)
     
     # Verificar se o usuário tem permissão para ver esta nota
-    if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente != nota.cliente:
+    if request.user.tipo_usuario == 'cliente' and request.user.cliente != nota.cliente:
         messages.error(request, 'Você não tem permissão para acessar esta nota fiscal.')
         return redirect('notas:minhas_notas_fiscais')
     
@@ -1346,7 +1084,7 @@ def imprimir_nota_fiscal(request, pk):
 @user_passes_test(is_cliente)
 def imprimir_relatorio_deposito(request):
     # Obter apenas notas em depósito do cliente
-    if request.user.tipo_usuario.upper() == 'CLIENTE' and request.user.cliente:
+    if request.user.tipo_usuario == 'cliente' and request.user.cliente:
         notas_fiscais = NotaFiscal.objects.filter(
             cliente=request.user.cliente,
             status='Depósito'
@@ -1355,13 +1093,9 @@ def imprimir_relatorio_deposito(request):
         # Admin e funcionários veem todas as notas em depósito
         notas_fiscais = NotaFiscal.objects.filter(status='Depósito').order_by('data')
 
-    # Calcular totais usando aggregate (mais eficiente em memória)
-    totais = notas_fiscais.aggregate(
-        total_peso=Sum('peso'),
-        total_valor=Sum('valor')
-    )
-    total_peso = totais['total_peso'] or 0
-    total_valor = totais['total_valor'] or 0
+    # Calcular totais
+    total_peso = sum(nota.peso for nota in notas_fiscais)
+    total_valor = sum(nota.valor for nota in notas_fiscais)
 
     return render(request, 'notas/auth/imprimir_relatorio_deposito.html', {
         'notas_fiscais': notas_fiscais,
@@ -1378,13 +1112,9 @@ def imprimir_romaneio_novo(request, pk):
     # Obter notas fiscais vinculadas ao romaneio
     notas_romaneadas = romaneio.notas_fiscais.all().order_by('data')
     
-    # Calcular totais usando aggregate (mais eficiente em memória)
-    totais = notas_romaneadas.aggregate(
-        total_peso=Sum('peso'),
-        total_valor=Sum('valor')
-    )
-    total_peso = totais['total_peso'] or 0
-    total_valor = totais['total_valor'] or 0
+    # Calcular totais
+    total_peso = sum(nota.peso for nota in notas_romaneadas)
+    total_valor = sum(nota.valor for nota in notas_romaneadas)
     
     # Dividir notas em grupos de 20 para multipágina
     notas_list = list(notas_romaneadas)
@@ -1419,13 +1149,9 @@ def gerar_romaneio_pdf(request, pk):
     # Obter notas fiscais vinculadas ao romaneio
     notas_romaneadas = romaneio.notas_fiscais.all().order_by('data')
     
-    # Calcular totais usando aggregate (mais eficiente em memória)
-    totais = notas_romaneadas.aggregate(
-        total_peso=Sum('peso'),
-        total_valor=Sum('valor')
-    )
-    total_peso = totais['total_peso'] or 0
-    total_valor = totais['total_valor'] or 0
+    # Calcular totais
+    total_peso = sum(nota.peso for nota in notas_romaneadas)
+    total_valor = sum(nota.valor for nota in notas_romaneadas)
     
     # Renderizar template
     template = get_template('notas/visualizar_romaneio_para_impressao.html')
@@ -1484,10 +1210,7 @@ def meus_romaneios(request):
         ).distinct().order_by('-data_emissao')
     else:
         # Admin e funcionários veem todos os romaneios
-        # OTIMIZAÇÃO: Usar select_related para evitar N+1 queries
-        romaneios = RomaneioViagem.objects.select_related(
-            'cliente', 'motorista', 'veiculo_principal'
-        ).order_by('-data_emissao')
+        romaneios = RomaneioViagem.objects.all().order_by('-data_emissao')
     
     return render(request, 'notas/auth/meus_romaneios.html', {
         'romaneios': romaneios
@@ -1514,31 +1237,7 @@ def cadastrar_usuario(request):
 @user_passes_test(is_admin)
 def listar_usuarios(request):
     usuarios = Usuario.objects.all().order_by('username')
-    # Verificar se está em modo de impersonação
-    is_impersonando = 'admin_original_id' in request.session
-    usuario_impersonado = None
-    admin_original = None
-    
-    if is_impersonando:
-        usuario_impersonado_id = request.session.get('usuario_impersonado_id')
-        admin_original_id = request.session.get('admin_original_id')
-        if usuario_impersonado_id:
-            try:
-                usuario_impersonado = Usuario.objects.get(pk=usuario_impersonado_id)
-            except Usuario.DoesNotExist:
-                pass
-        if admin_original_id:
-            try:
-                admin_original = Usuario.objects.get(pk=admin_original_id)
-            except Usuario.DoesNotExist:
-                pass
-    
-    return render(request, 'notas/auth/listar_usuarios.html', {
-        'usuarios': usuarios,
-        'is_impersonando': is_impersonando,
-        'usuario_impersonado': usuario_impersonado,
-        'admin_original': admin_original,
-    })
+    return render(request, 'notas/auth/listar_usuarios.html', {'usuarios': usuarios})
 
 @login_required
 @user_passes_test(is_admin)
@@ -1559,129 +1258,6 @@ def editar_usuario(request, pk):
         form = CadastroUsuarioForm(instance=usuario)
     
     return render(request, 'notas/auth/editar_usuario.html', {'form': form, 'usuario': usuario})
-
-@login_required
-def impersonar_usuario(request, pk):
-    """Permite que um administrador faça login como outro usuário (impersonação)"""
-    # Verificar se o usuário atual é admin ou se está impersonando (e o admin original é admin)
-    admin_original = None
-    if 'admin_original_id' in request.session:
-        # Se estiver impersonando, usar o admin original da sessão
-        admin_original_id = request.session.get('admin_original_id')
-        try:
-            admin_original = Usuario.objects.get(pk=admin_original_id)
-        except Usuario.DoesNotExist:
-            messages.error(request, 'Administrador original não encontrado.')
-            return redirect('notas:dashboard')
-    else:
-        # Se não estiver impersonando, usar o usuário atual
-        admin_original = request.user
-    
-    # Verificar se o admin original é realmente um administrador
-    if not admin_original.is_admin:
-        messages.error(request, 'Apenas administradores podem impersonar usuários.')
-        return redirect('notas:dashboard')
-    
-    usuario_alvo = get_object_or_404(Usuario, pk=pk)
-    
-    # Verificar se já está impersonando (mas permitir se o admin original for o mesmo)
-    if 'admin_original_id' in request.session:
-        admin_original_id_sessao = request.session.get('admin_original_id')
-        if admin_original_id_sessao != admin_original.pk:
-            messages.warning(request, 'Você já está impersonando outro usuário. Encerre a impersonação atual primeiro.')
-            return redirect('notas:listar_usuarios')
-    
-    # Verificar se o usuário alvo está ativo
-    if not usuario_alvo.is_active:
-        messages.error(request, 'Não é possível impersonar um usuário inativo.')
-        return redirect('notas:listar_usuarios')
-    
-    # Não permitir impersonar a si mesmo (a menos que já esteja impersonando)
-    if usuario_alvo == admin_original and 'admin_original_id' not in request.session:
-        messages.error(request, 'Você não pode impersonar a si mesmo.')
-        return redirect('notas:listar_usuarios')
-    
-    # Armazenar informações do admin original na sessão ANTES de fazer login
-    # (para garantir que temos o admin original correto)
-    request.session['admin_original_id'] = admin_original.pk
-    request.session['usuario_impersonado_id'] = usuario_alvo.pk
-    request.session['impersonacao_iniciada_em'] = timezone.now().isoformat()
-    
-    # Registrar log de auditoria ANTES de fazer login como o usuário alvo
-    try:
-        from .utils.auditoria import registrar_log_auditoria
-        registrar_log_auditoria(
-            usuario=admin_original,
-            acao='IMPERSONATE',
-            modelo='Usuario',
-            objeto_id=usuario_alvo.pk,
-            descricao=f'Administrador {admin_original.username} iniciou impersonação como {usuario_alvo.username}',
-            request=request
-        )
-    except Exception as e:
-        # Se falhar ao registrar log, não interrompe a impersonação
-        pass
-    
-    # Fazer login como o usuário alvo (DEPOIS de registrar o log)
-    from django.contrib.auth import login
-    login(request, usuario_alvo)
-    
-    messages.warning(request, f'Você está fazendo login como {usuario_alvo.username}. Todos os logs serão registrados em seu nome como administrador.')
-    return redirect('notas:dashboard')
-
-
-@login_required
-def encerrar_impersonacao(request):
-    """Encerra a impersonação e volta ao administrador original"""
-    if 'admin_original_id' not in request.session:
-        messages.error(request, 'Você não está em modo de impersonação.')
-        return redirect('notas:dashboard')
-    
-    admin_original_id = request.session.get('admin_original_id')
-    usuario_impersonado_id = request.session.get('usuario_impersonado_id')
-    
-    try:
-        admin_original = Usuario.objects.get(pk=admin_original_id)
-        usuario_impersonado = Usuario.objects.get(pk=usuario_impersonado_id) if usuario_impersonado_id else None
-        
-        # Fazer logout do usuário impersonado
-        from django.contrib.auth import logout, login
-        logout(request)
-        
-        # Fazer login como admin original
-        login(request, admin_original)
-        
-        # Limpar sessão de impersonação
-        del request.session['admin_original_id']
-        if 'usuario_impersonado_id' in request.session:
-            del request.session['usuario_impersonado_id']
-        if 'impersonacao_iniciada_em' in request.session:
-            del request.session['impersonacao_iniciada_em']
-        
-        # Registrar log de auditoria
-        try:
-            from .utils.auditoria import registrar_log_auditoria
-            registrar_log_auditoria(
-                usuario=admin_original,
-                acao='END_IMPERSONATE',
-                modelo='Usuario',
-                objeto_id=usuario_impersonado.pk if usuario_impersonado else None,
-                descricao=f'Administrador {admin_original.username} encerrou a impersonação de {usuario_impersonado.username if usuario_impersonado else "usuário"}',
-                request=request
-            )
-        except Exception as e:
-            # Se falhar ao registrar log, não interrompe o encerramento
-            pass
-        
-        messages.success(request, f'Você voltou a fazer login como {admin_original.username}.')
-        return redirect('notas:dashboard')
-        
-    except Usuario.DoesNotExist:
-        # Se o admin original não existir mais, fazer logout completo
-        logout(request)
-        messages.error(request, 'Administrador original não encontrado. Você foi desconectado.')
-        return redirect('notas:login')
-
 
 @login_required
 @user_passes_test(is_admin)
@@ -2624,495 +2200,8 @@ def cobranca_mensal(request):
 @login_required
 @user_passes_test(is_admin)
 def cobranca_carregamento(request):
-    """Lista todas as cobranças de carregamento"""
-    cobrancas = CobrancaCarregamento.objects.all().prefetch_related('romaneios', 'cliente')
-    
-    # Filtros
-    cliente_id = request.GET.get('cliente')
-    status_cobranca = request.GET.get('status')
-    data_inicio = request.GET.get('data_inicio')
-    data_fim = request.GET.get('data_fim')
-    
-    # Por padrão, mostrar apenas cobranças pendentes
-    # Se o usuário selecionar explicitamente um status, usar o selecionado
-    if status_cobranca:
-        cobrancas = cobrancas.filter(status=status_cobranca)
-    else:
-        # Se não houver filtro de status, mostrar apenas pendentes
-        cobrancas = cobrancas.filter(status='Pendente')
-    
-    if cliente_id:
-        cobrancas = cobrancas.filter(cliente_id=cliente_id)
-    
-    if data_inicio:
-        cobrancas = cobrancas.filter(criado_em__date__gte=data_inicio)
-    
-    if data_fim:
-        cobrancas = cobrancas.filter(criado_em__date__lte=data_fim)
-    
-    clientes = Cliente.objects.filter(status='Ativo').order_by('razao_social')
-    
-    context = {
-        'cobrancas': cobrancas,
-        'clientes': clientes,
-    }
-    return render(request, 'notas/relatorios/cobranca_carregamento.html', context)
-
-
-@login_required
-@user_passes_test(is_admin)
-def criar_cobranca_carregamento(request):
-    """Cria uma nova cobrança de carregamento"""
-    if request.method == 'POST':
-        try:
-            cliente_id = request.POST.get('cliente')
-            romaneios_ids = request.POST.getlist('romaneios')
-            valor_carregamento = request.POST.get('valor_carregamento', '0') or '0'
-            valor_cte_manifesto = request.POST.get('valor_cte_manifesto', '0') or '0'
-            data_vencimento = request.POST.get('data_vencimento') or None
-            observacoes = request.POST.get('observacoes', '')
-            
-            if not cliente_id or not romaneios_ids:
-                messages.error(request, 'Cliente e pelo menos um romaneio são obrigatórios!')
-                return redirect('notas:criar_cobranca_carregamento')
-            
-            cliente = Cliente.objects.get(pk=cliente_id)
-            
-            cobranca = CobrancaCarregamento.objects.create(
-                cliente=cliente,
-                valor_carregamento=valor_carregamento,
-                valor_cte_manifesto=valor_cte_manifesto,
-                data_vencimento=data_vencimento,
-                observacoes=observacoes
-            )
-            
-            # Associar romaneios
-            for romaneio_id in romaneios_ids:
-                romaneio = RomaneioViagem.objects.get(pk=romaneio_id)
-                cobranca.romaneios.add(romaneio)
-            
-            messages.success(request, 'Cobrança criada com sucesso!')
-            return redirect('notas:cobranca_carregamento')
-            
-        except Exception as e:
-            messages.error(request, f'Erro ao criar cobrança: {str(e)}')
-    
-    # GET - Mostrar formulário
-    clientes = Cliente.objects.filter(status='Ativo').order_by('razao_social')
-    cliente_id = request.GET.get('cliente')
-    romaneios = None
-    
-    if cliente_id:
-        # Buscar todos os romaneios emitidos do cliente (pode ter múltiplos CNPJs)
-        romaneios = RomaneioViagem.objects.filter(
-            cliente_id=cliente_id,
-            status='Emitido'
-        ).order_by('-data_emissao')
-    
-    context = {
-        'clientes': clientes,
-        'romaneios': romaneios,
-        'cliente_selecionado_id': cliente_id,
-    }
-    return render(request, 'notas/criar_cobranca_carregamento.html', context)
-
-
-@login_required
-@user_passes_test(is_admin)
-def editar_cobranca_carregamento(request, cobranca_id):
-    """Edita uma cobrança de carregamento"""
-    cobranca = get_object_or_404(CobrancaCarregamento, pk=cobranca_id)
-    
-    if request.method == 'POST':
-        try:
-            romaneios_ids = request.POST.getlist('romaneios')
-            cobranca.valor_carregamento = request.POST.get('valor_carregamento', '0') or '0'
-            cobranca.valor_cte_manifesto = request.POST.get('valor_cte_manifesto', '0') or '0'
-            cobranca.data_vencimento = request.POST.get('data_vencimento') or None
-            cobranca.observacoes = request.POST.get('observacoes', '')
-            cobranca.save()
-            
-            # Atualizar romaneios
-            cobranca.romaneios.clear()
-            for romaneio_id in romaneios_ids:
-                romaneio = RomaneioViagem.objects.get(pk=romaneio_id)
-                cobranca.romaneios.add(romaneio)
-            
-            messages.success(request, 'Cobrança atualizada com sucesso!')
-            return redirect('notas:cobranca_carregamento')
-            
-        except Exception as e:
-            messages.error(request, f'Erro ao atualizar cobrança: {str(e)}')
-    
-    # GET - Mostrar formulário
-    clientes = Cliente.objects.filter(status='Ativo').order_by('razao_social')
-    romaneios_cliente = RomaneioViagem.objects.filter(
-        cliente=cobranca.cliente,
-        status='Emitido'
-    ).order_by('-data_emissao')
-    
-    context = {
-        'cobranca': cobranca,
-        'clientes': clientes,
-        'romaneios': romaneios_cliente,
-        'romaneios_selecionados': list(cobranca.romaneios.values_list('id', flat=True)),
-    }
-    return render(request, 'notas/editar_cobranca_carregamento.html', context)
-
-
-@login_required
-@user_passes_test(is_admin)
-def baixar_cobranca_carregamento(request, cobranca_id):
-    """Baixa uma cobrança (marca como paga)"""
-    cobranca = get_object_or_404(CobrancaCarregamento, pk=cobranca_id)
-    
-    if request.method == 'POST':
-        cobranca.status = 'Baixado'
-        cobranca.data_baixa = timezone.now().date()
-        cobranca.save()
-        messages.success(request, 'Cobrança baixada com sucesso!')
-        return redirect('notas:cobranca_carregamento')
-    
-    return render(request, 'notas/confirmar_baixa_cobranca.html', {'cobranca': cobranca})
-
-
-@login_required
-@user_passes_test(is_admin)
-def excluir_cobranca_carregamento(request, cobranca_id):
-    """Exclui uma cobrança"""
-    cobranca = get_object_or_404(CobrancaCarregamento, pk=cobranca_id)
-    
-    if request.method == 'POST':
-        cobranca.delete()
-        messages.success(request, 'Cobrança excluída com sucesso!')
-        return redirect('notas:cobranca_carregamento')
-    
-    return render(request, 'notas/confirmar_exclusao_cobranca.html', {'cobranca': cobranca})
-
-
-@login_required
-@user_passes_test(is_admin)
-def gerar_relatorio_consolidado_cobranca_pdf(request):
-    """Gera relatório PDF consolidado com cobranças pendentes do cliente selecionado"""
-    from django.http import HttpResponse
-    from .utils.relatorios import gerar_relatorio_pdf_consolidado_cobranca
-    
-    # Buscar cobranças pendentes do cliente selecionado (se houver)
-    cliente_id = request.GET.get('cliente')
-    
-    cobrancas_pendentes = CobrancaCarregamento.objects.filter(
-        status='Pendente'
-    )
-    
-    # Filtrar por cliente se selecionado
-    if cliente_id:
-        cobrancas_pendentes = cobrancas_pendentes.filter(cliente_id=cliente_id)
-        cliente = get_object_or_404(Cliente, pk=cliente_id)
-        nome_arquivo = f"relatorio_consolidado_{cliente.razao_social.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf"
-    else:
-        # Se não houver cliente selecionado, mostrar mensagem
-        from django.contrib import messages
-        messages.warning(request, 'Por favor, selecione um cliente nos filtros para gerar o relatório consolidado.')
-        return redirect('notas:cobranca_carregamento')
-    
-    cobrancas_pendentes = cobrancas_pendentes.select_related('cliente').prefetch_related(
-        'romaneios__motorista',
-        'romaneios__veiculo_principal',
-        'romaneios__reboque_1',
-        'romaneios__reboque_2'
-    ).order_by('criado_em')
-    
-    # Verificar se há cobranças pendentes
-    if not cobrancas_pendentes.exists():
-        from django.contrib import messages
-        messages.info(request, f'O cliente {cliente.razao_social} não possui cobranças pendentes.')
-        return redirect('notas:cobranca_carregamento')
-    
-    # Gerar PDF
-    pdf_content = gerar_relatorio_pdf_consolidado_cobranca(cobrancas_pendentes, cliente_selecionado=cliente if cliente_id else None)
-    
-    # Criar resposta com inline para visualização no navegador
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="{nome_arquivo}"'
-    response.write(pdf_content)
-    return response
-
-
-@login_required
-@user_passes_test(is_cliente)
-def minhas_cobrancas_carregamento(request):
-    """Lista as cobranças de carregamento do cliente logado"""
-    # Verificar se o usuário é cliente e tem cliente associado
-    if request.user.tipo_usuario.upper() != 'CLIENTE' or not request.user.cliente:
-        messages.error(request, 'Acesso negado. Esta área é exclusiva para clientes.')
-        return redirect('notas:dashboard')
-    
-    # Buscar cobranças apenas do cliente logado
-    cobrancas = CobrancaCarregamento.objects.filter(
-        cliente=request.user.cliente
-    ).prefetch_related('romaneios', 'cliente').order_by('-criado_em')
-    
-    # Filtros
-    status_cobranca = request.GET.get('status')
-    data_inicio = request.GET.get('data_inicio')
-    data_fim = request.GET.get('data_fim')
-    
-    if status_cobranca:
-        cobrancas = cobrancas.filter(status=status_cobranca)
-    
-    if data_inicio:
-        cobrancas = cobrancas.filter(criado_em__date__gte=data_inicio)
-    
-    if data_fim:
-        cobrancas = cobrancas.filter(criado_em__date__lte=data_fim)
-    
-    context = {
-        'cobrancas': cobrancas,
-    }
-    return render(request, 'notas/auth/minhas_cobrancas_carregamento.html', context)
-
-
-@login_required
-@user_passes_test(is_cliente)
-def gerar_relatorio_cobranca_carregamento_pdf_cliente(request, cobranca_id):
-    """Gera relatório PDF para uma cobrança de carregamento - Versão Cliente"""
-    from django.http import HttpResponse
-    from .utils.relatorios import gerar_relatorio_pdf_cobranca_carregamento
-    
-    cobranca = get_object_or_404(
-        CobrancaCarregamento.objects.select_related('cliente').prefetch_related(
-            'romaneios__motorista',
-            'romaneios__veiculo_principal',
-            'romaneios__reboque_1',
-            'romaneios__reboque_2'
-        ),
-        pk=cobranca_id
-    )
-    
-    # Verificar se o cliente logado tem permissão para ver esta cobrança
-    if request.user.tipo_usuario.upper() == 'CLIENTE' and cobranca.cliente != request.user.cliente:
-        messages.error(request, 'Você não tem permissão para acessar esta cobrança.')
-        return redirect('notas:minhas_cobrancas_carregamento')
-    
-    # Gerar PDF
-    pdf_content = gerar_relatorio_pdf_cobranca_carregamento(cobranca)
-    
-    # Nome do arquivo
-    nome_arquivo = f"cobranca_carregamento_{cobranca.id}_{cobranca.cliente.razao_social.replace(' ', '_')}.pdf"
-    
-    # Criar resposta com inline para visualização no navegador
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="{nome_arquivo}"'
-    response.write(pdf_content)
-    return response
-
-
-@login_required
-@user_passes_test(is_admin)
-def gerar_relatorio_cobranca_carregamento_pdf(request, cobranca_id):
-    """Gera relatório PDF para uma cobrança de carregamento - Versão Admin"""
-    from django.http import HttpResponse
-    from .utils.relatorios import gerar_relatorio_pdf_cobranca_carregamento
-    
-    cobranca = get_object_or_404(
-        CobrancaCarregamento.objects.select_related('cliente').prefetch_related(
-            'romaneios__motorista',
-            'romaneios__veiculo_principal',
-            'romaneios__reboque_1',
-            'romaneios__reboque_2'
-        ),
-        pk=cobranca_id
-    )
-    
-    # Gerar PDF
-    pdf_content = gerar_relatorio_pdf_cobranca_carregamento(cobranca)
-    
-    # Nome do arquivo
-    nome_arquivo = f"cobranca_carregamento_{cobranca.id}_{cobranca.cliente.razao_social.replace(' ', '_')}.pdf"
-    
-    # Criar resposta com inline para visualização no navegador
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="{nome_arquivo}"'
-    response.write(pdf_content)
-    return response
-
-
-@login_required
-@user_passes_test(is_admin)
-def carregar_romaneios_cliente(request, cliente_id):
-    """Carrega romaneios emitidos de um cliente via AJAX"""
-    try:
-        romaneios = RomaneioViagem.objects.filter(
-            cliente_id=cliente_id,
-            status='Emitido'
-        ).order_by('-data_emissao')
-        
-        romaneios_data = []
-        for romaneio in romaneios:
-            romaneios_data.append({
-                'id': romaneio.id,
-                'codigo': romaneio.codigo,
-                'data_emissao': romaneio.data_emissao.strftime('%d/%m/%Y'),
-                'cliente': romaneio.cliente.razao_social,
-            })
-        
-        return JsonResponse({'romaneios': romaneios_data})
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-
-
-@login_required
-@user_passes_test(is_admin)
-def gerenciar_despesas_romaneio(request, romaneio_id):
-    """Gerencia as despesas de um romaneio específico"""
-    romaneio = get_object_or_404(RomaneioViagem, pk=romaneio_id)
-    despesas = romaneio.despesas.all()
-    
-    if request.method == 'POST':
-        # Processar múltiplas despesas
-        despesas_criadas = 0
-        erros = []
-        
-        # Verificar se é um formulário de múltiplas despesas
-        tipos = request.POST.getlist('tipo_despesa[]')
-        valores = request.POST.getlist('valor[]')
-        datas_vencimento = request.POST.getlist('data_vencimento[]')
-        observacoes_list = request.POST.getlist('observacoes[]')
-        
-        if tipos:
-            # Processar múltiplas despesas
-            for i, tipo in enumerate(tipos):
-                if tipo and i < len(valores) and valores[i]:
-                    try:
-                        valor = valores[i]
-                        data_vencimento = datas_vencimento[i] if i < len(datas_vencimento) else ''
-                        observacoes = observacoes_list[i] if i < len(observacoes_list) else ''
-                        
-                        DespesaCarregamento.objects.create(
-                            romaneio=romaneio,
-                            tipo_despesa=tipo,
-                            valor=valor,
-                            data_vencimento=data_vencimento or None,
-                            observacoes=observacoes
-                        )
-                        despesas_criadas += 1
-                    except Exception as e:
-                        erros.append(f'Erro ao adicionar {tipo}: {str(e)}')
-            
-            if despesas_criadas > 0:
-                if despesas_criadas == 1:
-                    messages.success(request, f'{despesas_criadas} despesa adicionada com sucesso!')
-                else:
-                    messages.success(request, f'{despesas_criadas} despesas adicionadas com sucesso!')
-            
-            if erros:
-                for erro in erros:
-                    messages.error(request, erro)
-        else:
-            # Compatibilidade com formulário antigo (uma despesa)
-            tipo = request.POST.get('tipo_despesa')
-            valor = request.POST.get('valor')
-            data_vencimento = request.POST.get('data_vencimento')
-            observacoes = request.POST.get('observacoes')
-            
-            if tipo and valor:
-                try:
-                    DespesaCarregamento.objects.create(
-                        romaneio=romaneio,
-                        tipo_despesa=tipo,
-                        valor=valor,
-                        data_vencimento=data_vencimento or None,
-                        observacoes=observacoes
-                    )
-                    messages.success(request, 'Despesa adicionada com sucesso!')
-                except Exception as e:
-                    messages.error(request, f'Erro ao adicionar despesa: {str(e)}')
-        
-        return redirect('notas:gerenciar_despesas_romaneio', romaneio_id=romaneio_id)
-    
-    total_pendente = despesas.filter(status='Pendente').aggregate(
-        total=Sum('valor')
-    )['total'] or 0
-    
-    total_baixado = despesas.filter(status='Baixado').aggregate(
-        total=Sum('valor')
-    )['total'] or 0
-    
-    # Calcular totais por tipo de despesa
-    total_carregamento = despesas.filter(tipo_despesa='Carregamento').aggregate(
-        total=Sum('valor')
-    )['total'] or 0
-    
-    # Unificar CTE e Manifesto em CTE/Manifesto
-    total_cte_manifesto = (
-        despesas.filter(tipo_despesa='CTE').aggregate(total=Sum('valor'))['total'] or 0
-    ) + (
-        despesas.filter(tipo_despesa='Manifesto').aggregate(total=Sum('valor'))['total'] or 0
-    ) + (
-        despesas.filter(tipo_despesa='CTE/Manifesto').aggregate(total=Sum('valor'))['total'] or 0
-    )
-    
-    context = {
-        'romaneio': romaneio,
-        'despesas': despesas,
-        'total_pendente': total_pendente,
-        'total_baixado': total_baixado,
-        'total_carregamento': total_carregamento,
-        'total_cte_manifesto': total_cte_manifesto,
-    }
-    return render(request, 'notas/gerenciar_despesas_romaneio.html', context)
-
-
-@login_required
-@user_passes_test(is_admin)
-def baixar_despesa(request, despesa_id):
-    """Baixa uma despesa (marca como paga)"""
-    despesa = get_object_or_404(DespesaCarregamento, pk=despesa_id)
-    
-    if request.method == 'POST':
-        despesa.status = 'Baixado'
-        despesa.data_baixa = timezone.now().date()
-        despesa.save()
-        messages.success(request, 'Despesa baixada com sucesso!')
-        return redirect('notas:gerenciar_despesas_romaneio', romaneio_id=despesa.romaneio.id)
-    
-    return render(request, 'notas/confirmar_baixa_despesa.html', {'despesa': despesa})
-
-
-@login_required
-@user_passes_test(is_admin)
-def editar_despesa(request, despesa_id):
-    """Edita uma despesa"""
-    despesa = get_object_or_404(DespesaCarregamento, pk=despesa_id)
-    
-    if request.method == 'POST':
-        try:
-            despesa.tipo_despesa = request.POST.get('tipo_despesa')
-            despesa.valor = request.POST.get('valor')
-            despesa.data_vencimento = request.POST.get('data_vencimento') or None
-            despesa.observacoes = request.POST.get('observacoes')
-            despesa.save()
-            messages.success(request, 'Despesa atualizada com sucesso!')
-        except Exception as e:
-            messages.error(request, f'Erro ao atualizar despesa: {str(e)}')
-        return redirect('notas:gerenciar_despesas_romaneio', romaneio_id=despesa.romaneio.id)
-    
-    return render(request, 'notas/editar_despesa.html', {'despesa': despesa})
-
-
-@login_required
-@user_passes_test(is_admin)
-def excluir_despesa(request, despesa_id):
-    """Exclui uma despesa"""
-    despesa = get_object_or_404(DespesaCarregamento, pk=despesa_id)
-    romaneio_id = despesa.romaneio.id
-    
-    if request.method == 'POST':
-        despesa.delete()
-        messages.success(request, 'Despesa excluída com sucesso!')
-        return redirect('notas:gerenciar_despesas_romaneio', romaneio_id=romaneio_id)
-    
-    return render(request, 'notas/confirmar_exclusao_despesa.html', {'despesa': despesa})
+    """View para o relatório de cobrança de carregamento."""
+    return render(request, 'notas/relatorios/cobranca_carregamento.html')
 
 @login_required
 def dashboard(request):
@@ -3408,15 +2497,6 @@ def listar_notas_fiscais(request):
             queryset = queryset.filter(local=local)
         
         notas_fiscais = queryset.order_by('nota')
-        
-        # Corrigir status desatualizados automaticamente
-        notas_corrigidas = 0
-        for nota_fiscal in notas_fiscais:
-            if nota_fiscal.corrigir_status():
-                notas_corrigidas += 1
-        
-        if notas_corrigidas > 0:
-            messages.success(request, f'{notas_corrigidas} nota(s) fiscal(is) tiveram o status corrigido automaticamente.')
     
     context = {
         'notas_fiscais': notas_fiscais,
@@ -3692,13 +2772,9 @@ def pesquisar_mercadorias_deposito(request):
         
         notas_fiscais = queryset.order_by('nota')
         
-        # Calcular totais apenas quando há resultados usando aggregate (mais eficiente)
-        totais = notas_fiscais.aggregate(
-            total_peso=Sum('peso'),
-            total_valor=Sum('valor')
-        )
-        total_peso = totais['total_peso'] or 0
-        total_valor = totais['total_valor'] or 0
+        # Calcular totais apenas quando há resultados
+        total_peso = sum(nota.peso for nota in notas_fiscais)
+        total_valor = sum(nota.valor for nota in notas_fiscais)
     elif search_performed:
         # Se o formulário não for válido, mostrar mensagem de erro
         messages.warning(request, f'Erro na validação do formulário: {search_form.errors}.')
@@ -3746,13 +2822,9 @@ def imprimir_relatorio_mercadorias_deposito(request):
         
         notas_fiscais = queryset.order_by('nota')
         
-        # Calcular totais apenas quando há resultados usando aggregate (mais eficiente)
-        totais = notas_fiscais.aggregate(
-            total_peso=Sum('peso'),
-            total_valor=Sum('valor')
-        )
-        total_peso = totais['total_peso'] or 0
-        total_valor = totais['total_valor'] or 0
+        # Calcular totais apenas quando há resultados
+        total_peso = sum(nota.peso for nota in notas_fiscais)
+        total_valor = sum(nota.valor for nota in notas_fiscais)
     elif search_performed:
         # Se o formulário não for válido, mostrar mensagem de erro
         messages.warning(request, f'Erro na validação do formulário: {search_form.errors}.')
@@ -3899,18 +2971,7 @@ def adicionar_agenda_entrega(request):
             agenda_entrega.usuario_criacao = request.user
             agenda_entrega.save()
             messages.success(request, 'Entrega agendada com sucesso!')
-            
-            if 'salvar_e_adicionar' in request.POST:
-                # Retorna para a mesma página com formulário limpo
-                form = AgendaEntregaForm()
-                context = {
-                    'title': 'Agendar Nova Entrega',
-                    'form': form,
-                }
-                return render(request, 'notas/agenda/adicionar_agenda_entrega.html', context)
-            else:
-                # Salvar e sair - redireciona para a lista
-                return redirect('notas:listar_agenda_entregas')
+            return redirect('notas:listar_agenda_entregas')
     else:
         form = AgendaEntregaForm()
     
@@ -4126,232 +3187,6 @@ def test_widget_agenda(request):
     }
     
     return render(request, 'notas/test_widget_agenda.html', context)
-
-
-# --------------------------------------------------------------------------------------
-# Views para Logs de Auditoria
-# --------------------------------------------------------------------------------------
-
-@login_required
-@user_passes_test(is_admin)
-def listar_logs_auditoria(request):
-    """Lista todos os logs de auditoria (apenas administradores)"""
-    logs = AuditoriaLog.objects.select_related('usuario').order_by('-data_hora')
-    
-    # Obter parâmetros de filtro do GET
-    acao = request.GET.get('acao', '').strip()
-    modelo = request.GET.get('modelo', '').strip()
-    usuario_id = request.GET.get('usuario', '').strip()
-    data_inicio = request.GET.get('data_inicio', '').strip()
-    data_fim = request.GET.get('data_fim', '').strip()
-    
-    # Aplicar filtros apenas se valores foram fornecidos
-    if acao:
-        logs = logs.filter(acao=acao)
-    
-    if modelo:
-        logs = logs.filter(modelo__icontains=modelo)
-    
-    if usuario_id:
-        try:
-            logs = logs.filter(usuario_id=int(usuario_id))
-        except (ValueError, TypeError):
-            # Se não conseguir converter, ignorar o filtro
-            pass
-    
-    if data_inicio:
-        try:
-            # Converter string de data (YYYY-MM-DD) para date object
-            data_inicio_date = datetime.strptime(data_inicio, '%Y-%m-%d').date()
-            # Filtrar por data (ignora hora)
-            logs = logs.filter(data_hora__date__gte=data_inicio_date)
-        except (ValueError, TypeError):
-            # Se a data estiver em formato inválido, ignorar o filtro
-            pass
-    
-    if data_fim:
-        try:
-            # Converter string de data (YYYY-MM-DD) para date object
-            data_fim_date = datetime.strptime(data_fim, '%Y-%m-%d').date()
-            # Filtrar por data (ignora hora)
-            logs = logs.filter(data_hora__date__lte=data_fim_date)
-        except (ValueError, TypeError):
-            # Se a data estiver em formato inválido, ignorar o filtro
-            pass
-    
-    # Paginação
-    from django.core.paginator import Paginator
-    paginator = Paginator(logs, 50)  # 50 logs por página
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    # Estatísticas
-    total_logs = logs.count()
-    acoes_count = logs.values('acao').annotate(count=Count('id')).order_by('-count')
-    modelos_count = logs.values('modelo').annotate(count=Count('id')).order_by('-count')[:10]
-    
-    # Lista de usuários para filtro
-    usuarios = Usuario.objects.filter(acoes_auditadas__isnull=False).distinct().order_by('username')
-    
-    context = {
-        'page_obj': page_obj,
-        'logs': page_obj,
-        'total_logs': total_logs,
-        'acoes_count': acoes_count,
-        'modelos_count': modelos_count,
-        'usuarios': usuarios,
-        'acao_atual': acao,
-        'modelo_atual': modelo,
-        'usuario_atual': usuario_id,
-        'data_inicio_atual': data_inicio,
-        'data_fim_atual': data_fim,
-        'ACTION_CHOICES': AuditoriaLog.ACTION_CHOICES,
-    }
-    
-    return render(request, 'notas/auditoria/listar_logs.html', context)
-
-
-@login_required
-@user_passes_test(is_admin)
-def detalhes_log_auditoria(request, pk):
-    """Mostra os detalhes de um log de auditoria específico"""
-    log = get_object_or_404(AuditoriaLog.objects.select_related('usuario'), pk=pk)
-    
-    context = {
-        'log': log,
-    }
-    
-    return render(request, 'notas/auditoria/detalhes_log.html', context)
-
-
-@login_required
-@user_passes_test(is_admin)
-def listar_registros_excluidos(request):
-    """Lista todos os registros excluídos (soft deleted)"""
-    modelo_tipo = request.GET.get('modelo', 'todos')
-    
-    # Dicionário com todos os modelos que suportam soft delete
-    modelos = {
-        'cliente': {
-            'model': Cliente,
-            'nome': 'Cliente',
-            'url_detalhes': 'notas:detalhes_cliente',
-            'verbose_name': 'Cliente'
-        },
-        'notafiscal': {
-            'model': NotaFiscal,
-            'nome': 'Nota Fiscal',
-            'url_detalhes': 'notas:detalhes_nota_fiscal',
-            'verbose_name': 'Nota Fiscal'
-        },
-        'motorista': {
-            'model': Motorista,
-            'nome': 'Motorista',
-            'url_detalhes': 'notas:detalhes_motorista',
-            'verbose_name': 'Motorista'
-        },
-        'veiculo': {
-            'model': Veiculo,
-            'nome': 'Veículo',
-            'url_detalhes': 'notas:detalhes_veiculo',
-            'verbose_name': 'Veículo'
-        },
-        'romaneio': {
-            'model': RomaneioViagem,
-            'nome': 'Romaneio',
-            'url_detalhes': 'notas:detalhes_romaneio',
-            'verbose_name': 'Romaneio'
-        },
-    }
-    
-    registros_excluidos = {}
-    total_excluidos = 0
-    
-    if modelo_tipo == 'todos':
-        # Buscar todos os modelos
-        for key, info in modelos.items():
-            excluidos = info['model'].all_objects.filter(deleted_at__isnull=False).select_related('deleted_by').order_by('-deleted_at')
-            count = excluidos.count()
-            if count > 0:
-                registros_excluidos[key] = {
-                    'nome': info['nome'],
-                    'registros': excluidos[:50],  # Limitar a 50 por tipo
-                    'total': count,
-                    'url_detalhes': info['url_detalhes'],
-                    'verbose_name': info['verbose_name']
-                }
-                total_excluidos += count
-    else:
-        # Buscar apenas um modelo específico
-        if modelo_tipo in modelos:
-            info = modelos[modelo_tipo]
-            excluidos = info['model'].all_objects.filter(deleted_at__isnull=False).select_related('deleted_by').order_by('-deleted_at')
-            count = excluidos.count()
-            if count > 0:
-                registros_excluidos[modelo_tipo] = {
-                    'nome': info['nome'],
-                    'registros': excluidos,
-                    'total': count,
-                    'url_detalhes': info['url_detalhes'],
-                    'verbose_name': info['verbose_name']
-                }
-                total_excluidos = count
-    
-    context = {
-        'registros_excluidos': registros_excluidos,
-        'total_excluidos': total_excluidos,
-        'modelo_tipo': modelo_tipo,
-        'modelos_disponiveis': modelos,
-    }
-    
-    return render(request, 'notas/auditoria/listar_registros_excluidos.html', context)
-
-
-@login_required
-@user_passes_test(is_admin)
-def restaurar_registro(request, modelo, pk):
-    """Restaura um registro soft deleted"""
-    # Mapeamento de modelos
-    modelos_map = {
-        'cliente': Cliente,
-        'notafiscal': NotaFiscal,
-        'motorista': Motorista,
-        'veiculo': Veiculo,
-        'romaneio': RomaneioViagem,
-    }
-    
-    if modelo not in modelos_map:
-        messages.error(request, 'Modelo inválido.')
-        return redirect('notas:listar_registros_excluidos')
-    
-    Model = modelos_map[modelo]
-    registro = get_object_or_404(Model.all_objects.filter(deleted_at__isnull=False), pk=pk)
-    
-    if request.method == 'POST':
-        try:
-            # Restaurar o registro
-            registro.restore()
-            
-            # Registrar a restauração no log de auditoria
-            registrar_restauracao(
-                usuario=request.user,
-                instancia=registro,
-                request=request,
-                descricao=f"{Model._meta.verbose_name.title()} '{str(registro)}' restaurado"
-            )
-            
-            messages.success(request, f'{Model._meta.verbose_name.title()} restaurado com sucesso!')
-            return redirect('notas:listar_registros_excluidos')
-        except Exception as e:
-            messages.error(request, f'Não foi possível restaurar o registro: {e}')
-    
-    context = {
-        'registro': registro,
-        'modelo': modelo,
-        'modelo_nome': Model._meta.verbose_name.title(),
-    }
-    
-    return render(request, 'notas/auditoria/restaurar_registro.html', context)
 
 
 # =============================================================================

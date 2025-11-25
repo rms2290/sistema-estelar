@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load format_filters %}
 
 {% block title %}Registrar Consulta - {{ motorista.nome }}{% endblock %}
 
@@ -147,7 +148,7 @@
                 </div>
                 <div class="card-body">
                     <p><strong>Nome:</strong> {{ motorista.nome }}</p>
-                    <p><strong>CPF:</strong> {{ motorista.cpf }}</p>
+                    <p><strong>CPF:</strong> {{ motorista.cpf|format_cpf }}</p>
                     <p><strong>RG/RNE:</strong> {{ motorista.rg|default:"Não informado" }}</p>
                     <p><strong>CNH:</strong> {{ motorista.cnh|default:"Não informado" }}</p>
                     <p><strong>Última Consulta:</strong> {{ motorista.numero_consulta|default:"Não registrada" }}</p>
