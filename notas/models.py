@@ -983,3 +983,103 @@ class TabelaSeguro(models.Model):
         ordering = ['estado']
 
 
+class AuditoriaLog(models.Model):
+    """Registra todas as ações importantes do sistema para auditoria"""
+    
+    ACTION_CHOICES = [
+        ('CREATE', 'Criação'),
+        ('UPDATE', 'Edição'),
+        ('DELETE', 'Exclusão'),
+        ('SOFT_DELETE', 'Exclusão Suave'),
+        ('RESTORE', 'Restauração'),
+        ('VIEW', 'Visualização'),
+        ('LOGIN', 'Login'),
+        ('LOGOUT', 'Logout'),
+        ('EXPORT', 'Exportação'),
+        ('IMPORT', 'Importação'),
+        ('IMPERSONATE', 'Impersonação'),
+        ('END_IMPERSONATE', 'Fim de Impersonação'),
+    ]
+    
+    usuario = models.ForeignKey(
+        'Usuario',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='acoes_auditadas',
+        verbose_name="Usuário"
+    )
+    
+    acao = models.CharField(
+        max_length=20,
+        choices=ACTION_CHOICES,
+        verbose_name="Ação"
+    )
+    
+    modelo = models.CharField(
+        max_length=100,
+        verbose_name="Modelo",
+        help_text="Nome do modelo afetado (ex: Cliente, NotaFiscal)"
+    )
+    
+    objeto_id = models.IntegerField(
+        null=True,
+        blank=True,
+        verbose_name="ID do Objeto",
+        help_text="ID do registro afetado"
+    )
+    
+    descricao = models.TextField(
+        verbose_name="Descrição",
+        help_text="Descrição detalhada da ação realizada"
+    )
+    
+    dados_anteriores = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name="Dados Anteriores",
+        help_text="Estado do objeto antes da mudança (para updates/deletes)"
+    )
+    
+    dados_novos = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name="Dados Novos",
+        help_text="Estado do objeto depois da mudança (para creates/updates)"
+    )
+    
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        verbose_name="Endereço IP"
+    )
+    
+    user_agent = models.CharField(
+        max_length=500,
+        blank=True,
+        verbose_name="User Agent",
+        help_text="Informações do navegador/cliente"
+    )
+    
+    data_hora = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Data e Hora"
+    )
+    
+    def __str__(self):
+        usuario_nome = self.usuario.username if self.usuario else "Sistema"
+        return f"{self.get_acao_display()} - {self.modelo} - {usuario_nome} - {self.data_hora.strftime('%d/%m/%Y %H:%M')}"
+    
+    class Meta:
+        verbose_name = "Log de Auditoria"
+        verbose_name_plural = "Logs de Auditoria"
+        ordering = ['-data_hora']
+        indexes = [
+            models.Index(fields=['usuario', 'data_hora']),
+            models.Index(fields=['modelo', 'acao']),
+            models.Index(fields=['objeto_id', 'modelo']),
+            models.Index(fields=['acao', 'data_hora']),
+        ]
+
+
+

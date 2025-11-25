@@ -3190,3 +3190,83 @@ def test_widget_agenda(request):
 
 
 # =============================================================================
+
+def listar_logs_auditoria(request):
+    """Lista todos os logs de auditoria (apenas administradores)"""
+    logs = AuditoriaLog.objects.select_related('usuario').order_by('-data_hora')
+    
+    # Obter parâmetros de filtro do GET
+    acao = request.GET.get('acao', '').strip()
+    modelo = request.GET.get('modelo', '').strip()
+    usuario_id = request.GET.get('usuario', '').strip()
+    data_inicio = request.GET.get('data_inicio', '').strip()
+    data_fim = request.GET.get('data_fim', '').strip()
+    
+    # Aplicar filtros apenas se valores foram fornecidos
+    if acao:
+        logs = logs.filter(acao=acao)
+    
+    if modelo:
+        logs = logs.filter(modelo__icontains=modelo)
+    
+    if usuario_id:
+        try:
+            logs = logs.filter(usuario_id=int(usuario_id))
+        except (ValueError, TypeError):
+            # Se não conseguir converter, ignorar o filtro
+            pass
+    
+    if data_inicio:
+        try:
+            # Converter string de data (YYYY-MM-DD) para date object
+            data_inicio_date = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            # Filtrar por data (ignora hora)
+            logs = logs.filter(data_hora__date__gte=data_inicio_date)
+        except (ValueError, TypeError):
+            # Se a data estiver em formato inválido, ignorar o filtro
+            pass
+    
+    if data_fim:
+        try:
+            # Converter string de data (YYYY-MM-DD) para date object
+            data_fim_date = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            # Filtrar por data (ignora hora)
+            logs = logs.filter(data_hora__date__lte=data_fim_date)
+        except (ValueError, TypeError):
+            # Se a data estiver em formato inválido, ignorar o filtro
+            pass
+    
+    # Paginação
+    from django.core.paginator import Paginator
+    paginator = Paginator(logs, 50)  # 50 logs por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Estatísticas
+    total_logs = logs.count()
+    acoes_count = logs.values('acao').annotate(count=Count('id')).order_by('-count')
+    modelos_count = logs.values('modelo').annotate(count=Count('id')).order_by('-count')[:10]
+    
+    # Lista de usuários para filtro
+    usuarios = Usuario.objects.filter(acoes_auditadas__isnull=False).distinct().order_by('username')
+    
+    context = {
+        'page_obj': page_obj,
+        'logs': page_obj,
+        'total_logs': total_logs,
+        'acoes_count': acoes_count,
+        'modelos_count': modelos_count,
+        'usuarios': usuarios,
+        'acao_atual': acao,
+        'modelo_atual': modelo,
+        'usuario_atual': usuario_id,
+        'data_inicio_atual': data_inicio,
+        'data_fim_atual': data_fim,
+        'ACTION_CHOICES': AuditoriaLog.ACTION_CHOICES,
+    }
+    
+    return render(request, 'notas/auditoria/listar_logs.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)

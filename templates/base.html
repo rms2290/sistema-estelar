@@ -44,7 +44,7 @@
                 <div class="alert alert-warning mb-0 me-2" style="padding: 0.25rem 0.5rem; font-size: 0.875rem;">
                     <i class="fas fa-user-secret"></i> 
                     <strong>Modo Impersonação:</strong> Você está logado como <strong>{{ user.username }}</strong>
-                    <a href="{% url 'notas:encerrar_impersonacao' %}" class="btn btn-sm btn-warning ms-2">
+                    {# <a href="{% url 'notas:encerrar_impersonacao' %}" class="btn btn-sm btn-warning ms-2"> #}
                         <i class="fas fa-times"></i> Voltar ao Admin
                     </a>
                 </div>
@@ -63,7 +63,7 @@
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                             {% if request.session.admin_original_id %}
-                            <li><a class="dropdown-item text-warning" href="{% url 'notas:encerrar_impersonacao' %}">
+                            {# <li><a class="dropdown-item text-warning" href="{% url 'notas:encerrar_impersonacao' %}"> #}
                                 <i class="fas fa-user-secret"></i> <strong>Encerrar Impersonação</strong>
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
@@ -82,7 +82,7 @@
                             <li><a class="dropdown-item" href="{% url 'notas:meus_romaneios' %}">
                                 <i class="fas fa-truck"></i> Meus Romaneios
                             </a></li>
-                            <li><a class="dropdown-item" href="{% url 'notas:minhas_cobrancas_carregamento' %}">
+                            {# <li><a class="dropdown-item" href="{% url 'notas:minhas_cobrancas_carregamento' %}"> #}
                                 <i class="fas fa-truck-loading"></i> Minhas Cobranças
                             </a></li>
                             {% endif %}
@@ -268,10 +268,10 @@
                             <span>Auditoria</span>
                         </div>
                         <ul class="nav-submenu">
-                            <li><a href="{% url 'notas:listar_logs_auditoria' %}">
+                            {# <li><a href="{% url 'notas:listar_logs_auditoria' %}"> #}
                                 <i class="fas fa-history"></i> Logs de Auditoria
                             </a></li>
-                            <li><a href="{% url 'notas:listar_registros_excluidos' %}">
+                            {# <li><a href="{% url 'notas:listar_registros_excluidos' %}"> #}
                                 <i class="fas fa-trash-restore"></i> Registros Excluídos
                             </a></li>
                         </ul>
@@ -299,7 +299,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{% url 'notas:minhas_cobrancas_carregamento' %}">
+                        {# <a href="{% url 'notas:minhas_cobrancas_carregamento' %}"> #}
                             <i class="fas fa-truck-loading"></i> Minhas Cobranças
                         </a>
                     </li>

@@ -10,7 +10,7 @@
             <h4 class="card-title mb-0">
                 <i class="fas fa-truck-loading"></i> Cobrança Carregamento
             </h4>
-            <a href="{% url 'notas:criar_cobranca_carregamento' %}" class="btn btn-success">
+            {# <a href="{% url 'notas:criar_cobranca_carregamento' %}" class="btn btn-success"> #}
                 <i class="fas fa-plus"></i> Nova Cobrança
             </a>
         </div>
@@ -78,7 +78,7 @@
                             <a href="{% url 'notas:cobranca_carregamento' %}" class="btn btn-secondary">
                                 <i class="fas fa-times"></i> Limpar Filtros
                             </a>
-                            <a href="{% url 'notas:gerar_relatorio_consolidado_cobranca' %}{% if request.GET.cliente %}?cliente={{ request.GET.cliente }}{% endif %}" 
+                            {# <a href="{% url 'notas:gerar_relatorio_consolidado_cobranca' %}{% if request.GET.cliente %}?cliente={{ request.GET.cliente }}{% endif %}" #}
                                class="btn btn-danger" 
                                target="_blank"
                                {% if not request.GET.cliente %}onclick="alert('Por favor, selecione um cliente nos filtros antes de gerar o relatório consolidado.'); return false;"{% endif %}>
@@ -175,7 +175,7 @@
             {% else %}
             <div class="alert alert-info">
                 <i class="fas fa-info-circle"></i> Nenhuma cobrança encontrada. 
-                <a href="{% url 'notas:criar_cobranca_carregamento' %}" class="alert-link">Clique aqui para criar uma nova cobrança.</a>
+                {# <a href="{% url 'notas:criar_cobranca_carregamento' %}" class="alert-link">Clique aqui para criar uma nova cobrança.</a> #}
             </div>
             {% endif %}
         </div>
