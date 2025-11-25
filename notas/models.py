@@ -1080,6 +1080,3 @@ class AuditoriaLog(models.Model):
             models.Index(fields=['objeto_id', 'modelo']),
             models.Index(fields=['acao', 'data_hora']),
         ]
-
-
-
