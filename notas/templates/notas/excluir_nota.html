@@ -1,12 +1,202 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
-    <h2>Confirmar Exclusão de Nota Fiscal</h2>
-    <p>Você tem certeza que deseja excluir a nota fiscal: <strong>{{ nota.nota }}</strong> do cliente <strong>{{ nota.cliente.razao_social }}</strong>?</p>
-    <form method="post">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Sim, Excluir</button>
-        {# MUDANÇA AQUI: Redirecionar para detalhes_nota_fiscal #}
-        <a href="{% url 'notas:detalhes_nota_fiscal' nota.pk %}" class="btn btn-secondary">Cancelar</a>
-    </form>
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Confirmar Exclusão de Nota Fiscal</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i> <strong>Atenção!</strong> Esta ação não pode ser desfeita.
+                    </div>
+                    
+                    <p>Você tem certeza que deseja excluir a nota fiscal:</p>
+                    <ul>
+                        <li><strong>Número:</strong> {{ nota.nota }}</li>
+                        <li><strong>Cliente:</strong> {{ nota.cliente.razao_social }}</li>
+                        <li><strong>Mercadoria:</strong> {{ nota.mercadoria }}</li>
+                        <li><strong>Valor:</strong> R$ {{ nota.valor|floatformat:2 }}</li>
+                    </ul>
+                    
+                    {% if not user.is_admin %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-shield-alt"></i> Para excluir este registro, será necessário autenticar com as credenciais de um administrador.
+                    </div>
+                    {% else %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> Você é um administrador. A exclusão será realizada sem necessidade de credenciais adicionais.
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{% url 'notas:detalhes_nota_fiscal' nota.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="button" class="btn btn-danger" id="btnExcluirNota" data-pk="{{ nota.pk }}">
+                            <i class="fas fa-trash"></i> Sim, Excluir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Autenticação -->
+{% include 'notas/modal_autenticacao_admin.html' %}
+
+<!-- Formulário oculto para exclusão -->
+<form id="formExcluirNota" method="post" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="username_admin" id="hidden_username_admin">
+    <input type="hidden" name="senha_admin" id="hidden_senha_admin">
+</form>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    #erroAutenticacao {
+        margin-top: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btnExcluir = document.getElementById('btnExcluirNota');
+    const modal = new bootstrap.Modal(document.getElementById('modalAutenticacaoAdmin'));
+    const formAutenticacao = document.getElementById('formAutenticacaoAdmin');
+    const btnConfirmar = document.getElementById('btnConfirmarExclusao');
+    const erroAutenticacao = document.getElementById('erroAutenticacao');
+    const mensagemErro = document.getElementById('mensagemErro');
+    const formExcluir = document.getElementById('formExcluirNota');
+    const isAdmin = {{ user.is_admin|yesno:"true,false" }};
+    const pk = btnExcluir ? btnExcluir.getAttribute('data-pk') : null;
+    const urlExcluir = pk ? `/notas/excluir/${pk}/` : '';
+
+    // Limpar erros ao abrir o modal
+    document.getElementById('modalAutenticacaoAdmin').addEventListener('show.bs.modal', function() {
+        erroAutenticacao.classList.add('d-none');
+        formAutenticacao.reset();
+        document.getElementById('username_admin_modal').classList.remove('is-invalid');
+        document.getElementById('senha_admin_modal').classList.remove('is-invalid');
+    });
+
+    // Botão excluir clicado
+    if (btnExcluir) {
+        btnExcluir.addEventListener('click', function() {
+            if (isAdmin) {
+                // Se for admin, excluir diretamente
+                if (confirm('Tem certeza que deseja excluir esta nota fiscal?')) {
+                    excluirNotaFiscal();
+                }
+            } else {
+                // Se não for admin, abrir modal
+                modal.show();
+            }
+        });
+    }
+
+    // Confirmar exclusão no modal
+    if (btnConfirmar) {
+        btnConfirmar.addEventListener('click', function() {
+            const username = document.getElementById('username_admin_modal').value;
+            const senha = document.getElementById('senha_admin_modal').value;
+
+            if (!username || !senha) {
+                mostrarErro('Por favor, preencha todos os campos.');
+                return;
+            }
+
+            // Desabilitar botão durante validação
+            btnConfirmar.disabled = true;
+            btnConfirmar.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Validando...';
+
+            // Validar credenciais via AJAX
+            fetch('{% url "notas:ajax_validar_credenciais_admin" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    username_admin: username,
+                    senha_admin: senha
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Credenciais válidas, proceder com exclusão
+                    document.getElementById('hidden_username_admin').value = username;
+                    document.getElementById('hidden_senha_admin').value = senha;
+                    
+                    // Fechar modal
+                    modal.hide();
+                    
+                    // Excluir via AJAX
+                    excluirNotaFiscal();
+                } else {
+                    // Mostrar erro
+                    mostrarErro(data.message);
+                    document.getElementById('username_admin_modal').classList.add('is-invalid');
+                    document.getElementById('senha_admin_modal').classList.add('is-invalid');
+                    btnConfirmar.disabled = false;
+                    btnConfirmar.innerHTML = '<i class="fas fa-check"></i> Confirmar e Excluir';
+                }
+            })
+            .catch(error => {
+                mostrarErro('Erro ao validar credenciais. Tente novamente.');
+                btnConfirmar.disabled = false;
+                btnConfirmar.innerHTML = '<i class="fas fa-check"></i> Confirmar e Excluir';
+            });
+        });
+    }
+
+    function mostrarErro(mensagem) {
+        mensagemErro.textContent = mensagem;
+        erroAutenticacao.classList.remove('d-none');
+    }
+
+    function excluirNotaFiscal() {
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        // Se não for admin, adicionar credenciais
+        if (!isAdmin) {
+            formData.append('username_admin', document.getElementById('hidden_username_admin').value);
+            formData.append('senha_admin', document.getElementById('hidden_senha_admin').value);
+        }
+        
+        fetch(urlExcluir, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Mostrar mensagem de sucesso e redirecionar
+                alert(data.message);
+                window.location.href = data.redirect_url;
+            } else {
+                alert('Erro ao excluir: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao excluir nota fiscal. Tente novamente.');
+        });
+    }
+});
+</script>
 {% endblock %}

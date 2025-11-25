@@ -71,19 +71,20 @@
                                 <input type="date" name="data_fim" class="form-control" value="{{ request.GET.data_fim }}">
                             </div>
                         </div>
-                        <div class="mt-3 d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-search"></i> Filtrar
-                            </button>
-                            <a href="{% url 'notas:cobranca_carregamento' %}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Limpar Filtros
-                            </a>
-                            <a href="{% url 'notas:gerar_relatorio_consolidado_cobranca' %}{% if request.GET.cliente %}?cliente={{ request.GET.cliente }}{% endif %}" 
-                               class="btn btn-danger" 
-                               target="_blank"
-                               {% if not request.GET.cliente %}onclick="alert('Por favor, selecione um cliente nos filtros antes de gerar o relatório consolidado.'); return false;"{% endif %}>
-                                <i class="fas fa-file-pdf"></i> Gerar Relatório Consolidado
-                            </a>
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> Filtrar
+                                </button>
+                                <a href="{% url 'notas:cobranca_carregamento' %}" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Limpar Filtros
+                                </a>
+                                <a href="{% url 'notas:gerar_relatorio_consolidado_cobranca' %}{% if request.GET.cliente %}?cliente={{ request.GET.cliente }}{% endif %}" 
+                                   class="btn btn-danger" 
+                                   target="_blank">
+                                    <i class="fas fa-file-pdf"></i> Gerar Relatório Consolidado
+                                </a>
+                            </div>
                         </div>
                     </form>
                 </div>

@@ -348,10 +348,17 @@ def gerar_relatorio_excel_totalizador_estado(resultados, data_inicial, data_fina
     return buffer.getvalue()
 
 
-def gerar_resposta_pdf(conteudo_pdf, nome_arquivo):
-    """Cria resposta HTTP para PDF"""
+def gerar_resposta_pdf(conteudo_pdf, nome_arquivo, inline=False):
+    """Cria resposta HTTP para PDF
+    
+    Args:
+        conteudo_pdf: Bytes do conteúdo PDF
+        nome_arquivo: Nome do arquivo para o header
+        inline: Se True, abre na página (inline). Se False, faz download (attachment)
+    """
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{nome_arquivo}"'
+    disposition = 'inline' if inline else 'attachment'
+    response['Content-Disposition'] = f'{disposition}; filename="{nome_arquivo}"'
     response.write(conteudo_pdf)
     return response
 

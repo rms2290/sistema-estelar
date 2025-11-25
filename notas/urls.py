@@ -56,6 +56,9 @@ urlpatterns = [
 # URL para filtrar veículos por composição via AJAX
     path('ajax/filtrar-veiculos/', views.filtrar_veiculos_por_composicao, name='ajax_filtrar_veiculos'),
 
+# URL para validar credenciais de administrador via AJAX
+    path('ajax/validar-credenciais-admin/', views.validar_credenciais_admin_ajax, name='ajax_validar_credenciais_admin'),
+
 # Nova URL para pesquisar mercadorias no depósito
     path('mercadorias-deposito/', views.pesquisar_mercadorias_deposito, name='pesquisar_mercadorias_deposito'),
     path('mercadorias-deposito/imprimir/', views.imprimir_relatorio_mercadorias_deposito, name='imprimir_relatorio_mercadorias_deposito'),
@@ -72,16 +75,16 @@ urlpatterns = [
     path('minhas-notas/<int:pk>/imprimir/', views.imprimir_nota_fiscal, name='imprimir_nota_fiscal'),
     path('minhas-notas/imprimir-relatorio-deposito/', views.imprimir_relatorio_deposito, name='imprimir_relatorio_deposito'),
     path('meus-romaneios/', views.meus_romaneios, name='meus_romaneios'),
-    path('minhas-cobrancas-carregamento/', views.minhas_cobrancas_carregamento, name='minhas_cobrancas_carregamento'),
-    path('minhas-cobrancas-carregamento/<int:cobranca_id>/gerar-pdf/', views.gerar_relatorio_cobranca_carregamento_pdf_cliente, name='gerar_relatorio_cobranca_carregamento_pdf_cliente'),
+    # path('minhas-cobrancas-carregamento/', views.minhas_cobrancas_carregamento, name='minhas_cobrancas_carregamento'),
+    # path('minhas-cobrancas-carregamento/<int:cobranca_id>/gerar-pdf/', views.gerar_relatorio_cobranca_carregamento_pdf_cliente, name='gerar_relatorio_cobranca_carregamento_pdf_cliente'),
     
     # URLs para Gerenciamento de Usuários (apenas administradores)
     path('usuarios/', views.listar_usuarios, name='listar_usuarios'),
     path('usuarios/cadastrar/', views.cadastrar_usuario, name='cadastrar_usuario'),
     path('usuarios/editar/<int:pk>/', views.editar_usuario, name='editar_usuario'),
     path('usuarios/excluir/<int:pk>/', views.excluir_usuario, name='excluir_usuario'),
-    path('usuarios/impersonar/<int:pk>/', views.impersonar_usuario, name='impersonar_usuario'),
-    path('usuarios/encerrar-impersonacao/', views.encerrar_impersonacao, name='encerrar_impersonacao'),
+    # path('usuarios/impersonar/<int:pk>/', views.impersonar_usuario, name='impersonar_usuario'),
+    # path('usuarios/encerrar-impersonacao/', views.encerrar_impersonacao, name='encerrar_impersonacao'),
     
     # URLs para Tabela de Seguros
     path('tabela-seguros/', views.listar_tabela_seguros, name='listar_tabela_seguros'),
@@ -110,11 +113,11 @@ urlpatterns = [
     path('cobranca-carregamento/relatorio-consolidado/', views.gerar_relatorio_consolidado_cobranca_pdf, name='gerar_relatorio_consolidado_cobranca'),
     path('api/romaneios-cliente/<int:cliente_id>/', views.carregar_romaneios_cliente, name='carregar_romaneios_cliente'),
     
-    # URLs para gerenciamento de despesas de carregamento (antiga estrutura - mantida para compatibilidade)
-    path('romaneios/<int:romaneio_id>/despesas/', views.gerenciar_despesas_romaneio, name='gerenciar_despesas_romaneio'),
-    path('despesas/<int:despesa_id>/baixar/', views.baixar_despesa, name='baixar_despesa'),
-    path('despesas/<int:despesa_id>/editar/', views.editar_despesa, name='editar_despesa'),
-    path('despesas/<int:despesa_id>/excluir/', views.excluir_despesa, name='excluir_despesa'),
+    # URLs para gerenciamento de despesas de carregamento (comentadas - views não implementadas)
+    # path('romaneios/<int:romaneio_id>/despesas/', views.gerenciar_despesas_romaneio, name='gerenciar_despesas_romaneio'),
+    # path('despesas/<int:despesa_id>/baixar/', views.baixar_despesa, name='baixar_despesa'),
+    # path('despesas/<int:despesa_id>/editar/', views.editar_despesa, name='editar_despesa'),
+    # path('despesas/<int:despesa_id>/excluir/', views.excluir_despesa, name='excluir_despesa'),
     
     # URLs para Agenda de Entregas
     path('agenda-entregas/', views.listar_agenda_entregas, name='listar_agenda_entregas'),

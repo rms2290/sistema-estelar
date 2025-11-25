@@ -10,14 +10,14 @@ from decimal import Decimal
 from datetime import datetime, date, timedelta
 
 # Importe todos os seus modelos
-from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, TabelaSeguro, AgendaEntrega
+from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, TabelaSeguro, AgendaEntrega, AuditoriaLog, CobrancaCarregamento, Usuario
 
 # Importe todos os seus formulários
 from .forms import (
     NotaFiscalForm, ClienteForm, MotoristaForm, VeiculoForm, RomaneioViagemForm,
     NotaFiscalSearchForm, ClienteSearchForm, MotoristaSearchForm, HistoricoConsultaForm,
     VeiculoSearchForm, RomaneioSearchForm, MercadoriaDepositoSearchForm, TabelaSeguroForm,
-    AgendaEntregaForm, MercadoriaDepositoSearchForm # Adicionados os novos formulários
+    AgendaEntregaForm, MercadoriaDepositoSearchForm, CobrancaCarregamentoForm # Adicionados os novos formulários
 )
 
 def formatar_valor_brasileiro(valor, tipo='numero'):
@@ -142,19 +142,83 @@ def editar_cliente(request, pk):
 def excluir_cliente(request, pk):
     cliente = get_object_or_404(Cliente, pk=pk)
     
-    # Verificar se o usuário é administrador
-    if not request.user.is_admin:
-        messages.error(request, 'Apenas administradores podem excluir clientes cadastrados.')
-        return redirect('notas:listar_clientes')
-    
     if request.method == 'POST':
+        # Verificar se é requisição AJAX
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            import json
+            try:
+                data = json.loads(request.body)
+                username_admin = data.get('username_admin', '')
+                senha_admin = data.get('senha_admin', '')
+            except json.JSONDecodeError:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Erro ao processar requisição'
+                }, status=400)
+        else:
+            username_admin = request.POST.get('username_admin', '')
+            senha_admin = request.POST.get('senha_admin', '')
+        
+        # Verificar credenciais de administrador
+        from .utils.validacao_exclusao import validar_exclusao_com_senha_admin
+        
+        valido, admin_autorizador, mensagem_erro = validar_exclusao_com_senha_admin(
+            username_admin=username_admin,
+            senha_admin=senha_admin,
+            usuario_solicitante=request.user
+        )
+        
+        if not valido:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': mensagem_erro
+                }, status=400)
+            messages.error(request, mensagem_erro)
+            return render(request, 'notas/excluir_cliente.html', {
+                'cliente': cliente,
+                'erro_senha': True
+            })
+        
         try:
+            # Registrar na auditoria
+            from .utils.auditoria import registrar_exclusao
+            observacao = f"Exclusão solicitada por {request.user.username}"
+            if admin_autorizador and admin_autorizador != request.user:
+                observacao += f", autorizada por {admin_autorizador.username}"
+            
+            registrar_exclusao(
+                usuario=request.user,
+                instancia=cliente,
+                request=request,
+                descricao=observacao
+            )
+            
             cliente.delete()
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Cliente excluído com sucesso!',
+                    'redirect_url': '/notas/clientes/'
+                })
+            
             messages.success(request, 'Cliente excluído com sucesso!')
         except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Não foi possível excluir o cliente: {str(e)}'
+                }, status=400)
             messages.error(request, f'Não foi possível excluir o cliente: {e}')
-        return redirect('notas:listar_clientes')
-    return render(request, 'notas/excluir_cliente.html', {'cliente': cliente})
+        
+        if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+            return redirect('notas:listar_clientes')
+    
+    return render(request, 'notas/excluir_cliente.html', {
+        'cliente': cliente,
+        'erro_senha': False
+    })
 
 def detalhes_cliente(request, pk):
     cliente = get_object_or_404(Cliente, pk=pk)
@@ -225,15 +289,173 @@ def editar_nota_fiscal(request, pk):
         form = NotaFiscalForm(instance=nota)
     return render(request, 'notas/editar_nota.html', {'form': form, 'nota': nota})
 
+@login_required
+@login_required
+def validar_credenciais_admin_ajax(request):
+    """
+    View AJAX para validar credenciais de administrador
+    """
+    if request.method == 'POST':
+        from .utils.validacao_exclusao import validar_exclusao_com_senha_admin
+        import json
+        
+        try:
+            # Verificar se é requisição JSON
+            content_type = request.headers.get('Content-Type', '')
+            if 'application/json' in content_type:
+                # Decodificar o body se necessário
+                body = request.body
+                if isinstance(body, bytes):
+                    body = body.decode('utf-8')
+                data = json.loads(body)
+            else:
+                # Usar POST tradicional
+                data = request.POST.dict()
+            
+            username_admin = data.get('username_admin', '').strip()
+            senha_admin = data.get('senha_admin', '')
+            
+            if not username_admin or not senha_admin:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Nome de usuário e senha são obrigatórios'
+                }, status=400)
+            
+            valido, admin_autorizador, mensagem_erro = validar_exclusao_com_senha_admin(
+                username_admin=username_admin,
+                senha_admin=senha_admin,
+                usuario_solicitante=request.user
+            )
+            
+            if valido:
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Credenciais válidas',
+                    'admin_username': admin_autorizador.username if admin_autorizador else None
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': mensagem_erro
+                }, status=400)
+        except json.JSONDecodeError as e:
+            return JsonResponse({
+                'success': False,
+                'message': 'Erro ao processar requisição JSON: ' + str(e)
+            }, status=400)
+        except Exception as e:
+            import traceback
+            return JsonResponse({
+                'success': False,
+                'message': 'Erro inesperado: ' + str(e)
+            }, status=500)
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Método não permitido. Use POST.'
+    }, status=405)
+
+@login_required
 def excluir_nota_fiscal(request, pk):
     nota = get_object_or_404(NotaFiscal, pk=pk)
+    
     if request.method == 'POST':
-        for romaneio in nota.romaneios_vinculados.all():
-            romaneio.notas_fiscais.remove(nota)
-        nota.delete()
-        messages.success(request, 'Nota fiscal excluída com sucesso!')
-        return redirect('notas:listar_notas_fiscais')
-    return render(request, 'notas/excluir_nota.html', {'nota': nota})
+        # Verificar se é requisição AJAX e se é JSON ou FormData
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            content_type = request.headers.get('Content-Type', '')
+            if 'application/json' in content_type:
+                # Requisição JSON
+                import json
+                try:
+                    body = request.body
+                    if isinstance(body, bytes):
+                        body = body.decode('utf-8')
+                    data = json.loads(body)
+                    username_admin = data.get('username_admin', '')
+                    senha_admin = data.get('senha_admin', '')
+                except (json.JSONDecodeError, ValueError):
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Erro ao processar requisição JSON'
+                    }, status=400)
+            else:
+                # Requisição FormData
+                username_admin = request.POST.get('username_admin', '')
+                senha_admin = request.POST.get('senha_admin', '')
+        else:
+            username_admin = request.POST.get('username_admin', '')
+            senha_admin = request.POST.get('senha_admin', '')
+        
+        # Verificar credenciais de administrador
+        from .utils.validacao_exclusao import validar_exclusao_com_senha_admin
+        
+        valido, admin_autorizador, mensagem_erro = validar_exclusao_com_senha_admin(
+            username_admin=username_admin,
+            senha_admin=senha_admin,
+            usuario_solicitante=request.user
+        )
+        
+        if not valido:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': mensagem_erro
+                }, status=400)
+            messages.error(request, mensagem_erro)
+            return render(request, 'notas/excluir_nota.html', {
+                'nota': nota,
+                'erro_senha': True
+            })
+        
+        # Registrar na auditoria ANTES de excluir
+        from .utils.auditoria import registrar_exclusao
+        if request.user.is_authenticated:
+            # Registrar quem solicitou e quem autorizou
+            observacao = f"Exclusão solicitada por {request.user.username}"
+            if admin_autorizador and admin_autorizador != request.user:
+                observacao += f", autorizada por {admin_autorizador.username}"
+            
+            registrar_exclusao(
+                usuario=request.user,
+                instancia=nota,
+                request=request,
+                descricao=observacao
+            )
+        
+        try:
+            # Remover nota dos romaneios vinculados
+            for romaneio in nota.romaneios_vinculados.all():
+                romaneio.notas_fiscais.remove(nota)
+            
+            # Excluir a nota
+            nota.delete()
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Nota fiscal excluída com sucesso!',
+                    'redirect_url': '/notas/notas/'
+                })
+            
+            messages.success(request, 'Nota fiscal excluída com sucesso!')
+            return redirect('notas:listar_notas_fiscais')
+        except Exception as e:
+            error_msg = str(e)
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Erro ao excluir nota fiscal: {error_msg}'
+                }, status=500)
+            messages.error(request, f'Erro ao excluir nota fiscal: {error_msg}')
+            return render(request, 'notas/excluir_nota.html', {
+                'nota': nota,
+                'erro_senha': False
+            })
+    
+    return render(request, 'notas/excluir_nota.html', {
+        'nota': nota,
+        'erro_senha': False
+    })
 
 def detalhes_nota_fiscal(request, pk):
     nota = get_object_or_404(NotaFiscal, pk=pk)
@@ -353,22 +575,53 @@ def registrar_consulta_motorista(request, pk):
     return render(request, 'notas/registrar_consulta_motorista.html', context) 
 
 @login_required
+@login_required
 def excluir_motorista(request, pk):
     motorista = get_object_or_404(Motorista, pk=pk)
     
-    # Verificar se o usuário é administrador
-    if not request.user.is_admin:
-        messages.error(request, 'Apenas administradores podem excluir motoristas cadastrados.')
-        return redirect('notas:listar_motoristas')
-    
     if request.method == 'POST':
+        # Verificar credenciais de administrador
+        from .utils.validacao_exclusao import validar_exclusao_com_senha_admin
+        
+        username_admin = request.POST.get('username_admin', '')
+        senha_admin = request.POST.get('senha_admin', '')
+        valido, admin_autorizador, mensagem_erro = validar_exclusao_com_senha_admin(
+            username_admin=username_admin,
+            senha_admin=senha_admin,
+            usuario_solicitante=request.user
+        )
+        
+        if not valido:
+            messages.error(request, mensagem_erro)
+            return render(request, 'notas/confirmar_exclusao_motorista.html', {
+                'motorista': motorista,
+                'erro_senha': True
+            })
+        
         try:
+            # Registrar na auditoria
+            from .utils.auditoria import registrar_exclusao
+            observacao = f"Exclusão solicitada por {request.user.username}"
+            if admin_autorizador and admin_autorizador != request.user:
+                observacao += f", autorizada por {admin_autorizador.username}"
+            
+            registrar_exclusao(
+                usuario=request.user,
+                instancia=motorista,
+                request=request,
+                descricao=observacao
+            )
+            
             motorista.delete()
             messages.success(request, 'Motorista excluído com sucesso!')
         except Exception as e:
             messages.error(request, f'Não foi possível excluir o motorista: {e}')
         return redirect('notas:listar_motoristas')
-    return render(request, 'notas/confirmar_exclusao_motorista.html', {'motorista': motorista})
+    
+    return render(request, 'notas/confirmar_exclusao_motorista.html', {
+        'motorista': motorista,
+        'erro_senha': False
+    })
 
 def detalhes_motorista(request, pk):
     motorista = get_object_or_404(Motorista, pk=pk)
@@ -419,12 +672,25 @@ def editar_veiculo(request, pk):
 def excluir_veiculo(request, pk):
     veiculo = get_object_or_404(Veiculo, pk=pk)
     
-    # Verificar se o usuário é administrador
-    if not is_admin(request.user):
-        messages.error(request, 'Apenas administradores podem excluir veículos cadastrados.')
-        return redirect('notas:listar_veiculos')
-    
     if request.method == 'POST':
+        # Verificar credenciais de administrador
+        from .utils.validacao_exclusao import validar_exclusao_com_senha_admin
+        
+        username_admin = request.POST.get('username_admin', '')
+        senha_admin = request.POST.get('senha_admin', '')
+        valido, admin_autorizador, mensagem_erro = validar_exclusao_com_senha_admin(
+            username_admin=username_admin,
+            senha_admin=senha_admin,
+            usuario_solicitante=request.user
+        )
+        
+        if not valido:
+            messages.error(request, mensagem_erro)
+            return render(request, 'notas/confirmar_exclusao_veiculo.html', {
+                'veiculo': veiculo,
+                'erro_senha': True
+            })
+        
         try:
             # Verificar se o veículo está sendo usado em romaneios
             romaneios_principal = veiculo.romaneios_veiculo_principal.all()
@@ -446,12 +712,28 @@ def excluir_veiculo(request, pk):
                     romaneio.save()
                 messages.warning(request, f'Veículo desvinculado de {total_romaneios} romaneio(s) antes da exclusão.')
             
+            # Registrar na auditoria
+            from .utils.auditoria import registrar_exclusao
+            observacao = f"Exclusão solicitada por {request.user.username}"
+            if admin_autorizador and admin_autorizador != request.user:
+                observacao += f", autorizada por {admin_autorizador.username}"
+            
+            registrar_exclusao(
+                usuario=request.user,
+                instancia=veiculo,
+                request=request,
+                descricao=observacao
+            )
+            
             veiculo.delete()
             messages.success(request, 'Unidade de Veículo excluída com sucesso!')
         except Exception as e:
             messages.error(request, f'Não foi possível excluir o veículo: {str(e)}')
         return redirect('notas:listar_veiculos')
-    return render(request, 'notas/confirmar_exclusao_veiculo.html', {'veiculo': veiculo})
+    return render(request, 'notas/confirmar_exclusao_veiculo.html', {
+        'veiculo': veiculo,
+        'erro_senha': False
+    })
 
 def detalhes_veiculo(request, pk):
     veiculo = get_object_or_404(Veiculo, pk=pk)
@@ -467,9 +749,6 @@ def detalhes_veiculo(request, pk):
 
 def adicionar_romaneio(request):
     if request.method == 'POST':
-        print(f"DEBUG POST: Dados recebidos: {request.POST}")
-        print(f"DEBUG POST: notas_fiscais no POST: {request.POST.getlist('notas_fiscais')}")
-        
         form = RomaneioViagemForm(request.POST)
         
         # Configurar o queryset das notas fiscais baseado no cliente selecionado
@@ -484,13 +763,8 @@ def adicionar_romaneio(request):
                 form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
         else:
             form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
-
-        print(f"DEBUG POST: Form válido: {form.is_valid()}")
-        if not form.is_valid():
-            print(f"DEBUG POST: Erros do form: {form.errors}")
         
         if form.is_valid():
-            print(f"DEBUG POST: Form válido! Notas selecionadas: {form.cleaned_data.get('notas_fiscais', [])}")
             romaneio = form.save(commit=False)
             
             # Tentar salvar com código único (proteção contra concorrência)
@@ -506,9 +780,7 @@ def adicionar_romaneio(request):
                         romaneio.status = 'Salvo'
 
                     romaneio.save()
-                    print(f"DEBUG POST: Romaneio salvo com ID {romaneio.id}")
                     form.save_m2m() # Salva a relação ManyToMany
-                    print(f"DEBUG POST: Relações ManyToMany salvas. Notas vinculadas: {romaneio.notas_fiscais.count()}")
                     break  # Sucesso, sair do loop
                 except IntegrityError as e:
                     if 'codigo' in str(e) and tentativa < max_tentativas - 1:
@@ -742,17 +1014,29 @@ def editar_romaneio(request, pk):
     return render(request, 'notas/editar_romaneio.html', context)
 
 @login_required
+@login_required
 def excluir_romaneio(request, pk):
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
     
-    # Verificar se o romaneio foi emitido
-    if romaneio.status == 'Emitido':
-        # Se foi emitido, apenas administradores podem excluir
-        if not request.user.is_admin:
-            messages.error(request, 'Apenas administradores podem excluir romaneios que já foram emitidos.')
-            return redirect('notas:listar_romaneios')
-    
     if request.method == 'POST':
+        # Verificar credenciais de administrador
+        from .utils.validacao_exclusao import validar_exclusao_com_senha_admin
+        
+        username_admin = request.POST.get('username_admin', '')
+        senha_admin = request.POST.get('senha_admin', '')
+        valido, admin_autorizador, mensagem_erro = validar_exclusao_com_senha_admin(
+            username_admin=username_admin,
+            senha_admin=senha_admin,
+            usuario_solicitante=request.user
+        )
+        
+        if not valido:
+            messages.error(request, mensagem_erro)
+            return render(request, 'notas/confirmar_exclusao_romaneio.html', {
+                'romaneio': romaneio,
+                'erro_senha': True
+            })
+        
         # Antes de excluir o romaneio, verificar se as notas estão vinculadas a outros romaneios emitidos
         for nota_fiscal in romaneio.notas_fiscais.all():
             # Verificar se a nota está vinculada a outros romaneios emitidos
@@ -762,10 +1046,26 @@ def excluir_romaneio(request, pk):
                 nota_fiscal.status = 'Depósito'
                 nota_fiscal.save()
         
+        # Registrar na auditoria
+        from .utils.auditoria import registrar_exclusao
+        observacao = f"Exclusão solicitada por {request.user.username}"
+        if admin_autorizador and admin_autorizador != request.user:
+            observacao += f", autorizada por {admin_autorizador.username}"
+        
+        registrar_exclusao(
+            usuario=request.user,
+            instancia=romaneio,
+            request=request,
+            descricao=observacao
+        )
+        
         romaneio.delete()
         messages.success(request, 'Romaneio excluído com sucesso! Notas fiscais associadas foram atualizadas conforme necessário.')
         return redirect('notas:listar_romaneios')
-    return render(request, 'notas/confirmar_exclusao_romaneio.html', {'romaneio': romaneio})
+    return render(request, 'notas/confirmar_exclusao_romaneio.html', {
+        'romaneio': romaneio,
+        'erro_senha': False
+    })
 
 def detalhes_romaneio(request, pk):
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
@@ -790,10 +1090,7 @@ def detalhes_romaneio(request, pk):
 # --------------------------------------------------------------------------------------
 def load_notas_fiscais(request):
     cliente_id = request.GET.get('cliente_id')
-    print(f"AJAX: load_notas_fiscais (Adicionar Romaneio) chamada. cliente_id={cliente_id}")
-
     if not cliente_id:
-        print("AJAX: cliente_id não fornecido. Retornando notas vazias.")
         return JsonResponse([], safe=False)
 
     try:
@@ -804,8 +1101,6 @@ def load_notas_fiscais(request):
             status='Depósito'
         ).order_by('nota')
         
-        print(f"AJAX: Encontradas {notas.count()} notas 'Depósito' para cliente {cliente_obj.razao_social}.")
-
         data = [{
             'id': nota.id,
             'nota_numero': nota.nota,
@@ -817,24 +1112,19 @@ def load_notas_fiscais(request):
             'data_emissao': nota.data.strftime("%d/%m/%Y"), 
             'status_nf': nota.get_status_display(), 
         } for nota in notas]
-        print(f"AJAX: Dados JSON sendo enviados: {data}")
         
         return JsonResponse(data, safe=False)
     except Cliente.DoesNotExist:
-        print(f"AJAX: Cliente com ID {cliente_id} não encontrado.")
         return JsonResponse([], safe=False)
     except Exception as e:
-        print(f"AJAX: Erro inesperado na view load_notas_fiscais: {e}")
         return JsonResponse({'error': str(e)}, status=500)
 
 
 def load_notas_fiscais_edicao(request):
     cliente_id = request.GET.get('cliente_id')
     romaneio_id = request.GET.get('romaneio_id')
-    print(f"AJAX: load_notas_fiscais_edicao (Editar Romaneio) chamada. cliente_id={cliente_id}, romaneio_id={romaneio_id}")
 
     if not cliente_id:
-        print("AJAX: cliente_id não fornecido. Retornando notas vazias.")
         return JsonResponse([], safe=False)
 
     try:
@@ -850,7 +1140,6 @@ def load_notas_fiscais_edicao(request):
             notas_query = notas_query.filter(status='Depósito')
 
         notas = notas_query.order_by('nota')
-        print(f"AJAX: Encontradas {notas.count()} notas para cliente {cliente_obj.razao_social} (para edição).")
         
         data = [{
             'id': nota.id,
@@ -865,20 +1154,13 @@ def load_notas_fiscais_edicao(request):
         } for nota in notas]
         return JsonResponse(data, safe=False)
     except Cliente.DoesNotExist:
-        print(f"AJAX: Cliente com ID {cliente_id} não encontrado (em edição).")
         return JsonResponse([], safe=False)
     except Exception as e:
-        print(f"AJAX: Erro inesperado na view load_notas_fiscais_edicao: {e}")
         return JsonResponse({'error': str(e)}, status=500)
     
 @login_required
 def load_notas_fiscais_para_romaneio(request, cliente_id):
     romaneio_id = request.GET.get('romaneio_id') # Pode ser None para adicionar novo romaneio
-    
-    print(f"DEBUG: load_notas_fiscais_para_romaneio chamada. cliente_id={cliente_id}, romaneio_id={romaneio_id}")
-    print(f"DEBUG: Método da requisição: {request.method}")
-    print(f"DEBUG: URL da requisição: {request.path}")
-    print(f"DEBUG: Parâmetros GET: {request.GET}")
 
     notas_fiscais = NotaFiscal.objects.none()
     selected_notas_ids = []
@@ -886,11 +1168,6 @@ def load_notas_fiscais_para_romaneio(request, cliente_id):
     if cliente_id:
         # Notas do cliente com status 'Depósito'
         notas_deposito = NotaFiscal.objects.filter(cliente_id=cliente_id, status='Depósito')
-        print(f"DEBUG: Encontradas {notas_deposito.count()} notas em depósito para cliente {cliente_id}")
-        
-        # Debug: listar algumas notas encontradas
-        for nota in notas_deposito[:3]:  # Primeiras 3 notas
-            print(f"DEBUG: Nota encontrada - ID: {nota.id}, Número: {nota.nota}, Cliente: {nota.cliente.razao_social}")
 
         # Se for um romaneio existente, incluir as notas já vinculadas a ele
         if romaneio_id:
@@ -898,31 +1175,22 @@ def load_notas_fiscais_para_romaneio(request, cliente_id):
                 romaneio_existente = RomaneioViagem.objects.get(pk=romaneio_id)
                 notas_fiscais = romaneio_existente.notas_fiscais.all()
                 selected_notas_ids = list(notas_fiscais.values_list('pk', flat=True))
-                print(f"DEBUG: Encontradas {notas_fiscais.count()} notas vinculadas ao romaneio {romaneio_id}")
                 
                 # Combine as notas em depósito com as já vinculadas (evitando duplicatas)
                 notas_fiscais = (notas_deposito | notas_fiscais).distinct().order_by('nota')
             except RomaneioViagem.DoesNotExist:
-                print(f"DEBUG: Romaneio {romaneio_id} não encontrado")
                 pass # Romaneio não encontrado, apenas notas em depósito
         else:
             # Se for um novo romaneio, apenas notas em depósito
             notas_fiscais = notas_deposito.order_by('nota')
-            print(f"DEBUG: Usando apenas notas em depósito para novo romaneio")
-            
-    print(f"DEBUG: Total de notas fiscais retornadas: {notas_fiscais.count()}")
     
     # Renderiza o template parcial com as notas e as IDs das selecionadas
     context = {
         'notas_fiscais': notas_fiscais,
         'selected_notas_ids': selected_notas_ids, # Passa as IDs das notas já selecionadas
     }
-    print(f"DEBUG: Contexto para template: {context}")
     
     html = render(request, 'notas/_notas_fiscais_checkboxes.html', context).content.decode('utf-8')
-    
-    print(f"DEBUG: HTML gerado com {len(html)} caracteres")
-    print(f"DEBUG: Primeiros 200 caracteres do HTML: {html[:200]}")
     
     return JsonResponse({'html': html})
 
@@ -1109,32 +1377,49 @@ def imprimir_romaneio_novo(request, pk):
     """View para imprimir romaneio usando o novo template baseado no relatório de mercadorias"""
     romaneio = get_object_or_404(RomaneioViagem, pk=pk)
     
-    # Obter notas fiscais vinculadas ao romaneio
-    notas_romaneadas = romaneio.notas_fiscais.all().order_by('data')
-    
-    # Calcular totais
-    total_peso = sum(nota.peso for nota in notas_romaneadas)
-    total_valor = sum(nota.valor for nota in notas_romaneadas)
-    
-    # Dividir notas em grupos de 20 para multipágina
-    notas_list = list(notas_romaneadas)
-    notas_paginas = []
-    for i in range(0, len(notas_list), 20):
-        pagina = notas_list[i:i + 20]
-        notas_paginas.append(pagina)
-    
-    # Adicionar parâmetro de versão para forçar reload
-    import time
-    version = int(time.time())
-    
-    return render(request, 'notas/visualizar_romaneio_para_impressao.html', {
-        'romaneio': romaneio,
-        'notas_romaneadas': notas_romaneadas,
-        'notas_paginas': notas_paginas,
-        'total_peso': total_peso,
-        'total_valor': total_valor,
-        'version': version
-    })
+    try:
+        # Obter notas fiscais vinculadas ao romaneio
+        notas_romaneadas = romaneio.notas_fiscais.all().order_by('data')
+        
+        # Calcular totais
+        total_peso = sum(nota.peso for nota in notas_romaneadas) if notas_romaneadas else 0
+        total_valor = sum(nota.valor for nota in notas_romaneadas) if notas_romaneadas else 0
+        
+        # Dividir notas em grupos de 20 para multipágina
+        notas_list = list(notas_romaneadas)
+        notas_paginas = []
+        for i in range(0, len(notas_list), 20):
+            pagina = notas_list[i:i + 20]
+            notas_paginas.append(pagina)
+        
+        # Adicionar parâmetro de versão para forçar reload
+        import time
+        version = int(time.time())
+        
+        context = {
+            'romaneio': romaneio,
+            'notas_romaneadas': notas_romaneadas,
+            'notas_paginas': notas_paginas,
+            'total_peso': total_peso,
+            'total_valor': total_valor,
+            'version': version
+        }
+        
+        return render(request, 'notas/visualizar_romaneio_para_impressao.html', context)
+    except Exception as e:
+        # Em caso de erro, retornar página com mensagem de erro
+        import traceback
+        error_details = traceback.format_exc()
+        messages.error(request, f'Erro ao gerar impressão do romaneio: {str(e)}')
+        return render(request, 'notas/visualizar_romaneio_para_impressao.html', {
+            'romaneio': romaneio,
+            'notas_romaneadas': [],
+            'notas_paginas': [],
+            'total_peso': 0,
+            'total_valor': 0,
+            'version': int(time.time()),
+            'erro': str(e)
+        })
 
 @login_required
 def gerar_romaneio_pdf(request, pk):
@@ -2200,8 +2485,40 @@ def cobranca_mensal(request):
 @login_required
 @user_passes_test(is_admin)
 def cobranca_carregamento(request):
-    """View para o relatório de cobrança de carregamento."""
-    return render(request, 'notas/relatorios/cobranca_carregamento.html')
+    """View para listar cobranças de carregamento."""
+    cobrancas = CobrancaCarregamento.objects.all().select_related('cliente').prefetch_related('romaneios')
+    
+    # Filtros
+    cliente_id = request.GET.get('cliente')
+    status = request.GET.get('status')
+    data_inicio = request.GET.get('data_inicio')
+    data_fim = request.GET.get('data_fim')
+    
+    if cliente_id:
+        cobrancas = cobrancas.filter(cliente_id=cliente_id)
+    if status:
+        cobrancas = cobrancas.filter(status=status)
+    if data_inicio:
+        try:
+            data_inicio_obj = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            cobrancas = cobrancas.filter(criado_em__date__gte=data_inicio_obj)
+        except ValueError:
+            pass
+    if data_fim:
+        try:
+            data_fim_obj = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            cobrancas = cobrancas.filter(criado_em__date__lte=data_fim_obj)
+        except ValueError:
+            pass
+    
+    clientes = Cliente.objects.filter(status='Ativo').order_by('razao_social')
+    
+    context = {
+        'cobrancas': cobrancas,
+        'clientes': clientes,
+    }
+    
+    return render(request, 'notas/relatorios/cobranca_carregamento.html', context)
 
 @login_required
 def dashboard(request):
@@ -3187,6 +3504,367 @@ def test_widget_agenda(request):
     }
     
     return render(request, 'notas/test_widget_agenda.html', context)
+
+
+# =============================================================================
+# Views de Cobrança de Carregamento
+# =============================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def criar_cobranca_carregamento(request):
+    """View para criar uma nova cobrança de carregamento"""
+    clientes = Cliente.objects.filter(status='Ativo').order_by('razao_social')
+    romaneios = RomaneioViagem.objects.none()
+    cliente_selecionado_id = None
+    
+    if request.method == 'POST':
+        form = CobrancaCarregamentoForm(request.POST)
+        if form.is_valid():
+            cobranca = form.save()
+            messages.success(request, f'Cobrança #{cobranca.id} criada com sucesso!')
+            return redirect('notas:cobranca_carregamento')
+        else:
+            # Exibir erros específicos do formulário
+            error_messages = []
+            for field, errors in form.errors.items():
+                field_name = form.fields[field].label if field in form.fields else field
+                for error in errors:
+                    error_messages.append(f"{field_name}: {error}")
+            if error_messages:
+                messages.error(request, 'Erro ao criar cobrança: ' + ' | '.join(error_messages))
+            else:
+                messages.error(request, 'Erro ao criar cobrança. Verifique os campos.')
+            
+            # Se houver cliente selecionado, manter os romaneios disponíveis
+            cliente_id = request.POST.get('cliente')
+            if cliente_id:
+                try:
+                    cliente_obj = Cliente.objects.get(pk=cliente_id)
+                    romaneios = RomaneioViagem.objects.filter(cliente=cliente_obj).order_by('-data_emissao')
+                    form.fields['romaneios'].queryset = romaneios
+                    cliente_selecionado_id = cliente_id
+                except (Cliente.DoesNotExist, ValueError):
+                    pass
+    else:
+        form = CobrancaCarregamentoForm()
+        cliente_selecionado_id = request.GET.get('cliente')
+        if cliente_selecionado_id:
+            try:
+                cliente_obj = Cliente.objects.get(pk=cliente_selecionado_id)
+                romaneios = RomaneioViagem.objects.filter(cliente=cliente_obj).order_by('-data_emissao')
+                form.fields['romaneios'].queryset = romaneios
+            except Cliente.DoesNotExist:
+                pass
+    
+    context = {
+        'form': form,
+        'clientes': clientes,
+        'romaneios': romaneios,
+        'cliente_selecionado_id': cliente_selecionado_id,
+    }
+    
+    return render(request, 'notas/criar_cobranca_carregamento.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+def editar_cobranca_carregamento(request, cobranca_id):
+    """View para editar uma cobrança de carregamento"""
+    cobranca = get_object_or_404(CobrancaCarregamento, pk=cobranca_id)
+    
+    if request.method == 'POST':
+        form = CobrancaCarregamentoForm(request.POST, instance=cobranca)
+        if form.is_valid():
+            cobranca = form.save()
+            messages.success(request, f'Cobrança #{cobranca.id} atualizada com sucesso!')
+            return redirect('notas:cobranca_carregamento')
+        else:
+            messages.error(request, 'Erro ao atualizar cobrança. Verifique os campos.')
+    else:
+        form = CobrancaCarregamentoForm(instance=cobranca)
+    
+    context = {
+        'form': form,
+        'cobranca': cobranca,
+    }
+    
+    return render(request, 'notas/editar_cobranca_carregamento.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+@login_required
+def excluir_cobranca_carregamento(request, cobranca_id):
+    """View para excluir uma cobrança de carregamento"""
+    cobranca = get_object_or_404(CobrancaCarregamento, pk=cobranca_id)
+    
+    if request.method == 'POST':
+        # Verificar credenciais de administrador
+        from .utils.validacao_exclusao import validar_exclusao_com_senha_admin
+        
+        username_admin = request.POST.get('username_admin', '')
+        senha_admin = request.POST.get('senha_admin', '')
+        valido, admin_autorizador, mensagem_erro = validar_exclusao_com_senha_admin(
+            username_admin=username_admin,
+            senha_admin=senha_admin,
+            usuario_solicitante=request.user
+        )
+        
+        if not valido:
+            messages.error(request, mensagem_erro)
+            return render(request, 'notas/confirmar_exclusao_cobranca.html', {
+                'cobranca': cobranca,
+                'erro_senha': True
+            })
+        
+        # Registrar na auditoria
+        from .utils.auditoria import registrar_exclusao
+        observacao = f"Exclusão solicitada por {request.user.username}"
+        if admin_autorizador and admin_autorizador != request.user:
+            observacao += f", autorizada por {admin_autorizador.username}"
+        
+        registrar_exclusao(
+            usuario=request.user,
+            instancia=cobranca,
+            request=request,
+            descricao=observacao
+        )
+        
+        cobranca_id_temp = cobranca.id
+        cobranca.delete()
+        messages.success(request, f'Cobrança #{cobranca_id_temp} excluída com sucesso!')
+        return redirect('notas:cobranca_carregamento')
+    
+    context = {
+        'cobranca': cobranca,
+        'erro_senha': False,
+    }
+    
+    return render(request, 'notas/confirmar_exclusao_cobranca.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+def baixar_cobranca_carregamento(request, cobranca_id):
+    """View para baixar (marcar como paga) uma cobrança"""
+    cobranca = get_object_or_404(CobrancaCarregamento, pk=cobranca_id)
+    
+    if request.method == 'POST':
+        cobranca.baixar()
+        messages.success(request, f'Cobrança #{cobranca.id} baixada com sucesso!')
+        return redirect('notas:cobranca_carregamento')
+    
+    context = {
+        'cobranca': cobranca,
+    }
+    
+    return render(request, 'notas/confirmar_baixa_cobranca.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+def gerar_relatorio_cobranca_carregamento_pdf(request, cobranca_id):
+    """View para gerar PDF de uma cobrança de carregamento"""
+    from .utils.relatorios import gerar_relatorio_pdf_cobranca_carregamento, gerar_resposta_pdf
+    
+    cobranca = get_object_or_404(CobrancaCarregamento, pk=cobranca_id)
+    
+    try:
+        pdf_content = gerar_relatorio_pdf_cobranca_carregamento(cobranca)
+        # Limpar nome do arquivo removendo caracteres inválidos
+        nome_cliente = cobranca.cliente.razao_social.replace(' ', '_').replace('/', '_').replace('\\', '_')
+        nome_cliente = ''.join(c for c in nome_cliente if c.isalnum() or c in ('_', '-'))
+        nome_arquivo = f"cobranca_carregamento_{cobranca.id}_{nome_cliente}.pdf"
+        return gerar_resposta_pdf(pdf_content, nome_arquivo, inline=True)
+    except Exception as e:
+        messages.error(request, f'Erro ao gerar PDF: {str(e)}')
+        return redirect('notas:cobranca_carregamento')
+
+
+@login_required
+@user_passes_test(is_admin)
+def gerar_relatorio_consolidado_cobranca_pdf(request):
+    """View para gerar PDF consolidado de cobranças"""
+    from .utils.relatorios import gerar_relatorio_pdf_consolidado_cobranca, gerar_resposta_pdf
+    
+    cliente_id = request.GET.get('cliente')
+    cliente_selecionado = None
+    
+    if cliente_id:
+        try:
+            cliente_selecionado = Cliente.objects.get(pk=cliente_id)
+        except Cliente.DoesNotExist:
+            pass
+    
+    cobrancas_pendentes = CobrancaCarregamento.objects.filter(status='Pendente')
+    if cliente_selecionado:
+        cobrancas_pendentes = cobrancas_pendentes.filter(cliente=cliente_selecionado)
+    
+    try:
+        pdf_content = gerar_relatorio_pdf_consolidado_cobranca(cobrancas_pendentes, cliente_selecionado)
+        if cliente_selecionado:
+            # Limpar nome do arquivo removendo caracteres inválidos
+            nome_cliente = cliente_selecionado.razao_social.replace(' ', '_').replace('/', '_').replace('\\', '_')
+            nome_cliente = ''.join(c for c in nome_cliente if c.isalnum() or c in ('_', '-'))
+            nome_arquivo = f"cobrancas_consolidadas_{nome_cliente}.pdf"
+        else:
+            nome_arquivo = "cobrancas_consolidadas_todas.pdf"
+        return gerar_resposta_pdf(pdf_content, nome_arquivo, inline=True)
+    except Exception as e:
+        messages.error(request, f'Erro ao gerar PDF consolidado: {str(e)}')
+        return redirect('notas:cobranca_carregamento')
+
+
+@login_required
+def carregar_romaneios_cliente(request, cliente_id):
+    """View AJAX para carregar romaneios de um cliente"""
+    try:
+        cliente = Cliente.objects.get(pk=cliente_id)
+        romaneios = RomaneioViagem.objects.filter(cliente=cliente).order_by('-data_emissao')
+        
+        data = {
+            'romaneios': [{
+                'id': romaneio.id,
+                'codigo': romaneio.codigo,
+                'data_emissao': romaneio.data_emissao.strftime('%d/%m/%Y'),
+                'cliente': romaneio.cliente.razao_social,
+            } for romaneio in romaneios]
+        }
+        
+        return JsonResponse(data)
+    except Cliente.DoesNotExist:
+        return JsonResponse({'error': 'Cliente não encontrado'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# =============================================================================
+# Views de Auditoria
+# =============================================================================
+
+@login_required
+@user_passes_test(lambda u: u.is_admin)
+def listar_logs_auditoria(request):
+    """Lista todos os logs de auditoria"""
+    logs = AuditoriaLog.objects.all().select_related('usuario')
+    
+    # Filtros
+    modelo_filtro = request.GET.get('modelo', '')
+    acao_filtro = request.GET.get('acao', '')
+    usuario_filtro = request.GET.get('usuario', '')
+    data_inicio = request.GET.get('data_inicio', '')
+    data_fim = request.GET.get('data_fim', '')
+    
+    if modelo_filtro:
+        logs = logs.filter(modelo__icontains=modelo_filtro)
+    if acao_filtro:
+        logs = logs.filter(acao=acao_filtro)
+    if usuario_filtro:
+        logs = logs.filter(usuario__username__icontains=usuario_filtro)
+    if data_inicio:
+        try:
+            data_inicio_obj = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            logs = logs.filter(data_hora__date__gte=data_inicio_obj)
+        except ValueError:
+            pass
+    if data_fim:
+        try:
+            data_fim_obj = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            logs = logs.filter(data_hora__date__lte=data_fim_obj)
+        except ValueError:
+            pass
+    
+    # Paginação
+    from django.core.paginator import Paginator
+    paginator = Paginator(logs, 50)  # 50 logs por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Estatísticas
+    total_logs = AuditoriaLog.objects.count()
+    acoes_count = AuditoriaLog.objects.values_list('acao', flat=True).distinct()
+    modelos_count = AuditoriaLog.objects.values_list('modelo', flat=True).distinct()
+    
+    # Lista de usuários para o filtro
+    usuarios = Usuario.objects.all().order_by('username')
+    
+    context = {
+        'page_obj': page_obj,
+        'modelo_filtro': modelo_filtro,
+        'acao_filtro': acao_filtro,
+        'usuario_filtro': usuario_filtro,
+        'data_inicio': data_inicio,
+        'data_fim': data_fim,
+        'acoes': AuditoriaLog.ACAO_CHOICES,
+        'ACTION_CHOICES': AuditoriaLog.ACAO_CHOICES,  # Para compatibilidade com template
+        'total_logs': total_logs,
+        'acoes_count': acoes_count,
+        'modelos_count': modelos_count,
+        'usuarios': usuarios,
+        'acao_atual': acao_filtro,
+        'modelo_atual': modelo_filtro,
+        'usuario_atual': usuario_filtro,
+        'data_inicio_atual': data_inicio,
+        'data_fim_atual': data_fim,
+    }
+    
+    return render(request, 'notas/auditoria/listar_logs.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_admin)
+def detalhes_log_auditoria(request, pk):
+    """Exibe os detalhes de um log de auditoria específico"""
+    log = get_object_or_404(AuditoriaLog, pk=pk)
+    
+    context = {
+        'log': log,
+    }
+    
+    return render(request, 'notas/auditoria/detalhes_log.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_admin)
+def listar_registros_excluidos(request):
+    """Lista todos os registros que foram excluídos (soft delete)"""
+    from django.contrib.contenttypes.models import ContentType
+    
+    # Buscar logs de exclusão
+    logs_exclusao = AuditoriaLog.objects.filter(acao='DELETE').select_related('usuario')
+    
+    # Agrupar por modelo
+    modelos_excluidos = {}
+    for log in logs_exclusao:
+        if log.modelo not in modelos_excluidos:
+            modelos_excluidos[log.modelo] = []
+        modelos_excluidos[log.modelo].append(log)
+    
+    context = {
+        'modelos_excluidos': modelos_excluidos,
+    }
+    
+    return render(request, 'notas/auditoria/registros_excluidos.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_admin)
+def restaurar_registro(request, modelo, pk):
+    """Restaura um registro excluído usando os dados do log de auditoria"""
+    from .utils.auditoria import restaurar_registro as restaurar
+    
+    try:
+        objeto_restaurado = restaurar(modelo, pk, usuario=request.user, request=request)
+        
+        if objeto_restaurado:
+            messages.success(request, f'{modelo} #{objeto_restaurado.pk} restaurado com sucesso!')
+        else:
+            messages.error(request, f'Não foi possível restaurar {modelo} #{pk}. Log de exclusão não encontrado ou dados inválidos.')
+    except Exception as e:
+        messages.error(request, f'Erro ao restaurar registro: {str(e)}')
+    
+    return redirect('notas:listar_registros_excluidos')
 
 
 # =============================================================================

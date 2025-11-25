@@ -98,11 +98,12 @@
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">
-                                    <i class="fas fa-file-alt"></i> Valor CTE/Manifesto (R$) <span class="text-danger">*</span>
+                                    <i class="fas fa-file-alt"></i> Valor CTE/Manifesto (R$)
                                 </label>
                                 <input type="number" name="valor_cte_manifesto" step="0.01" min="0" 
-                                       class="form-control form-control-lg" required 
-                                       value="{{ cobranca.valor_cte_manifesto }}">
+                                       class="form-control form-control-lg" 
+                                       placeholder="0.00 (opcional)"
+                                       value="{% if cobranca.valor_cte_manifesto %}{{ cobranca.valor_cte_manifesto }}{% endif %}">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">

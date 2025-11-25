@@ -5,7 +5,7 @@ from django.utils import timezone
 from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
 import re
-from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, Usuario, TabelaSeguro, AgendaEntrega
+from .models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, Usuario, TabelaSeguro, AgendaEntrega, CobrancaCarregamento
 from validate_docbr import CNPJ, CPF
 
 # Custom form field that automatically converts text to uppercase
@@ -946,7 +946,7 @@ class RomaneioViagemForm(forms.ModelForm):
     )
     
     reboque_1 = forms.ModelChoiceField(
-        queryset=Veiculo.objects.filter(tipo_unidade__in=['REBOQUE', 'SEMI-REBOQUE']).order_by('placa'),
+        queryset=Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque', 'REBOQUE', 'SEMI-REBOQUE', 'reboque', 'semi-reboque']).order_by('placa'),
         label='Reboque 1 (Opcional)',
         required=False,
         empty_label="--- Selecione o reboque 1 ---",
@@ -954,7 +954,7 @@ class RomaneioViagemForm(forms.ModelForm):
     )
     
     reboque_2 = forms.ModelChoiceField(
-        queryset=Veiculo.objects.filter(tipo_unidade__in=['REBOQUE', 'SEMI-REBOQUE']).order_by('placa'),
+        queryset=Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque', 'REBOQUE', 'SEMI-REBOQUE', 'reboque', 'semi-reboque']).order_by('placa'),
         label='Reboque 2 (Opcional)',
         required=False,
         empty_label="--- Selecione o reboque 2 ---",
@@ -973,8 +973,10 @@ class RomaneioViagemForm(forms.ModelForm):
         self.fields['cliente'].queryset = Cliente.objects.filter(status='Ativo').order_by('razao_social')
         self.fields['motorista'].queryset = Motorista.objects.all().order_by('nome')
         self.fields['veiculo_principal'].queryset = Veiculo.objects.filter(tipo_unidade__in=['CARRO', 'VAN', 'CAMINHÃO', 'CAVALO']).order_by('placa')
-        self.fields['reboque_1'].queryset = Veiculo.objects.filter(tipo_unidade__in=['REBOQUE', 'SEMI-REBOQUE']).order_by('placa')
-        self.fields['reboque_2'].queryset = Veiculo.objects.filter(tipo_unidade__in=['REBOQUE', 'SEMI-REBOQUE']).order_by('placa')
+        # Aceitar tanto maiúsculas quanto o formato padrão do modelo
+        tipos_reboque = ['Reboque', 'Semi-reboque', 'REBOQUE', 'SEMI-REBOQUE', 'reboque', 'semi-reboque']
+        self.fields['reboque_1'].queryset = Veiculo.objects.filter(tipo_unidade__in=tipos_reboque).order_by('placa')
+        self.fields['reboque_2'].queryset = Veiculo.objects.filter(tipo_unidade__in=tipos_reboque).order_by('placa')
 
         # Lógica para edição (preencher notas_fiscais e data_romaneio)
         if self.instance and self.instance.pk:
@@ -1099,14 +1101,16 @@ class RomaneioViagemForm(forms.ModelForm):
                     )
         
         # Validar se os reboques são do tipo correto
-        if reboque_1 and reboque_1.tipo_unidade not in ['Reboque', 'Semi-reboque']:
+        # Aceitar tanto maiúsculas quanto o formato padrão
+        tipos_reboque_validos = ['Reboque', 'Semi-reboque', 'REBOQUE', 'SEMI-REBOQUE', 'reboque', 'semi-reboque']
+        if reboque_1 and reboque_1.tipo_unidade not in tipos_reboque_validos:
             raise forms.ValidationError(
-                f"O veículo {reboque_1.placa} não é um reboque ou semi-reboque válido."
+                f"O veículo {reboque_1.placa} não é um reboque ou semi-reboque válido. Tipo atual: {reboque_1.tipo_unidade}"
             )
         
-        if reboque_2 and reboque_2.tipo_unidade not in ['Reboque', 'Semi-reboque']:
+        if reboque_2 and reboque_2.tipo_unidade not in tipos_reboque_validos:
             raise forms.ValidationError(
-                f"O veículo {reboque_2.placa} não é um reboque ou semi-reboque válido."
+                f"O veículo {reboque_2.placa} não é um reboque ou semi-reboque válido. Tipo atual: {reboque_2.tipo_unidade}"
             )
         
         # Validar se não há reboques duplicados
@@ -1734,3 +1738,142 @@ class MercadoriaDepositoSearchForm(forms.Form):
             'type': 'date'
         })
     )
+
+
+# --------------------------------------------------------------------------------------
+# Formulário de Cobrança de Carregamento
+# --------------------------------------------------------------------------------------
+class CobrancaCarregamentoForm(forms.ModelForm):
+    """Formulário para criar e editar cobranças de carregamento"""
+    
+    class Meta:
+        model = CobrancaCarregamento
+        fields = [
+            'cliente',
+            'romaneios',
+            'valor_carregamento',
+            'valor_cte_manifesto',
+            'data_vencimento',
+            'observacoes',
+        ]
+        widgets = {
+            'cliente': forms.Select(attrs={
+                'class': 'form-select form-select-lg',
+                'required': True
+            }),
+            'romaneios': forms.CheckboxSelectMultiple(attrs={
+                'class': 'form-check-input'
+            }),
+            'valor_carregamento': forms.NumberInput(attrs={
+                'class': 'form-control form-control-lg',
+                'step': '0.01',
+                'min': '0',
+                'placeholder': '0.00',
+                'required': True
+            }),
+            'valor_cte_manifesto': forms.NumberInput(attrs={
+                'class': 'form-control form-control-lg',
+                'step': '0.01',
+                'min': '0',
+                'placeholder': '0.00 (opcional)',
+            }),
+            'data_vencimento': forms.DateInput(attrs={
+                'class': 'form-control form-control-lg',
+                'type': 'date'
+            }),
+            'observacoes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Observações sobre esta cobrança (opcional)'
+            }),
+        }
+        labels = {
+            'cliente': 'Cliente',
+            'romaneios': 'Romaneios',
+            'valor_carregamento': 'Valor Carregamento (R$)',
+            'valor_cte_manifesto': 'Valor CTE/Manifesto (R$)',
+            'data_vencimento': 'Data de Vencimento',
+            'observacoes': 'Observações',
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filtrar apenas clientes ativos
+        self.fields['cliente'].queryset = Cliente.objects.filter(status='Ativo').order_by('razao_social')
+        
+        # Tornar campo valor_cte_manifesto opcional
+        self.fields['valor_cte_manifesto'].required = False
+        
+        # Determinar o cliente para filtrar romaneios
+        cliente_para_filtrar = None
+        
+        # Se for edição, usar o cliente da instância
+        if self.instance and self.instance.pk and self.instance.cliente:
+            cliente_para_filtrar = self.instance.cliente
+        # Se houver dados POST, tentar obter o cliente dos dados
+        elif self.data and 'cliente' in self.data:
+            try:
+                cliente_id = self.data.get('cliente')
+                if cliente_id:
+                    cliente_para_filtrar = Cliente.objects.get(pk=cliente_id)
+            except (Cliente.DoesNotExist, ValueError, TypeError):
+                pass
+        
+        # Definir queryset de romaneios baseado no cliente
+        if cliente_para_filtrar:
+            self.fields['romaneios'].queryset = RomaneioViagem.objects.filter(
+                cliente=cliente_para_filtrar
+            ).order_by('-data_emissao')
+        else:
+            # Se não há cliente, permitir todos os romaneios para validação
+            # Isso evita erro de "não é uma das escolhas disponíveis"
+            self.fields['romaneios'].queryset = RomaneioViagem.objects.all().order_by('-data_emissao')
+        
+        # Tornar romaneios opcional visualmente, mas validar depois
+        self.fields['romaneios'].required = False
+    
+    def clean_valor_cte_manifesto(self):
+        """Limpa o campo valor_cte_manifesto, convertendo valores vazios para 0.00"""
+        valor = self.cleaned_data.get('valor_cte_manifesto')
+        
+        # Se o valor não foi fornecido ou está vazio, retornar 0.00
+        if valor is None:
+            return 0.00
+        
+        # Se for string vazia, retornar 0.00
+        if isinstance(valor, str) and valor.strip() == '':
+            return 0.00
+        
+        # Se já for um número (Decimal, float, int), retornar como está
+        from decimal import Decimal
+        if isinstance(valor, (Decimal, float, int)):
+            return Decimal(str(valor))
+        
+        # Se for string, tentar converter
+        if isinstance(valor, str):
+            try:
+                return Decimal(valor.strip()) if valor.strip() else Decimal('0.00')
+            except (ValueError, TypeError):
+                return 0.00
+        
+        return valor
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        cliente = cleaned_data.get('cliente')
+        romaneios = cleaned_data.get('romaneios')
+        
+        # Validar que pelo menos um romaneio foi selecionado
+        if not romaneios or romaneios.count() == 0:
+            raise ValidationError('Selecione pelo menos um romaneio para esta cobrança.')
+        
+        # Validar que todos os romaneios selecionados pertencem ao cliente escolhido
+        if cliente and romaneios:
+            romaneios_invalidos = romaneios.exclude(cliente=cliente)
+            if romaneios_invalidos.exists():
+                raise ValidationError(
+                    f'Os seguintes romaneios não pertencem ao cliente selecionado: '
+                    f'{", ".join([str(r.codigo) for r in romaneios_invalidos])}'
+                )
+        
+        return cleaned_data

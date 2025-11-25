@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load format_filters %}
+{% load static %}
 
 {% block title %}Detalhes da Nota Fiscal - {{ nota.nota }}{% endblock %}
 
@@ -79,12 +80,9 @@
             <a href="{% url 'notas:editar_nota_fiscal' nota.pk %}" class="btn btn-warning me-2">
                 <i class="fas fa-edit"></i> Editar Nota
             </a>
-            <form action="{% url 'notas:excluir_nota_fiscal' nota.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir esta nota fiscal?');">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-danger me-2">
-                    <i class="fas fa-trash"></i> Excluir Nota
-                </button>
-            </form>
+            <button type="button" class="btn btn-danger me-2" id="btnExcluirNotaDetalhes" data-pk="{{ nota.pk }}">
+                <i class="fas fa-trash"></i> Excluir Nota
+            </button>
         {% endif %}
         {% if user.is_cliente %}
             <a href="{% url 'notas:minhas_notas_fiscais' %}" class="btn btn-secondary">Voltar às Minhas Notas</a>
@@ -93,5 +91,223 @@
         {% endif %}
     </div>
 
+    <!-- Modal de Autenticação -->
+    {% include 'notas/modal_autenticacao_admin.html' %}
+
+    <!-- Formulário oculto para exclusão -->
+    <form id="formExcluirNotaDetalhes" method="post" style="display: none;">
+        {% csrf_token %}
+        <input type="hidden" name="username_admin" id="hidden_username_admin_detalhes">
+        <input type="hidden" name="senha_admin" id="hidden_senha_admin_detalhes">
+    </form>
+
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btnExcluir = document.getElementById('btnExcluirNotaDetalhes');
+    if (!btnExcluir) return;
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalAutenticacaoAdmin'));
+    const formAutenticacao = document.getElementById('formAutenticacaoAdmin');
+    const btnConfirmar = document.getElementById('btnConfirmarExclusao');
+    const erroAutenticacao = document.getElementById('erroAutenticacao');
+    const mensagemErro = document.getElementById('mensagemErro');
+    const formExcluir = document.getElementById('formExcluirNotaDetalhes');
+    const isAdmin = {{ user.is_admin|yesno:"true,false" }};
+    const pk = btnExcluir.getAttribute('data-pk');
+    const urlExcluir = `/notas/excluir/${pk}/`;
+
+    // Limpar erros ao abrir o modal
+    document.getElementById('modalAutenticacaoAdmin').addEventListener('show.bs.modal', function() {
+        erroAutenticacao.classList.add('d-none');
+        formAutenticacao.reset();
+        document.getElementById('username_admin_modal').classList.remove('is-invalid');
+        document.getElementById('senha_admin_modal').classList.remove('is-invalid');
+    });
+
+    // Botão excluir clicado
+    btnExcluir.addEventListener('click', function() {
+        if (isAdmin) {
+            // Se for admin, excluir diretamente
+            if (confirm('Tem certeza que deseja excluir esta nota fiscal?')) {
+                excluirNotaFiscal();
+            }
+        } else {
+            // Se não for admin, abrir modal
+            modal.show();
+        }
+    });
+
+    // Confirmar exclusão no modal
+    if (btnConfirmar) {
+        btnConfirmar.addEventListener('click', function() {
+            const username = document.getElementById('username_admin_modal').value.trim();
+            const senha = document.getElementById('senha_admin_modal').value;
+
+            if (!username || !senha) {
+                mostrarErro('Por favor, preencha todos os campos.');
+                return;
+            }
+
+            // Obter CSRF token (pode estar no modal ou no formulário oculto)
+            let csrfInput = document.querySelector('#formAutenticacaoAdmin [name=csrfmiddlewaretoken]');
+            if (!csrfInput) {
+                csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+            }
+            if (!csrfInput || !csrfInput.value) {
+                mostrarErro('Erro: Token CSRF não encontrado. Recarregue a página.');
+                btnConfirmar.disabled = false;
+                btnConfirmar.innerHTML = '<i class="fas fa-check"></i> Confirmar e Excluir';
+                return;
+            }
+            const csrfToken = csrfInput.value;
+
+            // Desabilitar botão durante validação
+            btnConfirmar.disabled = true;
+            btnConfirmar.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Validando...';
+
+            // Validar credenciais via AJAX
+            const urlValidar = '{% url "notas:ajax_validar_credenciais_admin" %}';
+            
+            console.log('Iniciando validação em:', urlValidar);
+            console.log('CSRF Token:', csrfToken ? 'Presente' : 'Ausente');
+            
+            // Criar um timeout para evitar travamento
+            const timeoutId = setTimeout(() => {
+                console.error('Timeout na validação');
+                mostrarErro('Tempo de espera esgotado. Verifique sua conexão e tente novamente.');
+                document.getElementById('username_admin_modal').classList.add('is-invalid');
+                document.getElementById('senha_admin_modal').classList.add('is-invalid');
+                btnConfirmar.disabled = false;
+                btnConfirmar.innerHTML = '<i class="fas fa-check"></i> Confirmar e Excluir';
+            }, 10000); // 10 segundos de timeout
+            
+            // Função para restaurar botão em caso de erro
+            const restaurarBotao = () => {
+                clearTimeout(timeoutId);
+                btnConfirmar.disabled = false;
+                btnConfirmar.innerHTML = '<i class="fas fa-check"></i> Confirmar e Excluir';
+            };
+            
+            fetch(urlValidar, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    username_admin: username,
+                    senha_admin: senha
+                })
+            })
+            .then(response => {
+                clearTimeout(timeoutId);
+                console.log('Resposta recebida:', response.status, response.statusText);
+                
+                // Tentar parsear JSON independente do status
+                return response.text().then(text => {
+                    console.log('Texto da resposta:', text);
+                    try {
+                        const data = JSON.parse(text);
+                        console.log('Dados parseados:', data);
+                        return { data, status: response.status };
+                    } catch (e) {
+                        console.error('Erro ao parsear JSON:', e, 'Texto:', text);
+                        throw new Error('Resposta inválida do servidor: ' + text.substring(0, 100));
+                    }
+                });
+            })
+            .then(({ data, status }) => {
+                if (data.success) {
+                    // Credenciais válidas, proceder com exclusão
+                    console.log('Credenciais válidas!');
+                    document.getElementById('hidden_username_admin_detalhes').value = username;
+                    document.getElementById('hidden_senha_admin_detalhes').value = senha;
+                    
+                    // Fechar modal
+                    modal.hide();
+                    
+                    // Excluir via AJAX
+                    excluirNotaFiscal();
+                } else {
+                    // Mostrar erro
+                    console.log('Credenciais inválidas:', data.message);
+                    mostrarErro(data.message || 'Credenciais inválidas');
+                    document.getElementById('username_admin_modal').classList.add('is-invalid');
+                    document.getElementById('senha_admin_modal').classList.add('is-invalid');
+                    restaurarBotao();
+                }
+            })
+            .catch(error => {
+                console.error('Erro completo na validação:', error);
+                restaurarBotao();
+                mostrarErro(error.message || 'Erro ao validar credenciais. Verifique sua conexão e tente novamente.');
+                document.getElementById('username_admin_modal').classList.add('is-invalid');
+                document.getElementById('senha_admin_modal').classList.add('is-invalid');
+            });
+        });
+    }
+
+    function mostrarErro(mensagem) {
+        mensagemErro.textContent = mensagem;
+        erroAutenticacao.classList.remove('d-none');
+    }
+
+    function excluirNotaFiscal() {
+        console.log('Iniciando exclusão da nota fiscal...');
+        
+        const formData = new FormData();
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        formData.append('csrfmiddlewaretoken', csrfToken);
+        
+        // Se não for admin, adicionar credenciais
+        if (!isAdmin) {
+            const username = document.getElementById('hidden_username_admin_detalhes').value;
+            const senha = document.getElementById('hidden_senha_admin_detalhes').value;
+            console.log('Adicionando credenciais de admin');
+            formData.append('username_admin', username);
+            formData.append('senha_admin', senha);
+        }
+        
+        fetch(urlExcluir, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => {
+            console.log('Resposta da exclusão:', response.status, response.statusText);
+            // Tentar parsear JSON independente do status
+            return response.text().then(text => {
+                try {
+                    return { data: JSON.parse(text), status: response.status };
+                } catch (e) {
+                    console.error('Erro ao parsear JSON:', text);
+                    throw new Error('Resposta inválida do servidor: ' + text.substring(0, 100));
+                }
+            });
+        })
+        .then(({ data, status }) => {
+            console.log('Dados da exclusão:', data);
+            if (data.success) {
+                // Mostrar mensagem de sucesso e redirecionar
+                alert(data.message || 'Nota fiscal excluída com sucesso!');
+                window.location.href = data.redirect_url || '/notas/notas/';
+            } else {
+                alert('Erro ao excluir: ' + (data.message || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            console.error('Erro completo na exclusão:', error);
+            alert('Erro ao excluir nota fiscal: ' + error.message);
+        });
+    }
+});
+</script>
 {% endblock %}
