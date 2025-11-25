@@ -3191,3 +3191,232 @@ def test_widget_agenda(request):
 
 # =============================================================================
 
+
+
+def listar_logs_auditoria(request):
+    """Lista todos os logs de auditoria (apenas administradores)"""
+    logs = AuditoriaLog.objects.select_related('usuario').order_by('-data_hora')
+    
+    # Obter parâmetros de filtro do GET
+    acao = request.GET.get('acao', '').strip()
+    modelo = request.GET.get('modelo', '').strip()
+    usuario_id = request.GET.get('usuario', '').strip()
+    data_inicio = request.GET.get('data_inicio', '').strip()
+    data_fim = request.GET.get('data_fim', '').strip()
+    
+    # Aplicar filtros apenas se valores foram fornecidos
+    if acao:
+        logs = logs.filter(acao=acao)
+    
+    if modelo:
+        logs = logs.filter(modelo__icontains=modelo)
+    
+    if usuario_id:
+        try:
+            logs = logs.filter(usuario_id=int(usuario_id))
+        except (ValueError, TypeError):
+            # Se não conseguir converter, ignorar o filtro
+            pass
+    
+    if data_inicio:
+        try:
+            # Converter string de data (YYYY-MM-DD) para date object
+            data_inicio_date = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            # Filtrar por data (ignora hora)
+            logs = logs.filter(data_hora__date__gte=data_inicio_date)
+        except (ValueError, TypeError):
+            # Se a data estiver em formato inválido, ignorar o filtro
+            pass
+    
+    if data_fim:
+        try:
+            # Converter string de data (YYYY-MM-DD) para date object
+            data_fim_date = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            # Filtrar por data (ignora hora)
+            logs = logs.filter(data_hora__date__lte=data_fim_date)
+        except (ValueError, TypeError):
+            # Se a data estiver em formato inválido, ignorar o filtro
+            pass
+    
+    # Paginação
+    from django.core.paginator import Paginator
+    paginator = Paginator(logs, 50)  # 50 logs por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Estatísticas
+    total_logs = logs.count()
+    acoes_count = logs.values('acao').annotate(count=Count('id')).order_by('-count')
+    modelos_count = logs.values('modelo').annotate(count=Count('id')).order_by('-count')[:10]
+    
+    # Lista de usuários para filtro
+    usuarios = Usuario.objects.filter(acoes_auditadas__isnull=False).distinct().order_by('username')
+    
+    context = {
+        'page_obj': page_obj,
+        'logs': page_obj,
+        'total_logs': total_logs,
+        'acoes_count': acoes_count,
+        'modelos_count': modelos_count,
+        'usuarios': usuarios,
+        'acao_atual': acao,
+        'modelo_atual': modelo,
+        'usuario_atual': usuario_id,
+        'data_inicio_atual': data_inicio,
+        'data_fim_atual': data_fim,
+        'ACTION_CHOICES': AuditoriaLog.ACTION_CHOICES,
+    }
+    
+    return render(request, 'notas/auditoria/listar_logs.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+
+
+def detalhes_log_auditoria(request, pk):
+    """Mostra os detalhes de um log de auditoria específico"""
+    log = get_object_or_404(AuditoriaLog.objects.select_related('usuario'), pk=pk)
+    
+    context = {
+        'log': log,
+    }
+    
+    return render(request, 'notas/auditoria/detalhes_log.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+
+
+def listar_registros_excluidos(request):
+    """Lista todos os registros excluídos (soft deleted)"""
+    modelo_tipo = request.GET.get('modelo', 'todos')
+    
+    # Dicionário com todos os modelos que suportam soft delete
+    modelos = {
+        'cliente': {
+            'model': Cliente,
+            'nome': 'Cliente',
+            'url_detalhes': 'notas:detalhes_cliente',
+            'verbose_name': 'Cliente'
+        },
+        'notafiscal': {
+            'model': NotaFiscal,
+            'nome': 'Nota Fiscal',
+            'url_detalhes': 'notas:detalhes_nota_fiscal',
+            'verbose_name': 'Nota Fiscal'
+        },
+        'motorista': {
+            'model': Motorista,
+            'nome': 'Motorista',
+            'url_detalhes': 'notas:detalhes_motorista',
+            'verbose_name': 'Motorista'
+        },
+        'veiculo': {
+            'model': Veiculo,
+            'nome': 'Veículo',
+            'url_detalhes': 'notas:detalhes_veiculo',
+            'verbose_name': 'Veículo'
+        },
+        'romaneio': {
+            'model': RomaneioViagem,
+            'nome': 'Romaneio',
+            'url_detalhes': 'notas:detalhes_romaneio',
+            'verbose_name': 'Romaneio'
+        },
+    }
+    
+    registros_excluidos = {}
+    total_excluidos = 0
+    
+    if modelo_tipo == 'todos':
+        # Buscar todos os modelos
+        for key, info in modelos.items():
+            excluidos = info['model'].all_objects.filter(deleted_at__isnull=False).select_related('deleted_by').order_by('-deleted_at')
+            count = excluidos.count()
+            if count > 0:
+                registros_excluidos[key] = {
+                    'nome': info['nome'],
+                    'registros': excluidos[:50],  # Limitar a 50 por tipo
+                    'total': count,
+                    'url_detalhes': info['url_detalhes'],
+                    'verbose_name': info['verbose_name']
+                }
+                total_excluidos += count
+    else:
+        # Buscar apenas um modelo específico
+        if modelo_tipo in modelos:
+            info = modelos[modelo_tipo]
+            excluidos = info['model'].all_objects.filter(deleted_at__isnull=False).select_related('deleted_by').order_by('-deleted_at')
+            count = excluidos.count()
+            if count > 0:
+                registros_excluidos[modelo_tipo] = {
+                    'nome': info['nome'],
+                    'registros': excluidos,
+                    'total': count,
+                    'url_detalhes': info['url_detalhes'],
+                    'verbose_name': info['verbose_name']
+                }
+                total_excluidos = count
+    
+    context = {
+        'registros_excluidos': registros_excluidos,
+        'total_excluidos': total_excluidos,
+        'modelo_tipo': modelo_tipo,
+        'modelos_disponiveis': modelos,
+    }
+    
+    return render(request, 'notas/auditoria/listar_registros_excluidos.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+
+
+def restaurar_registro(request, modelo, pk):
+    """Restaura um registro soft deleted"""
+    # Mapeamento de modelos
+    modelos_map = {
+        'cliente': Cliente,
+        'notafiscal': NotaFiscal,
+        'motorista': Motorista,
+        'veiculo': Veiculo,
+        'romaneio': RomaneioViagem,
+    }
+    
+    if modelo not in modelos_map:
+        messages.error(request, 'Modelo inválido.')
+        return redirect('notas:listar_registros_excluidos')
+    
+    Model = modelos_map[modelo]
+    registro = get_object_or_404(Model.all_objects.filter(deleted_at__isnull=False), pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            # Restaurar o registro
+            registro.restore()
+            
+            # Registrar a restauração no log de auditoria
+            registrar_restauracao(
+                usuario=request.user,
+                instancia=registro,
+                request=request,
+                descricao=f"{Model._meta.verbose_name.title()} '{str(registro)}' restaurado"
+            )
+            
+            messages.success(request, f'{Model._meta.verbose_name.title()} restaurado com sucesso!')
+            return redirect('notas:listar_registros_excluidos')
+        except Exception as e:
+            messages.error(request, f'Não foi possível restaurar o registro: {e}')
+    
+    context = {
+        'registro': registro,
+        'modelo': modelo,
+        'modelo_nome': Model._meta.verbose_name.title(),
+    }
+    
+    return render(request, 'notas/auditoria/restaurar_registro.html', context)
+
+
+# =============================================================================
