@@ -1,0 +1,399 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load format_filters %}
+
+{% block title %}Detalhes do Fechamento de Frete - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="card-title mb-0">
+                <i class="fas fa-file-invoice-dollar"></i> Detalhes do Fechamento de Frete
+            </h4>
+            <div class="d-flex gap-2">
+                <a href="{% url 'notas:imprimir_fechamento_frete' fechamento.pk %}" target="_blank" class="btn btn-primary">
+                    <i class="fas fa-print"></i> Imprimir
+                </a>
+                <a href="{% url 'notas:editar_fechamento_frete' fechamento.pk %}" class="btn btn-warning">
+                    <i class="fas fa-edit"></i> Editar
+                </a>
+                <a href="{% url 'notas:fechamento_frete' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Dados Gerais -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h5>Dados Gerais</h5>
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="40%">Motorista:</th>
+                            <td>{{ fechamento.motorista.nome }}</td>
+                        </tr>
+                        <tr>
+                            <th>Data:</th>
+                            <td>{{ fechamento.data|date:"d/m/Y" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Frete Total:</th>
+                            <td><strong>{{ fechamento.frete_total|format_brazilian_currency }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>CTR Total:</th>
+                            <td>{{ fechamento.ctr_total|format_brazilian_currency }}</td>
+                        </tr>
+                        <tr>
+                            <th>Carregamento Total:</th>
+                            <td>{{ fechamento.carregamento_total|format_brazilian_currency }}</td>
+                        </tr>
+                        <tr>
+                            <th>Cubagem Total:</th>
+                            <td><strong>{% if fechamento.cubagem_bau_total %}{{ fechamento.cubagem_bau_total|format_brazilian_number:2 }}{% endif %} m³</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Romaneios Associados -->
+            <div class="mb-4">
+                <h5>Romaneios Associados</h5>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Cliente</th>
+                                <th>Data</th>
+                                <th>Peso (kg)</th>
+                                <th>Valor (R$)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for romaneio in fechamento.romaneios.all %}
+                            <tr>
+                                <td>{{ romaneio.codigo }}</td>
+                                <td>{{ romaneio.cliente.razao_social }}</td>
+                                <td>{{ romaneio.data_emissao|date:"d/m/Y" }}</td>
+                                <td>{{ romaneio.peso_total|format_brazilian_number:2 }}</td>
+                                <td>{{ romaneio.valor_total|format_brazilian_currency }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Itens do Fechamento -->
+            <div class="mb-4">
+                <h5>Clientes e Cálculos</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Peso (kg)</th>
+                                <th>Cubagem (m³)</th>
+                                <th>Valor (R$)</th>
+                                <th>Valor Cub.</th>
+                                <th>% - CUB</th>
+                                <th>% Escolhido</th>
+                                <th>Valor Ideal</th>
+                                <th>Ajuste</th>
+                                <th>Valor Final</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in fechamento.itens.all %}
+                            <tr>
+                                <td>
+                                    <strong>{{ item.cliente_consolidado.razao_social }}</strong>
+                                    <small class="text-muted d-block">
+                                        {{ item.romaneios.count }} romaneio(s)
+                                    </small>
+                                </td>
+                                <td>{{ item.peso|format_brazilian_number:2 }}</td>
+                                <td>{{ item.cubagem|format_brazilian_number:2 }}</td>
+                                <td>{{ item.valor_mercadoria|format_brazilian_currency }}</td>
+                                <td>{{ item.valor_por_cubagem|format_brazilian_currency }}</td>
+                                <td>{{ item.percentual_cubagem|format_brazilian_number:2 }}%</td>
+                                <td>
+                                    <strong>{{ item.percentual_escolhido|format_brazilian_number:2 }}%</strong><br>
+                                    <small>{{ item.valor_por_percentual|format_brazilian_currency }}</small>
+                                </td>
+                                <td>{{ item.valor_ideal|format_brazilian_currency }}</td>
+                                <td>
+                                    {% if item.percentual_ajustado %}
+                                        {{ item.percentual_ajustado|format_brazilian_currency }}
+                                        {% if item.usar_ajuste_manual %}<span class="badge bg-warning">Usado</span>{% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td><strong>{{ item.valor_final|format_brazilian_currency }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-secondary">
+                            <tr>
+                                <th>TOTAIS</th>
+                                <th>{{ totais.total_peso|format_brazilian_number:2 }}</th>
+                                <th>{{ totais.total_cubagem|format_brazilian_number:2 }}</th>
+                                <th>{{ totais.total_valor|format_brazilian_currency }}</th>
+                                <th>{{ totais.total_valor_cubagem|format_brazilian_currency }}</th>
+                                <th>-</th>
+                                <th>{{ totais.total_valor_percentual|format_brazilian_currency }}</th>
+                                <th>{{ totais.total_valor_ideal|format_brazilian_currency }}</th>
+                                <th>-</th>
+                                <th><strong>{{ totais.total_valor_final|format_brazilian_currency }}</strong></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Detalhes dos Romaneios por Item -->
+            {% for item in fechamento.itens.all %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">{{ item.cliente_consolidado.razao_social }}</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Romaneio</th>
+                                    <th>Cliente Original</th>
+                                    <th>Peso (kg)</th>
+                                    <th>Valor (R$)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for detalhe in item.detalhes.all %}
+                                <tr>
+                                    <td>{{ detalhe.romaneio.codigo }}</td>
+                                    <td>{{ detalhe.cliente_original.razao_social }}</td>
+                                    <td>{{ detalhe.peso|format_brazilian_number:2 }}</td>
+                                    <td>{{ detalhe.valor|format_brazilian_currency }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-secondary">
+                                    <th>Total</th>
+                                    <th>{{ item.detalhes.count }} romaneio(s)</th>
+                                    <th>{{ item.peso|format_brazilian_number:2 }}</th>
+                                    <th>{{ item.valor_mercadoria|format_brazilian_currency }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Resumo por Cliente: Frete, Carregamento e CTR -->
+            <div class="mb-4">
+                <h5>Resumo por Cliente - Frete, Carregamento e CTR</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead class="table-success">
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Frete Final (R$)</th>
+                                <th>Carregamento (R$)</th>
+                                <th>CTR (R$)</th>
+                                <th>Total (R$)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item_calc in itens_com_calculos %}
+                            <tr>
+                                <td>
+                                    <strong>{{ item_calc.item.cliente_consolidado.razao_social }}</strong>
+                                </td>
+                                <td><strong>{{ item_calc.item.valor_final|format_brazilian_currency }}</strong></td>
+                                <td>{{ item_calc.carregamento|format_brazilian_currency }}</td>
+                                <td>{{ item_calc.ctr|format_brazilian_currency }}</td>
+                                <td>
+                                    <strong>{{ item_calc.total|format_brazilian_currency }}</strong>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-secondary">
+                            <tr>
+                                <th>TOTAIS</th>
+                                <th><strong>{{ totais.total_valor_final|format_brazilian_currency }}</strong></th>
+                                <th>{{ total_carregamento_calculado|format_brazilian_currency }}</th>
+                                <th>{{ total_ctr_calculado|format_brazilian_currency }}</th>
+                                <th>
+                                    <strong>{{ total_carregamento_ctr|format_brazilian_currency }}</strong>
+                                </th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            
+            {% if fechamento.observacoes %}
+            <div class="alert alert-info">
+                <strong>Observações:</strong><br>
+                {{ fechamento.observacoes|linebreaks }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+/* Estilos para impressão */
+@media print {
+    /* Ocultar elementos não necessários na impressão */
+    body * {
+        visibility: hidden;
+    }
+    
+    .card, .card * {
+        visibility: visible;
+    }
+    
+    .card {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        border: none;
+        box-shadow: none;
+    }
+    
+    /* Ocultar botões e elementos de navegação */
+    .btn, .card-header .d-flex, .card-header .gap-2 {
+        display: none !important;
+    }
+    
+    /* Ajustar cabeçalho */
+    .card-header {
+        border-bottom: 2px solid #000;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .card-header h4 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+    
+    /* Melhorar espaçamento */
+    .card-body {
+        padding: 0;
+    }
+    
+    .mb-4, .mb-3 {
+        margin-bottom: 1.5rem !important;
+        page-break-inside: avoid;
+    }
+    
+    /* Ajustar tabelas */
+    .table {
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+    }
+    
+    .table th, .table td {
+        padding: 0.5rem;
+        border: 1px solid #000;
+    }
+    
+    .table thead th {
+        background-color: #f0f0f0 !important;
+        font-weight: bold;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: #f9f9f9 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .table-bordered {
+        border: 2px solid #000;
+    }
+    
+    .table-success thead th {
+        background-color: #d4edda !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .table-secondary {
+        background-color: #e9ecef !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    /* Ajustar títulos */
+    h5 {
+        font-size: 1.2rem;
+        margin-bottom: 0.75rem;
+        border-bottom: 1px solid #000;
+        padding-bottom: 0.25rem;
+    }
+    
+    h6 {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Evitar quebra de página em elementos importantes */
+    .table-responsive {
+        page-break-inside: avoid;
+    }
+    
+    /* Ajustar alertas */
+    .alert {
+        border: 1px solid #000;
+        page-break-inside: avoid;
+    }
+    
+    /* Remover cores de fundo que não imprimem bem */
+    .text-muted {
+        color: #666 !important;
+    }
+    
+    /* Ajustar badges */
+    .badge {
+        border: 1px solid #000;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    /* Ajustar página */
+    @page {
+        margin: 1.5cm;
+        size: A4;
+    }
+    
+    /* Ocultar sidebar e outros elementos */
+    .sidebar, .top-bar, .main-content > *:not(.card) {
+        display: none !important;
+    }
+    
+    /* Garantir que o conteúdo principal seja visível */
+    .main-content {
+        margin: 0;
+        padding: 0;
+    }
+    
+    .container {
+        max-width: 100%;
+        padding: 0;
+    }
+}
+</style>
+{% endblock %}
+

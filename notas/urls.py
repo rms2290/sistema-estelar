@@ -75,16 +75,12 @@ urlpatterns = [
     path('minhas-notas/<int:pk>/imprimir/', views.imprimir_nota_fiscal, name='imprimir_nota_fiscal'),
     path('minhas-notas/imprimir-relatorio-deposito/', views.imprimir_relatorio_deposito, name='imprimir_relatorio_deposito'),
     path('meus-romaneios/', views.meus_romaneios, name='meus_romaneios'),
-    # path('minhas-cobrancas-carregamento/', views.minhas_cobrancas_carregamento, name='minhas_cobrancas_carregamento'),
-    # path('minhas-cobrancas-carregamento/<int:cobranca_id>/gerar-pdf/', views.gerar_relatorio_cobranca_carregamento_pdf_cliente, name='gerar_relatorio_cobranca_carregamento_pdf_cliente'),
     
     # URLs para Gerenciamento de Usuários (apenas administradores)
     path('usuarios/', views.listar_usuarios, name='listar_usuarios'),
     path('usuarios/cadastrar/', views.cadastrar_usuario, name='cadastrar_usuario'),
     path('usuarios/editar/<int:pk>/', views.editar_usuario, name='editar_usuario'),
     path('usuarios/excluir/<int:pk>/', views.excluir_usuario, name='excluir_usuario'),
-    # path('usuarios/impersonar/<int:pk>/', views.impersonar_usuario, name='impersonar_usuario'),
-    # path('usuarios/encerrar-impersonacao/', views.encerrar_impersonacao, name='encerrar_impersonacao'),
     
     # URLs para Tabela de Seguros
     path('tabela-seguros/', views.listar_tabela_seguros, name='listar_tabela_seguros'),
@@ -101,6 +97,14 @@ urlpatterns = [
     path('relatorios/totalizador-por-cliente/pdf/', views.totalizador_por_cliente_pdf, name='totalizador_por_cliente_pdf'),
     path('relatorios/totalizador-por-cliente/excel/', views.totalizador_por_cliente_excel, name='totalizador_por_cliente_excel'),
     path('relatorios/fechamento-frete/', views.fechamento_frete, name='fechamento_frete'),
+    path('relatorios/fechamento-frete/criar/', views.criar_fechamento_frete, name='criar_fechamento_frete'),
+    path('relatorios/fechamento-frete/<int:pk>/editar/', views.editar_fechamento_frete, name='editar_fechamento_frete'),
+    path('relatorios/fechamento-frete/<int:pk>/imprimir/', views.imprimir_fechamento_frete, name='imprimir_fechamento_frete'),
+    path('relatorios/fechamento-frete/<int:pk>/', views.detalhes_fechamento_frete, name='detalhes_fechamento_frete'),
+    path('ajax/carregar-dados-romaneios/', views.carregar_dados_romaneios, name='carregar_dados_romaneios'),
+    path('ajax/carregar-mais-romaneios/', views.carregar_mais_romaneios, name='carregar_mais_romaneios'),
+    path('ajax/buscar-clientes-ativos/', views.buscar_clientes_ativos, name='buscar_clientes_ativos'),
+    path('ajax/buscar-romaneios-filtrados/', views.buscar_romaneios_filtrados, name='buscar_romaneios_filtrados'),
     path('relatorios/cobranca-mensal/', views.cobranca_mensal, name='cobranca_mensal'),
     path('relatorios/cobranca-carregamento/', views.cobranca_carregamento, name='cobranca_carregamento'),
     

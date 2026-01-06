@@ -1,0 +1,1255 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if editar %}Editar{% else %}Criar{% endif %} Fechamento de Frete - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="card-title mb-0">
+                <i class="fas fa-file-invoice-dollar"></i> {% if editar %}Editar{% else %}Criar{% endif %} Fechamento de Frete
+            </h4>
+            {% if editar %}
+            <a href="{% url 'notas:detalhes_fechamento_frete' fechamento.pk %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <form method="post" id="fechamentoForm">
+                {% csrf_token %}
+                
+                <!-- Seção: Dados Gerais -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle"></i> Dados Gerais
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.motorista.id_for_label }}" class="form-label">{{ form.motorista.label }}:</label>
+                                {{ form.motorista }}
+                                {% if form.motorista.errors %}
+                                <div class="text-danger">{{ form.motorista.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="{{ form.data.id_for_label }}" class="form-label">{{ form.data.label }}:</label>
+                                {{ form.data }}
+                                {% if form.data.errors %}
+                                <div class="text-danger">{{ form.data.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="{{ form.cubagem_total.id_for_label }}" class="form-label">{{ form.cubagem_total.label }}:</label>
+                                {{ form.cubagem_total }}
+                                {% if form.cubagem_total.help_text %}
+                                <small class="form-text text-muted">{{ form.cubagem_total.help_text }}</small>
+                                {% endif %}
+                                {% if form.cubagem_total.errors %}
+                                <div class="text-danger">{{ form.cubagem_total.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <!-- Campos ocultos para compatibilidade -->
+                            {{ form.cubagem_bau_a }}
+                            {{ form.cubagem_bau_b }}
+                            {{ form.cubagem_bau_c }}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.frete_total.id_for_label }}" class="form-label">{{ form.frete_total.label }}:</label>
+                                {{ form.frete_total }}
+                                {% if form.frete_total.errors %}
+                                <div class="text-danger">{{ form.frete_total.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.ctr_total.id_for_label }}" class="form-label">{{ form.ctr_total.label }}:</label>
+                                {{ form.ctr_total }}
+                                {% if form.ctr_total.errors %}
+                                <div class="text-danger">{{ form.ctr_total.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.carregamento_total.id_for_label }}" class="form-label">{{ form.carregamento_total.label }}:</label>
+                                {{ form.carregamento_total }}
+                                {% if form.carregamento_total.errors %}
+                                <div class="text-danger">{{ form.carregamento_total.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Seção: Tabela de Clientes -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-table"></i> Clientes e Cálculos
+                        </h5>
+                        <button type="button" class="btn btn-sm btn-success" id="btn_adicionar_linha">
+                            <i class="fas fa-plus"></i> Adicionar Linha
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="tabela_clientes">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th>Romaneios</th>
+                                        <th>Peso (kg)</th>
+                                        <th>Cubagem (m³)</th>
+                                        <th>Valor (R$)</th>
+                                        <th>Valor Cub.</th>
+                                        <th>% - CUB</th>
+                                        <th>% Escolhido</th>
+                                        <th>Valor Ideal</th>
+                                        <th>Ajuste</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody_clientes">
+                                    <!-- Linhas serão adicionadas dinamicamente -->
+                                </tbody>
+                                <tfoot class="table-secondary">
+                                    <tr>
+                                        <th>TOTAIS</th>
+                                        <th>-</th>
+                                        <th id="total_peso">0,00</th>
+                                        <th id="total_cubagem">0,00</th>
+                                        <th id="total_valor">R$ 0,00</th>
+                                        <th id="total_valor_cub">R$ 0,00</th>
+                                        <th>-</th>
+                                        <th id="total_percentual">R$ 0,00</th>
+                                        <th id="total_valor_ideal">R$ 0,00</th>
+                                        <th>-</th>
+                                        <th>-</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Botões de Ação -->
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'notas:fechamento_frete' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </a>
+                    <div>
+                        <button type="button" class="btn btn-info" id="btn_calcular">
+                            <i class="fas fa-calculator"></i> Calcular
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Salvar Fechamento
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Estilos para os modais no tema dark */
+#modalSelecionarCliente .form-check:hover,
+#modalSelecionarRomaneios .form-check:hover {
+    background-color: var(--card-header-bg) !important;
+}
+
+#modalSelecionarCliente .form-check-input:checked,
+#modalSelecionarRomaneios .form-check-input:checked {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+}
+
+#modalSelecionarCliente .form-check-input:focus,
+#modalSelecionarRomaneios .form-check-input:focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25) !important;
+}
+
+#modalSelecionarCliente .alert,
+#modalSelecionarRomaneios .alert {
+    background-color: var(--card-header-bg) !important;
+    color: var(--text-color) !important;
+    border-color: var(--border-color) !important;
+}
+
+#modalSelecionarCliente .alert-danger {
+    background-color: #dc3545 !important;
+    color: #fff !important;
+}
+
+#modalSelecionarCliente .alert-info {
+    background-color: #17a2b8 !important;
+    color: #fff !important;
+}
+
+#modalSelecionarCliente .form-control:focus,
+#modalSelecionarRomaneios .form-control:focus {
+    background-color: var(--sidebar-bg) !important;
+    color: var(--text-color) !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25) !important;
+}
+
+#modalSelecionarCliente input[type="date"]::-webkit-calendar-picker-indicator,
+#modalSelecionarRomaneios input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+}
+
+/* Estilos específicos para checkboxes do modal de romaneios */
+#modalSelecionarRomaneios .form-check-input {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
+    margin-top: 0.3rem !important;
+    margin-right: 10px !important;
+    margin-left: 0 !important;
+    flex-shrink: 0 !important;
+    cursor: pointer !important;
+    position: relative !important;
+    z-index: 10 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+    -webkit-appearance: checkbox !important;
+    -moz-appearance: checkbox !important;
+    appearance: checkbox !important;
+}
+
+#modalSelecionarRomaneios .form-check {
+    display: flex !important;
+    align-items: flex-start !important;
+    min-height: auto !important;
+    padding-left: 0 !important;
+}
+
+#modalSelecionarRomaneios .form-check-label {
+    flex-grow: 1 !important;
+    cursor: pointer !important;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    font-size: 0.85rem !important;
+    line-height: 1.3 !important;
+}
+
+#modalSelecionarRomaneios .form-check-label strong {
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+}
+
+#modalSelecionarRomaneios .form-check-label small {
+    font-size: 0.75rem !important;
+    line-height: 1.2 !important;
+}
+
+#modalSelecionarRomaneios .form-check {
+    padding: 4px 6px !important;
+    margin-bottom: 4px !important;
+}
+</style>
+
+<!-- Modal: Seleção de Cliente -->
+<div class="modal fade" id="modalSelecionarCliente" tabindex="-1" aria-labelledby="modalSelecionarClienteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background-color: var(--card-bg); color: var(--text-color); border-color: var(--border-color);">
+            <div class="modal-header" style="background-color: var(--card-header-bg); border-bottom-color: var(--border-color);">
+                <h5 class="modal-title" id="modalSelecionarClienteLabel" style="color: var(--text-color);">
+                    <i class="fas fa-building"></i> Selecionar Cliente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: invert(1) grayscale(100%) brightness(200%);"></button>
+            </div>
+            <div class="modal-body" style="background-color: var(--card-bg); color: var(--text-color);">
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="busca_cliente" placeholder="Buscar cliente (nome, CNPJ...)" 
+                           style="background-color: var(--sidebar-bg); color: var(--text-color); border-color: var(--border-color);">
+                </div>
+                <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto; background-color: var(--card-bg); border-color: var(--border-color) !important;">
+                    <div id="lista_clientes_modal">
+                        <!-- Lista será preenchida via JavaScript -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="background-color: var(--card-bg); border-top-color: var(--border-color);">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn_confirmar_cliente">
+                    <i class="fas fa-check"></i> Confirmar Seleção
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Seleção de Romaneios -->
+<div class="modal fade" id="modalSelecionarRomaneios" tabindex="-1" aria-labelledby="modalSelecionarRomaneiosLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" style="max-width: 900px;">
+        <div class="modal-content" style="background-color: var(--card-bg); color: var(--text-color); border-color: var(--border-color);">
+            <div class="modal-header" style="background-color: var(--card-header-bg); border-bottom-color: var(--border-color);">
+                <h5 class="modal-title" id="modalSelecionarRomaneiosLabel" style="color: var(--text-color);">
+                    <i class="fas fa-truck"></i> Selecionar Romaneios
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: invert(1) grayscale(100%) brightness(200%);"></button>
+            </div>
+            <div class="modal-body" style="background-color: var(--card-bg); color: var(--text-color);">
+                <!-- Filtros -->
+                <div class="card mb-2" style="background-color: var(--card-bg); border-color: var(--border-color);">
+                    <div class="card-body p-2" style="background-color: var(--card-bg);">
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <label class="form-label small mb-1" style="color: var(--text-color); font-size: 0.8rem;">Data Início:</label>
+                                <input type="date" class="form-control form-control-sm" id="filtro_data_inicio" 
+                                       style="background-color: var(--sidebar-bg); color: var(--text-color); border-color: var(--border-color); font-size: 0.85rem;">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small mb-1" style="color: var(--text-color); font-size: 0.8rem;">Data Fim:</label>
+                                <input type="date" class="form-control form-control-sm" id="filtro_data_fim"
+                                       style="background-color: var(--sidebar-bg); color: var(--text-color); border-color: var(--border-color); font-size: 0.85rem;">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small mb-1" style="color: var(--text-color); font-size: 0.8rem;">Buscar Código:</label>
+                                <input type="text" class="form-control form-control-sm" id="filtro_busca_romaneio" placeholder="Código do romaneio"
+                                       style="background-color: var(--sidebar-bg); color: var(--text-color); border-color: var(--border-color); font-size: 0.85rem;">
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="button" class="btn btn-primary btn-sm w-100" id="btn_filtrar_romaneios" style="font-size: 0.85rem;">
+                                    <i class="fas fa-search"></i> Filtrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Lista de Romaneios -->
+                <div class="border rounded p-2" style="max-height: 400px; overflow-y: auto; background-color: var(--card-bg); border-color: var(--border-color) !important;">
+                    <div id="lista_romaneios_modal">
+                        <!-- Lista será preenchida via JavaScript -->
+                    </div>
+                    <div id="loading_romaneios" class="text-center mt-2" style="display: none;">
+                        <div class="spinner-border spinner-border-sm" role="status" style="color: var(--primary-color);">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="background-color: var(--card-bg); border-top-color: var(--border-color);">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn_confirmar_romaneios">
+                    <i class="fas fa-check"></i> Confirmar Seleção
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Script de fechamento de frete carregado');
+    
+    // Converter data do formato brasileiro para ISO (yyyy-MM-dd) se necessário
+    {% if editar %}
+    (function() {
+        function converterData() {
+            try {
+                const dataInput = document.getElementById('id_data');
+                if (dataInput) {
+                    // Aguardar um pouco para garantir que o valor foi definido pelo Django
+                    setTimeout(function() {
+                        if (dataInput.value) {
+                            // Se a data estiver no formato brasileiro (dd/mm/yyyy), converter para ISO
+                            const dataValue = dataInput.value;
+                            if (dataValue && typeof dataValue === 'string' && dataValue.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                                const partes = dataValue.split('/');
+                                if (partes.length === 3) {
+                                    const dataISO = partes[2] + '-' + partes[1] + '-' + partes[0];
+                                    dataInput.value = dataISO;
+                                    console.log('Data convertida de', dataValue, 'para', dataISO);
+                                }
+                            }
+                        }
+                    }, 300);
+                }
+            } catch (error) {
+                console.error('Erro ao converter data:', error);
+            }
+        }
+        
+        // Tentar converter imediatamente e também após um delay
+        converterData();
+        setTimeout(converterData, 500);
+    })();
+    {% endif %}
+    
+    // Variáveis globais
+    let linhaIndex = 0;
+    let clienteSelecionadoModal = null;
+    let romaneiosSelecionadosModal = [];
+    let linhaAtualModal = null;
+    
+    // Função para preencher linha com dados existentes
+    function preencherLinhaComDados(row, dados) {
+        console.log('Preenchendo linha com dados:', dados);
+        console.log('Elementos da linha:', row);
+        
+        // Preencher cliente
+        const clienteInput = row.querySelector('.item-cliente-id');
+        const clienteNomeInput = row.querySelector('.item-cliente-nome');
+        if (clienteInput && dados.cliente_id) {
+            clienteInput.value = dados.cliente_id;
+            if (clienteNomeInput) {
+                clienteNomeInput.value = dados.cliente_nome || '';
+            }
+            console.log('Cliente preenchido:', dados.cliente_id, dados.cliente_nome);
+        }
+        
+        // Preencher romaneios
+        const romaneiosInput = row.querySelector('.item-romaneios-ids');
+        const romaneiosInfoInput = row.querySelector('.item-romaneios-info');
+        if (romaneiosInput && dados.romaneios && dados.romaneios.length > 0) {
+            romaneiosInput.value = dados.romaneios.join(',');
+            if (romaneiosInfoInput) {
+                romaneiosInfoInput.value = dados.romaneios.length + ' romaneio(s) selecionado(s)';
+            }
+            console.log('Romaneios preenchidos:', dados.romaneios);
+        }
+        
+        // Preencher valores
+        const pesoInput = row.querySelector('.item-peso');
+        const cubagemInput = row.querySelector('.cubagem-cliente');
+        const valorInput = row.querySelector('.item-valor');
+        if (pesoInput && dados.peso !== undefined && dados.peso !== null) {
+            pesoInput.value = parseFloat(dados.peso);
+            console.log('Peso preenchido:', dados.peso);
+        }
+        if (cubagemInput && dados.cubagem !== undefined && dados.cubagem !== null) {
+            cubagemInput.value = parseFloat(dados.cubagem);
+            console.log('Cubagem preenchida:', dados.cubagem);
+        }
+        if (valorInput && dados.valor !== undefined && dados.valor !== null) {
+            valorInput.value = parseFloat(dados.valor);
+            console.log('Valor preenchido:', dados.valor);
+        }
+        
+        // Preencher percentual escolhido
+        const percentualSelect = row.querySelector('.percentual-escolhido');
+        if (percentualSelect && dados.percentual_escolhido !== undefined && dados.percentual_escolhido !== null) {
+            percentualSelect.value = parseFloat(dados.percentual_escolhido);
+            console.log('Percentual escolhido preenchido:', dados.percentual_escolhido);
+        }
+        
+        // Preencher percentual ajustado
+        const percentualAjustadoInput = row.querySelector('.percentual-ajustado');
+        const usarAjusteCheckbox = row.querySelector('.usar-ajuste');
+        if (percentualAjustadoInput && dados.percentual_ajustado !== undefined && dados.percentual_ajustado !== null) {
+            percentualAjustadoInput.value = parseFloat(dados.percentual_ajustado);
+            console.log('Percentual ajustado preenchido:', dados.percentual_ajustado);
+        }
+        if (usarAjusteCheckbox && dados.usar_ajuste) {
+            usarAjusteCheckbox.checked = true;
+            console.log('Usar ajuste marcado');
+        }
+        
+        // Disparar eventos de input para recalcular
+        if (cubagemInput) {
+            cubagemInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (percentualSelect) {
+            percentualSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+    
+    // Campo de cubagem total
+    const cubagemTotal = document.getElementById('id_cubagem_total');
+    let tbodyClientes = document.getElementById('tbody_clientes');
+    let btnAdicionarLinha = document.getElementById('btn_adicionar_linha');
+    
+    // Verificar se os elementos foram encontrados
+    if (!tbodyClientes) {
+        console.error('tbody_clientes não encontrado');
+    }
+    if (!btnAdicionarLinha) {
+        console.error('btn_adicionar_linha não encontrado');
+    }
+    
+    // Modais
+    const modalCliente = new bootstrap.Modal(document.getElementById('modalSelecionarCliente'));
+    const modalRomaneios = new bootstrap.Modal(document.getElementById('modalSelecionarRomaneios'));
+    
+    // Adicionar event listener ao campo de cubagem total
+    if (cubagemTotal) {
+        cubagemTotal.addEventListener('input', calcularTodos);
+    }
+    
+    // Adicionar nova linha na tabela - garantir que funcione sempre
+    if (btnAdicionarLinha) {
+        btnAdicionarLinha.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Botão adicionar linha clicado');
+            try {
+                if (typeof adicionarLinha === 'function') {
+                    adicionarLinha();
+                } else {
+                    console.error('Função adicionarLinha não está disponível');
+                    alert('Erro: Função de adicionar linha não está disponível. Recarregue a página.');
+                }
+            } catch (error) {
+                console.error('Erro ao adicionar linha:', error);
+                alert('Erro ao adicionar linha: ' + error.message);
+            }
+        });
+        console.log('Event listener adicionado ao botão de adicionar linha');
+    } else {
+        console.error('Botão adicionar linha não encontrado! Tentando novamente...');
+        // Tentar novamente após um delay se o botão não foi encontrado
+        setTimeout(function() {
+            btnAdicionarLinha = document.getElementById('btn_adicionar_linha');
+            if (btnAdicionarLinha) {
+                btnAdicionarLinha.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Botão adicionar linha clicado (segunda tentativa)');
+                    try {
+                        if (typeof adicionarLinha === 'function') {
+                            adicionarLinha();
+                        } else {
+                            console.error('Função adicionarLinha não está disponível');
+                        }
+                    } catch (error) {
+                        console.error('Erro ao adicionar linha:', error);
+                    }
+                });
+                console.log('Event listener adicionado ao botão de adicionar linha (segunda tentativa)');
+            }
+        }, 200);
+    }
+    
+    function adicionarLinha() {
+        console.log('Função adicionarLinha chamada, linhaIndex:', linhaIndex);
+        
+        if (!tbodyClientes) {
+            console.error('tbodyClientes não encontrado!');
+            alert('Erro: Tabela não encontrada. Recarregue a página.');
+            return;
+        }
+        
+        const row = document.createElement('tr');
+        if (!row) {
+            console.error('Erro ao criar elemento row');
+            return;
+        }
+        try {
+            row.setAttribute('data-linha-index', linhaIndex);
+        } catch (error) {
+            console.error('Erro ao definir atributo data-linha-index:', error);
+            return;
+        }
+        row.innerHTML = `
+            <td>
+                <div class="d-flex flex-column" style="min-width: 150px;">
+                    <input type="hidden" name="item_cliente_${linhaIndex}" class="item-cliente-id" value="">
+                    <button type="button" class="btn btn-xs btn-outline-primary btn-selecionar-cliente mb-1" 
+                            data-linha="${linhaIndex}" 
+                            style="font-size: 0.65rem; padding: 1px 5px; line-height: 1.2; align-self: flex-start; width: auto;">
+                        <i class="fas fa-plus" style="font-size: 0.7rem;"></i>
+                    </button>
+                    <input type="text" class="form-control form-control-sm item-cliente-nome" 
+                           readonly placeholder="Selecione um cliente" 
+                           style="font-size: 0.75rem; min-height: 26px; padding: 4px 8px; width: 100%;">
+                </div>
+            </td>
+            <td>
+                <div class="d-flex flex-column" style="min-width: 150px;">
+                    <input type="hidden" name="item_romaneios_${linhaIndex}" class="item-romaneios-ids" value="">
+                    <button type="button" class="btn btn-xs btn-outline-primary btn-selecionar-romaneios mb-1" 
+                            data-linha="${linhaIndex}" 
+                            style="font-size: 0.65rem; padding: 1px 5px; line-height: 1.2; align-self: flex-start; width: auto;">
+                        <i class="fas fa-plus" style="font-size: 0.7rem;"></i>
+                    </button>
+                    <input type="text" class="form-control form-control-sm item-romaneios-info" 
+                           readonly placeholder="Selecione romaneios" 
+                           style="font-size: 0.75rem; min-height: 26px; padding: 4px 8px; width: 100%;">
+                </div>
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm item-peso" 
+                       name="item_peso_${linhaIndex}" 
+                       value="0" 
+                       step="0.01" 
+                       readonly>
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm cubagem-cliente" 
+                       name="item_cubagem_${linhaIndex}" 
+                       value="0" 
+                       step="0.01" 
+                       data-index="${linhaIndex}">
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm item-valor" 
+                       name="item_valor_${linhaIndex}" 
+                       value="0" 
+                       step="0.01" 
+                       readonly>
+            </td>
+            <td class="valor-cubagem" data-index="${linhaIndex}">R$ 0,00</td>
+            <td class="percentual-cubagem" data-index="${linhaIndex}">0,00%</td>
+            <td>
+                <select class="form-select form-select-sm percentual-escolhido" 
+                        name="item_percentual_escolhido_${linhaIndex}" 
+                        data-index="${linhaIndex}">
+                    ${Array.from({length: 20}, (_, i) => {
+                        const percent = i + 1;
+                        return `<option value="${percent}" ${percent === 6 ? 'selected' : ''}>${percent}%</option>`;
+                    }).join('')}
+                </select>
+                <div class="valor-por-percentual mt-1" data-index="${linhaIndex}">R$ 0,00</div>
+            </td>
+            <td class="valor-ideal" data-index="${linhaIndex}">R$ 0,00</td>
+            <td>
+                <input type="number" class="form-control form-control-sm percentual-ajustado" 
+                       name="item_percentual_ajustado_${linhaIndex}" 
+                       value="" 
+                       step="0.01" 
+                       data-index="${linhaIndex}">
+                <div class="form-check mt-1">
+                    <input class="form-check-input usar-ajuste" 
+                           type="checkbox" 
+                           name="item_usar_ajuste_${linhaIndex}" 
+                           data-index="${linhaIndex}">
+                    <label class="form-check-label small">Usar ajuste</label>
+                </div>
+            </td>
+            <td>
+                <button type="button" class="btn btn-sm btn-danger btn-remover-linha" data-linha="${linhaIndex}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        
+        try {
+            tbodyClientes.appendChild(row);
+            console.log('Linha adicionada com sucesso, índice:', linhaIndex);
+        } catch (error) {
+            console.error('Erro ao adicionar linha:', error);
+            alert('Erro ao adicionar linha: ' + error.message);
+            return;
+        }
+        
+        // Adicionar event listeners - usar o índice atual antes de incrementar
+        const currentIndex = linhaIndex;
+        
+        const cubagemInput = row.querySelector(`input[name="item_cubagem_${currentIndex}"]`);
+        const percentualSelect = row.querySelector(`select[name="item_percentual_escolhido_${currentIndex}"]`);
+        const percentualAjustadoInput = row.querySelector(`input[name="item_percentual_ajustado_${currentIndex}"]`);
+        const usarAjusteCheckbox = row.querySelector(`input[name="item_usar_ajuste_${currentIndex}"]`);
+        const btnSelecionarCliente = row.querySelector('.btn-selecionar-cliente');
+        const btnSelecionarRomaneios = row.querySelector('.btn-selecionar-romaneios');
+        const btnRemoverLinha = row.querySelector('.btn-remover-linha');
+        
+        if (cubagemInput) {
+            cubagemInput.addEventListener('input', calcularTodos);
+        }
+        if (percentualSelect) {
+            percentualSelect.addEventListener('change', calcularTodos);
+        }
+        if (percentualAjustadoInput) {
+            percentualAjustadoInput.addEventListener('input', calcularTodos);
+        }
+        if (usarAjusteCheckbox) {
+            usarAjusteCheckbox.addEventListener('change', calcularTodos);
+        }
+        if (btnSelecionarCliente) {
+            btnSelecionarCliente.addEventListener('click', function() {
+                linhaAtualModal = currentIndex;
+                abrirModalCliente();
+            });
+        }
+        if (btnSelecionarRomaneios) {
+            btnSelecionarRomaneios.addEventListener('click', function() {
+                linhaAtualModal = currentIndex;
+                abrirModalRomaneios();
+            });
+        }
+        if (btnRemoverLinha) {
+            btnRemoverLinha.addEventListener('click', function() {
+                row.remove();
+                calcularTodos();
+            });
+        }
+        
+        linhaIndex++;
+    }
+    
+    // Abrir modal de cliente
+    function abrirModalCliente() {
+        clienteSelecionadoModal = null;
+        carregarClientes();
+        modalCliente.show();
+    }
+    
+    // Carregar clientes no modal
+    async function carregarClientes(busca = '') {
+        const listaClientes = document.getElementById('lista_clientes_modal');
+        listaClientes.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm"></div></div>';
+        
+        try {
+            let url = '/notas/ajax/buscar-clientes-ativos/';
+            if (busca) {
+                url += '?busca=' + encodeURIComponent(busca);
+            }
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.error) {
+                listaClientes.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                return;
+            }
+            
+            if (data.clientes.length === 0) {
+                listaClientes.innerHTML = '<div class="alert alert-info">Nenhum cliente encontrado</div>';
+                return;
+            }
+            
+            let html = '';
+            data.clientes.forEach(cliente => {
+                html += `
+                    <div class="form-check mb-2" style="padding: 8px; border-bottom: 1px solid var(--border-color); border-radius: 4px; transition: background-color 0.2s;">
+                        <input class="form-check-input cliente-radio" 
+                               type="radio" 
+                               name="cliente_modal" 
+                               value="${cliente.id}" 
+                               id="cliente_${cliente.id}"
+                               style="margin-top: 0.4rem; cursor: pointer;">
+                        <label class="form-check-label" for="cliente_${cliente.id}" style="color: var(--text-color); cursor: pointer; width: 100%;">
+                            <strong style="color: var(--text-color);">${cliente.razao_social}</strong>
+                            ${cliente.nome_fantasia ? `<br><small style="color: var(--secondary-text-color);">${cliente.nome_fantasia}</small>` : ''}
+                            ${cliente.cnpj ? `<br><small style="color: var(--secondary-text-color);">CNPJ: ${cliente.cnpj}</small>` : ''}
+                        </label>
+                    </div>
+                `;
+            });
+            listaClientes.innerHTML = html;
+            
+            // Adicionar event listener para seleção
+            document.querySelectorAll('.cliente-radio').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.checked) {
+                        const clienteId = this.value;
+                        const cliente = data.clientes.find(c => c.id == clienteId);
+                        clienteSelecionadoModal = cliente;
+                    }
+                });
+            });
+            
+        } catch (error) {
+            console.error('Erro ao carregar clientes:', error);
+            listaClientes.innerHTML = '<div class="alert alert-danger">Erro ao carregar clientes</div>';
+        }
+    }
+    
+    // Busca de clientes
+    document.getElementById('busca_cliente').addEventListener('input', function() {
+        const busca = this.value.trim();
+        if (busca.length >= 2 || busca.length === 0) {
+            carregarClientes(busca);
+        }
+    });
+    
+    // Confirmar seleção de cliente
+    document.getElementById('btn_confirmar_cliente').addEventListener('click', function() {
+        if (!clienteSelecionadoModal) {
+            alert('Selecione um cliente');
+            return;
+        }
+        
+        if (linhaAtualModal !== null) {
+            const linha = document.querySelector(`tr[data-linha-index="${linhaAtualModal}"]`);
+            if (linha) {
+                linha.querySelector('.item-cliente-id').value = clienteSelecionadoModal.id;
+                linha.querySelector('.item-cliente-nome').value = clienteSelecionadoModal.razao_social;
+            }
+        }
+        
+        modalCliente.hide();
+    });
+    
+    // Limpar seleção ao fechar modal sem confirmar
+    document.getElementById('modalSelecionarCliente').addEventListener('hidden.bs.modal', function() {
+        clienteSelecionadoModal = null;
+    });
+    
+    // Abrir modal de romaneios
+    function abrirModalRomaneios() {
+        // Carregar romaneios já selecionados na linha atual
+        if (linhaAtualModal !== null) {
+            const linha = document.querySelector(`tr[data-linha-index="${linhaAtualModal}"]`);
+            if (linha) {
+                const inputRomaneiosIds = linha.querySelector('.item-romaneios-ids');
+                if (inputRomaneiosIds && inputRomaneiosIds.value) {
+                    // Converter string de IDs separados por vírgula em array
+                    const idsExistentes = inputRomaneiosIds.value.split(',').map(id => id.trim()).filter(id => id);
+                    romaneiosSelecionadosModal = idsExistentes.map(id => ({ id: parseInt(id) }));
+                } else {
+                    romaneiosSelecionadosModal = [];
+                }
+            } else {
+                romaneiosSelecionadosModal = [];
+            }
+        } else {
+            romaneiosSelecionadosModal = [];
+        }
+        carregarRomaneios();
+        modalRomaneios.show();
+    }
+    
+    // Carregar romaneios no modal
+    async function carregarRomaneios() {
+        const listaRomaneios = document.getElementById('lista_romaneios_modal');
+        const loadingRomaneios = document.getElementById('loading_romaneios');
+        listaRomaneios.innerHTML = '';
+        loadingRomaneios.style.display = 'block';
+        
+        try {
+            const dataInicio = document.getElementById('filtro_data_inicio').value;
+            const dataFim = document.getElementById('filtro_data_fim').value;
+            const busca = document.getElementById('filtro_busca_romaneio').value;
+            
+            let url = '/notas/ajax/buscar-romaneios-filtrados/?';
+            const params = [];
+            if (dataInicio) params.push(`data_inicio=${dataInicio}`);
+            if (dataFim) params.push(`data_fim=${dataFim}`);
+            if (busca) params.push(`busca=${encodeURIComponent(busca)}`);
+            url += params.join('&');
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            loadingRomaneios.style.display = 'none';
+            
+            if (data.error) {
+                listaRomaneios.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                return;
+            }
+            
+            if (data.romaneios.length === 0) {
+                listaRomaneios.innerHTML = '<div class="alert alert-info">Nenhum romaneio encontrado</div>';
+                return;
+            }
+            
+            let html = '';
+            data.romaneios.forEach(romaneio => {
+                // Verificar se este romaneio já está selecionado
+                const jaSelecionado = romaneiosSelecionadosModal.some(r => r.id === romaneio.id);
+                html += `
+                    <div class="form-check d-flex align-items-start" style="padding: 4px 6px; border-bottom: 1px solid var(--border-color); border-radius: 3px; transition: background-color 0.2s; margin-bottom: 4px;">
+                        <input class="form-check-input romaneio-checkbox-modal" 
+                               type="checkbox" 
+                               value="${romaneio.id}" 
+                               id="romaneio_modal_${romaneio.id}"
+                               data-romaneio='${JSON.stringify(romaneio)}'
+                               ${jaSelecionado ? 'checked' : ''}>
+                        <label class="form-check-label" for="romaneio_modal_${romaneio.id}" style="color: var(--text-color); cursor: pointer; margin-left: 0; padding-left: 0; font-size: 0.85rem; line-height: 1.3;">
+                            <strong style="color: var(--text-color); font-size: 0.85rem; font-weight: 600;">${romaneio.codigo}</strong> - <span style="color: var(--text-color); font-size: 0.85rem;">${romaneio.cliente_nome}</span>
+                            <br><small style="color: var(--secondary-text-color); font-size: 0.75rem; line-height: 1.2;">${romaneio.data_emissao} | Peso: ${romaneio.peso_total.toLocaleString('pt-BR', {minimumFractionDigits: 2})} kg | Valor: R$ ${romaneio.valor_total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</small>
+                        </label>
+                    </div>
+                `;
+            });
+            listaRomaneios.innerHTML = html;
+            
+            // Atualizar romaneiosSelecionadosModal com os dados completos dos romaneios já selecionados
+            if (romaneiosSelecionadosModal.length > 0) {
+                const idsExistentes = romaneiosSelecionadosModal.map(r => r.id);
+                romaneiosSelecionadosModal = data.romaneios
+                    .filter(r => idsExistentes.includes(r.id))
+                    .map(r => ({
+                        id: r.id,
+                        codigo: r.codigo,
+                        cliente_nome: r.cliente_nome,
+                        peso_total: r.peso_total,
+                        valor_total: r.valor_total,
+                        motorista_id: r.motorista_id,
+                        data: r.data
+                    }));
+            }
+            
+        } catch (error) {
+            console.error('Erro ao carregar romaneios:', error);
+            loadingRomaneios.style.display = 'none';
+            listaRomaneios.innerHTML = '<div class="alert alert-danger">Erro ao carregar romaneios</div>';
+        }
+    }
+    
+    // Filtrar romaneios
+    document.getElementById('btn_filtrar_romaneios').addEventListener('click', carregarRomaneios);
+    
+    // Confirmar seleção de romaneios
+    document.getElementById('btn_confirmar_romaneios').addEventListener('click', function() {
+        // Pegar todos os checkboxes marcados no modal
+        const selecionados = Array.from(document.querySelectorAll('.romaneio-checkbox-modal:checked'));
+        romaneiosSelecionadosModal = selecionados.map(cb => {
+            try {
+                return JSON.parse(cb.dataset.romaneio);
+            } catch (e) {
+                console.error('Erro ao parsear romaneio:', e, cb);
+                return null;
+            }
+        }).filter(r => r !== null);
+        
+        if (romaneiosSelecionadosModal.length === 0) {
+            alert('Selecione pelo menos um romaneio');
+            return;
+        }
+        
+        console.log('Total de romaneios selecionados:', romaneiosSelecionadosModal.length);
+        
+        console.log('Romaneios selecionados:', romaneiosSelecionadosModal);
+        console.log('Linha atual:', linhaAtualModal);
+        
+        if (linhaAtualModal !== null) {
+            const linha = document.querySelector(`tr[data-linha-index="${linhaAtualModal}"]`);
+            console.log('Linha encontrada:', linha);
+            
+            if (linha) {
+                // Atualizar IDs dos romaneios
+                const ids = romaneiosSelecionadosModal.map(r => r.id).join(',');
+                const inputRomaneiosIds = linha.querySelector('.item-romaneios-ids');
+                if (inputRomaneiosIds) {
+                    inputRomaneiosIds.value = ids;
+                    console.log('IDs dos romaneios atualizados:', ids);
+                } else {
+                    console.error('Campo .item-romaneios-ids não encontrado');
+                }
+                
+                // Atualizar texto informativo
+                const info = romaneiosSelecionadosModal.length > 0 
+                    ? `${romaneiosSelecionadosModal.length} romaneio(s): ${romaneiosSelecionadosModal.map(r => r.codigo).join(', ')}`
+                    : 'Nenhum romaneio selecionado';
+                const inputRomaneiosInfo = linha.querySelector('.item-romaneios-info');
+                if (inputRomaneiosInfo) {
+                    inputRomaneiosInfo.value = info;
+                    console.log('Info dos romaneios atualizada:', info);
+                } else {
+                    console.error('Campo .item-romaneios-info não encontrado');
+                }
+                
+                // Calcular peso e valor total
+                const pesoTotal = romaneiosSelecionadosModal.reduce((sum, r) => sum + (parseFloat(r.peso_total) || 0), 0);
+                const valorTotal = romaneiosSelecionadosModal.reduce((sum, r) => sum + (parseFloat(r.valor_total) || 0), 0);
+                
+                const inputPeso = linha.querySelector('.item-peso');
+                const inputValor = linha.querySelector('.item-valor');
+                
+                if (inputPeso) {
+                    inputPeso.value = pesoTotal.toFixed(2);
+                    console.log('Peso atualizado:', pesoTotal);
+                } else {
+                    console.error('Campo .item-peso não encontrado');
+                }
+                
+                if (inputValor) {
+                    inputValor.value = valorTotal.toFixed(2);
+                    console.log('Valor atualizado:', valorTotal);
+                } else {
+                    console.error('Campo .item-valor não encontrado');
+                }
+                
+                // Preencher motorista e data se ainda não preenchidos
+                if (romaneiosSelecionadosModal.length > 0) {
+                    const primeiroRomaneio = romaneiosSelecionadosModal[0];
+                    const inputMotorista = document.getElementById('id_motorista');
+                    const inputData = document.getElementById('id_data');
+                    
+                    if (inputMotorista && !inputMotorista.value && primeiroRomaneio.motorista_id) {
+                        inputMotorista.value = primeiroRomaneio.motorista_id;
+                    }
+                    if (inputData && !inputData.value && primeiroRomaneio.data) {
+                        inputData.value = primeiroRomaneio.data;
+                    }
+                }
+                
+                calcularTodos();
+            } else {
+                console.error('Linha não encontrada para índice:', linhaAtualModal);
+            }
+        } else {
+            console.error('linhaAtualModal é null');
+        }
+        
+        // Fechar modal
+        const modalElement = document.getElementById('modalSelecionarRomaneios');
+        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+        if (modalInstance) {
+            modalInstance.hide();
+        } else {
+            // Se não houver instância, criar uma nova e fechar
+            const newModal = new bootstrap.Modal(modalElement);
+            newModal.hide();
+        }
+    });
+    
+    // Calcular todos os valores
+    function calcularTodos() {
+        const freteTotal = parseFloat(document.getElementById('id_frete_total').value) || 0;
+        const cubagemTotalBau = parseFloat(cubagemTotal?.value?.replace(',', '.') || cubagemTotal?.value || 0) || 0;
+        
+        let totalPeso = 0;
+        let totalCubagem = 0;
+        let totalValor = 0;
+        let totalValorCub = 0;
+        let totalPercentual = 0;
+        let totalValorIdeal = 0;
+        
+        // Primeiro, calcular o valor total de mercadorias de TODOS os clientes
+        let valorTotalMercadorias = 0;
+        const linhas = document.querySelectorAll('#tbody_clientes tr[data-linha-index]');
+        
+        // Primeira passagem: somar todos os valores de mercadoria
+        linhas.forEach((row) => {
+            const inputValor = row.querySelector('.item-valor');
+            if (inputValor) {
+                const valor = parseFloat(inputValor.value) || 0;
+                valorTotalMercadorias += valor;
+            }
+        });
+        
+        // Calcular percentual geral: (Frete Total / Valor Total Mercadorias) × 100
+        const percentualGeral = valorTotalMercadorias > 0 ? (freteTotal / valorTotalMercadorias) * 100 : 0;
+        
+        // Segunda passagem: calcular valores para cada cliente
+        linhas.forEach((row) => {
+            const linhaIndex = row.getAttribute('data-linha-index');
+            const inputPeso = row.querySelector('.item-peso');
+            const inputCubagem = row.querySelector(`input[name="item_cubagem_${linhaIndex}"]`);
+            const inputValor = row.querySelector('.item-valor');
+            const selectPercentual = row.querySelector(`select[name="item_percentual_escolhido_${linhaIndex}"]`);
+            
+            if (!inputPeso || !inputCubagem || !inputValor) {
+                return;
+            }
+            
+            const peso = parseFloat(inputPeso.value) || 0;
+            const cubagem = parseFloat(inputCubagem.value) || 0;
+            const valor = parseFloat(inputValor.value) || 0;
+            const percentualEscolhido = parseFloat(selectPercentual?.value) || 6;
+            
+            // Calcular valor por cubagem
+            const valorCubagem = cubagemTotalBau > 0 ? (cubagem / cubagemTotalBau) * freteTotal : 0;
+            const percentualCub = valor > 0 ? (valorCubagem / valor) * 100 : 0;
+            
+            // Calcular valor por percentual escolhido
+            const valorPorPercentual = valor * (percentualEscolhido / 100);
+            
+            // Calcular valor ideal = Valor Mercadoria Cliente × Percentual Geral
+            const valorIdeal = valor * (percentualGeral / 100);
+            
+            // Atualizar células
+            const valorCubagemCell = row.querySelector(`.valor-cubagem[data-index="${linhaIndex}"]`);
+            const percentualCubagemCell = row.querySelector(`.percentual-cubagem[data-index="${linhaIndex}"]`);
+            const valorPorPercentualCell = row.querySelector(`.valor-por-percentual[data-index="${linhaIndex}"]`);
+            const valorIdealCell = row.querySelector(`.valor-ideal[data-index="${linhaIndex}"]`);
+            
+            if (valorCubagemCell) {
+                valorCubagemCell.textContent = formatarMoeda(valorCubagem);
+            }
+            if (percentualCubagemCell) {
+                percentualCubagemCell.textContent = percentualCub.toFixed(2) + '%';
+            }
+            if (valorPorPercentualCell) {
+                valorPorPercentualCell.textContent = formatarMoeda(valorPorPercentual);
+            }
+            if (valorIdealCell) {
+                valorIdealCell.textContent = formatarMoeda(valorIdeal);
+            }
+            
+            // Totais
+            totalPeso += peso;
+            totalCubagem += cubagem;
+            totalValor += valor;
+            totalValorCub += valorCubagem;
+            totalPercentual += valorPorPercentual;
+            totalValorIdeal += valorIdeal;
+        });
+        
+        // Atualizar totais
+        const totalPesoEl = document.getElementById('total_peso');
+        const totalCubagemEl = document.getElementById('total_cubagem');
+        const totalValorEl = document.getElementById('total_valor');
+        const totalValorCubEl = document.getElementById('total_valor_cub');
+        const totalPercentualEl = document.getElementById('total_percentual');
+        const totalValorIdealEl = document.getElementById('total_valor_ideal');
+        
+        if (totalPesoEl) {
+            totalPesoEl.textContent = totalPeso.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+        if (totalCubagemEl) {
+            totalCubagemEl.textContent = totalCubagem.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+        if (totalValorEl) {
+            totalValorEl.textContent = formatarMoeda(totalValor);
+        }
+        if (totalValorCubEl) {
+            totalValorCubEl.textContent = formatarMoeda(totalValorCub);
+        }
+        if (totalPercentualEl) {
+            totalPercentualEl.textContent = formatarMoeda(totalPercentual);
+        }
+        if (totalValorIdealEl) {
+            totalValorIdealEl.textContent = formatarMoeda(totalValorIdeal);
+        }
+    }
+    
+    // Formatar moeda
+    function formatarMoeda(valor) {
+        return 'R$ ' + valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+    
+    // Botão calcular
+    document.getElementById('btn_calcular').addEventListener('click', calcularTodos);
+    
+    // Carregar clientes ao abrir modal
+    document.getElementById('modalSelecionarCliente').addEventListener('show.bs.modal', function() {
+        carregarClientes();
+    });
+    
+    // Carregar romaneios ao abrir modal
+    document.getElementById('modalSelecionarRomaneios').addEventListener('show.bs.modal', function() {
+        carregarRomaneios();
+    });
+    
+    // Adicionar primeira linha automaticamente (apenas se não estiver editando)
+    {% if not editar %}
+    adicionarLinha();
+    {% endif %}
+    
+    // Se estiver editando, carregar dados existentes após tudo estar inicializado
+    {% if editar and itens_existentes %}
+    const itensExistentesData = [
+        {% for item in itens_existentes %}
+        {
+            cliente_id: {% if item.cliente_consolidado.pk %}{{ item.cliente_consolidado.pk }}{% else %}null{% endif %},
+            cliente_nome: "{% if item.cliente_consolidado.razao_social %}{{ item.cliente_consolidado.razao_social|escapejs }}{% endif %}",
+            peso: {% if item.peso %}{{ item.peso|stringformat:"f" }}{% else %}0{% endif %},
+            cubagem: {% if item.cubagem %}{{ item.cubagem|stringformat:"f" }}{% else %}0{% endif %},
+            valor: {% if item.valor_mercadoria %}{{ item.valor_mercadoria|stringformat:"f" }}{% else %}0{% endif %},
+            romaneios: [{% for romaneio in item.romaneios.all %}{{ romaneio.pk }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            percentual_escolhido: {% if item.percentual_escolhido %}{{ item.percentual_escolhido|stringformat:"f" }}{% else %}6{% endif %},
+            percentual_ajustado: {% if item.percentual_ajustado %}{{ item.percentual_ajustado|stringformat:"f" }}{% else %}null{% endif %},
+            usar_ajuste: {% if item.usar_ajuste_manual %}true{% else %}false{% endif %},
+            observacoes: "{% if item.observacoes %}{{ item.observacoes|escapejs }}{% endif %}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    // Função para carregar itens existentes
+    function carregarItensExistentes() {
+        console.log('=== Iniciando carregamento de itens existentes ===');
+        console.log('Dados:', itensExistentesData);
+        
+        // Re-obter referências aos elementos
+        tbodyClientes = document.getElementById('tbody_clientes');
+        btnAdicionarLinha = document.getElementById('btn_adicionar_linha');
+        
+        if (!tbodyClientes) {
+            console.error('tbody_clientes não encontrado, tentando novamente...');
+            setTimeout(carregarItensExistentes, 100);
+            return;
+        }
+        
+        console.log('tbody_clientes encontrado:', tbodyClientes);
+        
+        // Verificar se a função adicionarLinha está disponível
+        if (typeof adicionarLinha !== 'function') {
+            console.error('Função adicionarLinha não está disponível, tentando novamente...');
+            setTimeout(carregarItensExistentes, 100);
+            return;
+        }
+        
+        console.log('Função adicionarLinha está disponível');
+        
+        // Limpar tbody
+        tbodyClientes.innerHTML = '';
+        linhaIndex = 0;
+        console.log('tbody limpo, linhaIndex resetado para 0');
+        
+        // Carregar cada item existente
+        if (itensExistentesData.length === 0) {
+            console.log('Nenhum item existente para carregar');
+            // Adicionar pelo menos uma linha vazia para permitir adicionar novos itens
+            adicionarLinha();
+            return;
+        }
+        
+        itensExistentesData.forEach(function(item, index) {
+            console.log('Processando item ' + (index + 1) + ' de ' + itensExistentesData.length + ':', item);
+            
+            // Adicionar linha
+            try {
+                adicionarLinha();
+                console.log('Linha adicionada para item ' + (index + 1));
+            } catch (error) {
+                console.error('Erro ao adicionar linha para item ' + (index + 1) + ':', error);
+                return;
+            }
+            
+            // Aguardar um pouco para garantir que a linha foi adicionada
+            setTimeout(function() {
+                const linhas = tbodyClientes.querySelectorAll('tr');
+                console.log('Total de linhas encontradas:', linhas.length, 'Esperado:', index + 1);
+                
+                const linhaCorreta = linhas[index]; // Usar o índice para pegar a linha correta
+                
+                if (linhaCorreta) {
+                    console.log('Preenchendo linha ' + (index + 1) + ' com dados:', item);
+                    try {
+                        preencherLinhaComDados(linhaCorreta, item);
+                        console.log('Linha ' + (index + 1) + ' preenchida com sucesso');
+                    } catch (error) {
+                        console.error('Erro ao preencher linha ' + (index + 1) + ':', error);
+                    }
+                } else {
+                    console.error('Linha não encontrada para índice:', index, 'Total de linhas:', linhas.length);
+                    // Tentar usar a última linha disponível
+                    if (linhas.length > 0) {
+                        const ultimaLinha = linhas[linhas.length - 1];
+                        console.log('Usando última linha disponível');
+                        try {
+                            preencherLinhaComDados(ultimaLinha, item);
+                        } catch (error) {
+                            console.error('Erro ao preencher última linha:', error);
+                        }
+                    }
+                }
+            }, 200 * (index + 1)); // Delay progressivo para cada item
+        });
+        
+        // Recalcular tudo após carregar todos os itens
+        setTimeout(function() {
+            console.log('Recalculando todos os valores');
+            if (typeof calcularTodos === 'function') {
+                calcularTodos();
+            } else {
+                console.error('Função calcularTodos não está disponível');
+            }
+        }, 300 * (itensExistentesData.length + 1));
+    }
+    
+    // Aguardar um pouco para garantir que tudo está inicializado (aumentar o delay)
+    console.log('Aguardando inicialização completa antes de carregar itens existentes...');
+    setTimeout(function() {
+        console.log('Tentando carregar itens existentes...');
+        carregarItensExistentes();
+    }, 800);
+    {% endif %}
+});
+</script>
+{% endblock %}
