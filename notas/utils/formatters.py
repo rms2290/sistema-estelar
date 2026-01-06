@@ -121,4 +121,53 @@ def formatar_telefone(telefone):
     elif len(telefone_limpo) == 10:
         return f"({telefone_limpo[:2]}) {telefone_limpo[2:6]}-{telefone_limpo[6:]}"
     else:
-        return telefone 
+        return telefone
+
+
+def formatar_cep(cep):
+    """
+    Formata CEP no padrão brasileiro (00000-000)
+    
+    Args:
+        cep: CEP sem formatação
+    
+    Returns:
+        str: CEP formatado
+    """
+    if not cep:
+        return ''
+    
+    # Remove caracteres não numéricos
+    cep_limpo = ''.join(filter(str.isdigit, str(cep)))
+    
+    if len(cep_limpo) == 8:
+        return f"{cep_limpo[:5]}-{cep_limpo[5:]}"
+    else:
+        return cep
+
+
+def formatar_data_brasileira(data, formato='display'):
+    """
+    Formata data no padrão brasileiro (dd/mm/yyyy)
+    
+    Args:
+        data: Objeto date ou datetime
+        formato: 'display' (dd/mm/yyyy) ou 'datetime' (dd/mm/yyyy HH:MM)
+    
+    Returns:
+        str: Data formatada
+    """
+    if not data:
+        return ''
+    
+    from datetime import date, datetime
+    
+    if isinstance(data, datetime):
+        if formato == 'datetime':
+            return data.strftime('%d/%m/%Y %H:%M')
+        else:
+            return data.strftime('%d/%m/%Y')
+    elif isinstance(data, date):
+        return data.strftime('%d/%m/%Y')
+    else:
+        return str(data) 

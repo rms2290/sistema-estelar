@@ -40,13 +40,15 @@
                         {{ search_form.tipo_unidade }}
                     </div>
                 </div>
-                <div class="mt-3">
-                    <button type="submit" class="btn btn-primary me-2">
-                        <i class="fas fa-search"></i> Buscar
-                    </button>
-                    <a href="{% url 'notas:listar_veiculos' %}" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> Limpar Filtros
-                    </a>
+                <div class="row">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                        <a href="{% url 'notas:listar_veiculos' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Limpar Filtros
+                        </a>
+                    </div>
                 </div>
             </form>
         </div>

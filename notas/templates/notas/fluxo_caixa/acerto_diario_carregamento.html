@@ -1,0 +1,622 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load format_filters %}
+
+{% block title %}Acerto Diário de Carregamento - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-calculator"></i> Acerto Diário de Carregamento</h2>
+        <div>
+            <form method="GET" class="d-inline">
+                <input type="date" name="data" value="{{ data_selecionada|date:'Y-m-d' }}" class="form-control d-inline-block" style="width: auto;" onchange="this.form.submit()">
+            </form>
+            <a href="{% url 'notas:listar_acertos_diarios' %}" class="btn btn-info ms-2">
+                <i class="fas fa-search"></i> Pesquisar Acertos
+            </a>
+            <a href="{% url 'notas:dashboard_fluxo_caixa' %}" class="btn btn-secondary ms-2">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+        </div>
+    </div>
+
+    <!-- Mensagens -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form id="formAcertoDiario">
+        {% csrf_token %}
+        <input type="hidden" name="data" value="{{ data_selecionada|date:'Y-m-d' }}">
+        <input type="hidden" name="acerto_id" id="acerto_id" value="{{ acerto.pk }}">
+
+        <!-- CARREGAMENTOS E DESCARGAS -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-truck-loading"></i> Carregamentos e Descargas</h5>
+                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalAdicionarCliente">
+                    <i class="fas fa-plus"></i> Adicionar
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="tabelaCarregamentos">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Cliente/Descrição</th>
+                                <th>Valor (R$)</th>
+                                <th>Observações</th>
+                                <th width="100">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyCarregamentos">
+                            {% for carregamento in carregamentos %}
+                            <tr data-carregamento-id="{{ carregamento.pk }}">
+                                <td>
+                                    {% if carregamento.cliente %}
+                                        <span class="badge bg-primary">Carregamento</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Descarga</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ carregamento.nome_display }}</td>
+                                <td><strong>R$ {{ carregamento.valor|format_brazilian_currency }}</strong></td>
+                                <td>{{ carregamento.observacoes|default:"-" }}</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-danger btnRemoverCarregamento" data-id="{{ carregamento.pk }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr id="linhaVaziaCarregamentos">
+                                <td colspan="5" class="text-center text-muted">Nenhum registro</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-info">
+                                <th colspan="2">TOTAL:</th>
+                                <th id="totalCarregamentos">R$ {{ acerto.total_carregamentos|format_brazilian_currency }}</th>
+                                <th colspan="2"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- DISTRIBUIÇÃO -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-share-alt"></i> Distribuição</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Valor Estelar (R$)</label>
+                        <input type="number" name="valor_estelar" id="valor_estelar" class="form-control" 
+                               step="0.01" min="0" value="{{ acerto.valor_estelar }}" onchange="calcularTotais()">
+                    </div>
+                </div>
+
+                <h6 class="mb-3">Distribuição para Funcionários</h6>
+                <div class="d-flex justify-content-end mb-3">
+                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalAdicionarFuncionario">
+                        <i class="fas fa-plus"></i> Adicionar Funcionário
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-striped" id="tabelaDistribuicoes">
+                        <thead>
+                            <tr>
+                                <th>Funcionário</th>
+                                <th>Valor (R$)</th>
+                                <th width="100">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyDistribuicoes">
+                            {% for distribuicao in distribuicoes %}
+                            <tr data-distribuicao-id="{{ distribuicao.pk }}">
+                                <td>{{ distribuicao.funcionario.nome }}</td>
+                                <td><strong>R$ {{ distribuicao.valor|format_brazilian_currency }}</strong></td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-danger btnRemoverDistribuicao" data-id="{{ distribuicao.pk }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr id="linhaVaziaDistribuicoes">
+                                <td colspan="3" class="text-center text-muted">Nenhuma distribuição registrada</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-info">
+                                <th>TOTAL FUNCIONÁRIOS:</th>
+                                <th id="totalFuncionarios">R$ {{ acerto.total_funcionarios|format_brazilian_currency }}</th>
+                                <th></th>
+                            </tr>
+                            <tr class="table-success">
+                                <th>TOTAL DISTRIBUÍDO:</th>
+                                <th id="totalDistribuido">R$ {{ acerto.total_distribuido|format_brazilian_currency }}</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- VALIDAÇÃO -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-check-circle"></i> Validação</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Total Carregamentos:</strong> <span id="validacaoTotalCarregamentos">R$ {{ acerto.total_carregamentos|format_brazilian_currency }}</span></p>
+                        <p><strong>Total Distribuído:</strong> <span id="validacaoTotalDistribuido">R$ {{ acerto.total_distribuido|format_brazilian_currency }}</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <div id="validacaoResultado" class="alert">
+                            <!-- Será preenchido via JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button type="button" class="btn btn-primary" id="btnSalvarAcerto">
+                        <i class="fas fa-save"></i> Salvar Acerto
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Modal: Adicionar Cliente ou Descarga -->
+<div class="modal fade" id="modalAdicionarCliente" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Adicionar Carregamento ou Descarga</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formAdicionarCliente">
+                    <div class="mb-3">
+                        <label class="form-label">Tipo *</label>
+                        <select name="tipo_registro" id="tipo_registro" class="form-select" required onchange="toggleTipoRegistro()">
+                            <option value="">Selecione...</option>
+                            <option value="cliente">Carregamento (Cliente)</option>
+                            <option value="descarga">Descarga</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="divCliente">
+                        <label class="form-label">Cliente *</label>
+                        <select name="cliente_id" id="cliente_id" class="form-select">
+                            <option value="">Selecione...</option>
+                            {% for cliente in clientes %}
+                            <option value="{{ cliente.pk }}">{{ cliente.razao_social }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3" id="divDescricao" style="display: none;">
+                        <label class="form-label">Descrição da Descarga *</label>
+                        <input type="text" name="descricao" id="descricao" class="form-control" maxlength="255" placeholder="Ex: Descarga de mercadoria">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Valor (R$) *</label>
+                        <input type="number" name="valor" class="form-control" step="0.01" min="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Observações</label>
+                        <input type="text" name="observacoes" class="form-control" maxlength="255">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnSalvarCliente">
+                    <i class="fas fa-save"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Adicionar Funcionário -->
+<div class="modal fade" id="modalAdicionarFuncionario" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Adicionar Distribuição para Funcionário</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formAdicionarFuncionario">
+                    <div class="mb-3">
+                        <label class="form-label">Funcionário *</label>
+                        <select name="funcionario_id" class="form-select" required>
+                            <option value="">Selecione...</option>
+                            {% for funcionario in funcionarios %}
+                            <option value="{{ funcionario.pk }}">{{ funcionario.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Valor (R$) *</label>
+                        <input type="number" name="valor" class="form-control" step="0.01" min="0.01" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnSalvarFuncionarioDistribuicao">
+                    <i class="fas fa-save"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const acertoId = {{ acerto.pk }};
+const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+// Função para formatar moeda
+function formatarMoeda(valor) {
+    return 'R$ ' + valor.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+// Função para parsear valor brasileiro
+function parsearValor(texto) {
+    if (!texto) return 0;
+    // Remove "R$", espaços, pontos (separadores de milhar) e substitui vírgula por ponto
+    let valorLimpo = texto.toString()
+        .replace(/R\$/g, '')  // Remove todas as ocorrências de "R$"
+        .replace(/\s/g, '')   // Remove espaços
+        .replace(/\./g, '')   // Remove pontos (separadores de milhar)
+        .replace(',', '.')    // Substitui vírgula por ponto
+        .trim();
+    const valor = parseFloat(valorLimpo);
+    return isNaN(valor) ? 0 : valor;
+}
+
+// Função para calcular totais
+function calcularTotais() {
+    console.log('Calculando totais...');
+    
+    // Total carregamentos
+    // Coluna 1: Tipo, Coluna 2: Cliente/Descrição, Coluna 3: Valor
+    let totalCarregamentos = 0;
+    const linhasCarregamentos = document.querySelectorAll('#tbodyCarregamentos tr[data-carregamento-id]');
+    console.log('Linhas de carregamentos encontradas:', linhasCarregamentos.length);
+    
+    linhasCarregamentos.forEach((tr, index) => {
+        const valorElement = tr.querySelector('td:nth-child(3) strong');
+        if (valorElement) {
+            const valorTexto = valorElement.textContent;
+            const valor = parsearValor(valorTexto);
+            console.log(`Carregamento ${index + 1}: "${valorTexto}" -> ${valor}`);
+            totalCarregamentos += valor;
+        } else {
+            console.warn(`Linha ${index + 1} não tem elemento de valor`);
+        }
+    });
+    
+    // Total funcionários
+    // Coluna 1: Funcionário, Coluna 2: Valor
+    let totalFuncionarios = 0;
+    const linhasFuncionarios = document.querySelectorAll('#tbodyDistribuicoes tr[data-distribuicao-id]');
+    console.log('Linhas de funcionários encontradas:', linhasFuncionarios.length);
+    
+    linhasFuncionarios.forEach((tr, index) => {
+        const valorElement = tr.querySelector('td:nth-child(2) strong');
+        if (valorElement) {
+            const valorTexto = valorElement.textContent;
+            const valor = parsearValor(valorTexto);
+            console.log(`Funcionário ${index + 1}: "${valorTexto}" -> ${valor}`);
+            totalFuncionarios += valor;
+        } else {
+            console.warn(`Linha ${index + 1} não tem elemento de valor`);
+        }
+    });
+    
+    // Valor Estelar
+    const valorEstelarInput = document.getElementById('valor_estelar');
+    const valorEstelar = valorEstelarInput ? (parseFloat(valorEstelarInput.value) || 0) : 0;
+    console.log('Valor Estelar:', valorEstelar);
+    
+    // Total distribuído
+    const totalDistribuido = valorEstelar + totalFuncionarios;
+    
+    console.log('Totais calculados:', {
+        totalCarregamentos,
+        totalFuncionarios,
+        valorEstelar,
+        totalDistribuido
+    });
+    
+    // Atualizar totais
+    const totalCarregamentosEl = document.getElementById('totalCarregamentos');
+    const totalFuncionariosEl = document.getElementById('totalFuncionarios');
+    const totalDistribuidoEl = document.getElementById('totalDistribuido');
+    const validacaoTotalCarregamentosEl = document.getElementById('validacaoTotalCarregamentos');
+    const validacaoTotalDistribuidoEl = document.getElementById('validacaoTotalDistribuido');
+    
+    if (totalCarregamentosEl) totalCarregamentosEl.textContent = formatarMoeda(totalCarregamentos);
+    if (totalFuncionariosEl) totalFuncionariosEl.textContent = formatarMoeda(totalFuncionarios);
+    if (totalDistribuidoEl) totalDistribuidoEl.textContent = formatarMoeda(totalDistribuido);
+    if (validacaoTotalCarregamentosEl) validacaoTotalCarregamentosEl.textContent = formatarMoeda(totalCarregamentos);
+    if (validacaoTotalDistribuidoEl) validacaoTotalDistribuidoEl.textContent = formatarMoeda(totalDistribuido);
+    
+    // Validação
+    const diferenca = Math.abs(totalCarregamentos - totalDistribuido);
+    const validacaoDiv = document.getElementById('validacaoResultado');
+    
+    if (!validacaoDiv) {
+        console.error('Elemento validacaoResultado não encontrado');
+        return;
+    }
+    
+    if (diferenca < 0.01) {
+        validacaoDiv.className = 'alert alert-success';
+        validacaoDiv.innerHTML = '<i class="fas fa-check-circle"></i> <strong>Validação OK!</strong> Os valores estão corretos.';
+    } else {
+        validacaoDiv.className = 'alert alert-danger';
+        validacaoDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <strong>Diferença:</strong> ${formatarMoeda(diferenca)}`;
+    }
+}
+
+// Função para alternar entre cliente e descarga
+function toggleTipoRegistro() {
+    const tipo = document.getElementById('tipo_registro').value;
+    const divCliente = document.getElementById('divCliente');
+    const divDescricao = document.getElementById('divDescricao');
+    const clienteSelect = document.getElementById('cliente_id');
+    const descricaoInput = document.getElementById('descricao');
+    
+    if (tipo === 'cliente') {
+        divCliente.style.display = 'block';
+        divDescricao.style.display = 'none';
+        clienteSelect.required = true;
+        descricaoInput.required = false;
+        descricaoInput.value = '';
+    } else if (tipo === 'descarga') {
+        divCliente.style.display = 'none';
+        divDescricao.style.display = 'block';
+        clienteSelect.required = false;
+        descricaoInput.required = true;
+        clienteSelect.value = '';
+    } else {
+        divCliente.style.display = 'none';
+        divDescricao.style.display = 'none';
+        clienteSelect.required = false;
+        descricaoInput.required = false;
+    }
+}
+
+// Adicionar Cliente ou Descarga
+document.getElementById('btnSalvarCliente').addEventListener('click', function() {
+    const form = document.getElementById('formAdicionarCliente');
+    const tipo = document.getElementById('tipo_registro').value;
+    
+    if (!tipo) {
+        alert('Selecione o tipo (Carregamento ou Descarga)');
+        return;
+    }
+    
+    const formData = new FormData(form);
+    formData.append('acerto_id', acertoId);
+    
+    // Remover campos não utilizados baseado no tipo
+    if (tipo === 'cliente') {
+        formData.delete('descricao');
+    } else {
+        formData.delete('cliente_id');
+    }
+    
+    fetch('{% url "notas:adicionar_carregamento_cliente_ajax" %}', {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken},
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Adicionar linha na tabela
+            const tbody = document.getElementById('tbodyCarregamentos');
+            const linhaVazia = document.getElementById('linhaVaziaCarregamentos');
+            if (linhaVazia) linhaVazia.remove();
+            
+            const badgeClass = data.tipo === 'Carregamento' ? 'bg-primary' : 'bg-warning';
+            const observacoes = formData.get('observacoes') || '-';
+            const valorFormatado = formatarMoeda(parseFloat(data.valor));
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-carregamento-id', data.carregamento_id);
+            tr.innerHTML = `
+                <td><span class="badge ${badgeClass}">${data.tipo}</span></td>
+                <td>${data.nome_display}</td>
+                <td><strong>${valorFormatado}</strong></td>
+                <td>${observacoes}</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger btnRemoverCarregamento" data-id="${data.carregamento_id}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+            
+            // Adicionar event listener ao botão
+            tr.querySelector('.btnRemoverCarregamento').addEventListener('click', removerCarregamento);
+            
+            // Fechar modal e recalcular
+            bootstrap.Modal.getInstance(document.getElementById('modalAdicionarCliente')).hide();
+            form.reset();
+            toggleTipoRegistro(); // Resetar campos
+            calcularTotais();
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    });
+});
+
+// Adicionar Funcionário
+document.getElementById('btnSalvarFuncionarioDistribuicao').addEventListener('click', function() {
+    const form = document.getElementById('formAdicionarFuncionario');
+    const formData = new FormData(form);
+    formData.append('acerto_id', acertoId);
+    
+    fetch('{% url "notas:adicionar_distribuicao_funcionario_ajax" %}', {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken},
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Adicionar linha na tabela
+            const tbody = document.getElementById('tbodyDistribuicoes');
+            const linhaVazia = document.getElementById('linhaVaziaDistribuicoes');
+            if (linhaVazia) linhaVazia.remove();
+            
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-distribuicao-id', data.distribuicao_id);
+            const valorFormatado = formatarMoeda(parseFloat(data.valor));
+            tr.innerHTML = `
+                <td>${data.funcionario_nome}</td>
+                <td><strong>${valorFormatado}</strong></td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger btnRemoverDistribuicao" data-id="${data.distribuicao_id}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+            
+            // Adicionar event listener
+            tr.querySelector('.btnRemoverDistribuicao').addEventListener('click', removerDistribuicao);
+            
+            // Fechar modal e recalcular
+            bootstrap.Modal.getInstance(document.getElementById('modalAdicionarFuncionario')).hide();
+            form.reset();
+            calcularTotais();
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    });
+});
+
+// Remover Carregamento
+function removerCarregamento(e) {
+    const id = e.target.closest('button').getAttribute('data-id');
+    if (!confirm('Tem certeza que deseja remover este carregamento?')) return;
+    
+    fetch(`{% url 'notas:remover_carregamento_cliente_ajax' 0 %}`.replace('0', id), {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken}
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const tr = document.querySelector(`tr[data-carregamento-id="${id}"]`);
+            tr.remove();
+            
+            // Se não houver mais linhas, adicionar linha vazia
+            if (document.querySelectorAll('#tbodyCarregamentos tr[data-carregamento-id]').length === 0) {
+                const tbody = document.getElementById('tbodyCarregamentos');
+                const tr = document.createElement('tr');
+                tr.id = 'linhaVaziaCarregamentos';
+                tr.innerHTML = '<td colspan="5" class="text-center text-muted">Nenhum registro</td>';
+                tbody.appendChild(tr);
+            }
+            
+            calcularTotais();
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    });
+}
+
+// Remover Distribuição
+function removerDistribuicao(e) {
+    const id = e.target.closest('button').getAttribute('data-id');
+    if (!confirm('Tem certeza que deseja remover esta distribuição?')) return;
+    
+    fetch(`{% url 'notas:remover_distribuicao_funcionario_ajax' 0 %}`.replace('0', id), {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken}
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const tr = document.querySelector(`tr[data-distribuicao-id="${id}"]`);
+            tr.remove();
+            
+            // Se não houver mais linhas, adicionar linha vazia
+            if (document.querySelectorAll('#tbodyDistribuicoes tr[data-distribuicao-id]').length === 0) {
+                const tbody = document.getElementById('tbodyDistribuicoes');
+                const tr = document.createElement('tr');
+                tr.id = 'linhaVaziaDistribuicoes';
+                tr.innerHTML = '<td colspan="3" class="text-center text-muted">Nenhuma distribuição registrada</td>';
+                tbody.appendChild(tr);
+            }
+            
+            calcularTotais();
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    });
+}
+
+// Event listeners para botões de remover existentes
+document.querySelectorAll('.btnRemoverCarregamento').forEach(btn => {
+    btn.addEventListener('click', removerCarregamento);
+});
+
+document.querySelectorAll('.btnRemoverDistribuicao').forEach(btn => {
+    btn.addEventListener('click', removerDistribuicao);
+});
+
+// Salvar Acerto
+document.getElementById('btnSalvarAcerto').addEventListener('click', function() {
+    const form = document.getElementById('formAcertoDiario');
+    const formData = new FormData(form);
+    
+    fetch('{% url "notas:salvar_acerto_diario" %}', {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken},
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Acerto salvo com sucesso!');
+            location.reload();
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    });
+});
+
+// Calcular totais ao carregar e após um pequeno delay para garantir que o DOM está pronto
+document.addEventListener('DOMContentLoaded', function() {
+    // Pequeno delay para garantir que todos os elementos estão renderizados
+    setTimeout(function() {
+        calcularTotais();
+    }, 100);
+});
+</script>
+{% endblock %}
+

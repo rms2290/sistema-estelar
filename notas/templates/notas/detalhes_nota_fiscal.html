@@ -42,6 +42,66 @@
         <p><strong>Status:</strong> {{ nota.get_status_display }}</p>
     </div>
 
+    {# Ocorrências (se houver) #}
+    {% if ocorrencias %}
+    <div class="card card-body mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3><i class="fas fa-exclamation-triangle text-warning"></i> Ocorrências</h3>
+            {% if user.is_admin or user.is_funcionario %}
+            <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#modalOcorrencia">
+                <i class="fas fa-plus"></i> Nova Ocorrência
+            </button>
+            {% endif %}
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Usuário</th>
+                        <th>Observações</th>
+                        <th>Fotos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ocorrencia in ocorrencias %}
+                    <tr>
+                        <td>{{ ocorrencia.data_criacao|date:"d/m/Y H:i" }}</td>
+                        <td>{{ ocorrencia.usuario_criacao.username|default:"Sistema" }}</td>
+                        <td>{{ ocorrencia.observacoes|linebreaks }}</td>
+                        <td>
+                            {% if ocorrencia.fotos.all %}
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% for foto in ocorrencia.fotos.all %}
+                                        <a href="{{ foto.foto.url }}" target="_blank" class="btn btn-sm btn-info" title="Ver foto">
+                                            <i class="fas fa-image"></i> Foto {{ forloop.counter }}
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card card-body mt-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h3><i class="fas fa-exclamation-triangle text-warning"></i> Ocorrências</h3>
+            {% if user.is_admin or user.is_funcionario %}
+            <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#modalOcorrencia">
+                <i class="fas fa-plus"></i> Nova Ocorrência
+            </button>
+            {% endif %}
+        </div>
+        <p class="text-muted mb-0">Nenhuma ocorrência registrada para esta nota fiscal.</p>
+    </div>
+    {% endif %}
+
     {# Romaneios Vinculados (se houver) #}
     {% if nota.romaneios_vinculados.all %}
     <div class="card card-body mt-4">
@@ -100,6 +160,51 @@
         <input type="hidden" name="username_admin" id="hidden_username_admin_detalhes">
         <input type="hidden" name="senha_admin" id="hidden_senha_admin_detalhes">
     </form>
+
+    {# Modal: Ocorrência (apenas para admin/funcionário) #}
+    {% if user.is_admin or user.is_funcionario %}
+    <div class="modal fade" id="modalOcorrencia" tabindex="-1" aria-labelledby="modalOcorrenciaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalOcorrenciaLabel">
+                        <i class="fas fa-exclamation-triangle"></i> Registrar Ocorrência
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formOcorrencia" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="observacoes_ocorrencia" class="form-label">
+                                <i class="fas fa-comment-alt"></i> Observações:
+                            </label>
+                            <textarea class="form-control" id="observacoes_ocorrencia" name="observacoes" rows="5" 
+                                      placeholder="Descreva a ocorrência relacionada à nota fiscal..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="fotos_ocorrencia" class="form-label">
+                                <i class="fas fa-camera"></i> Fotos (múltiplas):
+                            </label>
+                            <input type="file" class="form-control" id="fotos_ocorrencia" name="fotos" 
+                                   accept="image/*" capture="environment" multiple>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i> Selecione uma ou mais fotos para anexar à ocorrência. Você pode selecionar múltiplas fotos de uma vez.
+                            </small>
+                            <div id="preview_fotos" class="mt-2 d-flex flex-wrap gap-2"></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnSalvarOcorrencia">
+                        <i class="fas fa-save"></i> Salvar Ocorrência
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
 </div>
 {% endblock %}
@@ -306,6 +411,104 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Erro completo na exclusão:', error);
             alert('Erro ao excluir nota fiscal: ' + error.message);
+        });
+    }
+
+    // Modal de Ocorrência
+    const fotosInput = document.getElementById('fotos_ocorrencia');
+    const previewDiv = document.getElementById('preview_fotos');
+    const btnSalvarOcorrencia = document.getElementById('btnSalvarOcorrencia');
+    const modalOcorrencia = document.getElementById('modalOcorrencia');
+    const notaId = {{ nota.pk }};
+
+    if (fotosInput && previewDiv) {
+        fotosInput.addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            previewDiv.innerHTML = ''; // Limpar previews anteriores
+            
+            if (files.length > 0) {
+                files.forEach((file, index) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const imgDiv = document.createElement('div');
+                        imgDiv.className = 'position-relative';
+                        imgDiv.style.cssText = 'width: 150px; height: 150px; margin-bottom: 10px;';
+                        
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.className = 'img-thumbnail';
+                        img.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+                        img.alt = `Preview ${index + 1}`;
+                        
+                        const badge = document.createElement('span');
+                        badge.className = 'badge bg-secondary position-absolute top-0 start-0';
+                        badge.textContent = `${index + 1}`;
+                        badge.style.cssText = 'font-size: 0.7rem;';
+                        
+                        imgDiv.appendChild(img);
+                        imgDiv.appendChild(badge);
+                        previewDiv.appendChild(imgDiv);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+        });
+    }
+
+    if (modalOcorrencia) {
+        modalOcorrencia.addEventListener('hidden.bs.modal', function() {
+            document.getElementById('formOcorrencia').reset();
+            if (previewDiv) previewDiv.innerHTML = '';
+        });
+    }
+
+    if (btnSalvarOcorrencia) {
+        btnSalvarOcorrencia.addEventListener('click', function() {
+            const observacoes = document.getElementById('observacoes_ocorrencia').value;
+            const fotos = document.getElementById('fotos_ocorrencia').files;
+
+            if (!observacoes.trim() && fotos.length === 0) {
+                alert('Por favor, preencha as observações ou anexe pelo menos uma foto.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('observacoes', observacoes);
+            
+            // Adicionar todas as fotos
+            for (let i = 0; i < fotos.length; i++) {
+                formData.append('fotos', fotos[i]);
+            }
+            
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            btnSalvarOcorrencia.disabled = true;
+            btnSalvarOcorrencia.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...';
+
+            fetch(`/notas/api/notas/${notaId}/ocorrencia/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload(); // Recarregar página para mostrar nova ocorrência
+                } else {
+                    alert('Erro: ' + (data.message || 'Erro ao salvar ocorrência'));
+                    btnSalvarOcorrencia.disabled = false;
+                    btnSalvarOcorrencia.innerHTML = '<i class="fas fa-save"></i> Salvar Ocorrência';
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao salvar ocorrência. Tente novamente.');
+                btnSalvarOcorrencia.disabled = false;
+                btnSalvarOcorrencia.innerHTML = '<i class="fas fa-save"></i> Salvar Ocorrência';
+            });
         });
     }
 });

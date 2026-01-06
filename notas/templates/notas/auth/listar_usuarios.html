@@ -53,6 +53,20 @@
                                             <a href="{% url 'notas:editar_usuario' usuario.pk %}" class="btn btn-sm btn-outline-primary" title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </a>
+                                            {% if usuario != user %}
+                                            <form action="{% url 'notas:toggle_status_usuario' usuario.pk %}" method="post" style="display:inline;">
+                                                {% csrf_token %}
+                                                {% if usuario.is_active %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Desativar" onclick="return confirm('Tem certeza que deseja desativar o usuário {{ usuario.username }}? Ele não conseguirá fazer login.');">
+                                                        <i class="fas fa-toggle-on"></i>
+                                                    </button>
+                                                {% else %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Ativar" onclick="return confirm('Tem certeza que deseja ativar o usuário {{ usuario.username }}?');">
+                                                        <i class="fas fa-toggle-off"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </form>
+                                            {% endif %}
                                             {% if usuario != user and admin_original and admin_original.is_admin %}
                                                 {% if is_impersonando %}
                                                     {% if usuario_impersonado and usuario.pk != usuario_impersonado.pk %}

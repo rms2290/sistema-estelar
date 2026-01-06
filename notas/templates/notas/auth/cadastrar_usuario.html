@@ -111,6 +111,21 @@
                                         </div>
 
                                         <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.is_active }}
+                                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                                    {{ form.is_active.label }}
+                                                </label>
+                                                {% if form.is_active.errors %}
+                                                    <div class="text-danger">{{ form.is_active.errors }}</div>
+                                                {% endif %}
+                                                <small class="form-text text-muted d-block">
+                                                    <i class="fas fa-info-circle"></i> Usuários inativos não conseguem fazer login no sistema.
+                                                </small>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
                                             <label for="{{ form.cliente.id_for_label }}" class="form-label">
                                                 <i class="fas fa-user"></i> {{ form.cliente.label }}
                                             </label>

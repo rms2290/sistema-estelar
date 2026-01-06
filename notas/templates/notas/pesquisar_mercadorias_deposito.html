@@ -75,7 +75,7 @@
                                     <i class="fas fa-search"></i> Pesquisar
                                 </button>
                                 <a href="{% url 'notas:pesquisar_mercadorias_deposito' %}" class="btn btn-secondary">
-                                    <i class="fas fa-times"></i> Limpar
+                                    <i class="fas fa-times"></i> Limpar Filtros
                                 </a>
                                 {% if search_performed and mercadorias %}
                                     <a href="{% url 'notas:imprimir_relatorio_mercadorias_deposito' %}?{{ request.GET.urlencode }}" 
@@ -124,9 +124,9 @@
                                             <th>Data</th>
                                             <th>Fornecedor</th>
                                             <th>Mercadoria</th>
-                                            <th>Quantidade</th>
-                                            <th>Peso (kg)</th>
-                                            <th>Valor (R$)</th>
+                                            <th style="text-align: center;">QUANT.</th>
+                                            <th style="text-align: center;">Peso (kg)</th>
+                                            <th style="text-align: center;">Valor (R$)</th>
                                             <th>Local</th>
                                             <th>Ações</th>
                                         </tr>
@@ -140,9 +140,9 @@
                                                 <td>{{ mercadoria.data|date:"d/m/Y" }}</td>
                                                 <td>{{ mercadoria.fornecedor }}</td>
                                                 <td>{{ mercadoria.mercadoria }}</td>
-                                                <td>{{ mercadoria.quantidade|format_brazilian_quantity }}</td>
-                                                <td>{{ mercadoria.peso|format_brazilian_weight }}</td>
-                                                <td>{{ mercadoria.valor|format_brazilian_currency }}</td>
+                                                <td style="text-align: center;">{{ mercadoria.quantidade|format_brazilian_quantity }}</td>
+                                                <td>{{ mercadoria.peso|format_brazilian_number:2 }}</td>
+                                                <td>{{ mercadoria.valor|format_brazilian_number:2 }}</td>
                                                 <td>
                                                     {% if mercadoria.local %}
                                                         <span class="badge bg-primary">Galpão {{ mercadoria.local }}</span>
@@ -154,10 +154,6 @@
                                                     <a href="{% url 'notas:detalhes_nota_fiscal' mercadoria.pk %}" 
                                                        class="btn btn-info btn-sm" title="Ver Detalhes">
                                                         <i class="fas fa-eye"></i>
-                                                    </a>
-                                                    <a href="{% url 'notas:editar_nota_fiscal' mercadoria.pk %}" 
-                                                       class="btn btn-warning btn-sm" title="Editar">
-                                                        <i class="fas fa-edit"></i>
                                                     </a>
                                                 </td>
                                             </tr>

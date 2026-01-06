@@ -15,9 +15,18 @@
     <script>
         (function() {
             // Aplicar tema imediatamente, antes do CSS carregar
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', savedTheme);
-            document.body.setAttribute('data-theme', savedTheme);
+            try {
+                const savedTheme = localStorage.getItem('theme') || 'light';
+                if (document.documentElement) {
+                    document.documentElement.setAttribute('data-theme', savedTheme);
+                }
+                if (document.body) {
+                    document.body.setAttribute('data-theme', savedTheme);
+                }
+            } catch (error) {
+                // Ignorar erros se o DOM ainda não estiver pronto
+                console.warn('Erro ao aplicar tema:', error);
+            }
         })();
     </script>
 </head>
@@ -231,6 +240,27 @@
                             </a></li>
                         </ul>
                     </li>
+                    
+                    <!-- Fluxo de Caixa -->
+                    {% if user.is_admin %}
+                    <li class="nav-group">
+                        <div class="nav-group-header">
+                            <i class="fas fa-cash-register"></i>
+                            <span>Fluxo de Caixa</span>
+                        </div>
+                        <ul class="nav-submenu">
+                            <li><a href="{% url 'notas:dashboard_fluxo_caixa' %}">
+                                <i class="fas fa-chart-line"></i> Dashboard
+                            </a></li>
+                            <li><a href="{% url 'notas:acerto_diario_carregamento' %}">
+                                <i class="fas fa-calculator"></i> Acerto Diário
+                            </a></li>
+                            <li><a href="{% url 'notas:listar_acertos_diarios' %}">
+                                <i class="fas fa-search"></i> Pesquisar Acertos
+                            </a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
                     
                     <!-- Relatórios -->
                     {% if user.is_admin %}
@@ -642,17 +672,27 @@
         // Função para carregar notas fiscais na edição
         async function loadNotasFiscaisEdicao(clienteId, romaneioId, notasContainer, totalPesoElement, totalValorElement, selectedNotasIds) {
             
-            if (!clienteId) return;
+            if (!clienteId) {
+                if (notasContainer) {
+                    notasContainer.innerHTML = '<p class="text-info">Selecione um cliente para carregar as notas fiscais.</p>';
+                }
+                return;
+            }
             
             // Se os elementos não foram passados como parâmetros, buscar por ID
             if (!notasContainer) {
-                notasContainer = document.getElementById('notas-fiscais-container');
+                notasContainer = document.getElementById('notas_fiscais_checkboxes') || document.getElementById('notas-fiscais-container');
             }
             if (!totalPesoElement) {
-                totalPesoElement = document.getElementById('total-peso');
+                totalPesoElement = document.getElementById('peso_total_romaneio') || document.getElementById('total-peso');
             }
             if (!totalValorElement) {
-                totalValorElement = document.getElementById('total-valor');
+                totalValorElement = document.getElementById('valor_total_romaneio') || document.getElementById('total-valor');
+            }
+            
+            if (!notasContainer) {
+                console.error('Container de notas fiscais não encontrado');
+                return;
             }
             
             try {
@@ -749,6 +789,6 @@
 
 
     </script>
+    {% block extra_js %}{% endblock %}
 </body>
-</html>
 </html>

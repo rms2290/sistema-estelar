@@ -116,13 +116,15 @@
                     <div class="col-md-12">
                         <div class="mb-3">
                             <label class="form-label">&nbsp;</label>
-                            <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-search"></i> Buscar
-                                </button>
-                                <a href="{% url 'notas:buscar_mercadorias_deposito' %}" class="btn btn-secondary">
-                                    <i class="fas fa-times"></i> Limpar
-                                </a>
+                            <div class="row">
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-search"></i> Buscar
+                                    </button>
+                                    <a href="{% url 'notas:buscar_mercadorias_deposito' %}" class="btn btn-secondary">
+                                        <i class="fas fa-times"></i> Limpar Filtros
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>

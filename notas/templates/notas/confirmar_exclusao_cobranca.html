@@ -58,8 +58,60 @@
                 <strong>Esta ação é irreversível!</strong> Tem certeza que deseja excluir esta cobrança?
             </p>
 
+            {% if not user.is_admin %}
+            <div class="alert alert-info">
+                <i class="fas fa-shield-alt"></i> Para excluir este registro, é necessário informar as credenciais de um administrador.
+            </div>
+            {% endif %}
+
             <form method="post">
                 {% csrf_token %}
+                
+                {% if not user.is_admin %}
+                <div class="mb-3">
+                    <label for="username_admin" class="form-label">
+                        <i class="fas fa-user"></i> Nome de Usuário do Administrador <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" 
+                           class="form-control {% if erro_senha == True %}is-invalid{% endif %}" 
+                           id="username_admin" 
+                           name="username_admin" 
+                           required
+                           placeholder="Digite o nome de usuário do administrador"
+                           autocomplete="username">
+                    {% if erro_senha == True %}
+                    <div class="invalid-feedback">
+                        Credenciais inválidas. Verifique o nome de usuário e senha.
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="senha_admin" class="form-label">
+                        <i class="fas fa-key"></i> Senha de Administrador <span class="text-danger">*</span>
+                    </label>
+                    <input type="password" 
+                           class="form-control {% if erro_senha == True %}is-invalid{% endif %}" 
+                           id="senha_admin" 
+                           name="senha_admin" 
+                           required
+                           placeholder="Digite a senha do administrador"
+                           autocomplete="current-password">
+                    {% if erro_senha == True %}
+                    <div class="invalid-feedback">
+                        Credenciais inválidas. Verifique o nome de usuário e senha.
+                    </div>
+                    {% endif %}
+                    <small class="form-text text-muted">
+                        Informe o nome de usuário e senha de um administrador para autorizar a exclusão.
+                    </small>
+                </div>
+                {% else %}
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> Você é um administrador. A exclusão será realizada sem necessidade de senha adicional.
+                </div>
+                {% endif %}
+                
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-danger">
                         <i class="fas fa-trash"></i> Sim, Excluir Cobrança

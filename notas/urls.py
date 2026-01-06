@@ -75,11 +75,14 @@ urlpatterns = [
     path('minhas-notas/<int:pk>/imprimir/', views.imprimir_nota_fiscal, name='imprimir_nota_fiscal'),
     path('minhas-notas/imprimir-relatorio-deposito/', views.imprimir_relatorio_deposito, name='imprimir_relatorio_deposito'),
     path('meus-romaneios/', views.meus_romaneios, name='meus_romaneios'),
+    path('minhas-cobrancas-carregamento/', views.minhas_cobrancas_carregamento, name='minhas_cobrancas_carregamento'),
+    path('minhas-cobrancas-carregamento/<int:cobranca_id>/pdf/', views.gerar_relatorio_cobranca_carregamento_pdf_cliente, name='gerar_relatorio_cobranca_carregamento_pdf_cliente'),
     
     # URLs para Gerenciamento de Usuários (apenas administradores)
     path('usuarios/', views.listar_usuarios, name='listar_usuarios'),
     path('usuarios/cadastrar/', views.cadastrar_usuario, name='cadastrar_usuario'),
     path('usuarios/editar/<int:pk>/', views.editar_usuario, name='editar_usuario'),
+    path('usuarios/<int:pk>/toggle-status/', views.toggle_status_usuario, name='toggle_status_usuario'),
     path('usuarios/excluir/<int:pk>/', views.excluir_usuario, name='excluir_usuario'),
     
     # URLs para Tabela de Seguros
@@ -116,6 +119,28 @@ urlpatterns = [
     path('cobranca-carregamento/<int:cobranca_id>/gerar-pdf/', views.gerar_relatorio_cobranca_carregamento_pdf, name='gerar_relatorio_cobranca_carregamento_pdf'),
     path('cobranca-carregamento/relatorio-consolidado/', views.gerar_relatorio_consolidado_cobranca_pdf, name='gerar_relatorio_consolidado_cobranca'),
     path('api/romaneios-cliente/<int:cliente_id>/', views.carregar_romaneios_cliente, name='carregar_romaneios_cliente'),
+    path('api/notas/<int:nota_id>/ocorrencia/', views.salvar_ocorrencia_nota_fiscal, name='salvar_ocorrencia_nota_fiscal'),
+    
+    # URLs para Fluxo de Caixa
+    path('fluxo-caixa/', views.dashboard_fluxo_caixa, name='dashboard_fluxo_caixa'),
+    path('fluxo-caixa/receitas/criar/', views.criar_receita_empresa, name='criar_receita_empresa'),
+    path('fluxo-caixa/receitas/<int:pk>/editar/', views.editar_receita_empresa, name='editar_receita_empresa'),
+    path('fluxo-caixa/receitas/<int:pk>/excluir/', views.excluir_receita_empresa, name='excluir_receita_empresa'),
+    path('fluxo-caixa/caixa-funcionario/criar/', views.criar_caixa_funcionario, name='criar_caixa_funcionario'),
+    path('fluxo-caixa/caixa-funcionario/<int:pk>/acertar/', views.acertar_caixa_funcionario, name='acertar_caixa_funcionario'),
+    path('fluxo-caixa/movimento-bancario/criar/', views.criar_movimento_bancario, name='criar_movimento_bancario'),
+    path('fluxo-caixa/movimento-bancario/<int:pk>/editar/', views.editar_movimento_bancario, name='editar_movimento_bancario'),
+    path('fluxo-caixa/movimento-bancario/<int:pk>/excluir/', views.excluir_movimento_bancario, name='excluir_movimento_bancario'),
+    path('fluxo-caixa/controle-saldo/<int:pk>/atualizar/', views.atualizar_controle_saldo, name='atualizar_controle_saldo'),
+    path('fluxo-caixa/funcionario/criar-ajax/', views.criar_funcionario_ajax, name='criar_funcionario_ajax'),
+    # URLs para Acerto Diário de Carregamento
+    path('fluxo-caixa/acerto-diario/', views.acerto_diario_carregamento, name='acerto_diario_carregamento'),
+    path('fluxo-caixa/acerto-diario/listar/', views.listar_acertos_diarios, name='listar_acertos_diarios'),
+    path('fluxo-caixa/acerto-diario/salvar/', views.salvar_acerto_diario, name='salvar_acerto_diario'),
+    path('fluxo-caixa/acerto-diario/carregamento/adicionar/', views.adicionar_carregamento_cliente_ajax, name='adicionar_carregamento_cliente_ajax'),
+    path('fluxo-caixa/acerto-diario/carregamento/<int:pk>/remover/', views.remover_carregamento_cliente_ajax, name='remover_carregamento_cliente_ajax'),
+    path('fluxo-caixa/acerto-diario/distribuicao/adicionar/', views.adicionar_distribuicao_funcionario_ajax, name='adicionar_distribuicao_funcionario_ajax'),
+    path('fluxo-caixa/acerto-diario/distribuicao/<int:pk>/remover/', views.remover_distribuicao_funcionario_ajax, name='remover_distribuicao_funcionario_ajax'),
     
     # URLs para gerenciamento de despesas de carregamento (comentadas - views não implementadas)
     # path('romaneios/<int:romaneio_id>/despesas/', views.gerenciar_despesas_romaneio, name='gerenciar_despesas_romaneio'),

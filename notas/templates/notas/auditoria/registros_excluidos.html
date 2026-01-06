@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Registros Excluídos{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2><i class="fas fa-trash-restore"></i> Registros Excluídos</h2>
+    
+    {% if modelos_excluidos %}
+        {% for modelo, logs in modelos_excluidos.items %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-folder"></i> {{ modelo }} ({{ logs|length }} registro{{ logs|length|pluralize }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Data da Exclusão</th>
+                                    <th>Usuário</th>
+                                    <th>IP</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                    <tr>
+                                        <td>{{ log.objeto_id }}</td>
+                                        <td>{{ log.data_hora|date:"d/m/Y H:i:s" }}</td>
+                                        <td>{{ log.usuario.username|default:"-" }}</td>
+                                        <td>{{ log.ip_address|default:"-" }}</td>
+                                        <td>
+                                            <a href="{% url 'notas:detalhes_log_auditoria' log.pk %}" class="btn btn-sm btn-info" title="Ver Detalhes">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'notas:restaurar_registro' modelo log.objeto_id %}" 
+                                               class="btn btn-sm btn-success" 
+                                               title="Restaurar"
+                                               onclick="return confirm('Tem certeza que deseja restaurar este registro?');">
+                                                <i class="fas fa-undo"></i> Restaurar
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> 
+            Nenhum registro excluído encontrado. Os registros excluídos serão exibidos aqui quando ações de exclusão forem registradas no sistema.
+            <br><br>
+            <small>
+                <strong>Nota:</strong> Apenas exclusões realizadas após a ativação do sistema de auditoria serão exibidas aqui.
+            </small>
+        </div>
+    {% endif %}
+    
+    <div class="mt-3">
+        <a href="{% url 'notas:listar_logs_auditoria' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Voltar para Logs
+        </a>
+    </div>
+</div>
+{% endblock %}
+

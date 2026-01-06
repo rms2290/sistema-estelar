@@ -1,0 +1,64 @@
+<!-- Modal de Autenticação de Administrador -->
+<div class="modal fade" id="modalAutenticacaoAdmin" tabindex="-1" aria-labelledby="modalAutenticacaoAdminLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalAutenticacaoAdminLabel">
+                    <i class="fas fa-shield-alt"></i> Autenticação de Administrador
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    <strong>Atenção!</strong> Esta ação requer autenticação de administrador.
+                </div>
+                
+                <form id="formAutenticacaoAdmin">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="username_admin_modal" class="form-label">
+                            <i class="fas fa-user"></i> Nome de Usuário do Administrador <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="username_admin_modal" 
+                               name="username_admin" 
+                               required
+                               placeholder="Digite o nome de usuário do administrador"
+                               autocomplete="username">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="senha_admin_modal" class="form-label">
+                            <i class="fas fa-key"></i> Senha de Administrador <span class="text-danger">*</span>
+                        </label>
+                        <input type="password" 
+                               class="form-control" 
+                               id="senha_admin_modal" 
+                               name="senha_admin" 
+                               required
+                               placeholder="Digite a senha do administrador"
+                               autocomplete="current-password">
+                    </div>
+                    
+                    <div id="erroAutenticacao" class="alert alert-danger d-none" role="alert">
+                        <i class="fas fa-exclamation-circle"></i> <span id="mensagemErro"></span>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarExclusao">
+                    <i class="fas fa-check"></i> Confirmar e Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+

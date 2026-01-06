@@ -1036,9 +1036,9 @@ def gerar_relatorio_pdf_consolidado_cobranca(cobrancas_pendentes, cliente_seleci
             story.append(Paragraph(f"CNPJ: {cliente_selecionado.cnpj}", info_style))
         story.append(Spacer(1, 25))
     
-    # Calcular totais
-    total_carregamento = sum([c.valor_carregamento for c in cobrancas_pendentes])
-    total_cte_manifesto = sum([c.valor_cte_manifesto for c in cobrancas_pendentes])
+    # Calcular totais (usar valor_total ou calcular)
+    total_carregamento = sum([c.valor_carregamento or Decimal('0.00') for c in cobrancas_pendentes])
+    total_cte_manifesto = sum([c.valor_cte_manifesto or Decimal('0.00') for c in cobrancas_pendentes])
     total_geral = total_carregamento + total_cte_manifesto
     
     # Tabela de cobranças - formato minimalista
@@ -1047,18 +1047,21 @@ def gerar_relatorio_pdf_consolidado_cobranca(cobrancas_pendentes, cliente_seleci
     cobrancas_data = []
     for cobranca in cobrancas_pendentes:
         romaneios_codigos = [r.codigo for r in cobranca.romaneios.all()]
-        romaneios_str = ', '.join(romaneios_codigos[:3])
+        romaneios_str = ', '.join(romaneios_codigos[:3]) if romaneios_codigos else '-'
         if len(romaneios_codigos) > 3:
             romaneios_str += f" (+{len(romaneios_codigos) - 3})"
         
         data_cobranca = cobranca.criado_em.strftime('%d/%m/%Y') if cobranca.criado_em else '-'
         
+        # Usar valor_total (property) ou calcular
+        valor_total = cobranca.valor_total if hasattr(cobranca, 'valor_total') else (cobranca.valor_carregamento or Decimal('0.00')) + (cobranca.valor_cte_manifesto or Decimal('0.00'))
+        
         cobrancas_data.append([
             romaneios_str,
             data_cobranca,
-            format_brazilian_currency(cobranca.valor_carregamento),
-            format_brazilian_currency(cobranca.valor_cte_manifesto),
-            format_brazilian_currency(cobranca.valor_total)
+            format_brazilian_currency(cobranca.valor_carregamento or Decimal('0.00')),
+            format_brazilian_currency(cobranca.valor_cte_manifesto or Decimal('0.00')),
+            format_brazilian_currency(valor_total)
         ])
     
     # Cabeçalho da tabela

@@ -1,0 +1,30 @@
+# Configurações de banco de dados
+# PostgreSQL (RECOMENDADO para produção)
+USE_POSTGRESQL=True
+DB_NAME=sistema_estelar
+DB_USER=postgres
+DB_PASSWORD=sua_senha_aqui
+DB_HOST=localhost
+DB_PORT=5432
+
+# Se USE_POSTGRESQL=False, o sistema usará SQLite (NÃO RECOMENDADO para produção)
+
+# Configurações de segurança
+# OBRIGATÓRIO: SECRET_KEY deve ser uma string longa e aleatória
+# Para gerar uma chave segura, execute:
+# python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+SECRET_KEY=GERE_UMA_CHAVE_SECRETA_AQUI_USANDO_O_COMANDO_ACIMA
+
+# Configurações de email
+EMAIL_HOST_USER=seu_email@dominio.com
+EMAIL_HOST_PASSWORD=sua_senha_do_email
+
+# Configurações de debug
+DEBUG=False
+
+# Configurações de domínio
+ALLOWED_HOSTS=seu-dominio.com.br,www.seu-dominio.com.br
+
+# Configurações de HTTPS
+# Defina como True quando HTTPS estiver configurado no servidor
+USE_HTTPS=False

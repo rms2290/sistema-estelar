@@ -97,10 +97,59 @@
         {# Botões de ação #}
         <button type="submit" name="salvar_e_sair" class="btn btn-success me-2">Salvar</button>
         <button type="submit" name="salvar_e_adicionar" class="btn btn-info me-2">Salvar e Adicionar +</button>
+        {% if user.is_admin or user.is_funcionario %}
+        <button type="button" class="btn btn-warning me-2" data-bs-toggle="modal" data-bs-target="#modalOcorrencia">
+            <i class="fas fa-exclamation-triangle"></i> Ocorrência
+        </button>
+        {% endif %}
         <a href="{% url 'notas:listar_notas_fiscais' %}" class="btn btn-secondary">Cancelar</a>
     </form>
 
-    {# JavaScript para o comportamento da tecla Enter #}
+    {# Modal: Ocorrência (apenas para admin/funcionário) #}
+    {% if user.is_admin or user.is_funcionario %}
+    <div class="modal fade" id="modalOcorrencia" tabindex="-1" aria-labelledby="modalOcorrenciaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalOcorrenciaLabel">
+                        <i class="fas fa-exclamation-triangle"></i> Registrar Ocorrência
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formOcorrencia" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="observacoes_ocorrencia" class="form-label">
+                                <i class="fas fa-comment-alt"></i> Observações:
+                            </label>
+                            <textarea class="form-control" id="observacoes_ocorrencia" name="observacoes" rows="5" 
+                                      placeholder="Descreva a ocorrência..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="fotos_ocorrencia" class="form-label">
+                                <i class="fas fa-camera"></i> Fotos (múltiplas):
+                            </label>
+                            <input type="file" class="form-control" id="fotos_ocorrencia" name="fotos" 
+                                   accept="image/*" capture="environment" multiple>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i> Selecione uma ou mais fotos para anexar à ocorrência. Você pode selecionar múltiplas fotos de uma vez.
+                            </small>
+                            <div id="preview_fotos" class="mt-2 d-flex flex-wrap gap-2"></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnSalvarOcorrencia">
+                        <i class="fas fa-save"></i> Salvar Ocorrência
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# JavaScript para o comportamento da tecla Enter e modal de ocorrência #}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const notaFiscalForm = document.getElementById('notaFiscalForm');
@@ -123,6 +172,67 @@
                     if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
                         event.preventDefault(); // Impede o envio padrão do formulário (que seria o primeiro botão submit)
                         salvarEAdicionarBtn.click(); // Simula o clique no botão "Salvar e Adicionar +"
+                    }
+                });
+            }
+
+            // Preview das fotos selecionadas
+            const fotosInput = document.getElementById('fotos_ocorrencia');
+            const previewDiv = document.getElementById('preview_fotos');
+
+            if (fotosInput && previewDiv) {
+                fotosInput.addEventListener('change', function(e) {
+                    const files = Array.from(e.target.files);
+                    previewDiv.innerHTML = ''; // Limpar previews anteriores
+                    
+                    if (files.length > 0) {
+                        files.forEach((file, index) => {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                const imgDiv = document.createElement('div');
+                                imgDiv.className = 'position-relative';
+                                imgDiv.style.cssText = 'width: 150px; height: 150px; margin-bottom: 10px;';
+                                
+                                const img = document.createElement('img');
+                                img.src = e.target.result;
+                                img.className = 'img-thumbnail';
+                                img.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+                                img.alt = `Preview ${index + 1}`;
+                                
+                                const badge = document.createElement('span');
+                                badge.className = 'badge bg-secondary position-absolute top-0 start-0';
+                                badge.textContent = `${index + 1}`;
+                                badge.style.cssText = 'font-size: 0.7rem;';
+                                
+                                imgDiv.appendChild(img);
+                                imgDiv.appendChild(badge);
+                                previewDiv.appendChild(imgDiv);
+                            };
+                            reader.readAsDataURL(file);
+                        });
+                    }
+                });
+            }
+
+            // Limpar modal ao fechar
+            const modalOcorrencia = document.getElementById('modalOcorrencia');
+            if (modalOcorrencia) {
+                modalOcorrencia.addEventListener('hidden.bs.modal', function() {
+                    document.getElementById('formOcorrencia').reset();
+                    if (previewDiv) previewDiv.innerHTML = '';
+                });
+            }
+
+            // Salvar ocorrência
+            const btnSalvarOcorrencia = document.getElementById('btnSalvarOcorrencia');
+            if (btnSalvarOcorrencia) {
+                btnSalvarOcorrencia.addEventListener('click', function() {
+                    alert('Por favor, salve a nota fiscal primeiro. Após salvar, você poderá registrar ocorrências na tela de detalhes.');
+                    
+                    // Fechar modal
+                    const modal = bootstrap.Modal.getInstance(modalOcorrencia);
+                    if (modal) {
+                        modal.hide();
                     }
                 });
             }

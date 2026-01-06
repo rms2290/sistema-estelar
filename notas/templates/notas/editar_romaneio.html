@@ -107,6 +107,12 @@
             const notasFiscaisDiv = document.getElementById('notas_fiscais_checkboxes');
             const pesoTotalSpan = document.getElementById('peso_total_romaneio');
             const valorTotalSpan = document.getElementById('valor_total_romaneio');
+            
+            // Verificar se os elementos existem
+            if (!notasFiscaisDiv) {
+                console.error('Elemento notas_fiscais_checkboxes não encontrado');
+                return;
+            }
 
             // allLoadedNotesData é global (definido em base.html)
             // updateTotals, loadNotasFiscais, loadNotasFiscaisEdicao são globais (definidos em base.html)

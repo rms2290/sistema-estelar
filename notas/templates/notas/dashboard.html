@@ -13,6 +13,7 @@
     </div>
     
     <div class="dashboard-widgets">
+        <!-- Primeira Linha: Acesso Rápido e Atalhos a Relatórios -->
         <!-- Widget de Acesso Rápido -->
         <div class="widget widget-quick-access">
             <div class="widget-header">
@@ -41,62 +42,6 @@
                         <span>Criar Romaneio</span>
                     </a>
                 </div>
-            </div>
-        </div>
-
-        <!-- Widget de Entregas Agendadas -->
-        <div class="widget widget-deliveries">
-            <div class="widget-header">
-                <h3><i class="fas fa-truck"></i> Entregas Agendadas</h3>
-            </div>
-            <div class="widget-content">
-                {% if entregas_agendadas %}
-                    <div class="deliveries-list">
-                        {% for entrega in entregas_agendadas %}
-                        <div class="delivery-item">
-                            <div class="delivery-info">
-                                <div class="delivery-client">
-                                    <strong>{{ entrega.cliente.razao_social }}</strong>
-                                </div>
-                                <div class="delivery-company">
-                                    <i class="fas fa-building"></i>
-                                    <span class="detail-label">Emp:</span>
-                                    <span class="detail-value">{{ entrega.empresa_entrega }}</span>
-                                </div>
-                                <div class="delivery-details">
-                                    <span class="delivery-quantity">
-                                        <i class="fas fa-layer-group"></i>
-                                        <span class="detail-label">Qtd:</span>
-                                        <span class="detail-value">{{ entrega.quantidade|format_brazilian_quantity }}</span>
-                                    </span>
-                                    <span class="delivery-volume">
-                                        <i class="fas fa-weight-hanging"></i>
-                                        <span class="detail-label">Vol:</span>
-                                        <span class="detail-value">{{ entrega.volume }}</span>
-                                    </span>
-                                </div>
-                                <div class="delivery-date">
-                                    <i class="fas fa-calendar"></i>
-                                    <span class="detail-label">Data:</span>
-                                    <span class="detail-value">{{ entrega.data_entrega|date:"d/m/Y" }}</span>
-                                </div>
-                            </div>
-                            <div class="delivery-actions">
-                                <button class="btn btn-success btn-sm marcar-entregue-btn" 
-                                        data-entrega-id="{{ entrega.pk }}"
-                                        title="Marcar como Entregue">
-                                    <i class="fas fa-check"></i> Entregue
-                                </button>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="no-data">
-                        <i class="fas fa-truck fa-3x text-muted mb-3"></i>
-                        <p>Nenhuma entrega agendada</p>
-                    </div>
-                {% endif %}
             </div>
         </div>
 
@@ -165,6 +110,7 @@
             </div>
         </div>
 
+        <!-- Segunda Linha: Atividades Recentes, Entregas Agendadas e Top Clientes -->
         <!-- Widget de Atividade Recente -->
         <div class="widget widget-activity">
             <div class="widget-header">
@@ -223,6 +169,62 @@
                         <p class="no-data">Nenhum romaneio recente</p>
                     {% endif %}
                 </div>
+            </div>
+        </div>
+
+        <!-- Widget de Entregas Agendadas -->
+        <div class="widget widget-deliveries">
+            <div class="widget-header">
+                <h3><i class="fas fa-truck"></i> Entregas Agendadas</h3>
+            </div>
+            <div class="widget-content">
+                {% if entregas_agendadas %}
+                    <div class="deliveries-list">
+                        {% for entrega in entregas_agendadas %}
+                        <div class="delivery-item">
+                            <div class="delivery-info">
+                                <div class="delivery-client">
+                                    <strong>{{ entrega.cliente.razao_social }}</strong>
+                                </div>
+                                <div class="delivery-company">
+                                    <i class="fas fa-building"></i>
+                                    <span class="detail-label">Emp:</span>
+                                    <span class="detail-value">{{ entrega.empresa_entrega }}</span>
+                                </div>
+                                <div class="delivery-details">
+                                    <span class="delivery-quantity">
+                                        <i class="fas fa-layer-group"></i>
+                                        <span class="detail-label">Qtd:</span>
+                                        <span class="detail-value">{{ entrega.quantidade|format_brazilian_quantity }}</span>
+                                    </span>
+                                    <span class="delivery-volume">
+                                        <i class="fas fa-weight-hanging"></i>
+                                        <span class="detail-label">Vol:</span>
+                                        <span class="detail-value">{{ entrega.volume }}</span>
+                                    </span>
+                                </div>
+                                <div class="delivery-date">
+                                    <i class="fas fa-calendar"></i>
+                                    <span class="detail-label">Data:</span>
+                                    <span class="detail-value">{{ entrega.data_entrega|date:"d/m/Y" }}</span>
+                                </div>
+                            </div>
+                            <div class="delivery-actions">
+                                <button class="btn btn-success btn-sm marcar-entregue-btn" 
+                                        data-entrega-id="{{ entrega.pk }}"
+                                        title="Marcar como Entregue">
+                                    <i class="fas fa-check"></i> Entregue
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="no-data">
+                        <i class="fas fa-truck fa-3x text-muted mb-3"></i>
+                        <p>Nenhuma entrega agendada</p>
+                    </div>
+                {% endif %}
             </div>
         </div>
 
@@ -289,7 +291,7 @@
 /* Dashboard Widgets Grid */
 .dashboard-widgets {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    grid-template-columns: repeat(6, 1fr);
     gap: 2rem;
     margin-top: 2rem;
 }
@@ -333,13 +335,13 @@
 
 /* Quick Access Widget */
 .widget-quick-access {
-    grid-column: span 2;
+    grid-column: 1 / 4;
 }
 
 .quick-access-buttons {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
 }
 
 .quick-btn {
@@ -513,22 +515,28 @@
 }
 
 /* Reports Widget */
+.widget-reports {
+    grid-column: 4 / 7;
+}
+
 .reports-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+    gap: 0.75rem;
 }
 
 .report-item {
     display: flex;
     align-items: center;
-    padding: 1rem;
+    padding: 0.75rem;
     border-radius: 8px;
     text-decoration: none;
     color: white;
     transition: all 0.3s ease;
-    min-height: 80px;
+    min-height: 65px;
+    max-height: 65px;
     border: none;
+    overflow: hidden;
 }
 
 .report-item:hover {
@@ -539,8 +547,8 @@
 }
 
 .report-icon {
-    margin-right: 0.75rem;
-    font-size: 1.5rem;
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
     color: white;
     transition: all 0.3s ease;
     flex-shrink: 0;
@@ -558,21 +566,31 @@
 }
 
 .report-label {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 600;
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.15rem;
     color: white;
-    line-height: 1.2;
+    line-height: 1.1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .report-desc {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: white;
     opacity: 0.9;
-    line-height: 1.3;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Activity Widget */
+.widget-activity {
+    grid-column: 1 / 3;
+}
+
 .activity-tabs {
     display: flex;
     margin-bottom: 1rem;
@@ -669,6 +687,14 @@
 .badge-cancelado { background: #e74c3c; color: white; }
 
 /* Top Clients Widget */
+.widget-top-clients {
+    grid-column: 5 / 7;
+}
+
+.widget-deliveries {
+    grid-column: 3 / 5;
+}
+
 .top-clients-list {
     max-height: 300px;
     overflow-y: auto;
@@ -735,6 +761,20 @@
 }
 
 /* Responsive Design */
+@media (max-width: 1024px) {
+    .dashboard-widgets {
+        grid-template-columns: 1fr;
+    }
+    
+    .widget-quick-access,
+    .widget-reports,
+    .widget-activity,
+    .widget-deliveries,
+    .widget-top-clients {
+        grid-column: 1 / -1;
+    }
+}
+
 @media (max-width: 768px) {
     .dashboard-container {
         padding: 1rem;
@@ -744,8 +784,12 @@
         grid-template-columns: 1fr;
     }
     
-    .widget-quick-access {
-        grid-column: span 1;
+    .widget-quick-access,
+    .widget-reports,
+    .widget-activity,
+    .widget-deliveries,
+    .widget-top-clients {
+        grid-column: 1 / -1;
     }
     
     .quick-access-buttons {

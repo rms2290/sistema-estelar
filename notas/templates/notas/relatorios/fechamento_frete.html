@@ -118,14 +118,9 @@
                             </td>
                             <td>{{ fechamento.usuario_criacao.username|default:"N/A" }}</td>
                             <td>
-                                <div class="btn-group" role="group">
-                                    <a href="{% url 'notas:detalhes_fechamento_frete' fechamento.pk %}" class="btn btn-sm btn-info">
-                                        <i class="fas fa-eye"></i> Ver
-                                    </a>
-                                    <a href="{% url 'notas:editar_fechamento_frete' fechamento.pk %}" class="btn btn-sm btn-warning">
-                                        <i class="fas fa-edit"></i> Editar
-                                    </a>
-                                </div>
+                                <a href="{% url 'notas:detalhes_fechamento_frete' fechamento.pk %}" class="btn btn-sm btn-info" title="Ver Detalhes">
+                                    <i class="fas fa-eye"></i>
+                                </a>
                             </td>
                         </tr>
                         {% endfor %}

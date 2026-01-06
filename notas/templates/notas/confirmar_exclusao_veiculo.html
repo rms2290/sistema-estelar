@@ -1,12 +1,93 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h2>Confirmar Exclusão de Veículo</h2>
-    <p>Você tem certeza que deseja excluir o veículo: <strong>{{ veiculo.placa }} ({{ veiculo.get_tipo_unidade_display }})</strong>?</p>
-    <form method="post">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Sim, Excluir</button>
-        {# MUDANÇA AQUI: Redirecionar para detalhes_veiculo #}
-        <a href="{% url 'notas:detalhes_veiculo' veiculo.pk %}" class="btn btn-secondary">Cancelar</a>
-    </form>
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Confirmar Exclusão de Veículo</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i> <strong>Atenção!</strong> Esta ação não pode ser desfeita.
+                    </div>
+                    
+                    <p>Você tem certeza que deseja excluir o veículo:</p>
+                    <ul>
+                        <li><strong>Placa:</strong> {{ veiculo.placa }}</li>
+                        <li><strong>Tipo:</strong> {{ veiculo.get_tipo_unidade_display }}</li>
+                        {% if veiculo.modelo %}
+                        <li><strong>Modelo:</strong> {{ veiculo.modelo }}</li>
+                        {% endif %}
+                    </ul>
+                    
+                    {% if not user.is_admin %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-shield-alt"></i> Para excluir este registro, é necessário informar as credenciais de um administrador.
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if not user.is_admin %}
+                        <div class="mb-3">
+                            <label for="username_admin" class="form-label">
+                                <i class="fas fa-user"></i> Nome de Usuário do Administrador <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" 
+                                   class="form-control {% if erro_senha == True %}is-invalid{% endif %}" 
+                                   id="username_admin" 
+                                   name="username_admin" 
+                                   required
+                                   placeholder="Digite o nome de usuário do administrador"
+                                   autocomplete="username">
+                            {% if erro_senha == True %}
+                            <div class="invalid-feedback">
+                                Credenciais inválidas. Verifique o nome de usuário e senha.
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="senha_admin" class="form-label">
+                                <i class="fas fa-key"></i> Senha de Administrador <span class="text-danger">*</span>
+                            </label>
+                            <input type="password" 
+                                   class="form-control {% if erro_senha == True %}is-invalid{% endif %}" 
+                                   id="senha_admin" 
+                                   name="senha_admin" 
+                                   required
+                                   placeholder="Digite a senha do administrador"
+                                   autocomplete="current-password">
+                            {% if erro_senha == True %}
+                            <div class="invalid-feedback">
+                                Credenciais inválidas. Verifique o nome de usuário e senha.
+                            </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Informe o nome de usuário e senha de um administrador para autorizar a exclusão.
+                            </small>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i> Você é um administrador. A exclusão será realizada sem necessidade de senha adicional.
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="{% url 'notas:detalhes_veiculo' veiculo.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Sim, Excluir
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

@@ -1,0 +1,85 @@
+===========================================
+  SISTEMA ESTELAR - GUIA RÁPIDO DE USO
+===========================================
+
+📋 COMO ATIVAR O SERVIDOR (FÁCIL)
+
+OPÇÃO 1 - PowerShell (Recomendado):
+  1. Abra o PowerShell na pasta do projeto
+  2. Execute: .\ativar.ps1
+  3. Depois execute: python manage.py runserver
+
+OPÇÃO 2 - Prompt de Comando (CMD):
+  1. Abra o CMD na pasta do projeto
+  2. Execute: ativar.bat
+  3. Depois execute: python manage.py runserver
+
+OPÇÃO 3 - Iniciar Diretamente:
+  PowerShell: .\iniciar_servidor.ps1
+  CMD: iniciar_servidor.bat
+
+
+⚠️ PROBLEMAS COMUNS E SOLUÇÕES:
+
+1. "Não é possível carregar o arquivo porque a execução de scripts está desabilitada"
+   SOLUÇÃO: Execute no PowerShell (como Administrador):
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+2. "Django não encontrado" ou "ModuleNotFoundError"
+   SOLUÇÃO: Execute:
+   pip install -r requirements.txt
+
+3. "Ambiente virtual não encontrado"
+   SOLUÇÃO: Crie o ambiente virtual:
+   python -m venv venv
+
+4. "Porta 8000 já está em uso"
+   SOLUÇÃO: Use outra porta:
+   python manage.py runserver 8001
+
+
+📝 COMANDOS ÚTEIS:
+
+- Ativar ambiente virtual manualmente:
+  PowerShell: venv\Scripts\activate.ps1
+  CMD: venv\Scripts\activate.bat
+
+- Aplicar migrações:
+  python manage.py migrate
+
+- Criar usuário administrador:
+  python manage.py createsuperuser
+
+- Coletar arquivos estáticos:
+  python manage.py collectstatic
+
+- Verificar erros:
+  python manage.py check
+
+
+🔧 ESTRUTURA DO PROJETO:
+
+sistema-estelar/
+├── ativar.ps1              ← Wrapper (chama scripts/dev/ativar.ps1)
+├── ativar.bat              ← Wrapper (chama scripts/dev/ativar.bat)
+├── iniciar_servidor.ps1    ← Wrapper (chama scripts/dev/iniciar_servidor.ps1)
+├── iniciar_servidor.bat    ← Wrapper (chama scripts/dev/iniciar_servidor.bat)
+├── manage.py               ← Comando principal Django
+├── requirements.txt        ← Dependências do projeto
+├── scripts/
+│   └── dev/                ← Scripts de desenvolvimento organizados
+│       ├── ativar.ps1
+│       ├── ativar.bat
+│       ├── iniciar_servidor.ps1
+│       └── iniciar_servidor.bat
+├── docs/                   ← Documentação
+│   └── COMO_USAR.txt      ← Este arquivo
+└── venv/                   ← Ambiente virtual Python
+
+
+💡 DICA: 
+Se você sempre usa PowerShell, pode criar um atalho ou alias:
+  Set-Alias -Name estelar -Value ".\iniciar_servidor.ps1"
+  
+Depois é só executar: estelar
+

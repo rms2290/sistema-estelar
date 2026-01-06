@@ -1,0 +1,262 @@
+"""
+Formulários administrativos
+"""
+from django import forms
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from decimal import Decimal
+
+from ..models import TabelaSeguro, AgendaEntrega, CobrancaCarregamento, Cliente, RomaneioViagem
+from .base import UpperCaseCharField
+
+
+class TabelaSeguroForm(forms.ModelForm):
+    """Formulário para tabela de seguros por estado"""
+    percentual_seguro = forms.DecimalField(
+        label='Percentual de Seguro (%)',
+        max_digits=5,
+        decimal_places=2,
+        min_value=0.00,
+        max_value=100.00,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'min': '0.00',
+            'max': '100.00',
+            'placeholder': '0.00'
+        })
+    )
+    
+    class Meta:
+        model = TabelaSeguro
+        fields = ['estado', 'percentual_seguro']
+        widgets = {
+            'estado': forms.Select(attrs={'class': 'form-control'}),
+        }
+    
+    def clean_percentual_seguro(self):
+        percentual = self.cleaned_data.get('percentual_seguro')
+        if percentual is not None:
+            if percentual < 0:
+                raise ValidationError('O percentual não pode ser negativo.')
+            if percentual > 100:
+                raise ValidationError('O percentual não pode ser maior que 100%.')
+        return percentual
+
+
+class AgendaEntregaForm(forms.ModelForm):
+    """Formulário para agendar entregas de mercadorias"""
+    
+    cliente = forms.ModelChoiceField(
+        queryset=Cliente.objects.filter(status='Ativo').order_by('razao_social'),
+        label='Cliente',
+        empty_label="--- Selecione um cliente ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    data_entrega = forms.DateField(
+        label='Data da Entrega',
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date',
+            'min': timezone.now().date().strftime('%Y-%m-%d')
+        })
+    )
+    
+    empresa_entrega = UpperCaseCharField(
+        label='Empresa que vai Entregar',
+        max_length=255,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Nome da empresa responsável pela entrega'
+        })
+    )
+    
+    quantidade = forms.DecimalField(
+        label='Quantidade',
+        max_digits=10,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Quantidade de mercadorias',
+            'step': '0.01',
+            'min': '0'
+        })
+    )
+    
+    volume = UpperCaseCharField(
+        label='Volume',
+        max_length=100,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ex: 10 caixas, 5 pallets'
+        })
+    )
+    
+    observacoes = forms.CharField(
+        label='Observações',
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Observações adicionais sobre a entrega'
+        })
+    )
+    
+    status = forms.ChoiceField(
+        choices=AgendaEntrega.STATUS_ENTREGA_CHOICES,
+        label='Status da Entrega',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    class Meta:
+        model = AgendaEntrega
+        fields = [
+            'cliente', 'data_entrega', 'empresa_entrega', 
+            'quantidade', 'volume', 'observacoes', 'status'
+        ]
+    
+    def clean_data_entrega(self):
+        data_entrega = self.cleaned_data.get('data_entrega')
+        if data_entrega:
+            if data_entrega < timezone.now().date():
+                raise ValidationError('A data da entrega não pode ser no passado.')
+        return data_entrega
+    
+    def clean_quantidade(self):
+        quantidade = self.cleaned_data.get('quantidade')
+        if quantidade is not None:
+            if quantidade <= 0:
+                raise ValidationError('A quantidade deve ser maior que zero.')
+        return quantidade
+
+
+class CobrancaCarregamentoForm(forms.ModelForm):
+    """Formulário para criar e editar cobranças de carregamento"""
+    
+    class Meta:
+        model = CobrancaCarregamento
+        fields = [
+            'cliente',
+            'romaneios',
+            'valor_carregamento',
+            'valor_cte_manifesto',
+            'data_vencimento',
+            'observacoes',
+        ]
+        widgets = {
+            'cliente': forms.Select(attrs={
+                'class': 'form-select form-select-lg',
+                'required': True
+            }),
+            'romaneios': forms.CheckboxSelectMultiple(attrs={
+                'class': 'form-check-input'
+            }),
+            'valor_carregamento': forms.NumberInput(attrs={
+                'class': 'form-control form-control-lg',
+                'step': '0.01',
+                'min': '0',
+                'placeholder': '0.00',
+                'required': True
+            }),
+            'valor_cte_manifesto': forms.NumberInput(attrs={
+                'class': 'form-control form-control-lg',
+                'step': '0.01',
+                'min': '0',
+                'placeholder': '0.00 (opcional)',
+            }),
+            'data_vencimento': forms.DateInput(attrs={
+                'class': 'form-control form-control-lg',
+                'type': 'date'
+            }),
+            'observacoes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Observações sobre esta cobrança (opcional)'
+            }),
+        }
+        labels = {
+            'cliente': 'Cliente',
+            'romaneios': 'Romaneios',
+            'valor_carregamento': 'Valor Carregamento (R$)',
+            'valor_cte_manifesto': 'Valor CTE/Manifesto (R$)',
+            'data_vencimento': 'Data de Vencimento',
+            'observacoes': 'Observações',
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filtrar apenas clientes ativos
+        self.fields['cliente'].queryset = Cliente.objects.filter(status='Ativo').order_by('razao_social')
+        
+        # Tornar campo valor_cte_manifesto opcional
+        self.fields['valor_cte_manifesto'].required = False
+        
+        # Determinar o cliente para filtrar romaneios
+        cliente_para_filtrar = None
+        
+        # Se for edição, usar o cliente da instância
+        if self.instance and self.instance.pk and self.instance.cliente:
+            cliente_para_filtrar = self.instance.cliente
+        # Se houver dados POST, tentar obter o cliente dos dados
+        elif self.data and 'cliente' in self.data:
+            try:
+                cliente_id = self.data.get('cliente')
+                if cliente_id:
+                    cliente_para_filtrar = Cliente.objects.get(pk=cliente_id)
+            except (Cliente.DoesNotExist, ValueError, TypeError):
+                pass
+        
+        # Definir queryset de romaneios baseado no cliente
+        if cliente_para_filtrar:
+            self.fields['romaneios'].queryset = RomaneioViagem.objects.filter(
+                cliente=cliente_para_filtrar
+            ).order_by('-data_emissao')
+        else:
+            self.fields['romaneios'].queryset = RomaneioViagem.objects.all().order_by('-data_emissao')
+        
+        # Tornar romaneios opcional visualmente, mas validar depois
+        self.fields['romaneios'].required = False
+    
+    def clean_valor_cte_manifesto(self):
+        """Limpa o campo valor_cte_manifesto, convertendo valores vazios para 0.00"""
+        valor = self.cleaned_data.get('valor_cte_manifesto')
+        
+        if valor is None:
+            return Decimal('0.00')
+        
+        if isinstance(valor, str) and valor.strip() == '':
+            return Decimal('0.00')
+        
+        if isinstance(valor, (Decimal, float, int)):
+            return Decimal(str(valor))
+        
+        if isinstance(valor, str):
+            try:
+                return Decimal(valor.strip()) if valor.strip() else Decimal('0.00')
+            except (ValueError, TypeError):
+                return Decimal('0.00')
+        
+        return valor
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        cliente = cleaned_data.get('cliente')
+        romaneios = cleaned_data.get('romaneios')
+        
+        # Validar que pelo menos um romaneio foi selecionado
+        if not romaneios or romaneios.count() == 0:
+            raise ValidationError('Selecione pelo menos um romaneio para esta cobrança.')
+        
+        # Validar que todos os romaneios selecionados pertencem ao cliente escolhido
+        if cliente and romaneios:
+            romaneios_invalidos = romaneios.exclude(cliente=cliente)
+            if romaneios_invalidos.exists():
+                raise ValidationError(
+                    f'Os seguintes romaneios não pertencem ao cliente selecionado: '
+                    f'{", ".join([str(r.codigo) for r in romaneios_invalidos])}'
+                )
+        
+        return cleaned_data
+
+

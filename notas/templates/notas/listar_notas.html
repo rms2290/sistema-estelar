@@ -96,9 +96,9 @@
                                             <th>Data</th>
                                             <th>Fornecedor</th>
                                             <th>Mercadoria</th>
-                                            <th>Quantidade</th>
-                                            <th>Peso (kg)</th>
-                                            <th>Valor (R$)</th>
+                                            <th style="width: 80px; text-align: center;">QUANT.</th>
+                                            <th style="text-align: center;">Peso (kg)</th>
+                                            <th style="text-align: center;">Valor (R$)</th>
                                             <th>Local</th>
                                             <th>Status</th>
                                             <th>Romaneio</th>
@@ -115,9 +115,9 @@
                                                 <td>{{ nota.data|date:"d/m/Y" }}</td>
                                                 <td>{{ nota.fornecedor }}</td>
                                                 <td>{{ nota.mercadoria }}</td>
-                                                <td>{{ nota.quantidade|format_brazilian_quantity }}</td>
-                                                <td>{{ nota.peso|format_brazilian_weight }}</td>
-                                                <td>{{ nota.valor|format_brazilian_currency }}</td>
+                                                <td style="text-align: center;">{{ nota.quantidade|format_brazilian_quantity }}</td>
+                                                <td>{{ nota.peso|format_brazilian_number:2 }}</td>
+                                                <td>{{ nota.valor|format_brazilian_number:2 }}</td>
                                                 <td>
                                                     {% if nota.local %}
                                                         <span class="badge bg-primary">Galpão {{ nota.local }}</span>
@@ -125,24 +125,30 @@
                                                         <span class="text-muted">-</span>
                                                     {% endif %}
                                                 </td>
-                                                <td>{{ nota.status }}</td>
+                                                <td>
+                                                    {% if nota.status %}
+                                                        <span class="badge {% if nota.status == 'Depósito' %}bg-warning{% else %}bg-success{% endif %}">
+                                                            {{ nota.get_status_display }}
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
                                                 <td>
                                                     {% if nota.romaneios_vinculados.all %}
                                                         {% for romaneio in nota.romaneios_vinculados.all %}
-                                                            <a href="{% url 'notas:detalhes_romaneio' romaneio.pk %}">{{ romaneio.codigo }}</a>{% if not forloop.last %}<br>{% endif %}
+                                                            <span class="badge {% if romaneio.status == 'Salvo' %}bg-warning{% elif romaneio.status == 'Emitido' %}bg-success{% else %}bg-secondary{% endif %}">
+                                                                <a href="{% url 'notas:detalhes_romaneio' romaneio.pk %}" style="color: white; text-decoration: none;">{{ romaneio.codigo }}</a>
+                                                            </span>{% if not forloop.last %}<br>{% endif %}
                                                         {% endfor %}
                                                     {% else %}
-                                                        N/A
+                                                        <span class="badge bg-secondary">N/A</span>
                                                     {% endif %}
                                                 </td>
                                                 <td>
                                                     <a href="{% url 'notas:detalhes_nota_fiscal' nota.pk %}" 
                                                        class="btn btn-info btn-sm" title="Ver Detalhes">
                                                         <i class="fas fa-eye"></i>
-                                                    </a>
-                                                    <a href="{% url 'notas:editar_nota_fiscal' nota.pk %}" 
-                                                       class="btn btn-warning btn-sm" title="Editar">
-                                                        <i class="fas fa-edit"></i>
                                                     </a>
                                                 </td>
                                             </tr>

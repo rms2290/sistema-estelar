@@ -1,0 +1,28 @@
+# Dependências de Desenvolvimento e Testes
+# Instalar com: pip install -r requirements-dev.txt
+
+# Incluir dependências de produção
+-r requirements.txt
+
+# Framework de Testes
+pytest==8.3.4
+pytest-django==4.9.0
+pytest-cov==6.0.0
+pytest-mock==3.14.0
+
+# Factories para criar objetos de teste
+factory-boy==3.3.1
+
+# Cobertura de Código
+coverage==7.6.1
+
+# Utilitários de Teste
+freezegun==1.5.1  # Para mockar datas/horas
+responses==0.25.2  # Para mockar requisições HTTP
+
+# Qualidade de Código (opcional)
+flake8==7.1.1
+black==24.8.0
+isort==5.13.2
+
+

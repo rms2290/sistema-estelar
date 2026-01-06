@@ -162,4 +162,37 @@ FORMATOS_MOEDA = {
     'separador_milhares': '.',
     'separador_decimal': ',',
     'casas_decimais': 2,
-} 
+}
+
+# ============================================================================
+# CONSTANTES DE VALIDAÇÃO
+# ============================================================================
+
+# Tamanhos de documentos
+TAMANHO_CNPJ = 14
+TAMANHO_CPF = 11
+TAMANHO_PLACA = 7
+TAMANHO_CHASSI = 17
+TAMANHO_RENAVAM = 11
+TAMANHO_CNH = 11
+TAMANHO_CEP = 8
+
+# Limites de tentativas
+MAX_TENTATIVAS_CODIGO_ROMANEIO = 5
+MAX_TENTATIVAS_LOGIN = 5
+TEMPO_LIMITE_LOGIN_MINUTOS = 1
+
+# Capacidades de veículos (em kg)
+CAPACIDADES_VEICULOS = {
+    'Carro': 1000,
+    'Van': 1500,
+    'Caminhão': 10000,
+    'Cavalo': 25000,
+    'Reboque': 25000,
+    'Semi-reboque': 25000,
+}
+
+# Percentuais padrão
+PERCENTUAL_SEGURO_PADRAO = 0.00
+PERCENTUAL_SEGURO_MIN = 0.00
+PERCENTUAL_SEGURO_MAX = 100.00 

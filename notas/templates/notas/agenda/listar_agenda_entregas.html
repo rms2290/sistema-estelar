@@ -46,16 +46,16 @@
                                            class="form-control" value="{{ data_fim }}">
                                 </div>
                                 
-                                <!-- Espaçamento vertical -->
-                                <div style="margin-bottom: 1rem;"></div>
-                                
-                                <button type="submit" class="btn btn-info mr-2">
-                                    <i class="fas fa-search"></i> Filtrar
-                                </button>
-                                
-                                <a href="{% url 'notas:listar_agenda_entregas' %}" class="btn btn-secondary">
-                                    <i class="fas fa-times"></i> Limpar
-                                </a>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-search"></i> Filtrar
+                                        </button>
+                                        <a href="{% url 'notas:listar_agenda_entregas' %}" class="btn btn-secondary">
+                                            <i class="fas fa-times"></i> Limpar Filtros
+                                        </a>
+                                    </div>
+                                </div>
                             </form>
                         </div>
                     </div>

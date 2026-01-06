@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 from decouple import config
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -9,12 +10,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-*ohrq*rm$#a2pee2%f@5jwt9xed%z&96yidu382^=u9!m!3lhi')
+# SECRET_KEY é OBRIGATÓRIA - deve estar no arquivo .env
+# Para desenvolvimento, gere uma nova chave: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+try:
+    SECRET_KEY = config('SECRET_KEY')
+except Exception as e:
+    raise ImproperlyConfigured(
+        f"SECRET_KEY não encontrada! Crie um arquivo .env na raiz do projeto com SECRET_KEY=...\n"
+        f"Para gerar uma chave: python -c \"from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())\"\n"
+        f"Erro: {e}"
+    )
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*', cast=lambda v: [s.strip() for s in v.split(',')])
+# ALLOWED_HOSTS - Lista de hosts permitidos
+# Em desenvolvimento: localhost,127.0.0.1
+# Em produção: seus domínios reais
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',') if s.strip()])
 
 # Application definition
 
@@ -143,6 +156,10 @@ STATICFILES_DIRS = [
 
 # Configuração do WhiteNoise para servir arquivos estáticos
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Configurações de mídia (upload de arquivos)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

@@ -60,9 +60,14 @@
         }
         
         .table th {
-            background-color: #f0f0f0;
+            background-color: #e0e0e0;
             font-weight: bold;
             font-size: 10px;
+        }
+        
+        .table thead th {
+            background-color: #e0e0e0 !important;
+            color: #000 !important;
         }
         
         .table-striped tbody tr:nth-of-type(odd) {
@@ -73,8 +78,11 @@
             border: 1px solid #000;
         }
         
+        .table thead th,
+        .table-primary thead th,
         .table-success thead th {
-            background-color: #d4edda;
+            background-color: #e0e0e0 !important;
+            color: #000 !important;
         }
         
         .table-secondary {
@@ -186,6 +194,17 @@
             
             .table th {
                 font-size: 9px;
+                background-color: #e0e0e0 !important;
+                color: #000 !important;
+            }
+            
+            .table thead th,
+            .table-primary thead th,
+            .table-success thead th {
+                background-color: #e0e0e0 !important;
+                color: #000 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
             
             .row {
