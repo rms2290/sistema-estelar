@@ -141,6 +141,7 @@ urlpatterns = [
     path('fluxo-caixa/movimento-bancario/<int:pk>/excluir/', views.excluir_movimento_bancario, name='excluir_movimento_bancario'),
     path('fluxo-caixa/controle-saldo/<int:pk>/atualizar/', views.atualizar_controle_saldo, name='atualizar_controle_saldo'),
     path('fluxo-caixa/funcionario/criar-ajax/', views.criar_funcionario_ajax, name='criar_funcionario_ajax'),
+    path('fluxo-caixa/movimento-caixa/', views.movimento_caixa, name='movimento_caixa'),
     # URLs para Acerto Diário de Carregamento
     path('fluxo-caixa/acerto-diario/', views.acerto_diario_carregamento, name='acerto_diario_carregamento'),
     path('fluxo-caixa/acerto-diario/listar/', views.listar_acertos_diarios, name='listar_acertos_diarios'),
@@ -149,6 +150,21 @@ urlpatterns = [
     path('fluxo-caixa/acerto-diario/carregamento/<int:pk>/remover/', views.remover_carregamento_cliente_ajax, name='remover_carregamento_cliente_ajax'),
     path('fluxo-caixa/acerto-diario/distribuicao/adicionar/', views.adicionar_distribuicao_funcionario_ajax, name='adicionar_distribuicao_funcionario_ajax'),
     path('fluxo-caixa/acerto-diario/distribuicao/<int:pk>/remover/', views.remover_distribuicao_funcionario_ajax, name='remover_distribuicao_funcionario_ajax'),
+    path('fluxo-caixa/acerto-diario/valor-estelar/salvar/', views.salvar_valor_estelar_ajax, name='salvar_valor_estelar_ajax'),
+    # URLs para Gerenciamento de Movimento de Caixa
+    path('fluxo-caixa/gerenciar-movimento-caixa/', views.gerenciar_movimento_caixa, name='gerenciar_movimento_caixa'),
+    path('fluxo-caixa/iniciar-periodo/', views.iniciar_periodo_movimento_caixa, name='iniciar_periodo_movimento_caixa'),
+    path('fluxo-caixa/pesquisar-periodo/', views.pesquisar_periodo_movimento_caixa, name='pesquisar_periodo_movimento_caixa'),
+    path('fluxo-caixa/periodo/<int:pk>/visualizar/', views.visualizar_periodo_movimento_caixa, name='visualizar_periodo_movimento_caixa'),
+    path('api/fluxo-caixa/periodo/<int:pk>/fechar/', views.fechar_periodo_movimento_caixa_ajax, name='fechar_periodo_movimento_caixa_ajax'),
+    path('api/fluxo-caixa/periodo/<int:pk>/editar/', views.editar_periodo_movimento_caixa_ajax, name='editar_periodo_movimento_caixa_ajax'),
+    path('api/fluxo-caixa/periodo/<int:pk>/obter/', views.obter_periodo_movimento_caixa_ajax, name='obter_periodo_movimento_caixa_ajax'),
+    path('api/fluxo-caixa/periodo/<int:pk>/excluir/', views.excluir_periodo_movimento_caixa_ajax, name='excluir_periodo_movimento_caixa_ajax'),
+    path('fluxo-caixa/movimento-caixa/criar/', views.criar_movimento_caixa_ajax, name='criar_movimento_caixa_ajax'),
+    path('fluxo-caixa/movimento-caixa/<int:pk>/editar/', views.editar_movimento_caixa_ajax, name='editar_movimento_caixa_ajax'),
+    path('fluxo-caixa/movimento-caixa/<int:pk>/excluir/', views.excluir_movimento_caixa_ajax, name='excluir_movimento_caixa_ajax'),
+    path('fluxo-caixa/movimento-caixa/<int:pk>/obter/', views.obter_movimento_caixa_ajax, name='obter_movimento_caixa_ajax'),
+    path('fluxo-caixa/funcionario/<int:funcionario_id>/acumulado/', views.obter_acumulado_funcionario_ajax, name='obter_acumulado_funcionario_ajax'),
     
     # URLs para gerenciamento de despesas de carregamento (comentadas - views não implementadas)
     # path('romaneios/<int:romaneio_id>/despesas/', views.gerenciar_despesas_romaneio, name='gerenciar_despesas_romaneio'),

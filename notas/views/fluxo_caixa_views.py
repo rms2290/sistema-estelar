@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.db.models import Sum, Q
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.urls import reverse
 from decimal import Decimal
 from datetime import datetime, timedelta
 
@@ -17,7 +18,8 @@ from ..models import (
     MovimentoBancario, ControleSaldoSemanal, CobrancaCarregamento,
     Usuario, Cliente, FuncionarioFluxoCaixa,
     AcertoDiarioCarregamento, CarregamentoCliente,
-    DistribuicaoFuncionario, AcumuladoFuncionario
+    DistribuicaoFuncionario, AcumuladoFuncionario,
+    MovimentoCaixa, PeriodoMovimentoCaixa
 )
 
 
@@ -485,39 +487,117 @@ def acerto_diario_carregamento(request):
         except AcertoDiarioCarregamento.DoesNotExist:
             return JsonResponse({'error': 'Acerto não encontrado'}, status=404)
     
-    # Obter data selecionada (hoje por padrão)
-    data_selecionada = request.GET.get('data', timezone.now().date().isoformat())
+    # Verificar se deve mostrar o formulário de edição/criação
+    mostrar_formulario = request.GET.get('novo') == '1' or request.GET.get('acerto_id')
+    acerto_id = request.GET.get('acerto_id')
+    novo_acerto = request.GET.get('novo') == '1'
     
-    try:
-        data_obj = datetime.strptime(data_selecionada, '%Y-%m-%d').date()
-    except:
+    # Se não for para mostrar formulário, mostrar lista com filtros
+    if not mostrar_formulario:
+        # Filtros de pesquisa
+        data_inicio = request.GET.get('data_inicio', '')
+        data_fim = request.GET.get('data_fim', '')
+        
+        # Buscar acertos
+        acertos = AcertoDiarioCarregamento.objects.all().order_by('-data')
+        
+        # Aplicar filtros
+        if data_inicio:
+            try:
+                data_inicio_obj = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+                acertos = acertos.filter(data__gte=data_inicio_obj)
+            except:
+                pass
+        
+        if data_fim:
+            try:
+                data_fim_obj = datetime.strptime(data_fim, '%Y-%m-%d').date()
+                acertos = acertos.filter(data__lte=data_fim_obj)
+            except:
+                pass
+        
+        context = {
+            'acertos': acertos,
+            'data_inicio': data_inicio,
+            'data_fim': data_fim,
+            'mostrar_lista': True,
+        }
+        
+        return render(request, 'notas/fluxo_caixa/acerto_diario_carregamento.html', context)
+    
+    # Se for para mostrar formulário, buscar ou criar acerto
+    if acerto_id:
+        # Editar acerto existente
+        try:
+            acerto = AcertoDiarioCarregamento.objects.get(pk=acerto_id)
+            data_obj = acerto.data
+        except AcertoDiarioCarregamento.DoesNotExist:
+            acerto = None
+            data_obj = timezone.now().date()
+    elif novo_acerto:
+        # Novo acerto - obter data selecionada (se não informada, não criar ainda)
+        data_selecionada = request.GET.get('data', '')
+        if data_selecionada:
+            try:
+                data_obj = datetime.strptime(data_selecionada, '%Y-%m-%d').date()
+                # Verificar se já existe acerto para esta data
+                acerto_existente = AcertoDiarioCarregamento.objects.filter(data=data_obj).first()
+                if acerto_existente:
+                    # Se já existe, redirecionar para edição deste acerto (não criar novo)
+                    return redirect('{}?acerto_id={}'.format(
+                        reverse('notas:acerto_diario_carregamento'),
+                        acerto_existente.pk
+                    ))
+                else:
+                    # Criar novo acerto vazio (sem carregamentos ou distribuições)
+                    acerto = AcertoDiarioCarregamento.objects.create(
+                        data=data_obj,
+                        valor_estelar=Decimal('0.00'),
+                        observacoes='',
+                        usuario_criacao=request.user
+                    )
+                    # Após criar, redirecionar para edição do novo acerto (garantindo que está vazio)
+                    return redirect('{}?acerto_id={}'.format(
+                        reverse('notas:acerto_diario_carregamento'),
+                        acerto.pk
+                    ))
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f'Erro ao criar novo acerto: {str(e)}', exc_info=True)
+                acerto = None
+                data_obj = None
+        else:
+            # Ainda não escolheu a data - mostrar apenas o seletor de data
+            acerto = None
+            data_obj = None
+    else:
+        # Fallback - não deveria chegar aqui
+        acerto = None
         data_obj = timezone.now().date()
     
-    # Buscar ou criar acerto do dia
-    acerto, created = AcertoDiarioCarregamento.objects.get_or_create(
-        data=data_obj,
-        defaults={
-            'valor_estelar': Decimal('0.00'),
-            'usuario_criacao': request.user
-        }
-    )
-    
-    # Buscar carregamentos e distribuições
-    # Ordenar: primeiro carregamentos (com cliente), depois descargas (sem cliente)
-    carregamentos = list(CarregamentoCliente.objects.filter(
-        acerto_diario=acerto
-    ).select_related('cliente'))
-    
-    # Ordenar manualmente: clientes primeiro (por nome), depois descargas (por descrição)
-    carregamentos.sort(key=lambda x: (
-        0 if x.cliente else 1,  # Carregamentos primeiro (0), descargas depois (1)
-        x.cliente.razao_social if x.cliente else '',
-        x.descricao or ''
-    ))
-    
-    distribuicoes = DistribuicaoFuncionario.objects.filter(
-        acerto_diario=acerto
-    ).select_related('funcionario').order_by('funcionario__nome')
+    # Buscar carregamentos e distribuições (apenas se houver acerto)
+    # IMPORTANTE: Sempre buscar do acerto específico para garantir que não há dados de outro acerto
+    if acerto:
+        # Buscar carregamentos APENAS deste acerto específico
+        carregamentos = list(CarregamentoCliente.objects.filter(
+            acerto_diario_id=acerto.pk  # Usar ID explícito para garantir
+        ).select_related('cliente'))
+        
+        # Ordenar manualmente: clientes primeiro (por nome), depois descargas (por descrição)
+        carregamentos.sort(key=lambda x: (
+            0 if x.cliente else 1,  # Carregamentos primeiro (0), descargas depois (1)
+            x.cliente.razao_social if x.cliente else '',
+            x.descricao or ''
+        ))
+        
+        # Buscar distribuições APENAS deste acerto específico
+        distribuicoes = list(DistribuicaoFuncionario.objects.filter(
+            acerto_diario_id=acerto.pk  # Usar ID explícito para garantir
+        ).select_related('funcionario').order_by('funcionario__nome'))
+    else:
+        carregamentos = []
+        distribuicoes = []
     
     # Buscar clientes e funcionários para os selects
     clientes = Cliente.objects.filter(status='Ativo').order_by('razao_social')
@@ -525,11 +605,13 @@ def acerto_diario_carregamento(request):
     
     context = {
         'acerto': acerto,
-        'data_selecionada': data_obj,
+        'data_selecionada': acerto.data if acerto else (data_obj if data_obj else None),
         'carregamentos': carregamentos,
         'distribuicoes': distribuicoes,
         'clientes': clientes,
         'funcionarios': funcionarios,
+        'mostrar_formulario': True,
+        'novo_acerto': novo_acerto and not acerto,  # Se é novo e ainda não tem acerto
     }
     
     return render(request, 'notas/fluxo_caixa/acerto_diario_carregamento.html', context)
@@ -538,37 +620,83 @@ def acerto_diario_carregamento(request):
 @login_required
 @admin_required
 def salvar_acerto_diario(request):
-    """Salva o acerto diário (via AJAX)"""
+    """Salva o acerto diário e cria movimentos de caixa automaticamente"""
     
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
     
     try:
         data = request.POST.get('data')
-        valor_estelar = Decimal(request.POST.get('valor_estelar', '0.00'))
         observacoes = request.POST.get('observacoes', '')
         
         acerto, created = AcertoDiarioCarregamento.objects.get_or_create(
             data=data,
             defaults={
-                'valor_estelar': valor_estelar,
+                'valor_estelar': Decimal('0.00'),
                 'observacoes': observacoes,
                 'usuario_criacao': request.user
             }
         )
         
         if not created:
-            acerto.valor_estelar = valor_estelar
+            # Não sobrescrever valor_estelar, pois ele é gerenciado via AJAX
             acerto.observacoes = observacoes
             acerto.save()
         
+        # Verificar se há período ativo
+        periodo_ativo = PeriodoMovimentoCaixa.objects.filter(status='Aberto').order_by('-criado_em').first()
+        if not periodo_ativo:
+            return JsonResponse({
+                'success': False,
+                'message': 'É necessário iniciar um período antes de salvar o acerto. Clique em "Iniciar Período" na página de gerenciamento.'
+            })
+        
+        # Criar movimentos de caixa automaticamente
+        # Primeiro, remover movimentos antigos deste acerto (se houver)
+        MovimentoCaixa.objects.filter(acerto_diario=acerto).delete()
+        
+        # NOTA: Carregamentos de clientes NÃO entram na lista de controle
+        # Apenas distribuições para funcionários e valor Estelar entram
+        
+        # 1. Criar saída para valor Estelar (se houver)
+        if acerto.valor_estelar and acerto.valor_estelar > 0:
+            MovimentoCaixa.objects.create(
+                data=acerto.data,
+                tipo='Saida',
+                valor=acerto.valor_estelar,
+                descricao=f"Valor Estelar - Acerto Diário {acerto.data.strftime('%d/%m/%Y')}",
+                categoria='Outros',
+                acerto_diario=acerto,
+                periodo=periodo_ativo,  # Associar ao período ativo
+                usuario_criacao=request.user
+            )
+        
+        # 2. Criar ENTRADAS (positivas) para cada distribuição de funcionário
+        # As distribuições para funcionários entram como AcertoFuncionario (valor positivo)
+        distribuicoes = DistribuicaoFuncionario.objects.filter(acerto_diario=acerto)
+        for distribuicao in distribuicoes:
+            MovimentoCaixa.objects.create(
+                data=acerto.data,
+                tipo='AcertoFuncionario',  # Tipo específico para acerto de funcionário (entrada positiva)
+                valor=distribuicao.valor,
+                descricao=f"Acerto Funcionário: {distribuicao.funcionario.nome} - Acerto Diário {acerto.data.strftime('%d/%m/%Y')}",
+                categoria=None,  # AcertoFuncionario não usa categoria
+                funcionario=distribuicao.funcionario,
+                acerto_diario=acerto,
+                periodo=periodo_ativo,  # Associar ao período ativo
+                usuario_criacao=request.user
+            )
+        
         return JsonResponse({
             'success': True,
-            'message': 'Acerto salvo com sucesso!',
+            'message': 'Acerto salvo com sucesso! Movimentos de caixa criados automaticamente.',
             'acerto_id': acerto.pk
         })
         
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f'Erro ao salvar acerto diário: {str(e)}', exc_info=True)
         return JsonResponse({
             'success': False,
             'message': f'Erro ao salvar acerto: {str(e)}'
@@ -731,4 +859,812 @@ def remover_distribuicao_funcionario_ajax(request, pk):
             'success': False,
             'message': f'Erro ao remover distribuição: {str(e)}'
         })
+
+
+@login_required
+@admin_required
+def movimento_caixa(request):
+    """Lista todos os movimentos de caixa (funcionários e bancários)"""
+    
+    # Filtros
+    data_inicio = request.GET.get('data_inicio', '')
+    data_fim = request.GET.get('data_fim', '')
+    tipo = request.GET.get('tipo', '')  # 'funcionario', 'bancario', ou vazio para todos
+    
+    # Buscar movimentos de funcionários
+    movimentos_funcionarios = MovimentoCaixaFuncionario.objects.all().select_related(
+        'caixa_funcionario__funcionario'
+    ).order_by('-data', '-id')
+    
+    # Buscar movimentos bancários
+    movimentos_bancarios = MovimentoBancario.objects.all().order_by('-data', '-id')
+    
+    # Aplicar filtros de data
+    if data_inicio:
+        try:
+            data_inicio_obj = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            movimentos_funcionarios = movimentos_funcionarios.filter(data__gte=data_inicio_obj)
+            movimentos_bancarios = movimentos_bancarios.filter(data__gte=data_inicio_obj)
+        except:
+            pass
+    
+    if data_fim:
+        try:
+            data_fim_obj = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            movimentos_funcionarios = movimentos_funcionarios.filter(data__lte=data_fim_obj)
+            movimentos_bancarios = movimentos_bancarios.filter(data__lte=data_fim_obj)
+        except:
+            pass
+    
+    # Aplicar filtro de tipo
+    if tipo == 'funcionario':
+        movimentos_bancarios = movimentos_bancarios.none()
+    elif tipo == 'bancario':
+        movimentos_funcionarios = movimentos_funcionarios.none()
+    
+    # Combinar e ordenar todos os movimentos
+    movimentos_combinados = []
+    
+    for mov in movimentos_funcionarios:
+        movimentos_combinados.append({
+            'tipo': 'funcionario',
+            'data': mov.data,
+            'descricao': mov.descricao,
+            'valor': mov.valor,
+            'funcionario': mov.caixa_funcionario.funcionario.nome if mov.caixa_funcionario.funcionario else 'N/A',
+            'id': mov.id,
+            'objeto': mov
+        })
+    
+    for mov in movimentos_bancarios:
+        movimentos_combinados.append({
+            'tipo': 'bancario',
+            'data': mov.data,
+            'descricao': mov.descricao,
+            'valor': mov.valor if mov.tipo == 'Credito' else -mov.valor,  # Negativo para débitos
+            'tipo_movimento': mov.tipo,
+            'id': mov.id,
+            'objeto': mov
+        })
+    
+    # Ordenar por data (mais recente primeiro)
+    movimentos_combinados.sort(key=lambda x: (x['data'], x['id']), reverse=True)
+    
+    # Calcular total
+    total = sum(mov['valor'] for mov in movimentos_combinados)
+    
+    context = {
+        'movimentos': movimentos_combinados,
+        'total': total,
+        'data_inicio': data_inicio,
+        'data_fim': data_fim,
+        'tipo_selecionado': tipo,
+    }
+    
+    return render(request, 'notas/fluxo_caixa/movimento_caixa.html', context)
+
+
+@login_required
+@admin_required
+def salvar_valor_estelar_ajax(request):
+    """Salva o valor Estelar via AJAX"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+    
+    try:
+        acerto_id = request.POST.get('acerto_id')
+        valor = Decimal(request.POST.get('valor', '0.00'))
+        
+        acerto = get_object_or_404(AcertoDiarioCarregamento, pk=acerto_id)
+        
+        if valor < 0:
+            return JsonResponse({'success': False, 'message': 'Valor não pode ser negativo'})
+        
+        acerto.valor_estelar = valor
+        acerto.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Valor Estelar salvo com sucesso!',
+            'valor': str(valor)
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao salvar valor Estelar: {str(e)}'
+        })
+
+
+@login_required
+@admin_required
+def gerenciar_movimento_caixa(request):
+    """Tela principal para gerenciar movimentos de caixa"""
+    
+    # Buscar período ativo (aberto) com contagem de movimentos
+    periodo_ativo = PeriodoMovimentoCaixa.objects.filter(status='Aberto').order_by('-criado_em').first()
+    if periodo_ativo:
+        # Anotar contagem de movimentos para uso no template
+        periodo_ativo._movimentos_count = periodo_ativo.movimentos.count()
+    
+    # Filtros
+    data_inicio = request.GET.get('data_inicio', '')
+    data_fim = request.GET.get('data_fim', '')
+    tipo = request.GET.get('tipo', '')
+    categoria = request.GET.get('categoria', '')
+    periodo_id = request.GET.get('periodo_id', '')
+    
+    # Se houver período ativo e não foi especificado outro período, usar o ativo
+    if periodo_ativo and not periodo_id:
+        periodo_id = str(periodo_ativo.pk)
+    
+    # Buscar movimentos (ordenados do mais antigo para o mais novo)
+    if periodo_id:
+        try:
+            periodo_selecionado = PeriodoMovimentoCaixa.objects.get(pk=periodo_id)
+            movimentos = MovimentoCaixa.objects.filter(
+                periodo=periodo_selecionado
+            ).select_related(
+                'funcionario', 'cliente', 'acerto_diario', 'usuario_criacao', 'periodo'
+            ).order_by('data', 'criado_em')  # Ordem crescente: mais antigo primeiro
+        except PeriodoMovimentoCaixa.DoesNotExist:
+            movimentos = MovimentoCaixa.objects.none()
+            periodo_selecionado = None
+    else:
+        movimentos = MovimentoCaixa.objects.none()
+        periodo_selecionado = None
+    
+    # Aplicar filtros adicionais
+    if data_inicio:
+        try:
+            data_inicio_obj = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            movimentos = movimentos.filter(data__gte=data_inicio_obj)
+        except:
+            pass
+    
+    if data_fim:
+        try:
+            data_fim_obj = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            movimentos = movimentos.filter(data__lte=data_fim_obj)
+        except:
+            pass
+    
+    if tipo:
+        movimentos = movimentos.filter(tipo=tipo)
+    
+    if categoria:
+        movimentos = movimentos.filter(categoria=categoria)
+    
+    # Se houver período selecionado, calcular saldo considerando valor inicial
+    if periodo_selecionado:
+        valor_inicial = periodo_selecionado.valor_inicial_caixa
+    else:
+        valor_inicial = Decimal('0.00')
+    
+    # Calcular saldo acumulado para cada movimento (para exibição na lista)
+    # Movimentos já estão ordenados do mais antigo para o mais novo
+    movimentos_lista = list(movimentos)
+    
+    # Calcular saldo acumulado do mais antigo para o mais recente
+    saldo_acumulado = valor_inicial
+    movimentos_com_saldo = []
+    
+    for mov in movimentos_lista:
+        if mov.is_entrada:
+            saldo_acumulado += mov.valor
+        else:
+            saldo_acumulado -= mov.valor
+        movimentos_com_saldo.append({
+            'movimento': mov,
+            'saldo_acumulado': saldo_acumulado
+        })
+    
+    # Calcular totais
+    total_entradas = sum(mov.valor for mov in movimentos if mov.is_entrada)
+    total_saidas = sum(mov.valor for mov in movimentos if mov.is_saida)
+    saldo = valor_inicial + total_entradas - total_saidas
+    
+    # Buscar funcionários e clientes para os selects
+    funcionarios = FuncionarioFluxoCaixa.objects.filter(ativo=True).order_by('nome')
+    clientes = Cliente.objects.filter(status='Ativo').order_by('razao_social')
+    
+    # Buscar todos os períodos para o select
+    periodos = PeriodoMovimentoCaixa.objects.all().order_by('-data_inicio', '-criado_em')
+    
+    context = {
+        'periodo_ativo': periodo_ativo,
+        'periodo_selecionado': periodo_selecionado,
+        'periodos': periodos,
+        'movimentos': movimentos,
+        'movimentos_com_saldo': movimentos_com_saldo,
+        'total_entradas': total_entradas,
+        'total_saidas': total_saidas,
+        'valor_inicial_caixa': valor_inicial,
+        'saldo': saldo,
+        'funcionarios': funcionarios,
+        'clientes': clientes,
+        'data_inicio': data_inicio,
+        'data_fim': data_fim,
+        'tipo_selecionado': tipo,
+        'categoria_selecionada': categoria,
+        'periodo_id': periodo_id,
+        'tipos': MovimentoCaixa.TIPO_CHOICES,
+        'categorias_entrada': MovimentoCaixa.CATEGORIA_ENTRADA_CHOICES,
+        'categorias_saida': MovimentoCaixa.CATEGORIA_SAIDA_CHOICES,
+    }
+    
+    return render(request, 'notas/fluxo_caixa/gerenciar_movimento_caixa.html', context)
+
+
+@login_required
+@admin_required
+def criar_movimento_caixa_ajax(request):
+    """Cria um novo movimento de caixa via AJAX"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+    
+    try:
+        # Verificar se há período ativo
+        periodo_ativo = PeriodoMovimentoCaixa.objects.filter(status='Aberto').order_by('-criado_em').first()
+        if not periodo_ativo:
+            return JsonResponse({
+                'success': False,
+                'message': 'É necessário iniciar um período antes de criar movimentos. Clique em "Iniciar Período".'
+            })
+        
+        data = request.POST.get('data')
+        tipo = request.POST.get('tipo')
+        valor = Decimal(request.POST.get('valor', '0.00'))
+        descricao = request.POST.get('descricao', '')
+        categoria = request.POST.get('categoria', '')
+        funcionario_id = request.POST.get('funcionario_id', '') or None
+        cliente_id = request.POST.get('cliente_id', '') or None
+        acerto_diario_id = request.POST.get('acerto_diario_id', '') or None
+        
+        if not data or not tipo or valor <= 0:
+            return JsonResponse({'success': False, 'message': 'Dados inválidos'})
+        
+        # Validar categoria baseado no tipo
+        if tipo == 'Entrada' and categoria and categoria not in [c[0] for c in MovimentoCaixa.CATEGORIA_ENTRADA_CHOICES]:
+            return JsonResponse({'success': False, 'message': 'Categoria inválida para entrada'})
+        if tipo == 'Saida' and categoria and categoria not in [c[0] for c in MovimentoCaixa.CATEGORIA_SAIDA_CHOICES]:
+            return JsonResponse({'success': False, 'message': 'Categoria inválida para saída'})
+        
+        movimento = MovimentoCaixa.objects.create(
+            data=data,
+            tipo=tipo,
+            valor=valor,
+            descricao=descricao,
+            categoria=categoria or None,
+            funcionario_id=funcionario_id,
+            cliente_id=cliente_id,
+            acerto_diario_id=acerto_diario_id,
+            periodo=periodo_ativo,  # Associar ao período ativo
+            usuario_criacao=request.user
+        )
+        
+        # Se for acerto de funcionário, atualizar acumulado
+        if tipo == 'AcertoFuncionario' and funcionario_id:
+            try:
+                acumulado = AcumuladoFuncionario.objects.filter(
+                    funcionario_id=funcionario_id
+                ).order_by('-data').first()
+                
+                if acumulado:
+                    # Reduzir o acumulado pelo valor acertado
+                    acumulado.valor_acumulado = max(Decimal('0.00'), acumulado.valor_acumulado - valor)
+                    acumulado.save()
+            except Exception as e:
+                # Log do erro mas não impede a criação do movimento
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f'Erro ao atualizar acumulado do funcionário: {str(e)}')
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Movimento criado com sucesso!',
+            'movimento_id': movimento.pk
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao criar movimento: {str(e)}'
+        })
+
+
+@login_required
+@admin_required
+def editar_movimento_caixa_ajax(request, pk):
+    """Edita um movimento de caixa via AJAX"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+    
+    try:
+        movimento = get_object_or_404(MovimentoCaixa, pk=pk)
+        
+        data = request.POST.get('data')
+        tipo = request.POST.get('tipo')
+        valor = Decimal(request.POST.get('valor', '0.00'))
+        descricao = request.POST.get('descricao', '')
+        categoria = request.POST.get('categoria', '')
+        funcionario_id = request.POST.get('funcionario_id', '') or None
+        cliente_id = request.POST.get('cliente_id', '') or None
+        
+        if not data or not tipo or valor <= 0:
+            return JsonResponse({'success': False, 'message': 'Dados inválidos'})
+        
+        # Validar categoria
+        if tipo == 'Entrada' and categoria and categoria not in [c[0] for c in MovimentoCaixa.CATEGORIA_ENTRADA_CHOICES]:
+            return JsonResponse({'success': False, 'message': 'Categoria inválida para entrada'})
+        if tipo == 'Saida' and categoria and categoria not in [c[0] for c in MovimentoCaixa.CATEGORIA_SAIDA_CHOICES]:
+            return JsonResponse({'success': False, 'message': 'Categoria inválida para saída'})
+        
+        # Se for acerto de funcionário e o valor mudou, ajustar acumulado
+        if tipo == 'AcertoFuncionario' and funcionario_id:
+            valor_anterior = movimento.valor
+            diferenca = valor - valor_anterior
+            
+            if diferenca != 0:
+                try:
+                    acumulado = AcumuladoFuncionario.objects.filter(
+                        funcionario_id=funcionario_id
+                    ).order_by('-data').first()
+                    
+                    if acumulado:
+                        # Ajustar o acumulado pela diferença
+                        acumulado.valor_acumulado = max(Decimal('0.00'), acumulado.valor_acumulado - diferenca)
+                        acumulado.save()
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f'Erro ao ajustar acumulado do funcionário: {str(e)}')
+        
+        movimento.data = data
+        movimento.tipo = tipo
+        movimento.valor = valor
+        movimento.descricao = descricao
+        movimento.categoria = categoria or None
+        movimento.funcionario_id = funcionario_id
+        movimento.cliente_id = cliente_id
+        movimento.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Movimento atualizado com sucesso!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao editar movimento: {str(e)}'
+        })
+
+
+@login_required
+@admin_required
+def excluir_movimento_caixa_ajax(request, pk):
+    """Exclui um movimento de caixa via AJAX"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+    
+    try:
+        movimento = get_object_or_404(MovimentoCaixa, pk=pk)
+        
+        # Se for acerto de funcionário, reverter no acumulado
+        if movimento.tipo == 'AcertoFuncionario' and movimento.funcionario:
+            try:
+                acumulado = AcumuladoFuncionario.objects.filter(
+                    funcionario_id=movimento.funcionario_id
+                ).order_by('-data').first()
+                
+                if acumulado:
+                    # Reverter o valor no acumulado
+                    acumulado.valor_acumulado += movimento.valor
+                    acumulado.save()
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f'Erro ao reverter acumulado do funcionário: {str(e)}')
+        
+        movimento.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Movimento excluído com sucesso!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao excluir movimento: {str(e)}'
+        })
+
+
+@login_required
+@admin_required
+def obter_acumulado_funcionario_ajax(request, funcionario_id):
+    """Obtém o valor acumulado de um funcionário via AJAX"""
+    
+    try:
+        acumulado = AcumuladoFuncionario.objects.filter(
+            funcionario_id=funcionario_id
+        ).order_by('-data').first()
+        
+        valor_acumulado = acumulado.valor_acumulado if acumulado else Decimal('0.00')
+        
+        return JsonResponse({
+            'success': True,
+            'valor_acumulado': str(valor_acumulado)
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao obter acumulado: {str(e)}'
+        })
+
+
+@login_required
+@admin_required
+def obter_movimento_caixa_ajax(request, pk):
+    """Obtém dados de um movimento de caixa via AJAX para edição"""
+    
+    try:
+        movimento = get_object_or_404(MovimentoCaixa, pk=pk)
+        
+        return JsonResponse({
+            'success': True,
+            'data': movimento.data.strftime('%Y-%m-%d'),
+            'tipo': movimento.tipo,
+            'valor': str(movimento.valor),
+            'descricao': movimento.descricao,
+            'categoria': movimento.categoria or '',
+            'funcionario_id': movimento.funcionario_id or '',
+            'cliente_id': movimento.cliente_id or '',
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao obter movimento: {str(e)}'
+        })
+
+
+@login_required
+@admin_required
+def iniciar_periodo_movimento_caixa(request):
+    """Inicia um novo período de movimento de caixa"""
+    
+    if request.method == 'POST':
+        try:
+            data_inicio = request.POST.get('data_inicio', '')
+            valor_inicial = Decimal(request.POST.get('valor_inicial_caixa', '0.00'))
+            observacoes = request.POST.get('observacoes', '').strip()
+            
+            if not data_inicio:
+                messages.error(request, 'Data de início é obrigatória.')
+                return redirect('notas:gerenciar_movimento_caixa')
+            
+            # Verificar se já existe período aberto
+            periodo_aberto = PeriodoMovimentoCaixa.objects.filter(status='Aberto').first()
+            if periodo_aberto:
+                from django.utils import formats
+                periodo_nome = periodo_aberto.data_inicio.strftime('%d/%m/%Y') if not periodo_aberto.nome else periodo_aberto.nome
+                messages.warning(request, f'Já existe um período aberto: {periodo_nome}. Feche-o antes de iniciar um novo.')
+                return redirect('notas:gerenciar_movimento_caixa')
+            
+            # Criar novo período (nome será gerado automaticamente pelo __str__)
+            periodo = PeriodoMovimentoCaixa.objects.create(
+                nome=None,  # Nome será gerado automaticamente pela data de início
+                data_inicio=data_inicio,
+                valor_inicial_caixa=valor_inicial,
+                observacoes=observacoes or None,
+                status='Aberto',
+                usuario_criacao=request.user
+            )
+            
+            periodo_nome = periodo.data_inicio.strftime('%d/%m/%Y')
+            messages.success(request, f'Período de {periodo_nome} iniciado com sucesso!')
+            # Redirecionar para a página de gerenciamento com o período recém-criado selecionado
+            return redirect(f"{reverse('notas:gerenciar_movimento_caixa')}?periodo_id={periodo.pk}")
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f'Erro ao iniciar período: {str(e)}', exc_info=True)
+            messages.error(request, f'Erro ao iniciar período: {str(e)}')
+            return redirect('notas:gerenciar_movimento_caixa')
+    
+    # GET - mostrar formulário
+    return render(request, 'notas/fluxo_caixa/iniciar_periodo_movimento_caixa.html', {
+        'data_inicio': timezone.now().date().isoformat()
+    })
+
+
+@login_required
+@admin_required
+def fechar_periodo_movimento_caixa_ajax(request, pk):
+    """Fecha um período de movimento de caixa via AJAX"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+    
+    try:
+        periodo = get_object_or_404(PeriodoMovimentoCaixa, pk=pk)
+        
+        if periodo.status == 'Fechado':
+            return JsonResponse({'success': False, 'message': 'Período já está fechado'})
+        
+        periodo.fechar_periodo()
+        
+        periodo_nome = periodo.data_inicio.strftime('%d/%m/%Y')
+        return JsonResponse({
+            'success': True,
+            'message': f'Período de {periodo_nome} fechado com sucesso!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao fechar período: {str(e)}'
+        })
+
+
+@login_required
+@admin_required
+def editar_periodo_movimento_caixa_ajax(request, pk):
+    """Edita um período de movimento de caixa via AJAX"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+    
+    try:
+        periodo = get_object_or_404(PeriodoMovimentoCaixa, pk=pk)
+        
+        # Verificar se o período tem movimentos associados
+        if periodo.movimentos.exists():
+            return JsonResponse({
+                'success': False,
+                'message': 'Não é possível editar um período que já possui movimentos cadastrados.'
+            })
+        
+        data_inicio = request.POST.get('data_inicio', '')
+        valor_inicial = Decimal(request.POST.get('valor_inicial_caixa', '0.00'))
+        observacoes = request.POST.get('observacoes', '').strip()
+        
+        if not data_inicio:
+            return JsonResponse({'success': False, 'message': 'Data de início é obrigatória.'})
+        
+        periodo.data_inicio = data_inicio
+        periodo.valor_inicial_caixa = valor_inicial
+        periodo.observacoes = observacoes or None
+        periodo.save()
+        
+        periodo_nome = periodo.data_inicio.strftime('%d/%m/%Y')
+        return JsonResponse({
+            'success': True,
+            'message': f'Período de {periodo_nome} atualizado com sucesso!'
+        })
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f'Erro ao editar período: {str(e)}', exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao editar período: {str(e)}'
+        })
+
+
+@login_required
+@admin_required
+def obter_periodo_movimento_caixa_ajax(request, pk):
+    """Obtém dados de um período de movimento de caixa via AJAX para edição"""
+    
+    try:
+        periodo = get_object_or_404(PeriodoMovimentoCaixa, pk=pk)
+        
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'data_inicio': periodo.data_inicio.strftime('%Y-%m-%d'),
+                'valor_inicial_caixa': str(periodo.valor_inicial_caixa),
+                'observacoes': periodo.observacoes or '',
+                'status': periodo.status,
+                'tem_movimentos': periodo.movimentos.exists()
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao obter período: {str(e)}'
+        })
+
+
+@login_required
+@admin_required
+def excluir_periodo_movimento_caixa_ajax(request, pk):
+    """Exclui um período de movimento de caixa via AJAX"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+    
+    try:
+        periodo = get_object_or_404(PeriodoMovimentoCaixa, pk=pk)
+        
+        # Verificar se o período tem movimentos associados
+        if periodo.movimentos.exists():
+            return JsonResponse({
+                'success': False,
+                'message': 'Não é possível excluir um período que possui movimentos cadastrados. Primeiro exclua ou mova os movimentos.'
+            })
+        
+        periodo_nome = periodo.data_inicio.strftime('%d/%m/%Y')
+        periodo.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Período de {periodo_nome} excluído com sucesso!'
+        })
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f'Erro ao excluir período: {str(e)}', exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao excluir período: {str(e)}'
+        })
+
+
+@login_required
+@admin_required
+def pesquisar_periodo_movimento_caixa(request):
+    """Página para pesquisar e listar períodos de movimento de caixa"""
+    
+    # Filtros
+    data_inicio = request.GET.get('data_inicio', '')
+    data_fim = request.GET.get('data_fim', '')
+    status = request.GET.get('status', '')
+    
+    # Buscar períodos
+    periodos = PeriodoMovimentoCaixa.objects.all()
+    
+    # Aplicar filtros
+    if data_inicio:
+        try:
+            data_inicio_obj = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            periodos = periodos.filter(data_inicio__gte=data_inicio_obj)
+        except:
+            pass
+    
+    if data_fim:
+        try:
+            data_fim_obj = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            periodos = periodos.filter(data_inicio__lte=data_fim_obj)
+        except:
+            pass
+    
+    if status:
+        periodos = periodos.filter(status=status)
+    
+    # Ordenar por data de início (mais recente primeiro)
+    periodos = periodos.order_by('-data_inicio', '-criado_em')
+    
+    # Anotar contagem de movimentos para cada período
+    for periodo in periodos:
+        periodo._movimentos_count = periodo.movimentos_caixa.count()
+        periodo._total_entradas = periodo.total_entradas
+        periodo._total_saidas = periodo.total_saidas
+        periodo._saldo_atual = periodo.saldo_atual
+    
+    context = {
+        'periodos': periodos,
+        'data_inicio': data_inicio,
+        'data_fim': data_fim,
+        'status_selecionado': status,
+        'status_choices': PeriodoMovimentoCaixa.STATUS_CHOICES,
+    }
+    
+    return render(request, 'notas/fluxo_caixa/pesquisar_periodos.html', context)
+
+
+@login_required
+@admin_required
+def pesquisar_periodo_movimento_caixa(request):
+    """Página para pesquisar e listar períodos de movimento de caixa"""
+    
+    # Filtros
+    data_inicio = request.GET.get('data_inicio', '')
+    data_fim = request.GET.get('data_fim', '')
+    status = request.GET.get('status', '')
+    
+    # Buscar períodos
+    periodos = PeriodoMovimentoCaixa.objects.all()
+    
+    # Aplicar filtros
+    if data_inicio:
+        try:
+            data_inicio_obj = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            periodos = periodos.filter(data_inicio__gte=data_inicio_obj)
+        except:
+            pass
+    
+    if data_fim:
+        try:
+            data_fim_obj = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            periodos = periodos.filter(data_inicio__lte=data_fim_obj)
+        except:
+            pass
+    
+    if status:
+        periodos = periodos.filter(status=status)
+    
+    # Ordenar por data de início (mais recente primeiro)
+    periodos = periodos.order_by('-data_inicio', '-criado_em')
+    
+    # Os dados serão acessados via propriedades do modelo
+    # Não é necessário anotar, pois o modelo já tem as propriedades
+    
+    context = {
+        'periodos': periodos,
+        'data_inicio': data_inicio,
+        'data_fim': data_fim,
+        'status_selecionado': status,
+        'status_choices': PeriodoMovimentoCaixa.STATUS_CHOICES,
+    }
+    
+    return render(request, 'notas/fluxo_caixa/pesquisar_periodos.html', context)
+
+
+@login_required
+@admin_required
+def visualizar_periodo_movimento_caixa(request, pk):
+    """Visualiza detalhes de um período de movimento de caixa"""
+    
+    periodo = get_object_or_404(PeriodoMovimentoCaixa, pk=pk)
+    
+    # Buscar movimentos do período
+    movimentos = MovimentoCaixa.objects.filter(
+        periodo=periodo
+    ).select_related(
+        'funcionario', 'cliente', 'acerto_diario', 'usuario_criacao'
+    ).order_by('data', 'criado_em')
+    
+    # Calcular saldo acumulado
+    movimentos_com_saldo = []
+    saldo_acumulado = periodo.valor_inicial_caixa
+    
+    for mov in movimentos:
+        if mov.is_entrada:
+            saldo_acumulado += mov.valor
+        else:
+            saldo_acumulado -= mov.valor
+        movimentos_com_saldo.append({
+            'movimento': mov,
+            'saldo_acumulado': saldo_acumulado
+        })
+    
+    # Calcular totais
+    total_entradas = sum(mov.valor for mov in movimentos if mov.is_entrada)
+    total_saidas = sum(mov.valor for mov in movimentos if mov.is_saida)
+    saldo = periodo.valor_inicial_caixa + total_entradas - total_saidas
+    
+    context = {
+        'periodo': periodo,
+        'movimentos_com_saldo': movimentos_com_saldo,
+        'total_entradas': total_entradas,
+        'total_saidas': total_saidas,
+        'valor_inicial_caixa': periodo.valor_inicial_caixa,
+        'saldo': saldo,
+        'total_movimentos': movimentos.count(),
+    }
+    
+    return render(request, 'notas/fluxo_caixa/visualizar_periodo_movimento_caixa.html', context)
 

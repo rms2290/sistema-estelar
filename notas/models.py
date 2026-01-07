@@ -71,7 +71,7 @@ class UpperCaseMixin:
                         'email', 'password', 'username', 'cpf', 'cnpj', 
                         'cnh', 'chassi', 'renavam', 'placa', 'cep',
                         'telefone', 'rntrc', 'numero_consulta', 'tipo_usuario',
-                        'status', 'rg'  # Adicionado para não converter status e RG para maiúsculo
+                        'status', 'rg', 'tipo', 'categoria'  # Adicionado tipo e categoria para não converter
                     ]
                     if field.name not in exclude_fields:
                         setattr(self, field.name, value.upper())
@@ -2901,5 +2901,285 @@ class ControleSaldoSemanal(UpperCaseMixin, models.Model):
     
     def __str__(self):
         return f"Controle Semanal - {self.semana_inicio} a {self.semana_fim}"
+
+
+class MovimentoCaixa(UpperCaseMixin, models.Model):
+    """
+    Modelo unificado para gerenciamento de todos os movimentos de caixa.
+    
+    Consolida acertos de funcionários, entradas e saídas de dinheiro
+    em uma única estrutura para facilitar o controle e relatórios.
+    """
+    
+    TIPO_CHOICES = [
+        ('AcertoFuncionario', 'Acerto de Funcionário'),
+        ('Entrada', 'Entrada de Dinheiro'),
+        ('Saida', 'Saída de Dinheiro'),
+    ]
+    
+    # Categorias para Entradas
+    CATEGORIA_ENTRADA_CHOICES = [
+        ('RecebimentoCliente', 'Recebimento de Cliente'),
+        ('Venda', 'Venda'),
+        ('Reembolso', 'Reembolso'),
+        ('Outros', 'Outros'),
+    ]
+    
+    # Categorias para Saídas
+    CATEGORIA_SAIDA_CHOICES = [
+        ('Combustivel', 'Combustível'),
+        ('Manutencao', 'Manutenção'),
+        ('Alimentacao', 'Alimentação'),
+        ('Pedagio', 'Pedágio'),
+        ('Multa', 'Multa'),
+        ('Salario', 'Salário'),
+        ('Fornecedor', 'Fornecedor'),
+        ('Imposto', 'Imposto'),
+        ('Outros', 'Outros'),
+    ]
+    
+    data = models.DateField(verbose_name="Data")
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPO_CHOICES,
+        verbose_name="Tipo de Movimento"
+    )
+    valor = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Valor (R$)"
+    )
+    descricao = models.TextField(verbose_name="Descrição")
+    
+    # Categoria (usada para Entradas e Saídas)
+    categoria = models.CharField(
+        max_length=30,
+        blank=True,
+        null=True,
+        verbose_name="Categoria"
+    )
+    
+    def get_categoria_display(self):
+        """Retorna o display da categoria baseado no tipo"""
+        if not self.categoria:
+            return '-'
+        
+        if self.tipo == 'Entrada':
+            for val, label in self.CATEGORIA_ENTRADA_CHOICES:
+                if val == self.categoria:
+                    return label
+        elif self.tipo == 'Saida':
+            for val, label in self.CATEGORIA_SAIDA_CHOICES:
+                if val == self.categoria:
+                    return label
+        
+        return self.categoria
+    
+    # Relacionamentos opcionais
+    funcionario = models.ForeignKey(
+        'FuncionarioFluxoCaixa',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='movimentos_caixa',
+        verbose_name="Funcionário"
+    )
+    
+    acerto_diario = models.ForeignKey(
+        'AcertoDiarioCarregamento',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='movimentos_caixa',
+        verbose_name="Acerto Diário"
+    )
+    
+    cliente = models.ForeignKey(
+        'Cliente',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='movimentos_caixa',
+        verbose_name="Cliente"
+    )
+    
+    # Período de movimento de caixa
+    periodo = models.ForeignKey(
+        'PeriodoMovimentoCaixa',
+        on_delete=models.PROTECT,
+        related_name='movimentos',
+        null=True,
+        blank=True,
+        verbose_name="Período",
+        help_text="Período ao qual este movimento pertence"
+    )
+    
+    # Controle e auditoria
+    usuario_criacao = models.ForeignKey(
+        'Usuario',
+        on_delete=models.PROTECT,
+        related_name='movimentos_caixa_criados',
+        verbose_name="Usuário que Criou"
+    )
+    criado_em = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Data de Criação"
+    )
+    atualizado_em = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Data de Atualização"
+    )
+    
+    class Meta:
+        verbose_name = "Movimento de Caixa"
+        verbose_name_plural = "Movimentos de Caixa"
+        ordering = ['-data', '-criado_em']
+        indexes = [
+            models.Index(fields=['data', 'tipo']),
+            models.Index(fields=['tipo', 'categoria']),
+            models.Index(fields=['funcionario', 'data']),
+        ]
+    
+    def __str__(self):
+        tipo_display = self.get_tipo_display()
+        if self.funcionario:
+            return f"{tipo_display} - {self.funcionario.nome} - {self.data} - R$ {self.valor}"
+        return f"{tipo_display} - {self.data} - R$ {self.valor}"
+    
+    @property
+    def valor_formatado(self):
+        """Retorna o valor formatado como moeda brasileira"""
+        return f"R$ {self.valor:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+    
+    @property
+    def is_entrada(self):
+        """Retorna True se for uma entrada"""
+        return self.tipo in ['AcertoFuncionario', 'Entrada']
+    
+    @property
+    def is_saida(self):
+        """Retorna True se for uma saída"""
+        return self.tipo == 'Saida'
+
+
+class PeriodoMovimentoCaixa(UpperCaseMixin, models.Model):
+    """
+    Representa um período de controle de movimentos de caixa.
+    
+    Permite iniciar um novo período com um valor inicial em caixa
+    e controlar todos os movimentos dentro desse período.
+    """
+    
+    STATUS_CHOICES = [
+        ('Aberto', 'Aberto'),
+        ('Fechado', 'Fechado'),
+    ]
+    
+    nome = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="Nome do Período",
+        help_text="Opcional. Se não informado, será gerado automaticamente pela data de início."
+    )
+    
+    data_inicio = models.DateField(verbose_name="Data de Início")
+    data_fim = models.DateField(
+        verbose_name="Data de Fim",
+        null=True,
+        blank=True,
+        help_text="Opcional. Deixe em branco se o período ainda está aberto."
+    )
+    
+    valor_inicial_caixa = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        verbose_name="Valor Inicial em Caixa (R$)",
+        help_text="Valor inicial disponível em caixa no início do período"
+    )
+    
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default='Aberto',
+        verbose_name="Status"
+    )
+    
+    observacoes = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Observações"
+    )
+    
+    usuario_criacao = models.ForeignKey(
+        'Usuario',
+        on_delete=models.PROTECT,
+        related_name='periodos_movimento_caixa_criados',
+        verbose_name="Usuário que Criou"
+    )
+    
+    criado_em = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Data de Criação"
+    )
+    atualizado_em = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Data de Atualização"
+    )
+    
+    class Meta:
+        verbose_name = "Período de Movimento de Caixa"
+        verbose_name_plural = "Períodos de Movimento de Caixa"
+        ordering = ['-data_inicio', '-criado_em']
+        indexes = [
+            models.Index(fields=['status', 'data_inicio']),
+        ]
+    
+    def __str__(self):
+        if self.nome:
+            return f"{self.nome} - {self.data_inicio.strftime('%d/%m/%Y')}"
+        return f"Período de {self.data_inicio.strftime('%d/%m/%Y')}"
+    
+    @property
+    def total_entradas(self):
+        """Calcula o total de entradas do período"""
+        from django.db.models import Sum
+        from decimal import Decimal
+        total = MovimentoCaixa.objects.filter(
+            periodo=self,
+            tipo__in=['AcertoFuncionario', 'Entrada']
+        ).aggregate(total=Sum('valor'))['total'] or Decimal('0.00')
+        return total
+    
+    @property
+    def total_saidas(self):
+        """Calcula o total de saídas do período"""
+        from django.db.models import Sum
+        from decimal import Decimal
+        total = MovimentoCaixa.objects.filter(
+            periodo=self,
+            tipo='Saida'
+        ).aggregate(total=Sum('valor'))['total'] or Decimal('0.00')
+        return total
+    
+    @property
+    def saldo_atual(self):
+        """Calcula o saldo atual (inicial + entradas - saídas)"""
+        return self.valor_inicial_caixa + self.total_entradas - self.total_saidas
+    
+    @property
+    def movimentos_count(self):
+        """Retorna a contagem de movimentos do período"""
+        return self.movimentos.count()
+    
+    def fechar_periodo(self):
+        """Fecha o período"""
+        if self.status == 'Aberto':
+            self.status = 'Fechado'
+            if not self.data_fim:
+                from django.utils import timezone
+                self.data_fim = timezone.now().date()
+            self.save()
 
 
