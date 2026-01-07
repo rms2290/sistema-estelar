@@ -44,7 +44,7 @@ class RomaneioViagemForm(forms.ModelForm):
 
     # Composição veicular
     veiculo_principal = forms.ModelChoiceField(
-        queryset=Veiculo.objects.filter(tipo_unidade__in=['CARRO', 'VAN', 'CAMINHÃO', 'CAVALO']).order_by('placa'),
+        queryset=Veiculo.objects.all().order_by('placa'),
         label='Veículo Principal',
         required=True,
         empty_label="--- Selecione o veículo principal ---",
@@ -52,16 +52,16 @@ class RomaneioViagemForm(forms.ModelForm):
     )
     
     reboque_1 = forms.ModelChoiceField(
-        queryset=Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque', 'REBOQUE', 'SEMI-REBOQUE', 'reboque', 'semi-reboque']).order_by('placa'),
-        label='Reboque 1 (Opcional)',
+        queryset=Veiculo.objects.filter(tipo_unidade__iexact='Reboque').order_by('placa'),
+        label='Reboque 1',
         required=False,
         empty_label="--- Selecione o reboque 1 ---",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
     
     reboque_2 = forms.ModelChoiceField(
-        queryset=Veiculo.objects.filter(tipo_unidade__in=['Reboque', 'Semi-reboque', 'REBOQUE', 'SEMI-REBOQUE', 'reboque', 'semi-reboque']).order_by('placa'),
-        label='Reboque 2 (Opcional)',
+        queryset=Veiculo.objects.filter(tipo_unidade__iexact='Reboque').order_by('placa'),
+        label='Reboque 2',
         required=False,
         empty_label="--- Selecione o reboque 2 ---",
         widget=forms.Select(attrs={'class': 'form-control'})
@@ -78,9 +78,9 @@ class RomaneioViagemForm(forms.ModelForm):
         self.fields['cliente'].queryset = Cliente.objects.filter(status='Ativo').order_by('razao_social')
         self.fields['motorista'].queryset = Motorista.objects.all().order_by('nome')
         self.fields['veiculo_principal'].queryset = Veiculo.objects.filter(tipo_unidade__in=['CARRO', 'VAN', 'CAMINHÃO', 'CAVALO']).order_by('placa')
-        tipos_reboque = ['Reboque', 'Semi-reboque', 'REBOQUE', 'SEMI-REBOQUE', 'reboque', 'semi-reboque']
-        self.fields['reboque_1'].queryset = Veiculo.objects.filter(tipo_unidade__in=tipos_reboque).order_by('placa')
-        self.fields['reboque_2'].queryset = Veiculo.objects.filter(tipo_unidade__in=tipos_reboque).order_by('placa')
+        # Usar iexact para buscar reboques (pode estar em maiúsculas devido ao UpperCaseMixin)
+        self.fields['reboque_1'].queryset = Veiculo.objects.filter(tipo_unidade__iexact='Reboque').order_by('placa')
+        self.fields['reboque_2'].queryset = Veiculo.objects.filter(tipo_unidade__iexact='Reboque').order_by('placa')
 
         # Lógica para edição
         if self.instance and self.instance.pk:
@@ -204,16 +204,15 @@ class RomaneioViagemForm(forms.ModelForm):
                         f"mas é necessário selecionar 2 reboques."
                     )
         
-        # Validar se os reboques são do tipo correto
-        tipos_reboque_validos = ['Reboque', 'Semi-reboque', 'REBOQUE', 'SEMI-REBOQUE', 'reboque', 'semi-reboque']
-        if reboque_1 and reboque_1.tipo_unidade not in tipos_reboque_validos:
+        # Validar reboques (comparação case-insensitive devido ao UpperCaseMixin)
+        if reboque_1 and reboque_1.tipo_unidade.upper() != 'REBOQUE':
             raise forms.ValidationError(
-                f"O veículo {reboque_1.placa} não é um reboque ou semi-reboque válido. Tipo atual: {reboque_1.tipo_unidade}"
+                f"O veículo {reboque_1.placa} não é um reboque válido. Tipo atual: {reboque_1.tipo_unidade}"
             )
         
-        if reboque_2 and reboque_2.tipo_unidade not in tipos_reboque_validos:
+        if reboque_2 and reboque_2.tipo_unidade.upper() != 'REBOQUE':
             raise forms.ValidationError(
-                f"O veículo {reboque_2.placa} não é um reboque ou semi-reboque válido. Tipo atual: {reboque_2.tipo_unidade}"
+                f"O veículo {reboque_2.placa} não é um reboque válido. Tipo atual: {reboque_2.tipo_unidade}"
             )
         
         # Validar se não há reboques duplicados

@@ -22,6 +22,8 @@ urlpatterns = [
     path('clientes/excluir/<int:pk>/', views.excluir_cliente, name='excluir_cliente'),
     path('clientes/<int:pk>/detalhes/', views.detalhes_cliente, name='detalhes_cliente'),
     path('clientes/<int:pk>/toggle-status/', views.toggle_status_cliente, name='toggle_status_cliente'),
+    path('clientes/<int:pk>/imprimir/', views.imprimir_detalhes_cliente, name='imprimir_detalhes_cliente'),
+    path('clientes/imprimir/', views.imprimir_relatorio_clientes, name='imprimir_relatorio_clientes'),
 
 # Novas URLs para Motoristas
     path('motoristas/', views.listar_motoristas, name='listar_motoristas'),
@@ -55,6 +57,9 @@ urlpatterns = [
 
 # URL para filtrar veículos por composição via AJAX
     path('ajax/filtrar-veiculos/', views.filtrar_veiculos_por_composicao, name='ajax_filtrar_veiculos'),
+    
+    # URL para obter tipo de veículo via AJAX
+    path('api/veiculo/<int:veiculo_id>/tipo/', views.obter_tipo_veiculo, name='obter_tipo_veiculo'),
 
 # URL para validar credenciais de administrador via AJAX
     path('ajax/validar-credenciais-admin/', views.validar_credenciais_admin_ajax, name='ajax_validar_credenciais_admin'),
@@ -120,6 +125,9 @@ urlpatterns = [
     path('cobranca-carregamento/relatorio-consolidado/', views.gerar_relatorio_consolidado_cobranca_pdf, name='gerar_relatorio_consolidado_cobranca'),
     path('api/romaneios-cliente/<int:cliente_id>/', views.carregar_romaneios_cliente, name='carregar_romaneios_cliente'),
     path('api/notas/<int:nota_id>/ocorrencia/', views.salvar_ocorrencia_nota_fiscal, name='salvar_ocorrencia_nota_fiscal'),
+    path('api/ocorrencia/<int:ocorrencia_id>/editar/', views.editar_ocorrencia_nota_fiscal, name='editar_ocorrencia_nota_fiscal'),
+    path('api/ocorrencia/<int:ocorrencia_id>/excluir/', views.excluir_ocorrencia_nota_fiscal, name='excluir_ocorrencia_nota_fiscal'),
+    path('api/ocorrencia/<int:ocorrencia_id>/obter/', views.obter_ocorrencia_nota_fiscal, name='obter_ocorrencia_nota_fiscal'),
     
     # URLs para Fluxo de Caixa
     path('fluxo-caixa/', views.dashboard_fluxo_caixa, name='dashboard_fluxo_caixa'),

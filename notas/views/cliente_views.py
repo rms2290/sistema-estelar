@@ -19,6 +19,7 @@ Versão: 2.0
 =============================================================================
 """
 import logging
+from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib import messages
@@ -380,6 +381,46 @@ def detalhes_cliente(request, pk):
 
 
 @login_required
+def imprimir_detalhes_cliente(request, pk):
+    """
+    View para imprimir detalhes de um cliente em nova janela.
+    
+    Args:
+        pk (int): Primary key do cliente
+    
+    Métodos Suportados:
+        - GET: Exibe página de impressão
+    
+    Fluxo:
+        1. Busca cliente por pk (404 se não existir)
+        2. Valida permissão de acesso (clientes só veem seus próprios dados)
+        3. Renderiza template de impressão
+    
+    Template:
+        notas/relatorios/imprimir_detalhes_cliente.html
+    
+    Context:
+        - cliente: Instância do Cliente com todos os dados
+        - data_emissao: Data e hora da emissão do relatório
+    
+    Exemplo de Uso:
+        GET /notas/clientes/1/imprimir/
+    """
+    cliente = get_object_or_404(Cliente, pk=pk)
+    
+    # Validar acesso: clientes só podem ver seus próprios dados
+    if request.user.is_cliente and request.user.cliente != cliente:
+        messages.error(request, 'Acesso negado. Você só pode visualizar seus próprios dados.')
+        return redirect('notas:dashboard')
+    
+    context = {
+        'cliente': cliente,
+        'data_emissao': datetime.now().strftime('%d/%m/%Y %H:%M'),
+    }
+    return render(request, 'notas/relatorios/imprimir_detalhes_cliente.html', context)
+
+
+@login_required
 def toggle_status_cliente(request, pk):
     """
     Alterna o status de um cliente entre 'Ativo' e 'Inativo'.
@@ -483,3 +524,51 @@ def listar_clientes(request):
     }
     return render(request, 'notas/listar_clientes.html', context)
 
+
+@login_required
+def imprimir_relatorio_clientes(request):
+    """
+    View para imprimir relatório de clientes filtrados em nova janela.
+    
+    Recebe os mesmos parâmetros de filtro da view listar_clientes e
+    renderiza um template de impressão com as informações dos clientes.
+    """
+    search_form = ClienteSearchForm(request.GET)
+    clientes = Cliente.objects.none()
+    search_performed = bool(request.GET)
+    
+    razao_social = None
+    cnpj = None
+    status = None
+
+    if search_performed and search_form.is_valid():
+        queryset = Cliente.objects.all()
+        razao_social = search_form.cleaned_data.get('razao_social')
+        cnpj = search_form.cleaned_data.get('cnpj')
+        status = search_form.cleaned_data.get('status')
+
+        if razao_social:
+            queryset = queryset.filter(razao_social__icontains=razao_social)
+        if cnpj:
+            queryset = queryset.filter(cnpj__icontains=cnpj)
+        if status:
+            queryset = queryset.filter(status=status)
+        
+        clientes = queryset.order_by('razao_social')
+    
+    # Informações dos filtros aplicados para exibir no relatório
+    filtros_aplicados = []
+    if razao_social:
+        filtros_aplicados.append(f"Razão Social: {razao_social}")
+    if cnpj:
+        filtros_aplicados.append(f"CNPJ: {cnpj}")
+    if status:
+        filtros_aplicados.append(f"Status: {status}")
+    
+    context = {
+        'clientes': clientes,
+        'filtros_aplicados': filtros_aplicados,
+        'total_clientes': clientes.count(),
+        'data_emissao': datetime.now().strftime('%d/%m/%Y %H:%M'),
+    }
+    return render(request, 'notas/relatorios/imprimir_clientes.html', context)

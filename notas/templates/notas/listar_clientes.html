@@ -53,6 +53,11 @@
                                 <a href="{% url 'notas:listar_clientes' %}" class="btn btn-secondary">
                                     <i class="fas fa-times"></i> Limpar Filtros
                                 </a>
+                                {% if search_performed and clientes %}
+                                <a href="{% url 'notas:imprimir_relatorio_clientes' %}?{{ request.GET.urlencode }}" target="_blank" class="btn btn-primary">
+                                    <i class="fas fa-print"></i> Imprimir Relatório
+                                </a>
+                                {% endif %}
                             </div>
                         </div>
                     </form>

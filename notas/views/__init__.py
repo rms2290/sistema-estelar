@@ -70,6 +70,8 @@ from .cliente_views import (
     excluir_cliente,
     detalhes_cliente,
     toggle_status_cliente,
+    imprimir_relatorio_clientes,
+    imprimir_detalhes_cliente,
 )
 
 from .motorista_views import (
@@ -182,6 +184,10 @@ from .api_views import (
     filtrar_veiculos_por_composicao,
     carregar_romaneios_cliente,
     salvar_ocorrencia_nota_fiscal,
+    editar_ocorrencia_nota_fiscal,
+    excluir_ocorrencia_nota_fiscal,
+    obter_ocorrencia_nota_fiscal,
+    obter_tipo_veiculo,
 )
 
 from .api_fechamento_views import (
@@ -219,6 +225,7 @@ __all__ = [
     # Cliente
     'listar_clientes', 'adicionar_cliente', 'editar_cliente',
     'excluir_cliente', 'detalhes_cliente', 'toggle_status_cliente',
+    'imprimir_relatorio_clientes', 'imprimir_detalhes_cliente',
     # Motorista
     'listar_motoristas', 'adicionar_motorista', 'editar_motorista',
     'excluir_motorista', 'detalhes_motorista', 'adicionar_historico_consulta',
@@ -261,7 +268,7 @@ __all__ = [
     # API/AJAX
     'load_notas_fiscais', 'load_notas_fiscais_edicao', 'load_notas_fiscais_para_romaneio',
     'validar_credenciais_admin_ajax', 'filtrar_veiculos_por_composicao',
-    'carregar_romaneios_cliente', 'salvar_ocorrencia_nota_fiscal',
+    'carregar_romaneios_cliente', 'salvar_ocorrencia_nota_fiscal', 'editar_ocorrencia_nota_fiscal', 'excluir_ocorrencia_nota_fiscal', 'obter_ocorrencia_nota_fiscal', 'obter_tipo_veiculo',
     # Fluxo de Caixa
     'dashboard_fluxo_caixa', 'criar_receita_empresa', 'editar_receita_empresa',
     'excluir_receita_empresa', 'criar_caixa_funcionario', 'acertar_caixa_funcionario',

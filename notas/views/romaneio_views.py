@@ -305,6 +305,10 @@ def detalhes_romaneio(request, pk):
     
     # Notas já foram carregadas via prefetch_related
     notas_romaneadas = romaneio.notas_fiscais.all().order_by('nota')
+    
+    # Garantir que os totais estejam calculados
+    if notas_romaneadas.exists():
+        romaneio.calcular_totais()
 
     context = {
         'romaneio': romaneio,

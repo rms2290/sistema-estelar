@@ -91,7 +91,7 @@
                             <li><a class="dropdown-item" href="{% url 'notas:meus_romaneios' %}">
                                 <i class="fas fa-truck"></i> Meus Romaneios
                             </a></li>
-                            {# <li><a class="dropdown-item" href="{% url 'notas:minhas_cobrancas_carregamento' %}"> #}
+                            <li><a class="dropdown-item" href="{% url 'notas:minhas_cobrancas_carregamento' %}">
                                 <i class="fas fa-truck-loading"></i> Minhas Cobranças
                             </a></li>
                             {% endif %}
@@ -258,6 +258,9 @@
                             <li><a href="{% url 'notas:listar_acertos_diarios' %}">
                                 <i class="fas fa-search"></i> Pesquisar Acertos
                             </a></li>
+                            <li><a href="{% url 'notas:cobranca_carregamento' %}">
+                                <i class="fas fa-truck-loading"></i> Cobrança Carregamento
+                            </a></li>
                         </ul>
                     </li>
                     {% endif %}
@@ -282,9 +285,6 @@
                             <li><a href="{% url 'notas:cobranca_mensal' %}">
                                 <i class="fas fa-calendar-alt"></i> Cobrança Mensal
                             </a></li>
-                            <li><a href="{% url 'notas:cobranca_carregamento' %}">
-                                <i class="fas fa-truck-loading"></i> Cobrança Carregamento
-                            </a></li>
                             <li><a href="{% url 'notas:listar_tabela_seguros' %}">
                                 <i class="fas fa-shield-alt"></i> Tabela de Seguros
                             </a></li>
@@ -292,20 +292,22 @@
                     </li>
                     
                     <!-- Auditoria -->
+                    {% if user.is_admin %}
                     <li class="nav-group">
                         <div class="nav-group-header">
                             <i class="fas fa-clipboard-list"></i>
                             <span>Auditoria</span>
                         </div>
                         <ul class="nav-submenu">
-                            {# <li><a href="{% url 'notas:listar_logs_auditoria' %}"> #}
+                            <li><a href="{% url 'notas:listar_logs_auditoria' %}">
                                 <i class="fas fa-history"></i> Logs de Auditoria
                             </a></li>
-                            {# <li><a href="{% url 'notas:listar_registros_excluidos' %}"> #}
+                            <li><a href="{% url 'notas:listar_registros_excluidos' %}">
                                 <i class="fas fa-trash-restore"></i> Registros Excluídos
                             </a></li>
                         </ul>
                     </li>
+                    {% endif %}
                     
                                        <!-- Usuários -->
                    <li class="nav-item">
@@ -329,7 +331,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        {# <a href="{% url 'notas:minhas_cobrancas_carregamento' %}"> #}
+                        <a href="{% url 'notas:minhas_cobrancas_carregamento' %}">
                             <i class="fas fa-truck-loading"></i> Minhas Cobranças
                         </a>
                     </li>

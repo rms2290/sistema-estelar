@@ -368,23 +368,33 @@ def buscar_mercadorias_deposito(request):
         # Identificar galpões com mercadorias do cliente pesquisado
         if cliente:
             galpoes_com_mercadorias = set()
-            if local or cliente:
-                # Otimizar query com select_related
-                cliente_mercadorias = NotaFiscal.objects.filter(
-                    cliente=cliente, status='Depósito'
-                ).select_related('cliente')
-                for mercadoria in cliente_mercadorias:
-                    if mercadoria.local:
-                        galpoes_com_mercadorias.add(mercadoria.local)
-            else:
-                for mercadoria in mercadorias:
-                    if mercadoria.local and mercadoria.status == 'Depósito':
-                        galpoes_com_mercadorias.add(mercadoria.local)
+            # Otimizar query com select_related
+            cliente_mercadorias = NotaFiscal.objects.filter(
+                cliente=cliente, status='Depósito'
+            ).select_related('cliente')
+            for mercadoria in cliente_mercadorias:
+                if mercadoria.local:
+                    galpoes_com_mercadorias.add(mercadoria.local)
+        elif local:
+            # Quando apenas galpão é selecionado, marcar esse galpão como tendo mercadorias se houver resultados
+            galpoes_com_mercadorias = {local} if list(mercadorias) else set()
+        else:
+            # Busca geral - identificar galpões com mercadorias
+            galpoes_com_mercadorias = set()
+            for mercadoria in mercadorias:
+                if hasattr(mercadoria, 'local') and mercadoria.local:
+                    galpoes_com_mercadorias.add(mercadoria.local)
+    
+    # Preparar dados do formulário para o template
+    form_data = {}
+    if search_form.is_valid():
+        form_data = search_form.cleaned_data
     
     context = {
         'mercadorias': mercadorias,
         'search_form': search_form,
         'search_performed': search_performed,
+        'form_data': form_data,  # Passar dados limpos para o template
         'contagem_galpoes': contagem_galpoes,
         'galpoes_com_mercadorias': list(galpoes_com_mercadorias),
         'galpoes_info': galpoes_info,
@@ -394,11 +404,56 @@ def buscar_mercadorias_deposito(request):
 
 @login_required
 def pesquisar_mercadorias_deposito(request):
-    """Pesquisa mercadorias no depósito (tela vazia para busca)"""
-    search_form = MercadoriaDepositoSearchForm()
-    return render(request, 'notas/pesquisar_mercadorias_deposito.html', {
-        'search_form': search_form
-    })
+    """Pesquisa mercadorias no depósito"""
+    from django.db.models import Sum, Count
+    from decimal import Decimal
+    
+    search_form = MercadoriaDepositoSearchForm(request.GET)
+    mercadorias = NotaFiscal.objects.none()
+    search_performed = bool(request.GET)
+    total_peso = Decimal('0.00')
+    total_valor = Decimal('0.00')
+    
+    if search_performed and search_form.is_valid():
+        # Filtrar apenas notas com status "Depósito"
+        queryset = NotaFiscal.objects.filter(status='Depósito').select_related('cliente')
+        
+        cliente = search_form.cleaned_data.get('cliente')
+        mercadoria = search_form.cleaned_data.get('mercadoria')
+        fornecedor = search_form.cleaned_data.get('fornecedor')
+        data_inicio = search_form.cleaned_data.get('data_inicio')
+        data_fim = search_form.cleaned_data.get('data_fim')
+        
+        if cliente:
+            queryset = queryset.filter(cliente=cliente)
+        if mercadoria:
+            queryset = queryset.filter(mercadoria__icontains=mercadoria)
+        if fornecedor:
+            queryset = queryset.filter(fornecedor__icontains=fornecedor)
+        if data_inicio:
+            queryset = queryset.filter(data__gte=data_inicio)
+        if data_fim:
+            queryset = queryset.filter(data__lte=data_fim)
+        
+        mercadorias = queryset.order_by('data', 'nota')
+        
+        # Calcular totais
+        if mercadorias.exists():
+            totais = mercadorias.aggregate(
+                total_peso=Sum('peso'),
+                total_valor=Sum('valor')
+            )
+            total_peso = totais['total_peso'] or Decimal('0.00')
+            total_valor = totais['total_valor'] or Decimal('0.00')
+    
+    context = {
+        'search_form': search_form,
+        'mercadorias': mercadorias,
+        'search_performed': search_performed,
+        'total_peso': total_peso,
+        'total_valor': total_valor,
+    }
+    return render(request, 'notas/pesquisar_mercadorias_deposito.html', context)
 
 
 @login_required
@@ -527,8 +582,8 @@ def imprimir_relatorio_deposito(request):
 def minhas_cobrancas_carregamento(request):
     """View para clientes verem apenas suas cobranças de carregamento"""
     # Verificar se o usuário é cliente e tem cliente vinculado
-    if not request.user.cliente:
-        messages.error(request, 'Você não possui um cliente vinculado.')
+    if not hasattr(request.user, 'cliente') or not request.user.cliente:
+        messages.error(request, 'Você não possui um cliente vinculado. Entre em contato com o administrador.')
         return redirect('notas:dashboard_cliente')
     
     # Buscar cobranças do cliente
@@ -571,6 +626,11 @@ def gerar_relatorio_cobranca_carregamento_pdf_cliente(request, cobranca_id):
     
     cobranca = get_object_or_404(CobrancaCarregamento, pk=cobranca_id)
     
+    # Verificar se o usuário tem cliente vinculado
+    if not hasattr(request.user, 'cliente') or not request.user.cliente:
+        messages.error(request, 'Você não possui um cliente vinculado.')
+        return redirect('notas:dashboard_cliente')
+    
     # Verificar se a cobrança pertence ao cliente do usuário
     if request.user.cliente != cobranca.cliente:
         messages.error(request, 'Você não tem permissão para acessar esta cobrança.')
@@ -585,45 +645,4 @@ def gerar_relatorio_cobranca_carregamento_pdf_cliente(request, cobranca_id):
     except Exception as e:
         messages.error(request, f'Erro ao gerar PDF: {str(e)}')
         return redirect('notas:minhas_cobrancas_carregamento')
-
-
-@login_required
-@user_passes_test(is_cliente)
-def minhas_cobrancas_carregamento(request):
-    """View para clientes verem apenas suas cobranças de carregamento"""
-    # Verificar se o usuário é cliente e tem cliente vinculado
-    if not request.user.cliente:
-        messages.error(request, 'Você não possui um cliente vinculado.')
-        return redirect('notas:dashboard_cliente')
-    
-    # Buscar cobranças do cliente
-    cobrancas = CobrancaCarregamento.objects.filter(
-        cliente=request.user.cliente
-    ).select_related('cliente').prefetch_related('romaneios').order_by('-criado_em')
-    
-    # Aplicar filtros
-    status_filter = request.GET.get('status', '')
-    data_inicio = request.GET.get('data_inicio', '')
-    data_fim = request.GET.get('data_fim', '')
-    
-    if status_filter:
-        cobrancas = cobrancas.filter(status=status_filter)
-    
-    if data_inicio:
-        try:
-            data_inicio_obj = datetime.strptime(data_inicio, '%Y-%m-%d').date()
-            cobrancas = cobrancas.filter(criado_em__gte=data_inicio_obj)
-        except ValueError:
-            pass
-    
-    if data_fim:
-        try:
-            data_fim_obj = datetime.strptime(data_fim, '%Y-%m-%d').date()
-            cobrancas = cobrancas.filter(criado_em__lte=data_fim_obj)
-        except ValueError:
-            pass
-    
-    return render(request, 'notas/auth/minhas_cobrancas_carregamento.html', {
-        'cobrancas': cobrancas
-    })
 

@@ -62,6 +62,15 @@
                     </tr>
                 {% endfor %}
             </tbody>
+            <tfoot>
+                <tr class="table-info" style="background-color: #e0e0e0 !important; font-weight: bold;">
+                    <td colspan="3"><strong>TOTAL</strong></td>
+                    <td><strong>{{ romaneio.quantidade_total|format_brazilian_quantity }}</strong></td>
+                    <td><strong>{{ romaneio.peso_total|format_brazilian_weight }}</strong></td>
+                    <td><strong>{{ romaneio.valor_total|format_brazilian_currency }}</strong></td>
+                    <td></td>
+                </tr>
+            </tfoot>
         </table>
     </div>
     {% else %}

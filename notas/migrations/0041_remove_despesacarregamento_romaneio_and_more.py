@@ -10,10 +10,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='despesacarregamento',
-            name='romaneio',
-        ),
+        # Nota: Removemos a operação de remover campo 'romaneio' de 'despesacarregamento'
+        # pois o modelo será deletado logo abaixo e essa operação causava conflito
         migrations.RemoveField(
             model_name='cliente',
             name='deleted_at',

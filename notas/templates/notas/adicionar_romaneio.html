@@ -114,7 +114,7 @@
                                 {% if form.veiculo_principal.errors %}<div class="text-danger">{{ form.veiculo_principal.errors }}</div>{% endif %}
                             </div>
                         </div>
-                        <div class="row">
+                        <div class="row align-items-end" id="reboques-container" style="display: none;">
                             <div class="col-md-6 mb-3">
                                 <label for="{{ form.reboque_1.id_for_label }}" class="form-label">
                                     <i class="fas fa-truck-moving"></i> {{ form.reboque_1.label }}:
@@ -122,12 +122,26 @@
                                 {{ form.reboque_1 }}
                                 {% if form.reboque_1.errors %}<div class="text-danger">{{ form.reboque_1.errors }}</div>{% endif %}
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6 mb-3" id="reboque-2-container" style="display: none;">
                                 <label for="{{ form.reboque_2.id_for_label }}" class="form-label">
                                     <i class="fas fa-truck-moving"></i> {{ form.reboque_2.label }}:
                                 </label>
-                                {{ form.reboque_2 }}
-                                {% if form.reboque_2.errors %}<div class="text-danger">{{ form.reboque_2.errors }}</div>{% endif %}
+                                <div class="d-flex gap-2 align-items-end">
+                                    <div class="flex-grow-1">
+                                        {{ form.reboque_2 }}
+                                        {% if form.reboque_2.errors %}<div class="text-danger">{{ form.reboque_2.errors }}</div>{% endif %}
+                                    </div>
+                                    <button type="button" id="btn-remover-reboque-2" class="btn btn-sm btn-outline-danger" title="Remover Reboque 2" style="height: 38px; flex-shrink: 0;">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row" id="btn-adicionar-reboque-2-container" style="display: none;">
+                            <div class="col-md-6 mb-3">
+                                <button type="button" id="btn-adicionar-reboque-2" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-plus"></i> Adicionar Segundo Reboque
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -148,9 +162,163 @@
             const notasFiscaisDiv = document.getElementById('notas-fiscais-container');
             const pesoTotalSpan = document.getElementById('total-peso');
             const valorTotalSpan = document.getElementById('total-valor');
+            const veiculoPrincipalSelect = document.getElementById('id_veiculo_principal');
+            const reboquesContainer = document.getElementById('reboques-container');
+            const reboque1Select = document.getElementById('id_reboque_1');
+            const reboque2Container = document.getElementById('reboque-2-container');
+            const reboque2Select = document.getElementById('id_reboque_2');
+            const btnAdicionarReboque2Container = document.getElementById('btn-adicionar-reboque-2-container');
+            const btnAdicionarReboque2 = document.getElementById('btn-adicionar-reboque-2');
 
             // allLoadedNotesData é global (definido em base.html)
             // updateTotals, loadNotasFiscais são globais (definidos em base.html)
+
+            // Função para verificar se o veículo selecionado é Cavalo
+            function verificarTipoVeiculo() {
+                if (!veiculoPrincipalSelect || !veiculoPrincipalSelect.value) {
+                    // Se não há veículo selecionado, ocultar reboques
+                    if (reboquesContainer) reboquesContainer.style.display = 'none';
+                    if (reboque1Select) reboque1Select.disabled = true;
+                    if (reboque2Container) reboque2Container.style.display = 'none';
+                    if (reboque2Select) reboque2Select.disabled = true;
+                    if (btnAdicionarReboque2Container) btnAdicionarReboque2Container.style.display = 'none';
+                    return;
+                }
+
+                // Buscar o tipo do veículo selecionado via AJAX
+                const veiculoId = veiculoPrincipalSelect.value;
+                const url = `/notas/api/veiculo/${veiculoId}/tipo/`;
+                
+                console.log('Buscando tipo do veículo:', veiculoId, 'URL:', url);
+                
+                fetch(url)
+                    .then(response => {
+                        console.log('Response status:', response.status);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Dados recebidos da API:', data);
+                        // Normalizar o tipo para comparação (pode vir em maiúsculas devido ao UpperCaseMixin)
+                        const tipoVeiculo = (data.tipo_unidade || '').toLowerCase().trim();
+                        console.log('Tipo normalizado:', tipoVeiculo, 'Comparando com: cavalo');
+                        
+                        if (tipoVeiculo === 'cavalo') {
+                            console.log('✓ Veículo é Cavalo, habilitando reboque 1');
+                            // Se for Cavalo, mostrar reboque 1
+                            if (reboquesContainer) {
+                                reboquesContainer.style.display = 'flex';
+                                console.log('✓ Container de reboques exibido');
+                            } else {
+                                console.error('✗ Container de reboques não encontrado!');
+                            }
+                            if (reboque1Select) {
+                                reboque1Select.disabled = false;
+                                reboque1Select.required = false;
+                                console.log('✓ Reboque 1 habilitado');
+                            } else {
+                                console.error('✗ Select de reboque 1 não encontrado!');
+                            }
+                            
+                            // Verificar se reboque 1 já está preenchido para mostrar botão de adicionar reboque 2
+                            if (reboque1Select && reboque1Select.value) {
+                                if (btnAdicionarReboque2Container) btnAdicionarReboque2Container.style.display = 'block';
+                            } else {
+                                if (btnAdicionarReboque2Container) btnAdicionarReboque2Container.style.display = 'none';
+                                if (reboque2Container) reboque2Container.style.display = 'none';
+                                if (reboque2Select) {
+                                    reboque2Select.disabled = true;
+                                    reboque2Select.value = '';
+                                }
+                            }
+                        } else {
+                            // Se não for Cavalo, ocultar reboques
+                            if (reboquesContainer) reboquesContainer.style.display = 'none';
+                            if (reboque1Select) {
+                                reboque1Select.disabled = true;
+                                reboque1Select.value = '';
+                            }
+                            if (reboque2Container) reboque2Container.style.display = 'none';
+                            if (reboque2Select) {
+                                reboque2Select.disabled = true;
+                                reboque2Select.value = '';
+                            }
+                            if (btnAdicionarReboque2Container) btnAdicionarReboque2Container.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro ao buscar tipo do veículo:', error);
+                        // Em caso de erro, ocultar reboques por segurança
+                        if (reboquesContainer) reboquesContainer.style.display = 'none';
+                        if (reboque1Select) reboque1Select.disabled = true;
+                        if (reboque2Container) reboque2Container.style.display = 'none';
+                        if (reboque2Select) reboque2Select.disabled = true;
+                    });
+            }
+
+            // Inicializar campos de reboque como desabilitados
+            if (reboque1Select) {
+                reboque1Select.disabled = true;
+            }
+            if (reboque2Select) {
+                reboque2Select.disabled = true;
+            }
+
+            // Event listener para mudança no veículo principal
+            if (veiculoPrincipalSelect) {
+                veiculoPrincipalSelect.addEventListener('change', function() {
+                    console.log('Veículo principal alterado:', this.value);
+                    verificarTipoVeiculo();
+                });
+                // Verificar na carga inicial se já houver um veículo selecionado
+                if (veiculoPrincipalSelect.value) {
+                    console.log('Verificando tipo do veículo na carga inicial:', veiculoPrincipalSelect.value);
+                    verificarTipoVeiculo();
+                }
+            }
+
+            // Event listener para mudança no reboque 1 (mostrar botão de adicionar reboque 2)
+            if (reboque1Select) {
+                reboque1Select.addEventListener('change', function() {
+                    if (this.value) {
+                        if (btnAdicionarReboque2Container) btnAdicionarReboque2Container.style.display = 'block';
+                    } else {
+                        if (btnAdicionarReboque2Container) btnAdicionarReboque2Container.style.display = 'none';
+                        if (reboque2Container) reboque2Container.style.display = 'none';
+                        if (reboque2Select) {
+                            reboque2Select.disabled = true;
+                            reboque2Select.value = '';
+                        }
+                    }
+                });
+            }
+
+            // Event listener para botão de adicionar reboque 2
+            if (btnAdicionarReboque2) {
+                btnAdicionarReboque2.addEventListener('click', function() {
+                    if (reboque2Container) reboque2Container.style.display = 'block';
+                    if (reboque2Select) {
+                        reboque2Select.disabled = false;
+                        reboque2Select.required = false;
+                    }
+                    if (btnAdicionarReboque2Container) btnAdicionarReboque2Container.style.display = 'none';
+                });
+            }
+
+            // Event listener para botão de remover reboque 2
+            const btnRemoverReboque2 = document.getElementById('btn-remover-reboque-2');
+            if (btnRemoverReboque2) {
+                btnRemoverReboque2.addEventListener('click', function() {
+                    if (reboque2Select) {
+                        reboque2Select.value = '';
+                        reboque2Select.disabled = true;
+                    }
+                    if (reboque2Container) reboque2Container.style.display = 'none';
+                    if (btnAdicionarReboque2Container) btnAdicionarReboque2Container.style.display = 'block';
+                });
+            }
 
             if (clienteSelect) {
                 clienteSelect.addEventListener('change', function() {

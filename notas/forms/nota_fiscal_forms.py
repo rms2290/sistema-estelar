@@ -148,5 +148,21 @@ class MercadoriaDepositoSearchForm(forms.Form):
         max_length=200,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome da Mercadoria'})
     )
+    local = forms.ChoiceField(
+        label='Local/Galpão',
+        required=False,
+        choices=[('', '--- Todos os galpões ---')] + NotaFiscal.LOCAL_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    data_inicio = forms.DateField(
+        label='Data Início',
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+    data_fim = forms.DateField(
+        label='Data Fim',
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
 
 

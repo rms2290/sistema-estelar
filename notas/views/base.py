@@ -75,6 +75,6 @@ def is_funcionario(user):
 
 
 def is_cliente(user):
-    """Verifica se o usuário é cliente (qualquer tipo autenticado)"""
-    return user.is_authenticated and (user.is_admin or user.is_funcionario or user.is_cliente)
+    """Verifica se o usuário é cliente"""
+    return user.is_authenticated and user.is_cliente
 

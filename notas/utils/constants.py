@@ -38,8 +38,8 @@ TIPO_COMPOSICAO_MOTORISTA_CHOICES = [
     ('Carro', 'Carro'),
     ('Van', 'Van'),
     ('Caminhão', 'Caminhão'),
-    ('Carreta', 'Carreta (Cavalo + 1 Reboque/Semi-reboque)'),
-    ('Bitrem', 'Bitrem (Cavalo + 2 Reboques/Semi-reboques)'),
+    ('Carreta', 'Carreta (Cavalo + 1 Reboque)'),
+    ('Bitrem', 'Bitrem (Cavalo + 2 Reboques)'),
 ]
 
 # Tipos de unidade de veículo
@@ -49,7 +49,6 @@ TIPO_UNIDADE_CHOICES = [
     ('Caminhão', 'Caminhão'),
     ('Cavalo', 'Cavalo'),
     ('Reboque', 'Reboque'),
-    ('Semi-reboque', 'Semi-reboque'),
 ]
 
 # Status de cliente
@@ -189,7 +188,6 @@ CAPACIDADES_VEICULOS = {
     'Caminhão': 10000,
     'Cavalo': 25000,
     'Reboque': 25000,
-    'Semi-reboque': 25000,
 }
 
 # Percentuais padrão

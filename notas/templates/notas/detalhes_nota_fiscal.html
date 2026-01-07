@@ -61,11 +61,14 @@
                         <th>Usuário</th>
                         <th>Observações</th>
                         <th>Fotos</th>
+                        {% if user.is_admin or user.is_funcionario %}
+                        <th>Ações</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for ocorrencia in ocorrencias %}
-                    <tr>
+                    <tr id="ocorrencia-row-{{ ocorrencia.pk }}">
                         <td>{{ ocorrencia.data_criacao|date:"d/m/Y H:i" }}</td>
                         <td>{{ ocorrencia.usuario_criacao.username|default:"Sistema" }}</td>
                         <td>{{ ocorrencia.observacoes|linebreaks }}</td>
@@ -82,6 +85,22 @@
                                 <span class="text-muted">-</span>
                             {% endif %}
                         </td>
+                        {% if user.is_admin or user.is_funcionario %}
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-warning btn-editar-ocorrencia" 
+                                        data-ocorrencia-id="{{ ocorrencia.pk }}" 
+                                        title="Editar Ocorrência">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger btn-excluir-ocorrencia" 
+                                        data-ocorrencia-id="{{ ocorrencia.pk }}" 
+                                        title="Excluir Ocorrência">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -168,19 +187,20 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="modalOcorrenciaLabel">
-                        <i class="fas fa-exclamation-triangle"></i> Registrar Ocorrência
+                        <i class="fas fa-exclamation-triangle"></i> <span id="modalOcorrenciaTitulo">Registrar Ocorrência</span>
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="formOcorrencia" enctype="multipart/form-data">
                         {% csrf_token %}
+                        <input type="hidden" id="ocorrencia_id_edicao" value="">
                         <div class="mb-3">
                             <label for="observacoes_ocorrencia" class="form-label">
                                 <i class="fas fa-comment-alt"></i> Observações:
                             </label>
                             <textarea class="form-control" id="observacoes_ocorrencia" name="observacoes" rows="5" 
-                                      placeholder="Descreva a ocorrência relacionada à nota fiscal..."></textarea>
+                                      placeholder="Descreva a ocorrência relacionada à nota fiscal..." required></textarea>
                         </div>
                         <div class="mb-3">
                             <label for="fotos_ocorrencia" class="form-label">
@@ -192,13 +212,14 @@
                                 <i class="fas fa-info-circle"></i> Selecione uma ou mais fotos para anexar à ocorrência. Você pode selecionar múltiplas fotos de uma vez.
                             </small>
                             <div id="preview_fotos" class="mt-2 d-flex flex-wrap gap-2"></div>
+                            <div id="fotos_existentes" class="mt-2"></div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-primary" id="btnSalvarOcorrencia">
-                        <i class="fas fa-save"></i> Salvar Ocorrência
+                        <i class="fas fa-save"></i> <span id="btnSalvarOcorrenciaTexto">Salvar Ocorrência</span>
                     </button>
                 </div>
             </div>
@@ -421,36 +442,102 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalOcorrencia = document.getElementById('modalOcorrencia');
     const notaId = {{ nota.pk }};
 
+    // Array para armazenar os arquivos selecionados
+    let fotosSelecionadas = [];
+    
+    function atualizarPreviewFotos() {
+        previewDiv.innerHTML = '';
+        
+        if (fotosSelecionadas.length > 0) {
+            fotosSelecionadas.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imgDiv = document.createElement('div');
+                    imgDiv.className = 'position-relative';
+                    imgDiv.style.cssText = 'width: 150px; height: 150px; margin-bottom: 10px;';
+                    imgDiv.setAttribute('data-file-index', index);
+                    
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'img-thumbnail';
+                    img.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+                    img.alt = `Preview ${index + 1}`;
+                    
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-secondary position-absolute top-0 start-0';
+                    badge.textContent = `${index + 1}`;
+                    badge.style.cssText = 'font-size: 0.7rem;';
+                    
+                    // Botão de remover
+                    const btnRemover = document.createElement('button');
+                    btnRemover.type = 'button';
+                    btnRemover.className = 'btn btn-danger btn-sm position-absolute top-0 end-0';
+                    btnRemover.style.cssText = 'padding: 2px 6px; font-size: 0.7rem; z-index: 10;';
+                    btnRemover.innerHTML = '<i class="fas fa-times"></i>';
+                    btnRemover.title = 'Remover foto';
+                    btnRemover.onclick = function() {
+                        removerFoto(index);
+                    };
+                    
+                    imgDiv.appendChild(img);
+                    imgDiv.appendChild(badge);
+                    imgDiv.appendChild(btnRemover);
+                    previewDiv.appendChild(imgDiv);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+    }
+    
+    function removerFoto(index) {
+        // Remover do array
+        fotosSelecionadas.splice(index, 1);
+        
+        // Atualizar o input file
+        const dataTransfer = new DataTransfer();
+        fotosSelecionadas.forEach(file => {
+            dataTransfer.items.add(file);
+        });
+        fotosInput.files = dataTransfer.files;
+        
+        // Atualizar preview
+        atualizarPreviewFotos();
+    }
+    
     if (fotosInput && previewDiv) {
         fotosInput.addEventListener('change', function(e) {
-            const files = Array.from(e.target.files);
-            previewDiv.innerHTML = ''; // Limpar previews anteriores
+            const novosArquivos = Array.from(e.target.files);
             
-            if (files.length > 0) {
-                files.forEach((file, index) => {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const imgDiv = document.createElement('div');
-                        imgDiv.className = 'position-relative';
-                        imgDiv.style.cssText = 'width: 150px; height: 150px; margin-bottom: 10px;';
-                        
-                        const img = document.createElement('img');
-                        img.src = e.target.result;
-                        img.className = 'img-thumbnail';
-                        img.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
-                        img.alt = `Preview ${index + 1}`;
-                        
-                        const badge = document.createElement('span');
-                        badge.className = 'badge bg-secondary position-absolute top-0 start-0';
-                        badge.textContent = `${index + 1}`;
-                        badge.style.cssText = 'font-size: 0.7rem;';
-                        
-                        imgDiv.appendChild(img);
-                        imgDiv.appendChild(badge);
-                        previewDiv.appendChild(imgDiv);
-                    };
-                    reader.readAsDataURL(file);
-                });
+            // Adicionar novos arquivos ao array (evitando duplicatas por nome e tamanho)
+            novosArquivos.forEach(novoFile => {
+                const jaExiste = fotosSelecionadas.some(file => 
+                    file.name === novoFile.name && file.size === novoFile.size
+                );
+                if (!jaExiste) {
+                    fotosSelecionadas.push(novoFile);
+                }
+            });
+            
+            // Atualizar o input file com todos os arquivos
+            const dataTransfer = new DataTransfer();
+            fotosSelecionadas.forEach(file => {
+                dataTransfer.items.add(file);
+            });
+            fotosInput.files = dataTransfer.files;
+            
+            // Atualizar preview
+            atualizarPreviewFotos();
+        });
+    }
+    
+    // Limpar array ao abrir modal para nova ocorrência
+    if (modalOcorrencia) {
+        modalOcorrencia.addEventListener('show.bs.modal', function() {
+            const ocorrenciaIdEdicao = document.getElementById('ocorrencia_id_edicao').value;
+            // Se não estiver editando, limpar o array
+            if (!ocorrenciaIdEdicao) {
+                fotosSelecionadas = [];
+                if (previewDiv) previewDiv.innerHTML = '';
             }
         });
     }
@@ -464,20 +551,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (btnSalvarOcorrencia) {
         btnSalvarOcorrencia.addEventListener('click', function() {
+            const ocorrenciaIdEdicao = document.getElementById('ocorrencia_id_edicao').value;
             const observacoes = document.getElementById('observacoes_ocorrencia').value;
             const fotos = document.getElementById('fotos_ocorrencia').files;
 
-            if (!observacoes.trim() && fotos.length === 0) {
-                alert('Por favor, preencha as observações ou anexe pelo menos uma foto.');
+            if (!observacoes.trim()) {
+                alert('Por favor, preencha as observações.');
                 return;
             }
 
             const formData = new FormData();
             formData.append('observacoes', observacoes);
             
-            // Adicionar todas as fotos
-            for (let i = 0; i < fotos.length; i++) {
-                formData.append('fotos', fotos[i]);
+            // Adicionar todas as fotos selecionadas
+            fotosSelecionadas.forEach((foto, index) => {
+                formData.append('fotos', foto);
+            });
+            
+            // Adicionar IDs de fotos a serem removidas (se estiver editando)
+            if (ocorrenciaIdEdicao && window.fotosParaRemover && window.fotosParaRemover.length > 0) {
+                window.fotosParaRemover.forEach(fotoId => {
+                    formData.append('fotos_remover', fotoId);
+                });
             }
             
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
@@ -485,7 +580,16 @@ document.addEventListener('DOMContentLoaded', function() {
             btnSalvarOcorrencia.disabled = true;
             btnSalvarOcorrencia.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...';
 
-            fetch(`/notas/api/notas/${notaId}/ocorrencia/`, {
+            let url;
+            if (ocorrenciaIdEdicao) {
+                // Editar ocorrência existente
+                url = `/notas/api/ocorrencia/${ocorrenciaIdEdicao}/editar/`;
+            } else {
+                // Criar nova ocorrência
+                url = `/notas/api/notas/${notaId}/ocorrencia/`;
+            }
+
+            fetch(url, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': csrfToken,
@@ -496,19 +600,212 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     alert(data.message);
-                    location.reload(); // Recarregar página para mostrar nova ocorrência
+                    location.reload(); // Recarregar página para mostrar alterações
                 } else {
                     alert('Erro: ' + (data.message || 'Erro ao salvar ocorrência'));
                     btnSalvarOcorrencia.disabled = false;
-                    btnSalvarOcorrencia.innerHTML = '<i class="fas fa-save"></i> Salvar Ocorrência';
+                    btnSalvarOcorrencia.innerHTML = '<i class="fas fa-save"></i> <span id="btnSalvarOcorrenciaTexto">Salvar Ocorrência</span>';
                 }
             })
             .catch(error => {
                 console.error('Erro:', error);
                 alert('Erro ao salvar ocorrência. Tente novamente.');
                 btnSalvarOcorrencia.disabled = false;
-                btnSalvarOcorrencia.innerHTML = '<i class="fas fa-save"></i> Salvar Ocorrência';
+                btnSalvarOcorrencia.innerHTML = '<i class="fas fa-save"></i> <span id="btnSalvarOcorrenciaTexto">Salvar Ocorrência</span>';
             });
+        });
+    }
+
+    // Botões de editar ocorrência
+    document.querySelectorAll('.btn-editar-ocorrencia').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const ocorrenciaId = this.getAttribute('data-ocorrencia-id');
+            
+            // Inicializar array de fotos para remover
+            window.fotosParaRemover = [];
+            
+            // Obter dados da ocorrência
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            fetch(`/notas/api/ocorrencia/${ocorrenciaId}/obter/`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Preencher formulário
+                    document.getElementById('ocorrencia_id_edicao').value = data.ocorrencia.id;
+                    document.getElementById('observacoes_ocorrencia').value = data.ocorrencia.observacoes;
+                    document.getElementById('modalOcorrenciaTitulo').textContent = 'Editar Ocorrência';
+                    document.getElementById('btnSalvarOcorrenciaTexto').textContent = 'Atualizar Ocorrência';
+                    
+                    // Limpar array de fotos selecionadas
+                    fotosSelecionadas = [];
+                    
+                    // Array para armazenar IDs de fotos a serem removidas
+                    window.fotosParaRemover = [];
+                    
+                    // Mostrar fotos existentes
+                    const fotosExistentesDiv = document.getElementById('fotos_existentes');
+                    fotosExistentesDiv.innerHTML = '';
+                    if (data.ocorrencia.fotos && data.ocorrencia.fotos.length > 0) {
+                        const fotosTitle = document.createElement('p');
+                        fotosTitle.className = 'mb-2 fw-bold';
+                        fotosTitle.textContent = 'Fotos existentes (clique no X para remover):';
+                        fotosExistentesDiv.appendChild(fotosTitle);
+                        
+                        const fotosContainer = document.createElement('div');
+                        fotosContainer.className = 'd-flex flex-wrap gap-2';
+                        
+                        data.ocorrencia.fotos.forEach((foto, index) => {
+                            const fotoDiv = document.createElement('div');
+                            fotoDiv.className = 'position-relative';
+                            fotoDiv.style.cssText = 'width: 150px; height: 150px;';
+                            fotoDiv.setAttribute('data-foto-id', foto.id);
+                            
+                            const fotoImg = document.createElement('img');
+                            fotoImg.src = foto.url;
+                            fotoImg.className = 'img-thumbnail';
+                            fotoImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover; cursor: pointer;';
+                            fotoImg.title = 'Clique para ver em tamanho maior';
+                            fotoImg.onclick = function() {
+                                window.open(foto.url, '_blank');
+                            };
+                            
+                            const badge = document.createElement('span');
+                            badge.className = 'badge bg-info position-absolute top-0 start-0';
+                            badge.textContent = `${index + 1}`;
+                            badge.style.cssText = 'font-size: 0.7rem;';
+                            
+                            // Botão de remover
+                            const btnRemover = document.createElement('button');
+                            btnRemover.type = 'button';
+                            btnRemover.className = 'btn btn-danger btn-sm position-absolute top-0 end-0';
+                            btnRemover.style.cssText = 'padding: 2px 6px; font-size: 0.7rem; z-index: 10;';
+                            btnRemover.innerHTML = '<i class="fas fa-times"></i>';
+                            btnRemover.title = 'Remover foto';
+                            btnRemover.onclick = function(e) {
+                                e.stopPropagation();
+                                const fotoId = foto.id;
+                                
+                                // Adicionar à lista de fotos para remover
+                                if (!window.fotosParaRemover.includes(fotoId)) {
+                                    window.fotosParaRemover.push(fotoId);
+                                }
+                                
+                                // Marcar visualmente como removida
+                                fotoDiv.style.opacity = '0.5';
+                                fotoDiv.style.border = '2px solid red';
+                                btnRemover.disabled = true;
+                                btnRemover.innerHTML = '<i class="fas fa-check"></i>';
+                                btnRemover.className = 'btn btn-success btn-sm position-absolute top-0 end-0';
+                                
+                                // Criar botão de desfazer
+                                const btnDesfazer = document.createElement('button');
+                                btnDesfazer.type = 'button';
+                                btnDesfazer.className = 'btn btn-warning btn-sm position-absolute bottom-0 start-0';
+                                btnDesfazer.style.cssText = 'padding: 2px 6px; font-size: 0.7rem; z-index: 10;';
+                                btnDesfazer.innerHTML = '<i class="fas fa-undo"></i> Desfazer';
+                                btnDesfazer.title = 'Desfazer remoção';
+                                btnDesfazer.onclick = function(e) {
+                                    e.stopPropagation();
+                                    // Remover da lista
+                                    window.fotosParaRemover = window.fotosParaRemover.filter(id => id !== fotoId);
+                                    // Restaurar visual
+                                    fotoDiv.style.opacity = '1';
+                                    fotoDiv.style.border = '';
+                                    btnRemover.disabled = false;
+                                    btnRemover.innerHTML = '<i class="fas fa-times"></i>';
+                                    btnRemover.className = 'btn btn-danger btn-sm position-absolute top-0 end-0';
+                                    btnDesfazer.remove();
+                                };
+                                fotoDiv.appendChild(btnDesfazer);
+                            };
+                            
+                            fotoDiv.appendChild(fotoImg);
+                            fotoDiv.appendChild(badge);
+                            fotoDiv.appendChild(btnRemover);
+                            fotosContainer.appendChild(fotoDiv);
+                        });
+                        
+                        fotosExistentesDiv.appendChild(fotosContainer);
+                    }
+                    
+                    // Limpar preview de novas fotos
+                    if (previewDiv) previewDiv.innerHTML = '';
+                    document.getElementById('fotos_ocorrencia').value = '';
+                    
+                    // Abrir modal
+                    const modal = new bootstrap.Modal(document.getElementById('modalOcorrencia'));
+                    modal.show();
+                } else {
+                    alert('Erro ao carregar ocorrência: ' + (data.message || 'Erro desconhecido'));
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao carregar ocorrência. Tente novamente.');
+            });
+        });
+    });
+
+    // Botões de excluir ocorrência
+    document.querySelectorAll('.btn-excluir-ocorrencia').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const ocorrenciaId = this.getAttribute('data-ocorrencia-id');
+            
+            if (!confirm('Tem certeza que deseja excluir esta ocorrência? Esta ação não pode ser desfeita.')) {
+                return;
+            }
+            
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            
+            fetch(`/notas/api/ocorrencia/${ocorrenciaId}/excluir/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload(); // Recarregar página para remover ocorrência
+                } else {
+                    alert('Erro: ' + (data.message || 'Erro ao excluir ocorrência'));
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-trash"></i>';
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao excluir ocorrência. Tente novamente.');
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-trash"></i>';
+            });
+        });
+    });
+
+    // Limpar formulário ao fechar modal
+    if (modalOcorrencia) {
+        modalOcorrencia.addEventListener('hidden.bs.modal', function() {
+            document.getElementById('formOcorrencia').reset();
+            document.getElementById('ocorrencia_id_edicao').value = '';
+            document.getElementById('modalOcorrenciaTitulo').textContent = 'Registrar Ocorrência';
+            document.getElementById('btnSalvarOcorrenciaTexto').textContent = 'Salvar Ocorrência';
+            if (previewDiv) previewDiv.innerHTML = '';
+            document.getElementById('fotos_existentes').innerHTML = '';
+            // Limpar arrays
+            fotosSelecionadas = [];
+            if (window.fotosParaRemover) {
+                window.fotosParaRemover = [];
+            }
         });
     }
 });

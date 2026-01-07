@@ -33,8 +33,8 @@ class Command(BaseCommand):
                 'ativo': True
             },
             {
-                'nome': 'Semi-reboque',
-                'descricao': 'Carreta semi-reboque para transporte de cargas',
+                'nome': 'Reboque',
+                'descricao': 'Reboque para transporte de cargas',
                 'ativo': True
             },
         ]

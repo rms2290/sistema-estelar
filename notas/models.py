@@ -452,8 +452,8 @@ class Motorista(UpperCaseMixin, models.Model):
         ('Carro', 'Carro'),
         ('Van', 'Van'),
         ('Caminhão', 'Caminhão'),
-        ('Carreta', 'Carreta (Cavalo + 1 Reboque/Semi-reboque)'),
-        ('Bitrem', 'Bitrem (Cavalo + 2 Reboques/Semi-reboques)'),
+        ('Carreta', 'Carreta (Cavalo + 1 Reboque)'),
+        ('Bitrem', 'Bitrem (Cavalo + 2 Reboques)'),
     ]
     tipo_composicao_motorista = models.CharField(
         max_length=50,
@@ -470,7 +470,7 @@ class Motorista(UpperCaseMixin, models.Model):
         related_name='motoristas_veiculo_principal',
         verbose_name="Veículo Principal (Placa 1)"
     )
-    reboque_1 = models.ForeignKey( # Primeiro Reboque/Semi-reboque (se Carreta ou Bi-trem)
+    reboque_1 = models.ForeignKey( # Primeiro Reboque (se Carreta ou Bi-trem)
         'Veiculo',
         on_delete=models.SET_NULL,
         blank=True,
@@ -478,7 +478,7 @@ class Motorista(UpperCaseMixin, models.Model):
         related_name='motoristas_reboque_1',
         verbose_name="Reboque 1 (Placa 2)"
     )
-    reboque_2 = models.ForeignKey( # Segundo Reboque/Semi-reboque (se Bi-trem)
+    reboque_2 = models.ForeignKey( # Segundo Reboque (se Bi-trem)
         'Veiculo',
         on_delete=models.SET_NULL,
         blank=True,
@@ -549,11 +549,11 @@ class Veiculo(UpperCaseMixin, models.Model):
     """
     Modelo que representa uma unidade de veículo cadastrada no sistema.
     
-    Pode ser um caminhão, carro, van, cavalo mecânico, reboque ou semi-reboque.
+    Pode ser um caminhão, carro, van, cavalo mecânico ou reboque.
     Armazena informações completas do veículo, incluindo dados do proprietário.
     
     Campos Principais:
-        - tipo_unidade: Tipo da unidade (Carro, Van, Caminhão, Cavalo, Reboque, Semi-reboque)
+        - tipo_unidade: Tipo da unidade (Carro, Van, Caminhão, Cavalo, Reboque)
         - placa: Placa do veículo (obrigatório, único)
         - chassi: Chassi do veículo (opcional, único se informado)
         - renavam: RENAVAM do veículo (opcional, único se informado)
@@ -592,7 +592,6 @@ class Veiculo(UpperCaseMixin, models.Model):
         ('Caminhão', 'Caminhão'),
         ('Cavalo', 'Cavalo'),
         ('Reboque', 'Reboque'),
-        ('Semi-reboque', 'Semi-reboque'),
     ]
     tipo_unidade = models.CharField(
         max_length=50,
@@ -1084,7 +1083,6 @@ class RomaneioViagem(UpperCaseMixin, models.Model):
             - Caminhão: 10.000 kg
             - Cavalo: 25.000 kg
             - Reboque: 25.000 kg
-            - Semi-reboque: 25.000 kg
         
         Exemplo:
             >>> valido, msg = romaneio.validar_capacidade_veiculo()
