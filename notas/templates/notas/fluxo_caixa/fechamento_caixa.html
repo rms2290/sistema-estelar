@@ -1,0 +1,331 @@
+{% extends 'base.html' %}
+{% load format_filters %}
+
+{% block title %}Fechamento de Caixa - Fluxo de Caixa{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-lock"></i> Fechamento de Caixa</h2>
+        <a href="{% url 'notas:gerenciar_movimento_caixa' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    {% if periodo_ativo %}
+    <!-- Valor Acumulado da Estelar -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-building"></i> Valor Acumulado da Estelar no Período</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Descrição</th>
+                            <th class="text-end">Valor Acumulado (R$)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <strong>Estelar</strong>
+                            </td>
+                            <td class="text-end">
+                                <strong class="text-primary">{{ valor_acumulado_estelar|format_brazilian_currency }}</strong>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Valor Acumulado dos Funcionários -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-users"></i> Valor Acumulado dos Funcionários no Período</h5>
+        </div>
+        <div class="card-body">
+            {% if funcionarios_acumulados %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Funcionário</th>
+                            <th class="text-end">Valor Acumulado (R$)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in funcionarios_acumulados %}
+                        <tr>
+                            <td>
+                                <strong>{{ item.funcionario.nome }}</strong>
+                            </td>
+                            <td class="text-end">
+                                <strong class="text-primary">{{ item.valor_acumulado|format_brazilian_currency }}</strong>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-info fw-bold">
+                            <td>Total</td>
+                            <td class="text-end">
+                                {{ total_acumulado_funcionarios|format_brazilian_currency }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Nenhum funcionário com valor acumulado no período.
+            </div>
+            {% endif %}
+            
+            <!-- DEBUG: Informações detalhadas -->
+            {% if debug_info %}
+            <div class="mt-4">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="collapse" data-bs-target="#debugInfo">
+                    <i class="fas fa-bug"></i> Ver Detalhes do Cálculo (Debug)
+                </button>
+                <div class="collapse mt-3" id="debugInfo">
+                    <div class="card card-body bg-light">
+                        <h6>Período:</h6>
+                        <p>{{ debug_info.periodo.data_inicio|date:"d/m/Y" }} a {{ debug_info.periodo.data_fim|date:"d/m/Y"|default:"Aberto" }}</p>
+                        
+                        <h6>Acertos Diários Encontrados ({{ debug_info.acertos_diarios|length }}):</h6>
+                        <ul>
+                            {% for acerto in debug_info.acertos_diarios %}
+                            <li>ID {{ acerto.id }} - {{ acerto.data }} - Estelar: R$ {{ acerto.valor_estelar }}</li>
+                            {% endfor %}
+                        </ul>
+                        
+                        <h6>Distribuições Detalhadas ({{ debug_info.distribuicoes_detalhadas|length }}):</h6>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Funcionário</th>
+                                    <th>Valor</th>
+                                    <th>Acerto ID</th>
+                                    <th>Data Acerto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for dist in debug_info.distribuicoes_detalhadas %}
+                                <tr>
+                                    <td>{{ dist.funcionario_nome }} (ID: {{ dist.funcionario_id }})</td>
+                                    <td>R$ {{ dist.valor }}</td>
+                                    <td>{{ dist.acerto_id }}</td>
+                                    <td>{{ dist.acerto_data }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        
+                        <h6>Acertos Diretos (Pagamentos) ({{ debug_info.acertos_diretos_detalhados|length }}):</h6>
+                        {% if debug_info.acertos_diretos_detalhados %}
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Funcionário</th>
+                                    <th>Valor</th>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for acerto in debug_info.acertos_diretos_detalhados %}
+                                <tr>
+                                    <td>{{ acerto.funcionario_nome }} (ID: {{ acerto.funcionario_id }})</td>
+                                    <td>R$ {{ acerto.valor }}</td>
+                                    <td>{{ acerto.data }}</td>
+                                    <td>{{ acerto.descricao }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <p class="text-muted">Nenhum acerto direto encontrado.</p>
+                        {% endif %}
+                        
+                        <h6>Saídas de Funcionários ({{ debug_info.saidas_funcionarios_detalhadas|length }}):</h6>
+                        {% if debug_info.saidas_funcionarios_detalhadas %}
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Funcionário</th>
+                                    <th>Valor</th>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for saida in debug_info.saidas_funcionarios_detalhadas %}
+                                <tr>
+                                    <td>{{ saida.funcionario_nome }} (ID: {{ saida.funcionario_id }})</td>
+                                    <td>R$ {{ saida.valor }}</td>
+                                    <td>{{ saida.data }}</td>
+                                    <td>{{ saida.descricao }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <p class="text-muted">Nenhuma saída de funcionário encontrada.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Clientes com Cobrança de Carregamento em Aberto -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-file-invoice-dollar"></i> Clientes com Cobrança de Carregamento em Aberto</h5>
+        </div>
+        <div class="card-body">
+            {% if clientes_cobrancas_pendentes %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th class="text-center">Quantidade de Cobranças</th>
+                            <th class="text-end">Valor Total (R$)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in clientes_cobrancas_pendentes %}
+                        <tr>
+                            <td>
+                                <strong>{{ item.cliente.razao_social }}</strong>
+                            </td>
+                            <td class="text-center">
+                                {{ item.quantidade_cobrancas }}
+                            </td>
+                            <td class="text-end">
+                                <strong class="text-warning">{{ item.valor_total|format_brazilian_currency }}</strong>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-info fw-bold">
+                            <td>Total</td>
+                            <td class="text-center">{{ clientes_cobrancas_pendentes|length }}</td>
+                            <td class="text-end">
+                                {{ total_cobrancas_pendentes|format_brazilian_currency }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Nenhum cliente com cobrança de carregamento em aberto.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- RESUMO E VALIDAÇÃO -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-calculator"></i> RESUMO E VALIDAÇÃO</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Saldo Inicial</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Caixa:</th>
+                            <td>R$ {{ valor_inicial_caixa|format_brazilian_currency }}</td>
+                        </tr>
+                        <tr>
+                            <th>Banco:</th>
+                            <td>R$ 0,00</td>
+                        </tr>
+                        <tr>
+                            <th>Total:</th>
+                            <td><strong>R$ {{ valor_inicial_caixa|format_brazilian_currency }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6>Movimentações</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <th>+ Total Entradas:</th>
+                            <td>R$ {{ total_entradas|format_brazilian_currency }}</td>
+                        </tr>
+                        <tr>
+                            <th>- Total Saídas:</th>
+                            <td>R$ {{ total_saidas|format_brazilian_currency }}</td>
+                        </tr>
+                        <tr>
+                            <th>Saldo Atual:</th>
+                            <td><strong>R$ {{ saldo_atual|format_brazilian_currency }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Saldo Final Calculado</h6>
+                    <p class="h4 text-primary">R$ {{ saldo_atual|format_brazilian_currency }}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Informações do Período</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Data Início:</th>
+                            <td>{{ periodo_ativo.data_inicio|date:"d/m/Y" }}</td>
+                        </tr>
+                        {% if periodo_ativo.data_fim %}
+                        <tr>
+                            <th>Data Fim:</th>
+                            <td>{{ periodo_ativo.data_fim|date:"d/m/Y" }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <th>Status:</th>
+                            <td><span class="badge bg-success">Aberto</span></td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <th>Total Movimentos:</th>
+                            <td><strong>{{ total_movimentos }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <hr>
+            <div class="alert alert-info">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle"></i>
+                    Saldo Atual: R$ {{ saldo_atual|format_brazilian_currency }}
+                </h5>
+                <p class="mb-0 mt-2">
+                    Este valor representa o saldo atual do período, calculado a partir do saldo inicial mais as entradas menos as saídas.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> Nenhum período ativo no momento.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

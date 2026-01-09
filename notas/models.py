@@ -71,7 +71,7 @@ class UpperCaseMixin:
                         'email', 'password', 'username', 'cpf', 'cnpj', 
                         'cnh', 'chassi', 'renavam', 'placa', 'cep',
                         'telefone', 'rntrc', 'numero_consulta', 'tipo_usuario',
-                        'status', 'rg', 'tipo', 'categoria'  # Adicionado tipo e categoria para não converter
+                        'status', 'rg', 'tipo', 'categoria', 'tipo_pagamento', 'tipo_cliente'  # Adicionado tipo_cliente para não converter
                     ]
                     if field.name not in exclude_fields:
                         setattr(self, field.name, value.upper())
@@ -1691,6 +1691,36 @@ class CobrancaCarregamento(UpperCaseMixin, models.Model):
         verbose_name="Valor CTE/Manifesto (R$)"
     )
     
+    TIPO_CLIENTE_CHOICES = [
+        ('Mensalista', 'Mensalista'),
+        ('Por_Cubagem', 'Por Cubagem'),
+    ]
+    
+    tipo_cliente = models.CharField(
+        max_length=20,
+        choices=TIPO_CLIENTE_CHOICES,
+        default='Mensalista',
+        verbose_name="Tipo de Cliente"
+    )
+    
+    cubagem = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        blank=True,
+        null=True,
+        verbose_name="Cubagem (m³)"
+    )
+    
+    valor_cubagem = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        blank=True,
+        null=True,
+        verbose_name="Valor da Cubagem (R$/m³)"
+    )
+    
     status = models.CharField(
         max_length=10,
         choices=STATUS_CHOICES,
@@ -1740,9 +1770,24 @@ class CobrancaCarregamento(UpperCaseMixin, models.Model):
         return f"Cobrança #{self.id} - {self.cliente.razao_social} - {self.get_status_display()}"
     
     @property
+    def valor_armazenamento(self):
+        """Calcula o valor de armazenamento (cubagem * valor_cubagem)"""
+        from decimal import Decimal
+        # Verificar tipo_cliente de forma case-insensitive
+        tipo = str(self.tipo_cliente).upper() if self.tipo_cliente else ''
+        if tipo == 'POR_CUBAGEM' and self.cubagem and self.valor_cubagem:
+            return self.cubagem * self.valor_cubagem
+        return Decimal('0.00')
+    
+    @property
     def valor_total(self):
         """Calcula o valor total da cobrança"""
-        return (self.valor_carregamento or 0) + (self.valor_cte_manifesto or 0)
+        total = (self.valor_carregamento or 0) + (self.valor_cte_manifesto or 0)
+        # Verificar tipo_cliente de forma case-insensitive
+        tipo = str(self.tipo_cliente).upper() if self.tipo_cliente else ''
+        if tipo == 'POR_CUBAGEM':
+            total += self.valor_armazenamento
+        return total
     
     def baixar(self):
         """Marca a cobrança como baixada"""
@@ -2315,6 +2360,21 @@ class CarregamentoCliente(UpperCaseMixin, models.Model):
     
     observacoes = models.CharField(max_length=255, blank=True, null=True, verbose_name="Observações")
     
+    TIPO_PAGAMENTO_CHOICES = [
+        ('Dinheiro', 'Dinheiro'),
+        ('Deposito', 'Depósito'),
+    ]
+    
+    tipo_pagamento = models.CharField(
+        max_length=10,
+        choices=TIPO_PAGAMENTO_CHOICES,
+        default='Dinheiro',
+        blank=True,
+        null=True,
+        verbose_name="Tipo de Pagamento",
+        help_text="Apenas para descargas. Se for depósito, não será contabilizado no movimento de caixa."
+    )
+    
     class Meta:
         verbose_name = "Carregamento/Descarga"
         verbose_name_plural = "Carregamentos e Descargas"
@@ -2499,6 +2559,97 @@ class ReceitaEmpresa(UpperCaseMixin, models.Model):
     
     def __str__(self):
         return f"{self.get_tipo_receita_display()} - R$ {self.valor} - {self.data}"
+
+
+class SetorBancario(models.Model):
+    """
+    Armazena dados bancários de cada setor da empresa para instruções de pagamento.
+    
+    Permite configurar dados bancários separados para:
+    - Setor de Carregamento
+    - Setor de Armazenagem
+    
+    Esses dados são utilizados nos relatórios de cobrança para indicar ao cliente
+    para onde deve ser direcionado cada valor.
+    """
+    SETOR_CHOICES = [
+        ('Armazenagem', 'Armazenagem'),
+        ('Carregamento', 'Carregamento'),
+    ]
+    
+    TIPO_CHAVE_PIX_CHOICES = [
+        ('CPF', 'CPF'),
+        ('CNPJ', 'CNPJ'),
+        ('Email', 'Email'),
+        ('Telefone', 'Telefone'),
+        ('Chave Aleatória', 'Chave Aleatória'),
+    ]
+    
+    setor = models.CharField(
+        max_length=20,
+        choices=SETOR_CHOICES,
+        unique=True,
+        verbose_name="Setor"
+    )
+    
+    nome_responsavel = models.CharField(
+        max_length=255,
+        verbose_name="Nome do Responsável/Beneficiário"
+    )
+    
+    banco = models.CharField(
+        max_length=100,
+        verbose_name="Banco"
+    )
+    
+    agencia = models.CharField(
+        max_length=20,
+        verbose_name="Agência"
+    )
+    
+    conta_corrente = models.CharField(
+        max_length=20,
+        verbose_name="Conta Corrente"
+    )
+    
+    chave_pix = models.CharField(
+        max_length=255,
+        verbose_name="Chave PIX"
+    )
+    
+    tipo_chave_pix = models.CharField(
+        max_length=50,
+        choices=TIPO_CHAVE_PIX_CHOICES,
+        verbose_name="Tipo de Chave PIX"
+    )
+    
+    ativo = models.BooleanField(
+        default=True,
+        verbose_name="Ativo"
+    )
+    
+    criado_em = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Data de Criação"
+    )
+    
+    atualizado_em = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Data de Atualização"
+    )
+    
+    class Meta:
+        verbose_name = "Dados Bancários do Setor"
+        verbose_name_plural = "Dados Bancários dos Setores"
+        ordering = ['setor']
+    
+    def __str__(self):
+        return f"{self.get_setor_display()} - {self.nome_responsavel}"
+    
+    def get_chave_pix_formatada(self):
+        """Retorna a chave PIX formatada com o tipo"""
+        tipo_formatado = self.get_tipo_chave_pix_display().lower()
+        return f"{self.chave_pix} ({tipo_formatado})"
 
 
 class CaixaFuncionario(UpperCaseMixin, models.Model):
@@ -3181,5 +3332,4 @@ class PeriodoMovimentoCaixa(UpperCaseMixin, models.Model):
                 from django.utils import timezone
                 self.data_fim = timezone.now().date()
             self.save()
-
 

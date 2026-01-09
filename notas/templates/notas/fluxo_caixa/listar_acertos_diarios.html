@@ -81,7 +81,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <a href="{% url 'notas:acerto_diario_carregamento' %}?data={{ acerto.data|date:'Y-m-d' }}" class="btn btn-sm btn-primary" title="Editar">
+                                <a href="{% url 'notas:acerto_diario_carregamento' %}?acerto_id={{ acerto.pk }}" class="btn btn-sm btn-primary" title="Editar">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 <button type="button" class="btn btn-sm btn-info" onclick="verDetalhes({{ acerto.pk }})" title="Ver Detalhes">

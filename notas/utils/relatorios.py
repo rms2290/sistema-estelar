@@ -753,90 +753,102 @@ def gerar_relatorio_excel_totalizador_cliente(lista_hierarquica, data_inicial, d
     return buffer.getvalue()
 
 
-def gerar_relatorio_pdf_cobranca_carregamento(cobranca):
-    """
-    Gera relatório PDF para Cobrança de Carregamento - Formato Minimalista Profissional
-    """
-    buffer = io.BytesIO()
-    
-    # Criar documento PDF
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        rightMargin=2.5*cm,
-        leftMargin=2.5*cm,
-        topMargin=2.5*cm,
-        bottomMargin=2.5*cm
-    )
-    
-    # Definir metadados do PDF (título da aba)
-    doc.title = "Relatório Cobrança"
-    
-    # Estilos
+# ============================================================================
+# FUNÇÕES AUXILIARES COMPARTILHADAS - COBRANÇA DE CARREGAMENTO
+# ============================================================================
+
+def _criar_estilos_relatorio_cobranca():
+    """Cria estilos comuns para relatórios de cobrança"""
     styles = getSampleStyleSheet()
     
-    # Estilo para título principal
     title_style = ParagraphStyle(
         'TitleStyle',
         parent=styles['Heading1'],
-        fontSize=20,
-        spaceAfter=30,
+        fontSize=14,
+        spaceAfter=6,
         alignment=TA_CENTER,
         textColor=colors.black,
         fontName='Helvetica-Bold',
-        leading=24
+        leading=16
     )
     
-    # Estilo para subtítulo/seção
     section_style = ParagraphStyle(
         'SectionStyle',
         parent=styles['Normal'],
-        fontSize=11,
-        spaceAfter=12,
-        spaceBefore=20,
+        fontSize=10,
+        spaceAfter=4,
+        spaceBefore=12,
         alignment=TA_LEFT,
         textColor=colors.black,
         fontName='Helvetica-Bold',
-        leading=14
+        leading=11,
+        leftIndent=0
     )
     
-    # Estilo para texto normal
     para_style = ParagraphStyle(
         'ParaStyle',
         parent=styles['Normal'],
-        fontSize=10,
-        spaceAfter=8,
+        fontSize=9,
+        spaceAfter=2,
         alignment=TA_LEFT,
         textColor=colors.black,
-        leading=13
+        leading=10,
+        leftIndent=0,
+        rightIndent=0
     )
     
-    # Estilo para informações secundárias
     info_style = ParagraphStyle(
         'InfoStyle',
         parent=styles['Normal'],
-        fontSize=9,
-        spaceAfter=6,
+        fontSize=8,
+        spaceAfter=2,
         alignment=TA_LEFT,
         textColor=colors.black,
-        leading=12
+        leading=9,
+        leftIndent=0,
+        rightIndent=0
     )
     
-    # Conteúdo do relatório
-    story = []
-    
-    # Título principal
+    return {
+        'title': title_style,
+        'section': section_style,
+        'para': para_style,
+        'info': info_style
+    }
+
+
+def _adicionar_linha_separadora(story, width=None):
+    """Adiciona uma linha horizontal para separar seções"""
+    # Largura da página A4 menos margens (1.5cm cada lado) = 21cm - 3cm = 18cm
+    if width is None:
+        width = 18*cm
+    linha = Table([['']], colWidths=[width], rowHeights=[0.3*cm])
+    linha.setStyle(TableStyle([
+        ('LINEBELOW', (0, 0), (-1, 0), 1.5, colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    story.append(linha)
+    story.append(Spacer(1, 4))
+
+
+def _adicionar_cabecalho_cobranca(story, cobranca, title_style, section_style, para_style, info_style):
+    """Adiciona cabeçalho comum (título, cliente)"""
     story.append(Paragraph("COBRANÇA DE CARREGAMENTO", title_style))
-    story.append(Spacer(1, 25))
+    story.append(Spacer(1, 6))
     
-    # Informações do Cliente
+    _adicionar_linha_separadora(story)
     story.append(Paragraph("CLIENTE", section_style))
     story.append(Paragraph(cobranca.cliente.razao_social, para_style))
     if cobranca.cliente.cnpj:
         story.append(Paragraph(f"CNPJ: {cobranca.cliente.cnpj}", info_style))
-    story.append(Spacer(1, 20))
-    
-    # Romaneios - formato minimalista
+    story.append(Spacer(1, 5))
+
+
+def _adicionar_romaneios_cobranca(story, cobranca, section_style, para_style):
+    """Adiciona seção de romaneios"""
+    _adicionar_linha_separadora(story)
     story.append(Paragraph("ROMANEIOS", section_style))
     
     romaneios_list = []
@@ -864,12 +876,58 @@ def gerar_relatorio_pdf_cobranca_carregamento(cobranca):
     for romaneio_info in romaneios_list:
         story.append(Paragraph(romaneio_info, para_style))
     
-    story.append(Spacer(1, 25))
+    story.append(Spacer(1, 6))
+
+
+def _adicionar_rodape_cobranca(story, info_style):
+    """Adiciona rodapé comum"""
+    data_geracao = datetime.now().strftime('%d/%m/%Y às %H:%M')
+    story.append(Spacer(1, 8))
+    linha_rodape = Table([['']], colWidths=[13*cm], rowHeights=[0.2*cm])
+    linha_rodape.setStyle(TableStyle([
+        ('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.HexColor('#ecf0f1')),
+    ]))
+    story.append(linha_rodape)
+    story.append(Spacer(1, 3))
+    story.append(Paragraph(f"Gerado em {data_geracao}", info_style))
+
+
+# ============================================================================
+# RELATÓRIO ESPECIALIZADO - MENSALISTA
+# ============================================================================
+
+def gerar_relatorio_pdf_cobranca_mensalista(cobranca):
+    """
+    Gera relatório PDF para Cobrança de Carregamento - Cliente Mensalista
+    """
+    buffer = io.BytesIO()
     
-    # Valores - formato minimalista
-    story.append(Paragraph("VALORES", section_style))
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=1.5*cm,
+        leftMargin=1.5*cm,
+        topMargin=1.5*cm,
+        bottomMargin=1.5*cm
+    )
     
-    # Tabela de valores simplificada
+    doc.title = "Relatório Cobrança - Mensalista"
+    
+    # Obter estilos
+    estilos = _criar_estilos_relatorio_cobranca()
+    
+    story = []
+    
+    # Cabeçalho
+    _adicionar_cabecalho_cobranca(story, cobranca, estilos['title'], estilos['section'], estilos['para'], estilos['info'])
+    
+    # Romaneios
+    _adicionar_romaneios_cobranca(story, cobranca, estilos['section'], estilos['para'])
+    
+    # Valores - Mensalista (sem armazenamento)
+    _adicionar_linha_separadora(story)
+    story.append(Paragraph("VALORES", estilos['section']))
+    
     valores_data = [
         ['Carregamento', format_brazilian_currency(cobranca.valor_carregamento)],
         ['CTE/Manifesto', format_brazilian_currency(cobranca.valor_cte_manifesto)],
@@ -880,76 +938,419 @@ def gerar_relatorio_pdf_cobranca_carregamento(cobranca):
         ('ALIGN', (0, 0), (0, -1), 'LEFT'),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
         ('FONTNAME', (0, 0), (0, -1), 'Helvetica'),
-        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
         ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
         ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor('#ecf0f1')),
     ]))
     
     story.append(valores_table)
-    story.append(Spacer(1, 5))
+    story.append(Spacer(1, 2))
     
-    # Total destacado
+    # Total
     total_data = [['TOTAL', format_brazilian_currency(cobranca.valor_total)]]
     total_table = Table(total_data, colWidths=[10*cm, 6*cm])
     total_table.setStyle(TableStyle([
         ('ALIGN', (0, 0), (0, 0), 'LEFT'),
         ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
         ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 12),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-        ('TOPPADDING', (0, 0), (-1, -1), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
         ('LINEABOVE', (0, 0), (-1, 0), 1, colors.black),
         ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
     ]))
     
     story.append(total_table)
-    story.append(Spacer(1, 25))
+    story.append(Spacer(1, 6))
     
     # Informações adicionais
     if cobranca.data_vencimento or cobranca.status or cobranca.data_baixa:
-        story.append(Paragraph("INFORMAÇÕES ADICIONAIS", section_style))
-        
+        _adicionar_linha_separadora(story)
+        story.append(Paragraph("INFORMAÇÕES ADICIONAIS", estilos['section']))
         info_items = []
         if cobranca.data_vencimento:
             info_items.append(f"Vencimento: {cobranca.data_vencimento.strftime('%d/%m/%Y')}")
         info_items.append(f"Status: {cobranca.get_status_display()}")
         if cobranca.data_baixa:
             info_items.append(f"Baixa: {cobranca.data_baixa.strftime('%d/%m/%Y')}")
-        
         for item in info_items:
-            story.append(Paragraph(item, info_style))
-        
-        story.append(Spacer(1, 20))
+            story.append(Paragraph(item, estilos['info']))
+        story.append(Spacer(1, 5))
+    
+    # Instruções de Pagamento
+    _adicionar_linha_separadora(story)
+    story.append(Paragraph("INSTRUÇÕES DE PAGAMENTO", estilos['section']))
+    
+    # Buscar dados bancários dos setores
+    from ..models import SetorBancario
+    
+    # Calcular valores por setor
+    # Setor de Carregamento: Carregamento + CTE/Manifesto
+    valor_carregamento = Decimal(str(cobranca.valor_carregamento)) if cobranca.valor_carregamento else Decimal('0.00')
+    valor_cte_manifesto = Decimal(str(cobranca.valor_cte_manifesto)) if cobranca.valor_cte_manifesto else Decimal('0.00')
+    valor_setor_carregamento = valor_carregamento + valor_cte_manifesto
+    
+    # Setor de Armazenagem: Armazenamento + Seguro
+    valor_armazenagem = valor_armazenamento + total_seguro
+    
+    # Setor de Carregamento
+    try:
+        setor_carregamento = SetorBancario.objects.filter(setor='Carregamento', ativo=True).first()
+        if setor_carregamento and valor_setor_carregamento > Decimal('0'):
+            story.append(Paragraph(f"<b>SETOR DE CARREGAMENTO</b>", estilos['para']))
+            story.append(Paragraph(f"Valor: {format_brazilian_currency(valor_setor_carregamento)} (Carregamento + CTE/Manifesto)", estilos['info']))
+            story.append(Paragraph(f"DEPOSITAR: {format_brazilian_currency(valor_setor_carregamento)}", estilos['info']))
+            story.append(Paragraph(f"Banco: {setor_carregamento.banco}", estilos['info']))
+            story.append(Paragraph(f"Agência: {setor_carregamento.agencia}", estilos['info']))
+            story.append(Paragraph(f"Conta Corrente: {setor_carregamento.conta_corrente}", estilos['info']))
+            story.append(Paragraph(f"PIX: {setor_carregamento.get_chave_pix_formatada()}", estilos['info']))
+            story.append(Paragraph(f"Beneficiário: {setor_carregamento.nome_responsavel}", estilos['info']))
+            story.append(Spacer(1, 4))
+    except Exception:
+        pass
+    
+    # Setor de Armazenagem
+    try:
+        setor_armazenagem = SetorBancario.objects.filter(setor='Armazenagem', ativo=True).first()
+        if setor_armazenagem and valor_armazenagem > Decimal('0'):
+            story.append(Paragraph(f"<b>SETOR DE ARMAZENAGEM</b>", estilos['para']))
+            story.append(Paragraph(f"Valor: {format_brazilian_currency(valor_armazenagem)} (Armazenamento + Seguro)", estilos['info']))
+            story.append(Paragraph(f"DEPOSITAR: {format_brazilian_currency(valor_armazenagem)}", estilos['info']))
+            story.append(Paragraph(f"Banco: {setor_armazenagem.banco}", estilos['info']))
+            story.append(Paragraph(f"Agência: {setor_armazenagem.agencia}", estilos['info']))
+            story.append(Paragraph(f"Conta Corrente: {setor_armazenagem.conta_corrente}", estilos['info']))
+            story.append(Paragraph(f"PIX: {setor_armazenagem.get_chave_pix_formatada()}", estilos['info']))
+            story.append(Paragraph(f"Beneficiário: {setor_armazenagem.nome_responsavel}", estilos['info']))
+            story.append(Spacer(1, 4))
+    except Exception:
+        pass
     
     # Observações
-    if cobranca.observacoes:
-        story.append(Paragraph("OBSERVAÇÕES", section_style))
-        story.append(Paragraph(cobranca.observacoes, para_style))
-        story.append(Spacer(1, 20))
+    observacoes = getattr(cobranca, 'observacoes', None)
+    if observacoes and observacoes.strip():
+        _adicionar_linha_separadora(story)
+        story.append(Paragraph("OBSERVAÇÕES", estilos['section']))
+        observacoes_texto = observacoes.replace('\n', '<br/>')
+        story.append(Paragraph(observacoes_texto, estilos['para']))
+        story.append(Spacer(1, 5))
     
-    # Rodapé minimalista
-    data_geracao = datetime.now().strftime('%d/%m/%Y às %H:%M')
-    story.append(Spacer(1, 30))
-    linha_rodape = Table([['']], colWidths=[13*cm], rowHeights=[0.3*cm])
-    linha_rodape.setStyle(TableStyle([
-        ('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.HexColor('#ecf0f1')),
-    ]))
-    story.append(linha_rodape)
-    story.append(Spacer(1, 8))
-    story.append(Paragraph(f"Gerado em {data_geracao}", info_style))
+    # Rodapé
+    _adicionar_rodape_cobranca(story, estilos['info'])
     
-    # Construir PDF
     doc.build(story)
-    
-    # Obter conteúdo do buffer
     pdf_content = buffer.getvalue()
     buffer.close()
     
     return pdf_content
+
+
+# ============================================================================
+# RELATÓRIO ESPECIALIZADO - POR CUBAGEM
+# ============================================================================
+
+def gerar_relatorio_pdf_cobranca_por_cubagem(cobranca):
+    """
+    Gera relatório PDF para Cobrança de Carregamento - Cliente Por Cubagem
+    """
+    buffer = io.BytesIO()
+    
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=1.5*cm,
+        leftMargin=1.5*cm,
+        topMargin=1.5*cm,
+        bottomMargin=1.5*cm
+    )
+    
+    doc.title = "Relatório Cobrança - Por Cubagem"
+    
+    # Obter estilos
+    estilos = _criar_estilos_relatorio_cobranca()
+    
+    story = []
+    
+    # Cabeçalho
+    _adicionar_cabecalho_cobranca(story, cobranca, estilos['title'], estilos['section'], estilos['para'], estilos['info'])
+    
+    # Romaneios
+    _adicionar_romaneios_cobranca(story, cobranca, estilos['section'], estilos['para'])
+    
+    # Valores - Por Cubagem (com armazenamento)
+    _adicionar_linha_separadora(story)
+    story.append(Paragraph("VALORES", estilos['section']))
+    
+    valores_data = [
+        ['Carregamento', format_brazilian_currency(cobranca.valor_carregamento)],
+        ['CTE/Manifesto', format_brazilian_currency(cobranca.valor_cte_manifesto)],
+    ]
+    
+    # Adicionar armazenamento
+    from decimal import Decimal
+    valor_armazenamento = Decimal('0.00')
+    try:
+        cubagem = getattr(cobranca, 'cubagem', None)
+        valor_cubagem = getattr(cobranca, 'valor_cubagem', None)
+        
+        if cubagem is not None and valor_cubagem is not None:
+            cubagem_decimal = Decimal(str(cubagem)) if cubagem else Decimal('0')
+            valor_cubagem_decimal = Decimal(str(valor_cubagem)) if valor_cubagem else Decimal('0')
+            
+            if cubagem_decimal > Decimal('0') and valor_cubagem_decimal > Decimal('0'):
+                valor_armazenamento = cubagem_decimal * valor_cubagem_decimal
+                if valor_armazenamento > Decimal('0'):
+                    valores_data.append(['Armazenamento', format_brazilian_currency(valor_armazenamento)])
+    except (TypeError, ValueError, AttributeError):
+        pass
+    
+    # Adicionar seguro (sempre calculado para cobrança por cubagem)
+    # Calcula: valor_total do romaneio * percentual_seguro do estado do cliente
+    total_seguro = Decimal('0.00')
+    try:
+        # Obter estado do cliente
+        estado_cliente = getattr(cobranca.cliente, 'estado', None)
+        
+        if estado_cliente:
+            # Buscar percentual de seguro na TabelaSeguro
+            from ..models import TabelaSeguro
+            try:
+                tabela_seguro = TabelaSeguro.objects.get(estado=estado_cliente)
+                percentual_seguro = Decimal(str(tabela_seguro.percentual_seguro))
+                
+                # Calcular seguro para cada romaneio
+                for romaneio in cobranca.romaneios.all():
+                    valor_total_romaneio = getattr(romaneio, 'valor_total', None)
+                    if valor_total_romaneio is not None:
+                        valor_romaneio = Decimal(str(valor_total_romaneio)) if valor_total_romaneio else Decimal('0')
+                        if valor_romaneio > Decimal('0'):
+                            # Seguro = valor_total * (percentual / 100)
+                            seguro_romaneio = (valor_romaneio * percentual_seguro) / Decimal('100')
+                            total_seguro += seguro_romaneio
+            except TabelaSeguro.DoesNotExist:
+                # Se não houver tabela de seguro para o estado, seguro = 0
+                pass
+    except (TypeError, ValueError, AttributeError):
+        pass
+    
+    # Sempre adicionar linha de seguro (mesmo que seja zero)
+    valores_data.append(['Seguro', format_brazilian_currency(total_seguro)])
+    
+    valores_table = Table(valores_data, colWidths=[10*cm, 6*cm])
+    valores_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor('#ecf0f1')),
+    ]))
+    
+    story.append(valores_table)
+    story.append(Spacer(1, 2))
+    
+    # Total (sempre inclui seguro para cobrança por cubagem)
+    total_calculado = cobranca.valor_total + total_seguro
+    total_data = [['TOTAL', format_brazilian_currency(total_calculado)]]
+    total_table = Table(total_data, colWidths=[10*cm, 6*cm])
+    total_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('LINEABOVE', (0, 0), (-1, 0), 1, colors.black),
+        ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+    ]))
+    
+    story.append(total_table)
+    story.append(Spacer(1, 12))
+    
+    # Informações adicionais
+    if cobranca.data_vencimento or cobranca.status or cobranca.data_baixa:
+        _adicionar_linha_separadora(story)
+        story.append(Paragraph("INFORMAÇÕES ADICIONAIS", estilos['section']))
+        info_items = []
+        if cobranca.data_vencimento:
+            info_items.append(f"Vencimento: {cobranca.data_vencimento.strftime('%d/%m/%Y')}")
+        info_items.append(f"Status: {cobranca.get_status_display()}")
+        if cobranca.data_baixa:
+            info_items.append(f"Baixa: {cobranca.data_baixa.strftime('%d/%m/%Y')}")
+        for item in info_items:
+            story.append(Paragraph(item, estilos['info']))
+        story.append(Spacer(1, 12))
+    
+    # Instruções de Pagamento
+    _adicionar_linha_separadora(story)
+    story.append(Paragraph("INSTRUÇÕES DE PAGAMENTO", estilos['section']))
+    
+    # Buscar dados bancários dos setores
+    from ..models import SetorBancario
+    
+    # Calcular valores por setor
+    # Setor de Carregamento: Carregamento + CTE/Manifesto
+    valor_carregamento = Decimal(str(cobranca.valor_carregamento)) if cobranca.valor_carregamento else Decimal('0.00')
+    valor_cte_manifesto = Decimal(str(cobranca.valor_cte_manifesto)) if cobranca.valor_cte_manifesto else Decimal('0.00')
+    valor_setor_carregamento = valor_carregamento + valor_cte_manifesto
+    
+    # Setor de Armazenagem: Armazenamento + Seguro
+    valor_armazenagem = valor_armazenamento + total_seguro
+    
+    # Estilos para a seção de pagamento
+    titulo_setor_style = ParagraphStyle(
+        'TituloSetor',
+        parent=estilos['section'],
+        fontSize=10,
+        fontName='Helvetica-Bold',
+        textColor=colors.black,
+        alignment=TA_LEFT,
+        spaceAfter=6,
+        spaceBefore=0
+    )
+    
+    valor_destaque_style = ParagraphStyle(
+        'ValorDestaque',
+        parent=estilos['para'],
+        fontSize=14,
+        fontName='Helvetica-Bold',
+        textColor=colors.black,
+        alignment=TA_CENTER,
+        spaceAfter=6,
+        spaceBefore=4
+    )
+    
+    info_bancaria_style = ParagraphStyle(
+        'InfoBancaria',
+        parent=estilos['info'],
+        fontSize=8,
+        fontName='Helvetica',
+        textColor=colors.black,
+        alignment=TA_LEFT,
+        spaceAfter=3,
+        leading=10
+    )
+    
+    # Preparar conteúdo para cada coluna
+    coluna_esquerda = []
+    coluna_direita = []
+    
+    # Coluna Esquerda - Setor de Carregamento
+    try:
+        setor_carregamento = SetorBancario.objects.filter(setor='Carregamento', ativo=True).first()
+        if setor_carregamento and valor_setor_carregamento > Decimal('0'):
+            coluna_esquerda.append(Paragraph("<b>SETOR DE CARREGAMENTO</b>", titulo_setor_style))
+            coluna_esquerda.append(Spacer(1, 2))
+            coluna_esquerda.append(Paragraph(f"<b>DEPOSITAR:</b>", info_bancaria_style))
+            coluna_esquerda.append(Paragraph(f"<b><font size='16' color='#000000'>{format_brazilian_currency(valor_setor_carregamento)}</font></b>", valor_destaque_style))
+            coluna_esquerda.append(Spacer(1, 6))
+            coluna_esquerda.append(Paragraph(f"<b>Banco:</b> {setor_carregamento.banco}", info_bancaria_style))
+            coluna_esquerda.append(Paragraph(f"<b>Agência:</b> {setor_carregamento.agencia}", info_bancaria_style))
+            coluna_esquerda.append(Paragraph(f"<b>Conta:</b> {setor_carregamento.conta_corrente}", info_bancaria_style))
+            coluna_esquerda.append(Paragraph(f"<b>PIX:</b> {setor_carregamento.get_chave_pix_formatada()}", info_bancaria_style))
+            coluna_esquerda.append(Paragraph(f"<b>Beneficiário:</b> {setor_carregamento.nome_responsavel}", info_bancaria_style))
+    except Exception:
+        coluna_esquerda.append(Paragraph("", info_bancaria_style))
+    
+    # Coluna Direita - Setor de Armazenagem
+    try:
+        setor_armazenagem = SetorBancario.objects.filter(setor='Armazenagem', ativo=True).first()
+        if setor_armazenagem and valor_armazenagem > Decimal('0'):
+            coluna_direita.append(Paragraph("<b>SETOR DE ARMAZENAGEM</b>", titulo_setor_style))
+            coluna_direita.append(Spacer(1, 2))
+            coluna_direita.append(Paragraph(f"<b>DEPOSITAR:</b>", info_bancaria_style))
+            coluna_direita.append(Paragraph(f"<b><font size='16' color='#000000'>{format_brazilian_currency(valor_armazenagem)}</font></b>", valor_destaque_style))
+            coluna_direita.append(Spacer(1, 6))
+            coluna_direita.append(Paragraph(f"<b>Banco:</b> {setor_armazenagem.banco}", info_bancaria_style))
+            coluna_direita.append(Paragraph(f"<b>Agência:</b> {setor_armazenagem.agencia}", info_bancaria_style))
+            coluna_direita.append(Paragraph(f"<b>Conta:</b> {setor_armazenagem.conta_corrente}", info_bancaria_style))
+            coluna_direita.append(Paragraph(f"<b>PIX:</b> {setor_armazenagem.get_chave_pix_formatada()}", info_bancaria_style))
+            coluna_direita.append(Paragraph(f"<b>Beneficiário:</b> {setor_armazenagem.nome_responsavel}", info_bancaria_style))
+    except Exception:
+        coluna_direita.append(Paragraph("", info_bancaria_style))
+    
+    # Criar tabela com duas colunas
+    # Ajustar altura das colunas para alinhar
+    max_items = max(len(coluna_esquerda), len(coluna_direita))
+    
+    # Preencher a coluna menor com espaços vazios para alinhar
+    while len(coluna_esquerda) < max_items:
+        coluna_esquerda.append(Spacer(1, 0.1))
+    while len(coluna_direita) < max_items:
+        coluna_direita.append(Spacer(1, 0.1))
+    
+    # Criar tabela de duas colunas
+    dados_tabela = []
+    for i in range(max_items):
+        dados_tabela.append([
+            coluna_esquerda[i] if i < len(coluna_esquerda) else Paragraph("", info_bancaria_style),
+            coluna_direita[i] if i < len(coluna_direita) else Paragraph("", info_bancaria_style)
+        ])
+    
+    tabela_pagamento = Table(dados_tabela, colWidths=[8*cm, 8*cm])
+    tabela_pagamento.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('BACKGROUND', (0, 0), (0, 0), colors.HexColor('#f5f5f5')),
+        ('BACKGROUND', (1, 0), (1, 0), colors.HexColor('#f5f5f5')),
+        ('LINEAFTER', (0, 0), (0, -1), 1, colors.grey),
+    ]))
+    
+    story.append(tabela_pagamento)
+    story.append(Spacer(1, 12))
+    
+    # Observações
+    observacoes = getattr(cobranca, 'observacoes', None)
+    if observacoes and observacoes.strip():
+        _adicionar_linha_separadora(story)
+        story.append(Paragraph("OBSERVAÇÕES", estilos['section']))
+        observacoes_texto = observacoes.replace('\n', '<br/>')
+        story.append(Paragraph(observacoes_texto, estilos['para']))
+        story.append(Spacer(1, 12))
+    
+    # Rodapé
+    _adicionar_rodape_cobranca(story, estilos['info'])
+    
+    doc.build(story)
+    pdf_content = buffer.getvalue()
+    buffer.close()
+    
+    return pdf_content
+
+
+# ============================================================================
+# FUNÇÃO WRAPPER (MANTÉM COMPATIBILIDADE)
+# ============================================================================
+
+def gerar_relatorio_pdf_cobranca_carregamento(cobranca):
+    """
+    Wrapper que escolhe o relatório correto baseado no tipo de cliente.
+    Mantém compatibilidade com código existente.
+    """
+    tipo = str(cobranca.tipo_cliente).upper() if getattr(cobranca, 'tipo_cliente', None) else ''
+    
+    if tipo == 'POR_CUBAGEM':
+        return gerar_relatorio_pdf_cobranca_por_cubagem(cobranca)
+    else:
+        return gerar_relatorio_pdf_cobranca_mensalista(cobranca)
 
 
 def gerar_relatorio_pdf_consolidado_cobranca(cobrancas_pendentes, cliente_selecionado=None):
@@ -962,10 +1363,10 @@ def gerar_relatorio_pdf_consolidado_cobranca(cobrancas_pendentes, cliente_seleci
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        rightMargin=2.5*cm,
-        leftMargin=2.5*cm,
-        topMargin=2.5*cm,
-        bottomMargin=2.5*cm
+        rightMargin=2*cm,
+        leftMargin=2*cm,
+        topMargin=2*cm,
+        bottomMargin=2*cm
     )
     
     # Definir metadados do PDF (título da aba)
@@ -1039,7 +1440,7 @@ def gerar_relatorio_pdf_consolidado_cobranca(cobrancas_pendentes, cliente_seleci
     # Calcular totais (usar valor_total ou calcular)
     total_carregamento = sum([c.valor_carregamento or Decimal('0.00') for c in cobrancas_pendentes])
     total_cte_manifesto = sum([c.valor_cte_manifesto or Decimal('0.00') for c in cobrancas_pendentes])
-    total_geral = total_carregamento + total_cte_manifesto
+    total_armazenamento = Decimal('0.00')
     
     # Tabela de cobranças - formato minimalista
     story.append(Paragraph("COBRANÇAS", section_style))
@@ -1053,6 +1454,20 @@ def gerar_relatorio_pdf_consolidado_cobranca(cobrancas_pendentes, cliente_seleci
         
         data_cobranca = cobranca.criado_em.strftime('%d/%m/%Y') if cobranca.criado_em else '-'
         
+        # Calcular valor de armazenamento
+        valor_armazenamento = Decimal('0.00')
+        try:
+            cubagem = getattr(cobranca, 'cubagem', None)
+            valor_cubagem = getattr(cobranca, 'valor_cubagem', None)
+            if cubagem is not None and valor_cubagem is not None:
+                cubagem_decimal = Decimal(str(cubagem)) if cubagem else Decimal('0')
+                valor_cubagem_decimal = Decimal(str(valor_cubagem)) if valor_cubagem else Decimal('0')
+                if cubagem_decimal > Decimal('0') and valor_cubagem_decimal > Decimal('0'):
+                    valor_armazenamento = cubagem_decimal * valor_cubagem_decimal
+                    total_armazenamento += valor_armazenamento
+        except (TypeError, ValueError, AttributeError):
+            pass
+        
         # Usar valor_total (property) ou calcular
         valor_total = cobranca.valor_total if hasattr(cobranca, 'valor_total') else (cobranca.valor_carregamento or Decimal('0.00')) + (cobranca.valor_cte_manifesto or Decimal('0.00'))
         
@@ -1061,26 +1476,27 @@ def gerar_relatorio_pdf_consolidado_cobranca(cobrancas_pendentes, cliente_seleci
             data_cobranca,
             format_brazilian_currency(cobranca.valor_carregamento or Decimal('0.00')),
             format_brazilian_currency(cobranca.valor_cte_manifesto or Decimal('0.00')),
+            format_brazilian_currency(valor_armazenamento) if valor_armazenamento > Decimal('0') else '-',
             format_brazilian_currency(valor_total)
         ])
     
     # Cabeçalho da tabela
-    header_data = [['Romaneio', 'Data', 'Carregamento', 'CTE/Manifesto', 'Total']]
-    header_table = Table(header_data, colWidths=[4*cm, 2.5*cm, 2.5*cm, 2.5*cm, 2.5*cm])
+    header_data = [['Romaneio', 'Data', 'Carregamento', 'CTE/Manifesto', 'Armazenamento', 'Total']]
+    header_table = Table(header_data, colWidths=[3*cm, 2*cm, 2.5*cm, 2.5*cm, 2.5*cm, 2.5*cm])
     header_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, 0), 'LEFT'),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('FONTSIZE', (0, 0), (-1, 0), 8),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
-        ('TOPPADDING', (0, 0), (-1, 0), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+        ('TOPPADDING', (0, 0), (-1, 0), 6),
         ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
     ]))
     story.append(header_table)
     
     # Dados das cobranças
     if cobrancas_data:
-        dados_table = Table(cobrancas_data, colWidths=[4*cm, 2.5*cm, 2.5*cm, 2.5*cm, 2.5*cm])
+        dados_table = Table(cobrancas_data, colWidths=[3*cm, 2*cm, 2.5*cm, 2.5*cm, 2.5*cm, 2.5*cm])
         dados_table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
             ('ALIGN', (1, 0), (1, -1), 'LEFT'),
@@ -1102,6 +1518,10 @@ def gerar_relatorio_pdf_consolidado_cobranca(cobrancas_pendentes, cliente_seleci
         ['Total CTE/Manifesto', format_brazilian_currency(total_cte_manifesto)],
     ]
     
+    # Adicionar total de armazenamento se houver
+    if total_armazenamento > Decimal('0'):
+        total_data.append(['Total Armazenamento', format_brazilian_currency(total_armazenamento)])
+    
     total_table = Table(total_data, colWidths=[10*cm, 4*cm])
     total_table.setStyle(TableStyle([
         ('ALIGN', (0, 0), (0, -1), 'LEFT'),
@@ -1117,7 +1537,8 @@ def gerar_relatorio_pdf_consolidado_cobranca(cobrancas_pendentes, cliente_seleci
     story.append(total_table)
     story.append(Spacer(1, 5))
     
-    # Total geral destacado
+    # Total geral destacado (incluindo armazenamento)
+    total_geral = total_carregamento + total_cte_manifesto + total_armazenamento
     total_geral_data = [['TOTAL GERAL', format_brazilian_currency(total_geral)]]
     total_geral_table = Table(total_geral_data, colWidths=[10*cm, 4*cm])
     total_geral_table.setStyle(TableStyle([

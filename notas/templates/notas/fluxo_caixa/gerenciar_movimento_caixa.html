@@ -2,12 +2,12 @@
 {% load static %}
 {% load format_filters %}
 
-{% block title %}Gerenciar Movimento de Caixa - Sistema Estelar{% endblock %}
+{% block title %}Movimento de Caixa - Sistema Estelar{% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-cash-register"></i> Gerenciar Movimento de Caixa</h2>
+        <h2><i class="fas fa-cash-register"></i> Movimento de Caixa</h2>
         <div>
             {% if periodo_ativo %}
             <span class="badge bg-success me-2">
@@ -135,45 +135,6 @@
                     <h3 class="mb-0">{{ saldo|format_brazilian_currency }}</h3>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Filtros -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="fas fa-filter"></i> Filtros de Pesquisa</h5>
-        </div>
-        <div class="card-body">
-            <form method="GET" class="row g-3">
-                <div class="col-md-2">
-                    <label class="form-label">Data Início</label>
-                    <input type="date" name="data_inicio" class="form-control" value="{{ data_inicio }}">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Data Fim</label>
-                    <input type="date" name="data_fim" class="form-control" value="{{ data_fim }}">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Tipo</label>
-                    <select name="tipo" class="form-select">
-                        <option value="">Todos</option>
-                        {% for tipo_val, tipo_label in tipos %}
-                        <option value="{{ tipo_val }}" {% if tipo_selecionado == tipo_val %}selected{% endif %}>{{ tipo_label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-6 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary me-2">
-                        <i class="fas fa-search"></i> Pesquisar
-                    </button>
-                    <a href="{% url 'notas:gerenciar_movimento_caixa' %}" class="btn btn-secondary me-2">
-                        <i class="fas fa-times"></i> Limpar
-                    </a>
-                    <a href="{% url 'notas:pesquisar_periodo_movimento_caixa' %}" class="btn btn-info">
-                        <i class="fas fa-calendar-alt"></i> Pesquisar Períodos
-                    </a>
-                </div>
-            </form>
         </div>
     </div>
 
@@ -345,9 +306,19 @@
                         <input type="number" name="valor" class="form-control" step="0.01" min="0.01" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Cliente (Opcional)</label>
-                        <select name="cliente_id" class="form-select">
-                            <option value="">Nenhum</option>
+                        <label class="form-label">Destino *</label>
+                        <select name="destino" id="destinoEntrada" class="form-select" required onchange="toggleDestinoEntrada()">
+                            <option value="">Selecione...</option>
+                            <option value="estelar">Estelar</option>
+                            <option value="cliente">Cliente</option>
+                            <option value="nenhum">Nenhum (Geral)</option>
+                        </select>
+                        <small class="form-text text-muted">Selecione para quem é esta entrada</small>
+                    </div>
+                    <div class="mb-3" id="divClienteEntrada" style="display: none;">
+                        <label class="form-label">Cliente *</label>
+                        <select name="cliente_id" id="clienteEntrada" class="form-select">
+                            <option value="">Selecione...</option>
                             {% for cliente in clientes %}
                             <option value="{{ cliente.pk }}">{{ cliente.razao_social }}</option>
                             {% endfor %}
@@ -355,7 +326,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Descrição *</label>
-                        <textarea name="descricao" class="form-control" rows="3" required placeholder="Descreva a entrada de dinheiro..."></textarea>
+                        <textarea name="descricao" id="descricaoEntrada" class="form-control" rows="3" required placeholder="Descreva a entrada de dinheiro..."></textarea>
                     </div>
                 </form>
             </div>
@@ -399,19 +370,29 @@
                         <input type="number" name="valor" class="form-control" step="0.01" min="0.01" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Funcionário (Opcional)</label>
-                        <select name="funcionario_id" class="form-select">
-                            <option value="">Nenhum</option>
+                        <label class="form-label">Destino *</label>
+                        <select name="destino" id="destinoSaida" class="form-select" required onchange="toggleDestinoSaida()">
+                            <option value="">Selecione...</option>
+                            <option value="estelar">Estelar</option>
+                            <option value="funcionario">Funcionário</option>
+                            <option value="cliente">Cliente</option>
+                            <option value="nenhum">Nenhum (Geral)</option>
+                        </select>
+                        <small class="form-text text-muted">Selecione para quem é esta saída</small>
+                    </div>
+                    <div class="mb-3" id="divFuncionarioSaida" style="display: none;">
+                        <label class="form-label">Funcionário *</label>
+                        <select name="funcionario_id" id="funcionarioSaida" class="form-select">
+                            <option value="">Selecione...</option>
                             {% for funcionario in funcionarios %}
                             <option value="{{ funcionario.pk }}">{{ funcionario.nome }}</option>
                             {% endfor %}
                         </select>
-                        <small class="form-text text-muted">Selecione um funcionário se a saída estiver relacionada a ele</small>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Cliente (Opcional)</label>
-                        <select name="cliente_id" class="form-select">
-                            <option value="">Nenhum</option>
+                    <div class="mb-3" id="divClienteSaida" style="display: none;">
+                        <label class="form-label">Cliente *</label>
+                        <select name="cliente_id" id="clienteSaida" class="form-select">
+                            <option value="">Selecione...</option>
                             {% for cliente in clientes %}
                             <option value="{{ cliente.pk }}">{{ cliente.razao_social }}</option>
                             {% endfor %}
@@ -419,7 +400,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Descrição *</label>
-                        <textarea name="descricao" class="form-control" rows="3" required placeholder="Descreva a saída de dinheiro..."></textarea>
+                        <textarea name="descricao" id="descricaoSaida" class="form-control" rows="3" required placeholder="Descreva a saída de dinheiro..."></textarea>
                     </div>
                 </form>
             </div>
@@ -533,6 +514,66 @@ document.getElementById('funcionarioAcertoSelect').addEventListener('change', fu
     }
 });
 
+// Função para toggle destino entrada
+function toggleDestinoEntrada() {
+    const destino = document.getElementById('destinoEntrada').value;
+    const divCliente = document.getElementById('divClienteEntrada');
+    const clienteSelect = document.getElementById('clienteEntrada');
+    const descricaoInput = document.getElementById('descricaoEntrada');
+    
+    // Resetar campos
+    clienteSelect.value = '';
+    clienteSelect.required = false;
+    
+    if (destino === 'cliente') {
+        divCliente.style.display = 'block';
+        clienteSelect.required = true;
+        descricaoInput.placeholder = 'Descreva a entrada de dinheiro...';
+    } else if (destino === 'estelar') {
+        divCliente.style.display = 'none';
+        descricaoInput.placeholder = 'Descreva a entrada de dinheiro para Estelar...';
+    } else {
+        divCliente.style.display = 'none';
+        descricaoInput.placeholder = 'Descreva a entrada de dinheiro...';
+    }
+}
+
+// Função para toggle destino saída
+function toggleDestinoSaida() {
+    const destino = document.getElementById('destinoSaida').value;
+    const divFuncionario = document.getElementById('divFuncionarioSaida');
+    const divCliente = document.getElementById('divClienteSaida');
+    const funcionarioSelect = document.getElementById('funcionarioSaida');
+    const clienteSelect = document.getElementById('clienteSaida');
+    const descricaoInput = document.getElementById('descricaoSaida');
+    
+    // Resetar campos
+    funcionarioSelect.value = '';
+    clienteSelect.value = '';
+    funcionarioSelect.required = false;
+    clienteSelect.required = false;
+    
+    if (destino === 'funcionario') {
+        divFuncionario.style.display = 'block';
+        divCliente.style.display = 'none';
+        funcionarioSelect.required = true;
+        descricaoInput.placeholder = 'Descreva a saída de dinheiro para o funcionário...';
+    } else if (destino === 'cliente') {
+        divFuncionario.style.display = 'none';
+        divCliente.style.display = 'block';
+        clienteSelect.required = true;
+        descricaoInput.placeholder = 'Descreva a saída de dinheiro para o cliente...';
+    } else if (destino === 'estelar') {
+        divFuncionario.style.display = 'none';
+        divCliente.style.display = 'none';
+        descricaoInput.placeholder = 'Descreva a saída de dinheiro para Estelar...';
+    } else {
+        divFuncionario.style.display = 'none';
+        divCliente.style.display = 'none';
+        descricaoInput.placeholder = 'Descreva a saída de dinheiro...';
+    }
+}
+
 // Salvar Acerto de Funcionário
 document.getElementById('btnSalvarAcertoFuncionario').addEventListener('click', function() {
     const form = document.getElementById('formAcertarFuncionario');
@@ -561,7 +602,20 @@ document.getElementById('btnSalvarAcertoFuncionario').addEventListener('click', 
 // Salvar Nova Entrada
 document.getElementById('btnSalvarEntrada').addEventListener('click', function() {
     const form = document.getElementById('formNovaEntrada');
+    const destino = document.getElementById('destinoEntrada').value;
     const formData = new FormData(form);
+    
+    // Se for para Estelar, garantir que não há cliente associado e adicionar "Estelar" na descrição
+    if (destino === 'estelar') {
+        formData.delete('cliente_id'); // Remover cliente se houver
+        const descricao = formData.get('descricao');
+        if (!descricao.toLowerCase().includes('estelar')) {
+            formData.set('descricao', 'Estelar: ' + descricao);
+        }
+    } else if (destino !== 'cliente') {
+        // Se não for cliente, remover cliente_id
+        formData.delete('cliente_id');
+    }
     
     fetch('{% url "notas:criar_movimento_caixa_ajax" %}', {
         method: 'POST',
@@ -574,6 +628,7 @@ document.getElementById('btnSalvarEntrada').addEventListener('click', function()
             alert('Entrada registrada com sucesso!');
             bootstrap.Modal.getInstance(document.getElementById('modalNovaEntrada')).hide();
             form.reset();
+            toggleDestinoEntrada(); // Resetar campos
             location.reload();
         } else {
             alert('Erro: ' + data.message);
@@ -584,7 +639,28 @@ document.getElementById('btnSalvarEntrada').addEventListener('click', function()
 // Salvar Nova Saída
 document.getElementById('btnSalvarSaida').addEventListener('click', function() {
     const form = document.getElementById('formNovaSaida');
+    const destino = document.getElementById('destinoSaida').value;
     const formData = new FormData(form);
+    
+    // Se for para Estelar, garantir que não há funcionário ou cliente associado e adicionar "Estelar" na descrição
+    if (destino === 'estelar') {
+        formData.delete('funcionario_id'); // Remover funcionário se houver
+        formData.delete('cliente_id'); // Remover cliente se houver
+        const descricao = formData.get('descricao');
+        if (!descricao.toLowerCase().includes('estelar')) {
+            formData.set('descricao', 'Estelar: ' + descricao);
+        }
+    } else if (destino === 'funcionario') {
+        // Se for funcionário, remover cliente
+        formData.delete('cliente_id');
+    } else if (destino === 'cliente') {
+        // Se for cliente, remover funcionário
+        formData.delete('funcionario_id');
+    } else {
+        // Se for nenhum, remover ambos
+        formData.delete('funcionario_id');
+        formData.delete('cliente_id');
+    }
     
     fetch('{% url "notas:criar_movimento_caixa_ajax" %}', {
         method: 'POST',
@@ -597,6 +673,7 @@ document.getElementById('btnSalvarSaida').addEventListener('click', function() {
             alert('Saída registrada com sucesso!');
             bootstrap.Modal.getInstance(document.getElementById('modalNovaSaida')).hide();
             form.reset();
+            toggleDestinoSaida(); // Resetar campos
             location.reload();
         } else {
             alert('Erro: ' + data.message);
@@ -719,10 +796,12 @@ document.getElementById('modalAcertarFuncionario').addEventListener('hidden.bs.m
 
 document.getElementById('modalNovaEntrada').addEventListener('hidden.bs.modal', function() {
     document.getElementById('formNovaEntrada').reset();
+    toggleDestinoEntrada(); // Resetar campos de destino
 });
 
 document.getElementById('modalNovaSaida').addEventListener('hidden.bs.modal', function() {
     document.getElementById('formNovaSaida').reset();
+    toggleDestinoSaida(); // Resetar campos de destino
 });
 
 // Editar período

@@ -158,6 +158,8 @@ from .admin_views import (
     detalhes_log_auditoria,
     listar_registros_excluidos,
     restaurar_registro,
+    listar_setores_bancarios,
+    editar_setor_bancario,
 )
 
 from .relatorio_views import (
@@ -209,7 +211,6 @@ from .fluxo_caixa_views import (
     excluir_movimento_bancario,
     atualizar_controle_saldo,
     criar_funcionario_ajax,
-    movimento_caixa,
     acerto_diario_carregamento,
     listar_acertos_diarios,
     salvar_acerto_diario,
@@ -232,6 +233,8 @@ from .fluxo_caixa_views import (
     excluir_periodo_movimento_caixa_ajax,
     pesquisar_periodo_movimento_caixa,
     visualizar_periodo_movimento_caixa,
+    imprimir_periodo_movimento_caixa,
+    fechamento_caixa,
 )
 
 # Manter compatibilidade com código antigo
@@ -290,7 +293,6 @@ __all__ = [
     'excluir_receita_empresa', 'criar_caixa_funcionario', 'acertar_caixa_funcionario',
     'criar_movimento_bancario', 'editar_movimento_bancario', 'excluir_movimento_bancario',
     'atualizar_controle_saldo', 'criar_funcionario_ajax',
-    'movimento_caixa',
     'acerto_diario_carregamento', 'listar_acertos_diarios', 'salvar_acerto_diario',
     'adicionar_carregamento_cliente_ajax', 'remover_carregamento_cliente_ajax',
     'adicionar_distribuicao_funcionario_ajax', 'remover_distribuicao_funcionario_ajax',
@@ -301,6 +303,8 @@ __all__ = [
     'iniciar_periodo_movimento_caixa', 'pesquisar_periodo_movimento_caixa',
     'fechar_periodo_movimento_caixa_ajax', 'editar_periodo_movimento_caixa_ajax',
     'obter_periodo_movimento_caixa_ajax', 'excluir_periodo_movimento_caixa_ajax',
+    'visualizar_periodo_movimento_caixa', 'imprimir_periodo_movimento_caixa',
+    'fechamento_caixa',
     # Utilitários
     'formatar_valor_brasileiro', 'formatar_peso_brasileiro',
     'get_next_romaneio_codigo', 'get_next_romaneio_generico_codigo',

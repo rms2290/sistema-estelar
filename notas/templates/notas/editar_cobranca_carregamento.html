@@ -88,6 +88,45 @@
                     </div>
                     <div class="card-body">
                         <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-user-tag"></i> Tipo de Cliente <span class="text-danger">*</span>
+                                </label>
+                                <select name="tipo_cliente" id="tipo_cliente" class="form-select form-select-lg" required onchange="toggleTipoCliente()">
+                                    <option value="Mensalista" {% if cobranca.tipo_cliente == 'Mensalista' %}selected{% endif %}>Mensalista</option>
+                                    <option value="Por_Cubagem" {% if cobranca.tipo_cliente == 'Por_Cubagem' %}selected{% endif %}>Por Cubagem</option>
+                                </select>
+                                <small class="text-muted">Selecione se o cliente é mensalista ou cobrado por cubagem</small>
+                            </div>
+                        </div>
+                        <div class="row" id="campos_cubagem" style="display: {% if cobranca.tipo_cliente == 'Por_Cubagem' %}block{% else %}none{% endif %};">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-cube"></i> Cubagem (m³) <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" name="cubagem" id="cubagem" step="0.01" min="0" 
+                                       class="form-control form-control-lg" placeholder="0.00" 
+                                       value="{% if cobranca.cubagem %}{{ cobranca.cubagem }}{% else %}0.00{% endif %}" 
+                                       oninput="calcularValorArmazenamento()">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-dollar-sign"></i> Valor da Cubagem (R$/m³) <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" name="valor_cubagem" id="valor_cubagem" step="0.01" min="0" 
+                                       class="form-control form-control-lg" placeholder="0.00" 
+                                       value="{% if cobranca.valor_cubagem %}{{ cobranca.valor_cubagem }}{% else %}0.00{% endif %}" 
+                                       oninput="calcularValorArmazenamento()">
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-calculator"></i> 
+                                    <strong>Valor de Armazenamento Calculado:</strong> 
+                                    <span id="valor_armazenamento_calculado">R$ {% if cobranca.tipo_cliente == 'Por_Cubagem' %}{{ cobranca.valor_armazenamento|floatformat:2 }}{% else %}0,00{% endif %}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">
                                     <i class="fas fa-truck-loading"></i> Valor Carregamento (R$) <span class="text-danger">*</span>
@@ -146,6 +185,53 @@
 </div>
 
 <script>
+// Função para toggle campos de cubagem (escopo global)
+function toggleTipoCliente() {
+    const tipoCliente = document.getElementById('tipo_cliente').value;
+    const camposCubagem = document.getElementById('campos_cubagem');
+    const cubagemInput = document.getElementById('cubagem');
+    const valorCubagemInput = document.getElementById('valor_cubagem');
+    
+    if (tipoCliente === 'Por_Cubagem') {
+        if (camposCubagem) camposCubagem.style.display = 'block';
+        if (cubagemInput) cubagemInput.required = true;
+        if (valorCubagemInput) valorCubagemInput.required = true;
+    } else {
+        if (camposCubagem) camposCubagem.style.display = 'none';
+        if (cubagemInput) {
+            cubagemInput.required = false;
+            cubagemInput.value = '0.00';
+        }
+        if (valorCubagemInput) {
+            valorCubagemInput.required = false;
+            valorCubagemInput.value = '0.00';
+        }
+        calcularValorArmazenamento();
+    }
+}
+
+// Função para calcular valor de armazenamento (escopo global)
+function calcularValorArmazenamento() {
+    const cubagemInput = document.getElementById('cubagem');
+    const valorCubagemInput = document.getElementById('valor_cubagem');
+    const valorArmazenamentoCalculado = document.getElementById('valor_armazenamento_calculado');
+    
+    if (!cubagemInput || !valorCubagemInput || !valorArmazenamentoCalculado) {
+        return;
+    }
+    
+    const cubagem = parseFloat(cubagemInput.value) || 0;
+    const valorCubagem = parseFloat(valorCubagemInput.value) || 0;
+    const valorArmazenamento = cubagem * valorCubagem;
+    
+    const valorFormatado = valorArmazenamento.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    });
+    
+    valorArmazenamentoCalculado.textContent = valorFormatado;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const selecionarTodos = document.getElementById('selecionar-todos');
     
@@ -156,6 +242,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Inicializar cálculo se for Por_Cubagem
+    {% if cobranca.tipo_cliente == 'Por_Cubagem' %}
+    calcularValorArmazenamento();
+    {% endif %}
+    
     // Validação do formulário
     document.getElementById('form-cobranca').addEventListener('submit', function(e) {
         const romaneiosSelecionados = document.querySelectorAll('input[name="romaneios"]:checked');
@@ -163,6 +254,25 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             alert('Por favor, selecione pelo menos um romaneio.');
             return false;
+        }
+        
+        // Validar campos de cubagem se tipo for Por_Cubagem
+        const tipoCliente = document.getElementById('tipo_cliente').value;
+        if (tipoCliente === 'Por_Cubagem') {
+            const cubagem = parseFloat(document.getElementById('cubagem').value) || 0;
+            const valorCubagem = parseFloat(document.getElementById('valor_cubagem').value) || 0;
+            
+            if (cubagem <= 0) {
+                e.preventDefault();
+                alert('Por favor, informe a cubagem (deve ser maior que zero).');
+                return false;
+            }
+            
+            if (valorCubagem <= 0) {
+                e.preventDefault();
+                alert('Por favor, informe o valor da cubagem (deve ser maior que zero).');
+                return false;
+            }
         }
     });
 });

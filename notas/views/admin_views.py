@@ -10,8 +10,8 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from datetime import datetime, date, timedelta
 
-from ..models import Usuario, TabelaSeguro, AgendaEntrega, AuditoriaLog, CobrancaCarregamento, Cliente, RomaneioViagem
-from ..forms import CadastroUsuarioForm, TabelaSeguroForm, AgendaEntregaForm, CobrancaCarregamentoForm
+from ..models import Usuario, TabelaSeguro, AgendaEntrega, AuditoriaLog, CobrancaCarregamento, Cliente, RomaneioViagem, SetorBancario
+from ..forms import CadastroUsuarioForm, TabelaSeguroForm, AgendaEntregaForm, CobrancaCarregamentoForm, SetorBancarioForm
 from ..decorators import admin_required, rate_limit_critical
 from .base import is_admin
 
@@ -796,6 +796,66 @@ def listar_registros_excluidos(request):
     }
     
     return render(request, 'notas/auditoria/registros_excluidos.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+def listar_setores_bancarios(request):
+    """Lista todos os setores bancários cadastrados"""
+    setores = SetorBancario.objects.all().order_by('setor')
+    
+    # Criar setores padrão se não existirem
+    if not setores.exists():
+        SetorBancario.objects.create(
+            setor='Carregamento',
+            nome_responsavel='',
+            banco='',
+            agencia='',
+            conta_corrente='',
+            chave_pix='',
+            tipo_chave_pix='Telefone',
+            ativo=True
+        )
+        SetorBancario.objects.create(
+            setor='Armazenagem',
+            nome_responsavel='',
+            banco='',
+            agencia='',
+            conta_corrente='',
+            chave_pix='',
+            tipo_chave_pix='CNPJ',
+            ativo=True
+        )
+        setores = SetorBancario.objects.all().order_by('setor')
+    
+    context = {
+        'setores': setores,
+    }
+    return render(request, 'notas/listar_setores_bancarios.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+def editar_setor_bancario(request, pk):
+    """Edita um setor bancário específico"""
+    setor = get_object_or_404(SetorBancario, pk=pk)
+    
+    if request.method == 'POST':
+        form = SetorBancarioForm(request.POST, instance=setor)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Dados bancários do setor {setor.get_setor_display()} atualizados com sucesso!')
+            return redirect('notas:listar_setores_bancarios')
+        else:
+            messages.error(request, 'Houve um erro ao atualizar os dados. Verifique os campos.')
+    else:
+        form = SetorBancarioForm(instance=setor)
+    
+    context = {
+        'form': form,
+        'setor': setor,
+    }
+    return render(request, 'notas/editar_setor_bancario.html', context)
 
 
 @admin_required

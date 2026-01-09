@@ -25,7 +25,7 @@ from .veiculo_forms import VeiculoForm, VeiculoSearchForm
 from .romaneio_forms import RomaneioViagemForm, RomaneioSearchForm
 
 # Importar formulários administrativos
-from .admin_forms import TabelaSeguroForm, AgendaEntregaForm, CobrancaCarregamentoForm
+from .admin_forms import TabelaSeguroForm, AgendaEntregaForm, CobrancaCarregamentoForm, SetorBancarioForm
 
 # Importar formulários de fechamento de frete
 from .fechamento_frete_forms import FechamentoFreteForm, ItemFechamentoFreteForm
@@ -59,6 +59,7 @@ __all__ = [
     'TabelaSeguroForm',
     'AgendaEntregaForm',
     'CobrancaCarregamentoForm',
+    'SetorBancarioForm',
     # Fechamento de Frete
     'FechamentoFreteForm',
     'ItemFechamentoFreteForm',

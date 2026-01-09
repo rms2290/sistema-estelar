@@ -1,4 +1,5 @@
 from django.urls import path
+from django.shortcuts import redirect
 from . import views
 
 app_name = 'notas'
@@ -115,6 +116,8 @@ urlpatterns = [
     path('ajax/buscar-romaneios-filtrados/', views.buscar_romaneios_filtrados, name='buscar_romaneios_filtrados'),
     path('relatorios/cobranca-mensal/', views.cobranca_mensal, name='cobranca_mensal'),
     path('relatorios/cobranca-carregamento/', views.cobranca_carregamento, name='cobranca_carregamento'),
+    path('relatorios/dados-bancarios-setores/', views.listar_setores_bancarios, name='listar_setores_bancarios'),
+    path('relatorios/dados-bancarios-setores/<int:pk>/editar/', views.editar_setor_bancario, name='editar_setor_bancario'),
     
     # URLs para nova estrutura de cobrança de carregamento
     path('cobranca-carregamento/criar/', views.criar_cobranca_carregamento, name='criar_cobranca_carregamento'),
@@ -141,7 +144,8 @@ urlpatterns = [
     path('fluxo-caixa/movimento-bancario/<int:pk>/excluir/', views.excluir_movimento_bancario, name='excluir_movimento_bancario'),
     path('fluxo-caixa/controle-saldo/<int:pk>/atualizar/', views.atualizar_controle_saldo, name='atualizar_controle_saldo'),
     path('fluxo-caixa/funcionario/criar-ajax/', views.criar_funcionario_ajax, name='criar_funcionario_ajax'),
-    path('fluxo-caixa/movimento-caixa/', views.movimento_caixa, name='movimento_caixa'),
+    # Redirecionamento da URL antiga movimento-caixa para gerenciar-movimento-caixa
+    path('fluxo-caixa/movimento-caixa/', lambda request: redirect('notas:gerenciar_movimento_caixa'), name='movimento_caixa'),
     # URLs para Acerto Diário de Carregamento
     path('fluxo-caixa/acerto-diario/', views.acerto_diario_carregamento, name='acerto_diario_carregamento'),
     path('fluxo-caixa/acerto-diario/listar/', views.listar_acertos_diarios, name='listar_acertos_diarios'),
@@ -156,6 +160,7 @@ urlpatterns = [
     path('fluxo-caixa/iniciar-periodo/', views.iniciar_periodo_movimento_caixa, name='iniciar_periodo_movimento_caixa'),
     path('fluxo-caixa/pesquisar-periodo/', views.pesquisar_periodo_movimento_caixa, name='pesquisar_periodo_movimento_caixa'),
     path('fluxo-caixa/periodo/<int:pk>/visualizar/', views.visualizar_periodo_movimento_caixa, name='visualizar_periodo_movimento_caixa'),
+    path('fluxo-caixa/periodo/<int:pk>/imprimir/', views.imprimir_periodo_movimento_caixa, name='imprimir_periodo_movimento_caixa'),
     path('api/fluxo-caixa/periodo/<int:pk>/fechar/', views.fechar_periodo_movimento_caixa_ajax, name='fechar_periodo_movimento_caixa_ajax'),
     path('api/fluxo-caixa/periodo/<int:pk>/editar/', views.editar_periodo_movimento_caixa_ajax, name='editar_periodo_movimento_caixa_ajax'),
     path('api/fluxo-caixa/periodo/<int:pk>/obter/', views.obter_periodo_movimento_caixa_ajax, name='obter_periodo_movimento_caixa_ajax'),
@@ -165,6 +170,8 @@ urlpatterns = [
     path('fluxo-caixa/movimento-caixa/<int:pk>/excluir/', views.excluir_movimento_caixa_ajax, name='excluir_movimento_caixa_ajax'),
     path('fluxo-caixa/movimento-caixa/<int:pk>/obter/', views.obter_movimento_caixa_ajax, name='obter_movimento_caixa_ajax'),
     path('fluxo-caixa/funcionario/<int:funcionario_id>/acumulado/', views.obter_acumulado_funcionario_ajax, name='obter_acumulado_funcionario_ajax'),
+    # URL para Fechamento de Caixa
+    path('fluxo-caixa/fechamento-caixa/', views.fechamento_caixa, name='fechamento_caixa'),
     
     # URLs para gerenciamento de despesas de carregamento (comentadas - views não implementadas)
     # path('romaneios/<int:romaneio_id>/despesas/', views.gerenciar_despesas_romaneio, name='gerenciar_despesas_romaneio'),

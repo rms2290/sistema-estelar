@@ -249,17 +249,17 @@
                             <span>Fluxo de Caixa</span>
                         </div>
                         <ul class="nav-submenu">
-                            <li><a href="{% url 'notas:dashboard_fluxo_caixa' %}">
-                                <i class="fas fa-chart-line"></i> Dashboard
+                            <li><a href="{% url 'notas:gerenciar_movimento_caixa' %}">
+                                <i class="fas fa-cash-register"></i> Movimento de Caixa
+                            </a></li>
+                            <li><a href="{% url 'notas:fechamento_caixa' %}">
+                                <i class="fas fa-lock"></i> Fechamento de Caixa
                             </a></li>
                             <li><a href="{% url 'notas:cobranca_carregamento' %}">
                                 <i class="fas fa-truck-loading"></i> Cobrança Carregamento
                             </a></li>
-                            <li><a href="{% url 'notas:movimento_caixa' %}">
-                                <i class="fas fa-money-bill-wave"></i> Movimento de Caixa
-                            </a></li>
-                            <li><a href="{% url 'notas:gerenciar_movimento_caixa' %}">
-                                <i class="fas fa-cash-register"></i> Gerenciar Movimento de Caixa
+                            <li><a href="{% url 'notas:dashboard_fluxo_caixa' %}">
+                                <i class="fas fa-chart-line"></i> Dashboard
                             </a></li>
                             <li><a href="{% url 'notas:pesquisar_periodo_movimento_caixa' %}">
                                 <i class="fas fa-search"></i> Pesquisar Período
@@ -290,6 +290,9 @@
                             </a></li>
                             <li><a href="{% url 'notas:listar_tabela_seguros' %}">
                                 <i class="fas fa-shield-alt"></i> Tabela de Seguros
+                            </a></li>
+                            <li><a href="{% url 'notas:listar_setores_bancarios' %}">
+                                <i class="fas fa-university"></i> Dados Bancários dos Setores
                             </a></li>
                         </ul>
                     </li>

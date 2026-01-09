@@ -10,48 +10,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Nota: Removemos a operação de remover campo 'romaneio' de 'despesacarregamento'
-        # pois o modelo será deletado logo abaixo e essa operação causava conflito
-        migrations.RemoveField(
-            model_name='cliente',
-            name='deleted_at',
-        ),
-        migrations.RemoveField(
-            model_name='cliente',
-            name='deleted_by',
-        ),
-        migrations.RemoveField(
-            model_name='motorista',
-            name='deleted_at',
-        ),
-        migrations.RemoveField(
-            model_name='motorista',
-            name='deleted_by',
-        ),
-        migrations.RemoveField(
-            model_name='notafiscal',
-            name='deleted_at',
-        ),
-        migrations.RemoveField(
-            model_name='notafiscal',
-            name='deleted_by',
-        ),
-        migrations.RemoveField(
-            model_name='romaneioviagem',
-            name='deleted_at',
-        ),
-        migrations.RemoveField(
-            model_name='romaneioviagem',
-            name='deleted_by',
-        ),
-        migrations.RemoveField(
-            model_name='veiculo',
-            name='deleted_at',
-        ),
-        migrations.RemoveField(
-            model_name='veiculo',
-            name='deleted_by',
-        ),
+        # Nota: Os campos deleted_at e deleted_by já foram removidos na migração 0041_remove_cobrancacarregamento_cliente_and_more
+        # Portanto, não precisamos removê-los novamente aqui
         migrations.AlterField(
             model_name='auditorialog',
             name='acao',
@@ -62,10 +22,5 @@ class Migration(migrations.Migration):
             name='codigo',
             field=models.CharField(help_text='Código único do romaneio (ex: ROM-2024-01-0001)', max_length=20, unique=True, verbose_name='Código do Romaneio'),
         ),
-        migrations.DeleteModel(
-            name='CobrancaCarregamento',
-        ),
-        migrations.DeleteModel(
-            name='DespesaCarregamento',
-        ),
+        # Nota: Os modelos CobrancaCarregamento e DespesaCarregamento já foram deletados em outras migrações
     ]

@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from decimal import Decimal
 
-from ..models import TabelaSeguro, AgendaEntrega, CobrancaCarregamento, Cliente, RomaneioViagem
+from ..models import TabelaSeguro, AgendaEntrega, CobrancaCarregamento, Cliente, RomaneioViagem, SetorBancario
 from .base import UpperCaseCharField
 
 
@@ -139,6 +139,9 @@ class CobrancaCarregamentoForm(forms.ModelForm):
         fields = [
             'cliente',
             'romaneios',
+            'tipo_cliente',
+            'cubagem',
+            'valor_cubagem',
             'valor_carregamento',
             'valor_cte_manifesto',
             'data_vencimento',
@@ -174,10 +177,29 @@ class CobrancaCarregamentoForm(forms.ModelForm):
                 'rows': 3,
                 'placeholder': 'Observações sobre esta cobrança (opcional)'
             }),
+            'tipo_cliente': forms.Select(attrs={
+                'class': 'form-select form-select-lg',
+                'required': True
+            }),
+            'cubagem': forms.NumberInput(attrs={
+                'class': 'form-control form-control-lg',
+                'step': '0.01',
+                'min': '0',
+                'placeholder': '0.00'
+            }),
+            'valor_cubagem': forms.NumberInput(attrs={
+                'class': 'form-control form-control-lg',
+                'step': '0.01',
+                'min': '0',
+                'placeholder': '0.00'
+            }),
         }
         labels = {
             'cliente': 'Cliente',
             'romaneios': 'Romaneios',
+            'tipo_cliente': 'Tipo de Cliente',
+            'cubagem': 'Cubagem (m³)',
+            'valor_cubagem': 'Valor da Cubagem (R$/m³)',
             'valor_carregamento': 'Valor Carregamento (R$)',
             'valor_cte_manifesto': 'Valor CTE/Manifesto (R$)',
             'data_vencimento': 'Data de Vencimento',
@@ -259,4 +281,53 @@ class CobrancaCarregamentoForm(forms.ModelForm):
         
         return cleaned_data
 
+
+class SetorBancarioForm(forms.ModelForm):
+    """Formulário para dados bancários dos setores"""
+    
+    class Meta:
+        model = SetorBancario
+        fields = ['setor', 'nome_responsavel', 'banco', 'agencia', 'conta_corrente', 'chave_pix', 'tipo_chave_pix', 'ativo']
+        widgets = {
+            'setor': forms.Select(attrs={
+                'class': 'form-select form-select-lg',
+                'required': True
+            }),
+            'nome_responsavel': forms.TextInput(attrs={
+                'class': 'form-control form-control-lg',
+                'placeholder': 'Nome do responsável ou beneficiário'
+            }),
+            'banco': forms.TextInput(attrs={
+                'class': 'form-control form-control-lg',
+                'placeholder': 'Ex: BRADESCO'
+            }),
+            'agencia': forms.TextInput(attrs={
+                'class': 'form-control form-control-lg',
+                'placeholder': 'Ex: 0125'
+            }),
+            'conta_corrente': forms.TextInput(attrs={
+                'class': 'form-control form-control-lg',
+                'placeholder': 'Ex: 7715-1'
+            }),
+            'chave_pix': forms.TextInput(attrs={
+                'class': 'form-control form-control-lg',
+                'placeholder': 'Chave PIX'
+            }),
+            'tipo_chave_pix': forms.Select(attrs={
+                'class': 'form-select form-select-lg'
+            }),
+            'ativo': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+        }
+        labels = {
+            'setor': 'Setor',
+            'nome_responsavel': 'Nome do Responsável/Beneficiário',
+            'banco': 'Banco',
+            'agencia': 'Agência',
+            'conta_corrente': 'Conta Corrente',
+            'chave_pix': 'Chave PIX',
+            'tipo_chave_pix': 'Tipo de Chave PIX',
+            'ativo': 'Ativo',
+        }
 

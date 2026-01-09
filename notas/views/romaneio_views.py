@@ -396,11 +396,12 @@ def imprimir_romaneio_novo(request, pk):
         total_peso = totais['total_peso']
         total_valor = totais['total_valor']
         
-        # Dividir notas em grupos de 20 para multipágina
+        # Tentar caber tudo em uma página (aumentar limite se necessário)
         notas_list = list(notas_romaneadas)
         notas_paginas = []
-        for i in range(0, len(notas_list), 20):
-            pagina = notas_list[i:i + 20]
+        # Aumentar para 30 notas por página para tentar caber tudo
+        for i in range(0, len(notas_list), 30):
+            pagina = notas_list[i:i + 30]
             notas_paginas.append(pagina)
         
         version = int(time.time())
@@ -454,15 +455,30 @@ def gerar_romaneio_pdf(request, pk):
     
     notas_romaneadas = romaneio.notas_fiscais.all().order_by('data')
     
-    total_peso = sum(nota.peso for nota in notas_romaneadas)
-    total_valor = sum(nota.valor for nota in notas_romaneadas)
+    # Usar serviço para calcular totais
+    from ..services.romaneio_service import RomaneioService
+    totais = RomaneioService.calcular_totais_romaneio(romaneio)
+    total_peso = totais['total_peso']
+    total_valor = totais['total_valor']
+    
+    # Dividir notas em páginas (30 por página)
+    notas_list = list(notas_romaneadas)
+    notas_paginas = []
+    for i in range(0, len(notas_list), 30):
+        pagina = notas_list[i:i + 30]
+        notas_paginas.append(pagina)
+    
+    import time
+    version = int(time.time())
     
     template = get_template('notas/visualizar_romaneio_para_impressao.html')
     html = template.render({
         'romaneio': romaneio,
         'notas_romaneadas': notas_romaneadas,
+        'notas_paginas': notas_paginas,
         'total_peso': total_peso,
-        'total_valor': total_valor
+        'total_valor': total_valor,
+        'version': version
     })
     
     response = HttpResponse(content_type='application/pdf')
@@ -476,12 +492,61 @@ def gerar_romaneio_pdf(request, pk):
         css = CSS(string='''
             @page {
                 size: A4;
-                margin: 1cm;
+                margin: 0.8cm;
             }
             body {
                 font-family: Arial, sans-serif;
-                font-size: 12px;
-                line-height: 1.4;
+                font-size: 11px;
+                line-height: 1.2;
+                margin: 0;
+                padding: 0;
+            }
+            .header {
+                text-align: center;
+                margin-bottom: 8px;
+                padding-bottom: 5px;
+                border-bottom: 2px solid #000;
+            }
+            .header h1 {
+                font-size: 17px;
+                margin: 0;
+            }
+            .info-container {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+                gap: 8px;
+            }
+            .romaneio-info, .motorista-info, .cliente-info {
+                flex: 1;
+                padding: 5px;
+                background-color: #f9f9f9;
+                border: 1px solid #ddd;
+            }
+            .report-title {
+                text-align: center;
+                margin: 8px 0 5px 0;
+                font-size: 13px;
+                font-weight: bold;
+                border-bottom: 1px solid #000;
+                padding-bottom: 3px;
+            }
+            .table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 5px 0 8px 0;
+            }
+            .table th, .table td {
+                border: 1px solid #ddd;
+                padding: 3px 4px;
+                font-size: 9px;
+            }
+            .table th {
+                background-color: #f2f2f2;
+                font-weight: bold;
+            }
+            .table tbody tr:nth-child(even) {
+                background-color: #f9f9f9;
             }
             .no-print {
                 display: none !important;

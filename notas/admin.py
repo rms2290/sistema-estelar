@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from .models import Cliente, NotaFiscal, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, Usuario, TabelaSeguro, TipoVeiculo, PlacaVeiculo, AuditoriaLog, CobrancaCarregamento, FechamentoFrete, ItemFechamentoFrete, DetalheItemFechamento, OcorrenciaNotaFiscal, FotoOcorrencia, FuncionarioFluxoCaixa, ReceitaEmpresa, CaixaFuncionario, MovimentoCaixaFuncionario, MovimentoBancario, ControleSaldoSemanal, AcertoDiarioCarregamento, CarregamentoCliente, DistribuicaoFuncionario, AcumuladoFuncionario
+from .models import Cliente, NotaFiscal, Motorista, Veiculo, RomaneioViagem, HistoricoConsulta, Usuario, TabelaSeguro, TipoVeiculo, PlacaVeiculo, AuditoriaLog, CobrancaCarregamento, FechamentoFrete, ItemFechamentoFrete, DetalheItemFechamento, OcorrenciaNotaFiscal, FotoOcorrencia, FuncionarioFluxoCaixa, ReceitaEmpresa, CaixaFuncionario, MovimentoCaixaFuncionario, MovimentoBancario, ControleSaldoSemanal, AcertoDiarioCarregamento, CarregamentoCliente, DistribuicaoFuncionario, AcumuladoFuncionario, MovimentoCaixa, PeriodoMovimentoCaixa, SetorBancario
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
@@ -482,6 +482,29 @@ class FuncionarioFluxoCaixaAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+@admin.register(SetorBancario)
+class SetorBancarioAdmin(admin.ModelAdmin):
+    list_display = ['setor', 'nome_responsavel', 'banco', 'agencia', 'conta_corrente', 'chave_pix', 'tipo_chave_pix', 'ativo']
+    list_filter = ['setor', 'ativo', 'banco']
+    search_fields = ['setor', 'nome_responsavel', 'banco', 'chave_pix']
+    list_editable = ['ativo']
+    
+    fieldsets = (
+        ('Informações do Setor', {
+            'fields': ('setor', 'nome_responsavel', 'ativo')
+        }),
+        ('Dados Bancários', {
+            'fields': ('banco', 'agencia', 'conta_corrente', 'chave_pix', 'tipo_chave_pix')
+        }),
+        ('Controle', {
+            'fields': ('criado_em', 'atualizado_em'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ['criado_em', 'atualizado_em']
 
 
 @admin.register(ReceitaEmpresa)

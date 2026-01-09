@@ -18,6 +18,7 @@ from ..models import (
     MovimentoBancario, ControleSaldoSemanal, CobrancaCarregamento,
     Usuario, Cliente, FuncionarioFluxoCaixa,
     AcertoDiarioCarregamento, CarregamentoCliente,
+    DistribuicaoFuncionario, MovimentoCaixa, PeriodoMovimentoCaixa,
     DistribuicaoFuncionario, AcumuladoFuncionario,
     MovimentoCaixa, PeriodoMovimentoCaixa
 )
@@ -655,23 +656,81 @@ def salvar_acerto_diario(request):
         # Primeiro, remover movimentos antigos deste acerto (se houver)
         MovimentoCaixa.objects.filter(acerto_diario=acerto).delete()
         
-        # NOTA: Carregamentos de clientes NÃO entram na lista de controle
-        # Apenas distribuições para funcionários e valor Estelar entram
+        # LÓGICA DE MOVIMENTOS:
+        # 1. Carregamentos (com cliente) entram como SAÍDA (negativo)
+        # 2. Descargas em dinheiro entram como ENTRADA (positivo)
+        # 3. Descargas em depósito entram como SAÍDA (negativo)
+        # 4. Valor Estelar entra como ENTRADA (positivo)
+        # 5. Distribuições para funcionários entram como ENTRADA (positivo)
         
-        # 1. Criar saída para valor Estelar (se houver)
-        if acerto.valor_estelar and acerto.valor_estelar > 0:
+        # 1. Criar SAÍDAS para carregamentos (com cliente)
+        carregamentos = CarregamentoCliente.objects.filter(
+            acerto_diario=acerto,
+            cliente__isnull=False  # Apenas carregamentos com cliente
+        )
+        for carregamento in carregamentos:
             MovimentoCaixa.objects.create(
                 data=acerto.data,
                 tipo='Saida',
-                valor=acerto.valor_estelar,
-                descricao=f"Valor Estelar - Acerto Diário {acerto.data.strftime('%d/%m/%Y')}",
+                valor=carregamento.valor,
+                descricao=f"Carregamento: {carregamento.cliente.razao_social}",
                 categoria='Outros',
+                cliente=carregamento.cliente,
                 acerto_diario=acerto,
-                periodo=periodo_ativo,  # Associar ao período ativo
+                periodo=periodo_ativo,
                 usuario_criacao=request.user
             )
         
-        # 2. Criar ENTRADAS (positivas) para cada distribuição de funcionário
+        # 2. Criar movimentos para descargas
+        # Buscar todas as descargas (sem cliente)
+        descargas = CarregamentoCliente.objects.filter(
+            acerto_diario=acerto,
+            cliente__isnull=True  # Descargas não têm cliente
+        )
+        for descarga in descargas:
+            # Se não tiver tipo_pagamento definido, considerar como 'Dinheiro' (padrão)
+            # Normalizar para comparação case-insensitive (pode ter valores antigos em maiúsculas)
+            tipo_pagamento = (descarga.tipo_pagamento or 'Dinheiro').upper()
+            
+            if tipo_pagamento in ['DINHEIRO', 'DINHEIRO']:
+                # Descargas em dinheiro entram como ENTRADA (positivo)
+                MovimentoCaixa.objects.create(
+                    data=acerto.data,
+                    tipo='Entrada',
+                    valor=descarga.valor,
+                    descricao=f"Descarga: {descarga.descricao or 'Descarga'}",
+                    categoria='RecebimentoCliente',
+                    acerto_diario=acerto,
+                    periodo=periodo_ativo,
+                    usuario_criacao=request.user
+                )
+            elif tipo_pagamento in ['DEPOSITO', 'DEPÓSITO']:
+                # Descargas em depósito entram como SAÍDA (negativo)
+                MovimentoCaixa.objects.create(
+                    data=acerto.data,
+                    tipo='Saida',
+                    valor=descarga.valor,
+                    descricao=f"Descarga (Depósito): {descarga.descricao or 'Descarga'}",
+                    categoria='Outros',
+                    acerto_diario=acerto,
+                    periodo=periodo_ativo,
+                    usuario_criacao=request.user
+                )
+        
+        # 4. Criar ENTRADA para valor Estelar (se houver)
+        if acerto.valor_estelar and acerto.valor_estelar > 0:
+            MovimentoCaixa.objects.create(
+                data=acerto.data,
+                tipo='Entrada',
+                valor=acerto.valor_estelar,
+                descricao="Valor Estelar",
+                categoria='RecebimentoCliente',
+                acerto_diario=acerto,
+                periodo=periodo_ativo,
+                usuario_criacao=request.user
+            )
+        
+        # 5. Criar ENTRADAS (positivas) para cada distribuição de funcionário
         # As distribuições para funcionários entram como AcertoFuncionario (valor positivo)
         distribuicoes = DistribuicaoFuncionario.objects.filter(acerto_diario=acerto)
         for distribuicao in distribuicoes:
@@ -679,11 +738,11 @@ def salvar_acerto_diario(request):
                 data=acerto.data,
                 tipo='AcertoFuncionario',  # Tipo específico para acerto de funcionário (entrada positiva)
                 valor=distribuicao.valor,
-                descricao=f"Acerto Funcionário: {distribuicao.funcionario.nome} - Acerto Diário {acerto.data.strftime('%d/%m/%Y')}",
+                descricao=f"Acerto Funcionário: {distribuicao.funcionario.nome}",
                 categoria=None,  # AcertoFuncionario não usa categoria
                 funcionario=distribuicao.funcionario,
                 acerto_diario=acerto,
-                periodo=periodo_ativo,  # Associar ao período ativo
+                periodo=periodo_ativo,
                 usuario_criacao=request.user
             )
         
@@ -735,6 +794,9 @@ def adicionar_carregamento_cliente_ajax(request):
         if cliente_id:
             cliente = get_object_or_404(Cliente, pk=cliente_id)
         
+        # Obter tipo de pagamento (apenas para descargas)
+        tipo_pagamento = request.POST.get('tipo_pagamento', 'Dinheiro') if not cliente else None
+        
         # Criar ou atualizar carregamento
         carregamento, created = CarregamentoCliente.objects.get_or_create(
             acerto_diario=acerto,
@@ -742,7 +804,8 @@ def adicionar_carregamento_cliente_ajax(request):
             defaults={
                 'descricao': descricao if not cliente else '',
                 'valor': valor,
-                'observacoes': observacoes
+                'observacoes': observacoes,
+                'tipo_pagamento': tipo_pagamento  # Só para descargas
             }
         )
         
@@ -751,6 +814,8 @@ def adicionar_carregamento_cliente_ajax(request):
             carregamento.descricao = descricao if not cliente else ''
             carregamento.valor = valor
             carregamento.observacoes = observacoes
+            if not cliente:  # Só atualiza tipo_pagamento para descargas
+                carregamento.tipo_pagamento = tipo_pagamento
             carregamento.save()
         
         return JsonResponse({
@@ -1498,15 +1563,24 @@ def excluir_periodo_movimento_caixa_ajax(request, pk):
     try:
         periodo = get_object_or_404(PeriodoMovimentoCaixa, pk=pk)
         
-        # Verificar se o período tem movimentos associados
-        if periodo.movimentos.exists():
-            return JsonResponse({
-                'success': False,
-                'message': 'Não é possível excluir um período que possui movimentos cadastrados. Primeiro exclua ou mova os movimentos.'
-            })
-        
         periodo_nome = periodo.data_inicio.strftime('%d/%m/%Y')
+        
+        # Contar movimentos antes de excluir
+        movimentos_count = periodo.movimentos.count()
+        
+        # Excluir o período (os movimentos serão excluídos em cascata devido ao on_delete=PROTECT)
+        # Mas primeiro precisamos excluir os movimentos manualmente se houver
+        if periodo.movimentos.exists():
+            # Excluir todos os movimentos do período
+            periodo.movimentos.all().delete()
+        
         periodo.delete()
+        
+        if movimentos_count > 0:
+            return JsonResponse({
+                'success': True,
+                'message': f'Período de {periodo_nome} e seus {movimentos_count} movimento(s) foram excluídos com sucesso!'
+            })
         
         return JsonResponse({
             'success': True,
@@ -1667,4 +1741,467 @@ def visualizar_periodo_movimento_caixa(request, pk):
     }
     
     return render(request, 'notas/fluxo_caixa/visualizar_periodo_movimento_caixa.html', context)
+
+
+@login_required
+@admin_required
+def imprimir_periodo_movimento_caixa(request, pk):
+    """Gera relatório de impressão do período de movimento de caixa"""
+    
+    periodo = get_object_or_404(PeriodoMovimentoCaixa, pk=pk)
+    
+    # Buscar movimentos do período
+    movimentos = MovimentoCaixa.objects.filter(
+        periodo=periodo
+    ).select_related(
+        'funcionario', 'cliente', 'acerto_diario', 'usuario_criacao'
+    ).order_by('data', 'criado_em')
+    
+    # Calcular saldo acumulado
+    movimentos_com_saldo = []
+    saldo_acumulado = periodo.valor_inicial_caixa
+    
+    for mov in movimentos:
+        if mov.is_entrada:
+            saldo_acumulado += mov.valor
+        else:
+            saldo_acumulado -= mov.valor
+        movimentos_com_saldo.append({
+            'movimento': mov,
+            'saldo_acumulado': saldo_acumulado
+        })
+    
+    # Calcular totais
+    total_entradas = sum(mov.valor for mov in movimentos if mov.is_entrada)
+    total_saidas = sum(mov.valor for mov in movimentos if mov.is_saida)
+    saldo = periodo.valor_inicial_caixa + total_entradas - total_saidas
+    
+    context = {
+        'periodo': periodo,
+        'movimentos_com_saldo': movimentos_com_saldo,
+        'total_entradas': total_entradas,
+        'total_saidas': total_saidas,
+        'valor_inicial_caixa': periodo.valor_inicial_caixa,
+        'saldo': saldo,
+        'total_movimentos': movimentos.count(),
+    }
+    
+    return render(request, 'notas/fluxo_caixa/imprimir_periodo_movimento_caixa.html', context)
+
+
+@login_required
+@admin_required
+def fechamento_caixa(request):
+    """
+    Tela para fechamento de caixa.
+    Permite visualizar períodos abertos e fechá-los.
+    """
+    # Buscar período ativo (aberto)
+    periodo_ativo = PeriodoMovimentoCaixa.objects.filter(status='Aberto').order_by('-criado_em').first()
+    
+    # Buscar todos os períodos fechados recentes
+    periodos_fechados = PeriodoMovimentoCaixa.objects.filter(
+        status='Fechado'
+    ).order_by('-data_fim', '-criado_em')[:10]  # Últimos 10 períodos fechados
+    
+    # Se houver período ativo, calcular totais
+    funcionarios_acumulados = []
+    if periodo_ativo:
+        movimentos = MovimentoCaixa.objects.filter(
+            periodo=periodo_ativo
+        ).select_related(
+            'funcionario', 'cliente', 'acerto_diario', 'usuario_criacao'
+        )
+        
+        total_entradas = sum(mov.valor for mov in movimentos if mov.is_entrada)
+        total_saidas = sum(mov.valor for mov in movimentos if mov.is_saida)
+        saldo_atual = periodo_ativo.valor_inicial_caixa + total_entradas - total_saidas
+        total_movimentos = movimentos.count()
+        
+        # Buscar valores acumulados dos funcionários no período
+        # O valor acumulado = distribuições - acertos (pagamentos)
+        from django.db.models import Sum, Q
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Buscar todos os acertos diários do período
+        # IMPORTANTE: Incluir a data_inicio usando >= (data__gte já faz isso)
+        # Se o período não tem data_fim, buscar todos os acertos a partir da data_inicio
+        logger.info(f"=== DEBUG FECHAMENTO CAIXA ===")
+        logger.info(f"Período ativo - Data início: {periodo_ativo.data_inicio} (tipo: {type(periodo_ativo.data_inicio)})")
+        logger.info(f"Período ativo - Data fim: {periodo_ativo.data_fim} (tipo: {type(periodo_ativo.data_fim)})")
+        
+        # Buscar TODOS os acertos diários para debug
+        todos_acertos = AcertoDiarioCarregamento.objects.all().order_by('data')
+        logger.info(f"Total de acertos diários no sistema: {todos_acertos.count()}")
+        for acerto in todos_acertos:
+            logger.info(f"  - Acerto ID {acerto.pk}: Data {acerto.data} (tipo: {type(acerto.data)})")
+        
+        # Filtrar acertos do período
+        # IMPORTANTE: Usar data__gte para incluir a data_inicio
+        # Se data_fim não existir, buscar todos os acertos a partir de data_inicio
+        acertos_periodo = AcertoDiarioCarregamento.objects.filter(
+            data__gte=periodo_ativo.data_inicio
+        )
+        if periodo_ativo.data_fim:
+            acertos_periodo = acertos_periodo.filter(data__lte=periodo_ativo.data_fim)
+        
+        logger.info(f"Acertos filtrados por data >= {periodo_ativo.data_inicio}: {acertos_periodo.count()}")
+        for acerto in acertos_periodo.order_by('data'):
+            logger.info(f"  - Acerto ID {acerto.pk}: Data {acerto.data} (Comparação: {acerto.data} >= {periodo_ativo.data_inicio} = {acerto.data >= periodo_ativo.data_inicio})")
+        
+        # Verificar especificamente acertos do dia 05/01/2026
+        from datetime import date
+        try:
+            data_05_01 = date(2026, 1, 5)
+            acertos_05 = AcertoDiarioCarregamento.objects.filter(data=data_05_01)
+            logger.info(f"Acertos do dia 05/01/2026 encontrados: {acertos_05.count()}")
+            for acerto in acertos_05:
+                logger.info(f"  - Acerto ID {acerto.pk}: Data {acerto.data}, Comparação com período início ({periodo_ativo.data_inicio}): {acerto.data >= periodo_ativo.data_inicio}")
+                if acerto.data < periodo_ativo.data_inicio:
+                    logger.warning(f"  ⚠️ Acerto {acerto.pk} do dia {acerto.data} está ANTES do início do período {periodo_ativo.data_inicio}!")
+        except Exception as e:
+            logger.error(f"Erro ao verificar acertos do dia 05/01: {str(e)}")
+        for acerto in acertos_periodo:
+            logger.info(f"  - Acerto {acerto.pk}: {acerto.data} - {acerto.valor_estelar}")
+        
+        # 1. Soma das distribuições (valores distribuídos aos funcionários - sempre positivos)
+        distribuicoes_agrupadas = DistribuicaoFuncionario.objects.filter(
+            acerto_diario__in=acertos_periodo
+        ).select_related('funcionario', 'acerto_diario').order_by('funcionario__nome', 'acerto_diario__data')
+        
+        logger.info(f"Distribuições encontradas: {distribuicoes_agrupadas.count()}")
+        for dist in distribuicoes_agrupadas:
+            logger.info(f"  - Funcionário {dist.funcionario.nome}: R$ {dist.valor} (Acerto {dist.acerto_diario.pk} - {dist.acerto_diario.data})")
+        
+        # Agrupar por funcionário
+        distribuicoes_por_funcionario = distribuicoes_agrupadas.values('funcionario').annotate(
+            total_distribuicoes=Sum('valor')
+        )
+        
+        # 2. Soma dos acertos diretos (pagamentos aos funcionários - reduzem o acumulado)
+        # IMPORTANTE: Movimentos tipo AcertoFuncionario COM acerto_diario são distribuições (já contadas acima)
+        # Apenas movimentos SEM acerto_diario são pagamentos diretos que reduzem o acumulado
+        acertos_funcionarios = MovimentoCaixa.objects.filter(
+            periodo=periodo_ativo,
+            tipo='AcertoFuncionario',
+            funcionario__isnull=False,
+            acerto_diario__isnull=True  # Apenas acertos diretos (sem acerto_diario)
+        ).select_related('funcionario')
+        
+        logger.info(f"Acertos diretos encontrados: {acertos_funcionarios.count()}")
+        for acerto in acertos_funcionarios:
+            logger.info(f"  - Funcionário {acerto.funcionario.nome}: R$ {acerto.valor} (Data: {acerto.data})")
+        
+        acertos_agrupados = acertos_funcionarios.values('funcionario').annotate(
+            total_acertos=Sum('valor')
+        )
+        
+        # 3. Soma das saídas associadas a funcionários (também reduzem o acumulado)
+        saidas_funcionarios = MovimentoCaixa.objects.filter(
+            periodo=periodo_ativo,
+            tipo='Saida',
+            funcionario__isnull=False
+        ).select_related('funcionario')
+        
+        logger.info(f"Saídas de funcionários encontradas: {saidas_funcionarios.count()}")
+        for saida in saidas_funcionarios:
+            logger.info(f"  - Funcionário {saida.funcionario.nome}: R$ {saida.valor} (Data: {saida.data}, Descrição: {saida.descricao})")
+        
+        saidas_agrupadas = saidas_funcionarios.values('funcionario').annotate(
+            total_saidas=Sum('valor')
+        )
+        
+        # Criar dicionário para armazenar valores por funcionário
+        funcionarios_dict = {}
+        
+        # Adicionar distribuições
+        for item in distribuicoes_por_funcionario:
+            funcionario_id = item['funcionario']
+            valor_dist = Decimal(str(item['total_distribuicoes'] or '0.00'))
+            if funcionario_id not in funcionarios_dict:
+                funcionarios_dict[funcionario_id] = Decimal('0.00')
+            funcionarios_dict[funcionario_id] += valor_dist
+            logger.info(f"Funcionário {funcionario_id}: +R$ {valor_dist} (distribuições) = R$ {funcionarios_dict[funcionario_id]}")
+        
+        # Subtrair acertos (pagamentos)
+        for item in acertos_agrupados:
+            funcionario_id = item['funcionario']
+            valor_acerto = Decimal(str(item['total_acertos'] or '0.00'))
+            if funcionario_id not in funcionarios_dict:
+                funcionarios_dict[funcionario_id] = Decimal('0.00')
+            funcionarios_dict[funcionario_id] -= valor_acerto
+            logger.info(f"Funcionário {funcionario_id}: -R$ {valor_acerto} (acertos) = R$ {funcionarios_dict[funcionario_id]}")
+        
+        # Subtrair saídas associadas a funcionários
+        for item in saidas_agrupadas:
+            funcionario_id = item['funcionario']
+            valor_saida = Decimal(str(item['total_saidas'] or '0.00'))
+            if funcionario_id not in funcionarios_dict:
+                funcionarios_dict[funcionario_id] = Decimal('0.00')
+            funcionarios_dict[funcionario_id] -= valor_saida
+            logger.info(f"Funcionário {funcionario_id}: -R$ {valor_saida} (saídas) = R$ {funcionarios_dict[funcionario_id]}")
+        
+        # Montar lista final
+        funcionarios_acumulados = []
+        total_acumulado_funcionarios = Decimal('0.00')
+        
+        for funcionario_id, valor_acumulado in funcionarios_dict.items():
+            if valor_acumulado != 0:  # Incluir se tiver qualquer valor (positivo ou negativo)
+                funcionario = FuncionarioFluxoCaixa.objects.get(pk=funcionario_id)
+                funcionarios_acumulados.append({
+                    'funcionario': funcionario,
+                    'valor_acumulado': valor_acumulado,
+                })
+                total_acumulado_funcionarios += valor_acumulado
+        
+        # Ordenar por nome do funcionário
+        funcionarios_acumulados.sort(key=lambda x: x['funcionario'].nome)
+        
+        # Calcular valor acumulado da Estelar
+        # Buscar TODOS os movimentos relacionados à Estelar no período
+        # 1. Entradas da Estelar - buscar de múltiplas formas para garantir que encontre todos
+        
+        # Buscar movimentos com descrição "Valor Estelar" (exato) no período
+        # Não filtrar por acerto_diario aqui, pois pode haver movimentos sem acerto associado
+        entradas_estelar_exato = MovimentoCaixa.objects.filter(
+            periodo=periodo_ativo,
+            tipo='Entrada',
+            funcionario__isnull=True,
+            descricao='Valor Estelar'
+        )
+        
+        # Buscar movimentos com descrição contendo "Estelar" (case-insensitive)
+        entradas_estelar_icontains = MovimentoCaixa.objects.filter(
+            periodo=periodo_ativo,
+            tipo='Entrada',
+            funcionario__isnull=True,
+            descricao__icontains='Estelar'
+        )
+        
+        # Buscar movimentos com categoria RecebimentoCliente que não sejam descargas
+        # Filtrar por data do período para garantir que estejam no período correto
+        entradas_estelar_categoria = MovimentoCaixa.objects.filter(
+            periodo=periodo_ativo,
+            tipo='Entrada',
+            funcionario__isnull=True,
+            categoria='RecebimentoCliente',
+            data__gte=periodo_ativo.data_inicio
+        )
+        if periodo_ativo.data_fim:
+            entradas_estelar_categoria = entradas_estelar_categoria.filter(data__lte=periodo_ativo.data_fim)
+        
+        entradas_estelar_categoria = entradas_estelar_categoria.exclude(
+            Q(descricao__icontains='Descarga') | Q(descricao__icontains='descarga')
+        )
+        
+        # Combinar todas as queries (usando set para evitar duplicatas)
+        entradas_estelar_ids = set()
+        entradas_estelar_list = []
+        
+        for entrada in entradas_estelar_exato:
+            if entrada.id not in entradas_estelar_ids:
+                entradas_estelar_ids.add(entrada.id)
+                entradas_estelar_list.append(entrada)
+        
+        for entrada in entradas_estelar_icontains:
+            if entrada.id not in entradas_estelar_ids:
+                entradas_estelar_ids.add(entrada.id)
+                entradas_estelar_list.append(entrada)
+        
+        for entrada in entradas_estelar_categoria:
+            if entrada.id not in entradas_estelar_ids:
+                entradas_estelar_ids.add(entrada.id)
+                entradas_estelar_list.append(entrada)
+        
+        total_estelar_entradas = sum(Decimal(str(entrada.valor)) for entrada in entradas_estelar_list)
+        
+        # Se ainda não encontrar movimentos, usar os valores dos acertos diários diretamente como fallback
+        # Mas primeiro, verificar se os movimentos foram criados mas não estão sendo encontrados
+        if total_estelar_entradas == 0 or len(entradas_estelar_list) == 0:
+            # Verificar se há movimentos no período que deveriam ser encontrados
+            movimentos_periodo = MovimentoCaixa.objects.filter(
+                periodo=periodo_ativo,
+                tipo='Entrada',
+                funcionario__isnull=True
+            )
+            logger.warning(f"⚠️ Nenhum movimento Estelar encontrado nas buscas específicas!")
+            logger.warning(f"Total de movimentos de entrada (sem funcionário) no período: {movimentos_periodo.count()}")
+            for mov in movimentos_periodo:
+                logger.warning(f"  Movimento: R$ {mov.valor} - '{mov.descricao}' (Categoria: {mov.categoria}, Acerto: {mov.acerto_diario_id})")
+            
+            # Buscar diretamente pelos acertos do período que têm valor_estelar
+            valor_dos_acertos = sum(
+                Decimal(str(acerto.valor_estelar)) for acerto in acertos_periodo if acerto.valor_estelar
+            )
+            logger.info(f"Valor total dos acertos diários (valor_estelar): R$ {valor_dos_acertos}")
+            logger.info(f"Acertos com valor_estelar: {[f'ID {acerto.pk} (R$ {acerto.valor_estelar})' for acerto in acertos_periodo if acerto.valor_estelar]}")
+            
+            # Se houver valor nos acertos mas não nos movimentos, usar o valor dos acertos
+            if valor_dos_acertos > 0:
+                total_estelar_entradas = valor_dos_acertos
+                logger.info(f"Usando valores dos acertos diários como fallback: R$ {total_estelar_entradas}")
+        
+        # Garantir que seja Decimal
+        if not isinstance(total_estelar_entradas, Decimal):
+            total_estelar_entradas = Decimal(str(total_estelar_entradas))
+        
+        # 2. Subtrair saídas gerais (não associadas a funcionários ou clientes específicos)
+        #    Essas são saídas da Estelar (despesas gerais)
+        saidas_estelar = MovimentoCaixa.objects.filter(
+            periodo=periodo_ativo,
+            tipo='Saida',
+            funcionario__isnull=True,  # Saídas não associadas a funcionários
+            cliente__isnull=True  # Saídas não associadas a clientes específicos (despesas gerais)
+        )
+        
+        total_estelar_saidas = sum(Decimal(str(saida.valor)) for saida in saidas_estelar)
+        
+        # Garantir que seja Decimal
+        if not isinstance(total_estelar_saidas, Decimal):
+            total_estelar_saidas = Decimal(str(total_estelar_saidas))
+        
+        # 3. Calcular valor acumulado (entradas - saídas)
+        valor_acumulado_estelar = total_estelar_entradas - total_estelar_saidas
+        
+        # Garantir que seja Decimal
+        if not isinstance(valor_acumulado_estelar, Decimal):
+            valor_acumulado_estelar = Decimal(str(valor_acumulado_estelar))
+        
+        logger.info(f"=== Valor acumulado Estelar ===")
+        logger.info(f"Período: {periodo_ativo.data_inicio} a {periodo_ativo.data_fim or 'Aberto'}")
+        logger.info(f"Acertos diários no período: {acertos_periodo.count()}")
+        logger.info(f"Entradas encontradas (busca exata 'Valor Estelar'): {entradas_estelar_exato.count()}")
+        logger.info(f"Entradas encontradas (busca icontains 'Estelar'): {entradas_estelar_icontains.count()}")
+        logger.info(f"Entradas encontradas (busca categoria RecebimentoCliente): {entradas_estelar_categoria.count()}")
+        logger.info(f"Total entradas únicas: {len(entradas_estelar_list)}")
+        for entrada in entradas_estelar_list:
+            logger.info(f"  * R$ {entrada.valor} - {entrada.descricao} (Data: {entrada.data}, ID: {entrada.id}, Acerto: {entrada.acerto_diario_id}, Categoria: {entrada.categoria})")
+        logger.info(f"Total Entradas: R$ {total_estelar_entradas} (tipo: {type(total_estelar_entradas)})")
+        logger.info(f"Saídas encontradas (gerais, sem funcionário/cliente): {saidas_estelar.count()}")
+        for saida in saidas_estelar:
+            logger.info(f"  * R$ {saida.valor} - {saida.descricao} (Data: {saida.data})")
+        logger.info(f"Total Saídas: R$ {total_estelar_saidas} (tipo: {type(total_estelar_saidas)})")
+        logger.info(f"Valor Acumulado Final: R$ {valor_acumulado_estelar} (tipo: {type(valor_acumulado_estelar)})")
+        
+        # Debug adicional: verificar todos os movimentos de entrada no período
+        todos_movimentos_entrada = MovimentoCaixa.objects.filter(
+            periodo=periodo_ativo,
+            tipo='Entrada',
+            funcionario__isnull=True
+        )
+        logger.info(f"=== DEBUG: Todos os movimentos de entrada (sem funcionário) no período ===")
+        logger.info(f"Total: {todos_movimentos_entrada.count()}")
+        for mov in todos_movimentos_entrada:
+            logger.info(f"  * R$ {mov.valor} - {mov.descricao} (Data: {mov.data}, ID: {mov.id}, Acerto: {mov.acerto_diario_id}, Categoria: {mov.categoria})")
+        
+        # DEBUG: Coletar informações detalhadas para debug
+        debug_info = {
+            'periodo': {
+                'data_inicio': periodo_ativo.data_inicio.strftime('%d/%m/%Y') if periodo_ativo.data_inicio else '',
+                'data_fim': periodo_ativo.data_fim.strftime('%d/%m/%Y') if periodo_ativo.data_fim else 'Aberto',
+            },
+            'acertos_diarios': [],
+            'distribuicoes_detalhadas': [],
+            'acertos_diretos_detalhados': [],
+            'saidas_funcionarios_detalhadas': [],
+        }
+        
+        for acerto in acertos_periodo:
+            debug_info['acertos_diarios'].append({
+                'id': acerto.pk,
+                'data': acerto.data.strftime('%d/%m/%Y'),
+                'valor_estelar': str(acerto.valor_estelar) if acerto.valor_estelar else '0.00',
+            })
+        
+        for dist in distribuicoes_agrupadas:
+            debug_info['distribuicoes_detalhadas'].append({
+                'funcionario_id': dist.funcionario.pk,
+                'funcionario_nome': dist.funcionario.nome,
+                'valor': str(dist.valor),
+                'acerto_id': dist.acerto_diario.pk,
+                'acerto_data': dist.acerto_diario.data.strftime('%d/%m/%Y'),
+            })
+        
+        for acerto_mov in acertos_funcionarios:
+            debug_info['acertos_diretos_detalhados'].append({
+                'funcionario_id': acerto_mov.funcionario.pk,
+                'funcionario_nome': acerto_mov.funcionario.nome,
+                'valor': str(acerto_mov.valor),
+                'data': acerto_mov.data.strftime('%d/%m/%Y'),
+                'descricao': acerto_mov.descricao,
+            })
+        
+        for saida_mov in saidas_funcionarios:
+            debug_info['saidas_funcionarios_detalhadas'].append({
+                'funcionario_id': saida_mov.funcionario.pk,
+                'funcionario_nome': saida_mov.funcionario.nome,
+                'valor': str(saida_mov.valor),
+                'data': saida_mov.data.strftime('%d/%m/%Y'),
+                'descricao': saida_mov.descricao,
+            })
+    else:
+        total_entradas = Decimal('0.00')
+        total_saidas = Decimal('0.00')
+        saldo_atual = Decimal('0.00')
+        total_movimentos = 0
+        total_acumulado_funcionarios = Decimal('0.00')
+        funcionarios_acumulados = []
+        valor_acumulado_estelar = Decimal('0.00')
+        total_estelar_entradas = Decimal('0.00')
+        total_estelar_saidas = Decimal('0.00')
+        debug_info = None
+        clientes_cobrancas_lista = []
+        total_cobrancas_pendentes = Decimal('0.00')
+    
+    # Buscar clientes com cobranças de carregamento em aberto (status='Pendente')
+    # Esta busca é independente do período, pois mostra todas as cobranças pendentes
+    cobrancas_pendentes = CobrancaCarregamento.objects.filter(
+        status='Pendente'
+    ).select_related('cliente').order_by('cliente__razao_social')
+    
+    # Agrupar por cliente e calcular totais
+    clientes_cobrancas = {}
+    for cobranca in cobrancas_pendentes:
+        cliente_id = cobranca.cliente.id
+        if cliente_id not in clientes_cobrancas:
+            clientes_cobrancas[cliente_id] = {
+                'cliente': cobranca.cliente,
+                'valor_total': Decimal('0.00'),
+                'quantidade_cobrancas': 0
+            }
+        clientes_cobrancas[cliente_id]['valor_total'] += cobranca.valor_carregamento + cobranca.valor_cte_manifesto
+        clientes_cobrancas[cliente_id]['quantidade_cobrancas'] += 1
+    
+    # Converter para lista ordenada por nome do cliente
+    clientes_cobrancas_lista = sorted(
+        clientes_cobrancas.values(),
+        key=lambda x: x['cliente'].razao_social
+    )
+    
+    # Calcular total geral
+    total_cobrancas_pendentes = sum(item['valor_total'] for item in clientes_cobrancas_lista)
+    
+    context = {
+        'periodo_ativo': periodo_ativo,
+        'periodos_fechados': periodos_fechados,
+        'total_entradas': total_entradas,
+        'total_saidas': total_saidas,
+        'valor_inicial_caixa': periodo_ativo.valor_inicial_caixa if periodo_ativo else Decimal('0.00'),
+        'saldo_atual': saldo_atual,
+        'total_movimentos': total_movimentos,
+        'funcionarios_acumulados': funcionarios_acumulados,
+        'total_acumulado_funcionarios': total_acumulado_funcionarios,
+        'valor_acumulado_estelar': valor_acumulado_estelar,
+        'total_estelar_entradas': total_estelar_entradas,
+        'total_estelar_saidas': total_estelar_saidas,
+        'clientes_cobrancas_pendentes': clientes_cobrancas_lista,
+        'total_cobrancas_pendentes': total_cobrancas_pendentes,
+    }
+    
+    # Adicionar debug_info ao context se existir
+    if debug_info:
+        context['debug_info'] = debug_info
+    
+    return render(request, 'notas/fluxo_caixa/fechamento_caixa.html', context)
 
