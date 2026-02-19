@@ -1,0 +1,382 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load format_filters %}
+
+{% block title %}Fluxo de Caixa - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-cash-register"></i> Fluxo de Caixa Semanal</h2>
+        <div>
+            <a href="?calcular=true&semana_inicio={{ semana_inicio|date:'Y-m-d' }}&semana_fim={{ semana_fim|date:'Y-m-d' }}" class="btn btn-info">
+                <i class="fas fa-calculator"></i> Calcular Totais
+            </a>
+            <a href="{% url 'financeiro:atualizar_controle_saldo' controle_saldo.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Atualizar Saldos
+            </a>
+        </div>
+    </div>
+
+    <!-- Mensagens -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Seleção de Semana -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Início da Semana</label>
+                    <input type="date" name="semana_inicio" class="form-control" value="{{ semana_inicio|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Fim da Semana</label>
+                    <input type="date" name="semana_fim" class="form-control" value="{{ semana_fim|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SEÇÃO 1: VALORES ARRECADADOS PARA A EMPRESA -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-money-bill-wave"></i> SEÇÃO 1: Valores Arrecadados para a Empresa</h5>
+            <a href="{% url 'financeiro:criar_receita_empresa' %}" class="btn btn-sm btn-success">
+                <i class="fas fa-plus"></i> Adicionar Receita
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Tipo</th>
+                            <th>Valor</th>
+                            <th>Cliente</th>
+                            <th>Descrição</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for receita in receitas %}
+                        <tr>
+                            <td>{{ receita.data|date:"d/m/Y" }}</td>
+                            <td>{{ receita.get_tipo_receita_display }}</td>
+                            <td><strong>R$ {{ receita.valor|format_brazilian_currency }}</strong></td>
+                            <td>{{ receita.cliente.razao_social|default:"-" }}</td>
+                            <td>{{ receita.descricao|truncatewords:10|default:"-" }}</td>
+                            <td>
+                                <a href="{% url 'financeiro:editar_receita_empresa' receita.pk %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'financeiro:excluir_receita_empresa' receita.pk %}" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">Nenhuma receita registrada nesta semana</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-info">
+                            <th colspan="2">TOTAL:</th>
+                            <th>R$ {{ controle_saldo.total_receitas_empresa|format_brazilian_currency }}</th>
+                            <th colspan="3"></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEÇÃO 2: CAIXA DOS FUNCIONÁRIOS -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-user-tie"></i> SEÇÃO 2: Caixa dos Funcionários</h5>
+            <a href="{% url 'financeiro:criar_caixa_funcionario' %}" class="btn btn-sm btn-success">
+                <i class="fas fa-plus"></i> Adicionar Caixa
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Funcionário</th>
+                            <th>Período</th>
+                            <th>Valor Coletado</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for caixa in caixas_funcionarios %}
+                        <tr>
+                            <td>{{ caixa.funcionario.nome }}</td>
+                            <td>
+                                {% if caixa.periodo_tipo == 'Semanal' %}
+                                    {{ caixa.semana_inicio|date:"d/m/Y" }} a {{ caixa.semana_fim|date:"d/m/Y" }}
+                                {% else %}
+                                    {{ caixa.data|date:"d/m/Y" }}
+                                {% endif %}
+                            </td>
+                            <td><strong>R$ {{ caixa.valor_coletado|format_brazilian_currency }}</strong></td>
+                            <td>
+                                <span class="badge {% if caixa.status == 'Acertado' %}bg-success{% else %}bg-warning{% endif %}">
+                                    {{ caixa.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if caixa.status == 'Em_Aberto' %}
+                                <a href="{% url 'financeiro:acertar_caixa_funcionario' caixa.pk %}" class="btn btn-sm btn-success">
+                                    <i class="fas fa-check"></i> Acertar
+                                </a>
+                                {% else %}
+                                <span class="text-muted">Acertado em {{ caixa.data_acerto|date:"d/m/Y" }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">Nenhum caixa de funcionário registrado nesta semana</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-info">
+                            <th colspan="2">TOTAL:</th>
+                            <th>R$ {{ controle_saldo.total_caixa_funcionarios|format_brazilian_currency }}</th>
+                            <th colspan="2"></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEÇÃO 3: MOVIMENTO CONTA CORRENTE -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-university"></i> SEÇÃO 3: Movimento Conta Corrente</h5>
+            <a href="{% url 'financeiro:criar_movimento_bancario' %}" class="btn btn-sm btn-success">
+                <i class="fas fa-plus"></i> Adicionar Movimento
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Tipo</th>
+                            <th>Valor</th>
+                            <th>Descrição</th>
+                            <th>Nº Documento</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for movimento in movimentos_banco %}
+                        <tr>
+                            <td>{{ movimento.data|date:"d/m/Y" }}</td>
+                            <td>
+                                <span class="badge {% if movimento.tipo == 'Credito' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ movimento.get_tipo_display }}
+                                </span>
+                            </td>
+                            <td><strong>R$ {{ movimento.valor|format_brazilian_currency }}</strong></td>
+                            <td>{{ movimento.descricao|truncatewords:10 }}</td>
+                            <td>{{ movimento.numero_documento|default:"-" }}</td>
+                            <td>
+                                <a href="{% url 'financeiro:editar_movimento_bancario' movimento.pk %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'financeiro:excluir_movimento_bancario' movimento.pk %}" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">Nenhum movimento bancário registrado nesta semana</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-info">
+                            <th colspan="2">TOTAL ENTRADAS:</th>
+                            <th>R$ {{ controle_saldo.total_entradas_banco|format_brazilian_currency }}</th>
+                            <th colspan="3"></th>
+                        </tr>
+                        <tr class="table-danger">
+                            <th colspan="2">TOTAL SAÍDAS:</th>
+                            <th>R$ {{ controle_saldo.total_saidas_banco|format_brazilian_currency }}</th>
+                            <th colspan="3"></th>
+                        </tr>
+                        <tr class="table-success">
+                            <th colspan="2">SALDO BANCO:</th>
+                            <th>R$ {{ saldo_banco|format_brazilian_currency }}</th>
+                            <th colspan="3"></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEÇÃO 4: VALORES PENDENTES A RECEBER -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-clock"></i> SEÇÃO 4: Valores Pendentes a Receber</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Data Vencimento</th>
+                            <th>Valor Carregamento</th>
+                            <th>Valor CTE/Manifesto</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pendente in pendentes_receber %}
+                        <tr>
+                            <td>{{ pendente.cliente.razao_social }}</td>
+                            <td>{{ pendente.data_vencimento|date:"d/m/Y"|default:"-" }}</td>
+                            <td>R$ {{ pendente.valor_carregamento|format_brazilian_currency }}</td>
+                            <td>R$ {{ pendente.valor_cte_manifesto|format_brazilian_currency }}</td>
+                            <td><strong>R$ {{ pendente.valor_total|format_brazilian_currency }}</strong></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">Nenhuma cobrança pendente</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-warning">
+                            <th colspan="4">TOTAL PENDENTE:</th>
+                            <th>R$ {{ controle_saldo.total_pendentes_receber|format_brazilian_currency }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESUMO E VALIDAÇÃO -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-calculator"></i> RESUMO E VALIDAÇÃO</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Saldo Inicial</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Caixa:</th>
+                            <td>R$ {{ controle_saldo.saldo_inicial_caixa|format_brazilian_currency }}</td>
+                        </tr>
+                        <tr>
+                            <th>Banco:</th>
+                            <td>R$ {{ controle_saldo.saldo_inicial_banco|format_brazilian_currency }}</td>
+                        </tr>
+                        <tr>
+                            <th>Total:</th>
+                            <td><strong>R$ {{ saldo_inicial_total|format_brazilian_currency }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6>Movimentações</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <th>+ Receitas Empresa:</th>
+                            <td>R$ {{ controle_saldo.total_receitas_empresa|format_brazilian_currency }}</td>
+                        </tr>
+                        <tr>
+                            <th>+ Caixa Funcionários:</th>
+                            <td>R$ {{ controle_saldo.total_caixa_funcionarios|format_brazilian_currency }}</td>
+                        </tr>
+                        <tr>
+                            <th>+ Entradas Banco:</th>
+                            <td>R$ {{ controle_saldo.total_entradas_banco|format_brazilian_currency }}</td>
+                        </tr>
+                        <tr>
+                            <th>- Saídas Banco:</th>
+                            <td>R$ {{ controle_saldo.total_saidas_banco|format_brazilian_currency }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Saldo Final Calculado</h6>
+                    <p class="h4 text-primary">R$ {{ controle_saldo.saldo_final_calculado|format_brazilian_currency }}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Saldo Final Real</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Caixa:</th>
+                            <td>R$ {{ controle_saldo.saldo_final_real_caixa|format_brazilian_currency }}</td>
+                        </tr>
+                        <tr>
+                            <th>Banco:</th>
+                            <td>R$ {{ controle_saldo.saldo_final_real_banco|format_brazilian_currency }}</td>
+                        </tr>
+                        <tr>
+                            <th>Total:</th>
+                            <td><strong>R$ {{ saldo_final_real_total|format_brazilian_currency }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <hr>
+            <div class="alert {% if controle_saldo.diferenca == 0 %}alert-success{% else %}alert-danger{% endif %}">
+                <h5 class="mb-0">
+                    <i class="fas fa-{% if controle_saldo.diferenca == 0 %}check-circle{% else %}exclamation-triangle{% endif %}"></i>
+                    DIFERENÇA: R$ {{ controle_saldo.diferenca|format_brazilian_currency }}
+                </h5>
+                {% if controle_saldo.diferenca == 0 and controle_saldo.validado %}
+                <p class="mb-0 mt-2">
+                    <i class="fas fa-check"></i> Validado em {{ controle_saldo.data_validacao|date:"d/m/Y H:i" }} por {{ controle_saldo.usuario_validacao.username }}
+                </p>
+                {% elif controle_saldo.diferenca == 0 %}
+                <form method="POST" class="mt-2">
+                    {% csrf_token %}
+                    <button type="submit" name="validar" class="btn btn-success">
+                        <i class="fas fa-check"></i> Validar Saldo
+                    </button>
+                </form>
+                {% else %}
+                <p class="mb-0 mt-2">A diferença deve ser zero para validar o saldo.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

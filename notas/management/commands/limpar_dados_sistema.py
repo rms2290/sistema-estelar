@@ -13,24 +13,22 @@ from notas.models import (
     RomaneioViagem,
     PlacaVeiculo,
     TipoVeiculo,
-    
     # Relatórios e fechamentos
     FechamentoFrete,
     ItemFechamentoFrete,
     DetalheItemFechamento,
-    
     # Cobranças
     CobrancaCarregamento,
-    
     # Ocorrências
     OcorrenciaNotaFiscal,
     FotoOcorrencia,
-    
     # Histórico e auditoria
     HistoricoConsulta,
     AuditoriaLog,
-    
-    # Fluxo de Caixa
+    # Tabelas auxiliares
+    TabelaSeguro,
+)
+from financeiro.models import (
     ReceitaEmpresa,
     FuncionarioFluxoCaixa,
     CaixaFuncionario,
@@ -41,9 +39,9 @@ from notas.models import (
     CarregamentoCliente,
     DistribuicaoFuncionario,
     AcumuladoFuncionario,
-    
-    # Tabelas auxiliares
-    TabelaSeguro,
+    MovimentoCaixa,
+    PeriodoMovimentoCaixa,
+    SetorBancario,
 )
 
 
@@ -80,6 +78,8 @@ class Command(BaseCommand):
                 
                 # 1. Limpar Fluxo de Caixa (dependências primeiro)
                 self.stdout.write('Limpando Fluxo de Caixa...')
+                contadores['MovimentoCaixa'] = MovimentoCaixa.objects.all().delete()[0]
+                contadores['PeriodoMovimentoCaixa'] = PeriodoMovimentoCaixa.objects.all().delete()[0]
                 contadores['AcumuladoFuncionario'] = AcumuladoFuncionario.objects.all().delete()[0]
                 contadores['DistribuicaoFuncionario'] = DistribuicaoFuncionario.objects.all().delete()[0]
                 contadores['CarregamentoCliente'] = CarregamentoCliente.objects.all().delete()[0]
@@ -90,6 +90,7 @@ class Command(BaseCommand):
                 contadores['ControleSaldoSemanal'] = ControleSaldoSemanal.objects.all().delete()[0]
                 contadores['ReceitaEmpresa'] = ReceitaEmpresa.objects.all().delete()[0]
                 contadores['FuncionarioFluxoCaixa'] = FuncionarioFluxoCaixa.objects.all().delete()[0]
+                contadores['SetorBancario'] = SetorBancario.objects.all().delete()[0]
                 
                 # 2. Limpar Ocorrências
                 self.stdout.write('Limpando Ocorrências...')

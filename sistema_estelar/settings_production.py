@@ -112,33 +112,44 @@ CACHES = {
     }
 }
 
-# OTIMIZAÇÃO: Configurações de logging mais eficientes
+# Logging produção: timestamp, nível, logger, mensagem (sem debug; erros e ações críticas)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'simple': {
-            'format': '{levelname} {message}',
+        'verbose': {
+            'format': '{asctime} {levelname} [{name}] {message}',
             'style': '{',
         },
     },
     'handlers': {
         'file': {
-            'level': 'ERROR',
+            'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),
-            'formatter': 'simple',
+            'encoding': 'utf-8',
+            'formatter': 'verbose',
         },
     },
     'loggers': {
+        'notas': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'financeiro': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
         'django': {
             'handlers': ['file'],
-            'level': 'ERROR',
-            'propagate': True,
+            'level': 'WARNING',
+            'propagate': False,
         },
     },
     'root': {
-        'level': 'ERROR',
+        'level': 'WARNING',
         'handlers': ['file'],
     },
 }

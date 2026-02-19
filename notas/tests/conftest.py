@@ -14,7 +14,7 @@ from django.utils import timezone
 
 from notas.models import (
     Cliente, Motorista, Veiculo, NotaFiscal, 
-    RomaneioViagem, TabelaSeguro, AgendaEntrega
+    RomaneioViagem, TabelaSeguro
 )
 
 Usuario = get_user_model()

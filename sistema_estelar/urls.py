@@ -15,7 +15,11 @@ def index(request):
 urlpatterns = [
     path('', index, name='index'),
     path('admin/', admin.site.urls),
-    path('notas/', include('notas.urls')), # Inclua as URLs do app 'notas'
+    path('notas/', include('notas.urls')),
+    # Fluxo de caixa: namespace 'financeiro' registrado na raiz para {% url 'financeiro:...' %}
+    path('notas/fluxo-caixa/', include('financeiro.urls')),
+    # API REST (Fase 6): /api/v1/ + documentação em /api/schema/
+    path('api/', include('api.urls')),
 ]
 
 # Debug Toolbar URLs (apenas em desenvolvimento)

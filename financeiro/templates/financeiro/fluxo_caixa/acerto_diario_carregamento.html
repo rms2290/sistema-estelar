@@ -1,0 +1,1232 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load format_filters %}
+
+{% block title %}Acerto Diário de Carregamento - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-calculator"></i> Acerto Diário de Carregamento</h2>
+        <div>
+            {% if mostrar_formulario %}
+            <a href="{% url 'financeiro:acerto_diario_carregamento' %}" class="btn btn-info ms-2">
+                <i class="fas fa-list"></i> Ver Lista
+            </a>
+            <a href="{% url 'financeiro:gerenciar_movimento_caixa' %}" class="btn btn-secondary ms-2">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+            {% else %}
+            <a href="{% url 'financeiro:acerto_diario_carregamento' %}?novo=1" class="btn btn-success ms-2">
+                <i class="fas fa-plus"></i> Novo Acerto
+            </a>
+            <a href="{% url 'financeiro:gerenciar_movimento_caixa' %}" class="btn btn-secondary ms-2">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if mostrar_lista %}
+    <!-- LISTA DE ACERTOS COM FILTROS -->
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-filter"></i> Filtros de Pesquisa</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Data Início</label>
+                    <input type="date" name="data_inicio" class="form-control" value="{{ data_inicio }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Data Fim</label>
+                    <input type="date" name="data_fim" class="form-control" value="{{ data_fim }}">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search"></i> Pesquisar
+                    </button>
+                    <a href="{% url 'financeiro:acerto_diario_carregamento' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabela de Acertos -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-table"></i> Acertos Diários ({{ acertos.count }} registro{{ acertos.count|pluralize }})</h5>
+        </div>
+        <div class="card-body">
+            {% if acertos %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Total Carregamentos</th>
+                            <th>Valor Estelar</th>
+                            <th>Total Funcionários</th>
+                            <th>Total Distribuído</th>
+                            <th>Diferença</th>
+                            <th>Status</th>
+                            <th width="150">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for acerto in acertos %}
+                        <tr>
+                            <td><strong>{{ acerto.data|date:"d/m/Y" }}</strong></td>
+                            <td>{{ acerto.total_carregamentos|format_brazilian_currency }}</td>
+                            <td>{{ acerto.valor_estelar|format_brazilian_currency }}</td>
+                            <td>{{ acerto.distribuicoes.count }}</td>
+                            <td>{{ acerto.total_distribuido|format_brazilian_currency }}</td>
+                            <td>
+                                {% if acerto.total_carregamentos == acerto.total_distribuido|add:acerto.valor_estelar %}
+                                    <span class="badge bg-success">R$ 0,00</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Diferença</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if acerto.total_carregamentos == acerto.total_distribuido|add:acerto.valor_estelar %}
+                                    <span class="badge bg-success">OK</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Diferença</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1">
+                                    <a href="{% url 'financeiro:acerto_diario_carregamento' %}?acerto_id={{ acerto.pk }}" class="btn btn-sm btn-primary" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-info btnVerDetalhes" data-acerto-id="{{ acerto.pk }}" title="Ver Detalhes">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Nenhum acerto encontrado com os filtros aplicados.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Modal para ver detalhes -->
+    <div class="modal fade" id="modalDetalhesAcerto" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Detalhes do Acerto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="conteudoDetalhesAcerto">
+                    <!-- Conteúdo será carregado via AJAX -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Ver detalhes do acerto
+    document.querySelectorAll('.btnVerDetalhes').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const acertoId = this.getAttribute('data-acerto-id');
+            const modal = new bootstrap.Modal(document.getElementById('modalDetalhesAcerto'));
+            const conteudo = document.getElementById('conteudoDetalhesAcerto');
+            
+            conteudo.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Carregando...</p></div>';
+            modal.show();
+            
+            fetch(`{% url 'financeiro:acerto_diario_carregamento' %}?ajax=1&acerto_id=${acertoId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.html) {
+                        conteudo.innerHTML = data.html;
+                    } else {
+                        conteudo.innerHTML = '<div class="alert alert-danger">Erro ao carregar detalhes</div>';
+                    }
+                })
+                .catch(error => {
+                    conteudo.innerHTML = '<div class="alert alert-danger">Erro ao carregar detalhes</div>';
+                });
+        });
+    });
+    </script>
+    {% endif %}
+
+    {% if mostrar_formulario %}
+
+    <!-- Mensagens -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if novo_acerto and not acerto %}
+    <!-- Selecionar data para novo acerto -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-calendar-day"></i> Novo Acerto Diário
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="GET">
+                <input type="hidden" name="novo" value="1">
+                <div class="mb-3">
+                    <label class="form-label">Selecione a Data do Acerto *</label>
+                    <input type="date" name="data" class="form-control" required value="{% now 'Y-m-d' %}">
+                    <small class="text-muted">Escolha a data para criar o novo acerto diário</small>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check"></i> Criar Acerto
+                    </button>
+                    <a href="{% url 'financeiro:acerto_diario_carregamento' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% elif acerto %}
+    <!-- Formulário de edição com seletor de data -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-calendar-day"></i> Editar Acerto de {{ acerto.data|date:"d/m/Y" }}
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="mb-3">
+                <input type="hidden" name="acerto_id" value="{{ acerto.pk }}">
+                <label class="form-label">Alterar Data do Acerto</label>
+                <div class="input-group">
+                    <input type="date" name="data" value="{{ data_selecionada|date:'Y-m-d' }}" class="form-control" onchange="this.form.submit()">
+                    <button type="submit" class="btn btn-outline-secondary">
+                        <i class="fas fa-search"></i> Carregar
+                    </button>
+                </div>
+                <small class="text-muted">Altere a data para carregar outro acerto</small>
+            </form>
+        </div>
+    </div>
+
+    {% if acerto %}
+    <form id="formAcertoDiario">
+        {% csrf_token %}
+        <input type="hidden" name="data" value="{{ data_selecionada|date:'Y-m-d' }}">
+        <input type="hidden" name="acerto_id" id="acerto_id" value="{{ acerto.pk }}">
+
+        <!-- CARREGAMENTOS E DESCARGAS -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-truck-loading"></i> Carregamentos e Descargas</h5>
+                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalAdicionarCliente">
+                    <i class="fas fa-plus"></i> Adicionar
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="tabelaCarregamentos">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Cliente/Descrição</th>
+                                <th>Valor (R$)</th>
+                                <th>Pagamento</th>
+                                <th>Observações</th>
+                                <th width="100">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyCarregamentos">
+                            {% for carregamento in carregamentos %}
+                            <tr data-carregamento-id="{{ carregamento.pk }}">
+                                <td>
+                                    {% if carregamento.cliente %}
+                                        <span class="badge bg-primary">Carregamento</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Descarga</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ carregamento.nome_display }}</td>
+                                <td><strong>R$ {{ carregamento.valor|format_brazilian_currency }}</strong></td>
+                                <td>
+                                    {% if not carregamento.cliente %}
+                                        {% if carregamento.tipo_pagamento == 'Dinheiro' %}
+                                            <span class="badge bg-success">Dinheiro</span>
+                                        {% elif carregamento.tipo_pagamento == 'Deposito' %}
+                                            <span class="badge bg-info">Depósito</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">-</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ carregamento.observacoes|default:"-" }}</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-danger btnRemoverCarregamento" data-id="{{ carregamento.pk }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr id="linhaVaziaCarregamentos">
+                                <td colspan="6" class="text-center text-muted">Nenhum registro</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-info">
+                                <th colspan="2">TOTAL:</th>
+                                <th id="totalCarregamentos">R$ {{ acerto.total_carregamentos|format_brazilian_currency }}</th>
+                                <th colspan="3"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- DISTRIBUIÇÃO -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-share-alt"></i> Distribuição</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">Distribuição</h6>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-primary me-2" data-bs-toggle="modal" data-bs-target="#modalAdicionarEstelar">
+                            <i class="fas fa-plus"></i> Adicionar Valor Estelar
+                        </button>
+                        <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalAdicionarFuncionario">
+                            <i class="fas fa-plus"></i> Adicionar Funcionário
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-striped" id="tabelaDistribuicoes">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Descrição</th>
+                                <th>Valor (R$)</th>
+                                <th width="100">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyDistribuicoes">
+                            {% if acerto.valor_estelar and acerto.valor_estelar > 0 %}
+                            <tr id="linhaEstelar" data-tipo="estelar">
+                                <td><span class="badge bg-info">Estelar</span></td>
+                                <td>Valor Estelar</td>
+                                <td><strong>{{ acerto.valor_estelar|format_brazilian_currency }}</strong></td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <button type="button" class="btn btn-sm btn-warning btnEditarEstelar" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger btnRemoverEstelar" title="Remover">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr id="linhaVaziaEstelar" style="display: none;">
+                                <td colspan="4"></td>
+                            </tr>
+                            {% endif %}
+                            {% for distribuicao in distribuicoes %}
+                            <tr data-distribuicao-id="{{ distribuicao.pk }}" data-tipo="funcionario">
+                                <td><span class="badge bg-success">Funcionário</span></td>
+                                <td>{{ distribuicao.funcionario.nome }}</td>
+                                <td><strong>{{ distribuicao.valor|format_brazilian_currency }}</strong></td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <button type="button" class="btn btn-sm btn-warning btnEditarDistribuicao" data-id="{{ distribuicao.pk }}" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger btnRemoverDistribuicao" data-id="{{ distribuicao.pk }}" title="Remover">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            {% if not acerto.valor_estelar or acerto.valor_estelar == 0 %}
+                            <tr id="linhaVaziaDistribuicoes">
+                                <td colspan="4" class="text-center text-muted">Nenhuma distribuição registrada</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-info">
+                                <th>TOTAL FUNCIONÁRIOS:</th>
+                                <th colspan="2" id="totalFuncionarios">R$ {{ acerto.total_funcionarios|format_brazilian_currency }}</th>
+                                <th></th>
+                            </tr>
+                            <tr class="table-success">
+                                <th>TOTAL DISTRIBUÍDO:</th>
+                                <th colspan="2" id="totalDistribuido">R$ {{ acerto.total_distribuido|format_brazilian_currency }}</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- VALIDAÇÃO -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-check-circle"></i> Validação</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Total Carregamentos:</strong> <span id="validacaoTotalCarregamentos">R$ {{ acerto.total_carregamentos|format_brazilian_currency }}</span></p>
+                        <p><strong>Total Distribuído:</strong> <span id="validacaoTotalDistribuido">R$ {{ acerto.total_distribuido|format_brazilian_currency }}</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <div id="validacaoResultado" class="alert">
+                            <!-- Será preenchido via JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button type="button" class="btn btn-primary" id="btnSalvarAcerto">
+                        <i class="fas fa-save"></i> Salvar Acerto
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+    {% endif %}
+    {% endif %}
+</div>
+
+<!-- Modal: Adicionar Cliente ou Descarga -->
+<div class="modal fade" id="modalAdicionarCliente" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Adicionar Carregamento ou Descarga</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formAdicionarCliente">
+                    <div class="mb-3">
+                        <label class="form-label">Tipo *</label>
+                        <select name="tipo_registro" id="tipo_registro" class="form-select" required onchange="toggleTipoRegistro()">
+                            <option value="">Selecione...</option>
+                            <option value="cliente">Carregamento (Cliente)</option>
+                            <option value="descarga">Descarga</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="divCliente">
+                        <label class="form-label">Cliente *</label>
+                        <select name="cliente_id" id="cliente_id" class="form-select">
+                            <option value="">Selecione...</option>
+                            {% for cliente in clientes %}
+                            <option value="{{ cliente.pk }}">{{ cliente.razao_social }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3" id="divDescricao" style="display: none;">
+                        <label class="form-label">Descrição da Descarga *</label>
+                        <input type="text" name="descricao" id="descricao" class="form-control" maxlength="255" placeholder="Ex: Descarga de mercadoria">
+                    </div>
+                    <div class="mb-3" id="divTipoPagamento" style="display: none;">
+                        <label class="form-label">Tipo de Pagamento *</label>
+                        <select name="tipo_pagamento" id="tipo_pagamento" class="form-select" required>
+                            <option value="Dinheiro">Dinheiro</option>
+                            <option value="Deposito">Depósito</option>
+                        </select>
+                        <small class="form-text text-muted">Se for depósito, não será contabilizado no movimento de caixa.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Valor (R$) *</label>
+                        <input type="number" name="valor" class="form-control" step="0.01" min="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Observações</label>
+                        <input type="text" name="observacoes" class="form-control" maxlength="255">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnSalvarCliente">
+                    <i class="fas fa-save"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Adicionar/Editar Valor Estelar -->
+<div class="modal fade" id="modalAdicionarEstelar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEstelarTitle">Adicionar Valor Estelar</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formAdicionarEstelar">
+                    <div class="mb-3">
+                        <label class="form-label">Valor Estelar (R$) *</label>
+                        <input type="number" name="valor" id="valorEstelarInput" class="form-control" step="0.01" min="0" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnSalvarEstelar">
+                    <i class="fas fa-save"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Criar Novo Funcionário -->
+<div class="modal fade" id="modalCriarFuncionario" tabindex="-1" aria-labelledby="modalCriarFuncionarioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalCriarFuncionarioLabel">
+                    <i class="fas fa-user-plus"></i> Criar Novo Funcionário
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formCriarFuncionario">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Nome do Funcionário *</label>
+                        <input type="text" name="nome" class="form-control" required maxlength="100" placeholder="Digite o nome do funcionário">
+                        <small class="form-text text-muted">Apenas o nome é necessário para o fluxo de caixa</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnSalvarFuncionario">
+                    <i class="fas fa-save"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Adicionar/Editar Funcionário -->
+<div class="modal fade" id="modalAdicionarFuncionario" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalFuncionarioTitle">Adicionar Distribuição para Funcionário</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formAdicionarFuncionario">
+                    <input type="hidden" id="distribuicao_id_edicao" name="distribuicao_id" value="">
+                    <div class="mb-3">
+                        <label class="form-label">Funcionário *</label>
+                        <div class="input-group">
+                            <select name="funcionario_id" id="funcionario_id_select" class="form-select" required>
+                                <option value="">Selecione...</option>
+                                {% for funcionario in funcionarios %}
+                                <option value="{{ funcionario.pk }}">{{ funcionario.nome }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalCriarFuncionario">
+                                <i class="fas fa-plus"></i> Novo
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Valor (R$) *</label>
+                        <input type="number" name="valor" id="valorFuncionarioInput" class="form-control" step="0.01" min="0.01" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnSalvarFuncionarioDistribuicao">
+                    <i class="fas fa-save"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const acertoId = {{ acerto.pk }};
+const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+// Função para formatar moeda
+function formatarMoeda(valor) {
+    return 'R$ ' + valor.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+// Função para parsear valor brasileiro
+function parsearValor(texto) {
+    if (!texto) return 0;
+    // Remove "R$", espaços, pontos (separadores de milhar) e substitui vírgula por ponto
+    let valorLimpo = texto.toString()
+        .replace(/R\$/g, '')  // Remove todas as ocorrências de "R$"
+        .replace(/\s/g, '')   // Remove espaços
+        .replace(/\./g, '')   // Remove pontos (separadores de milhar)
+        .replace(',', '.')    // Substitui vírgula por ponto
+        .trim();
+    const valor = parseFloat(valorLimpo);
+    return isNaN(valor) ? 0 : valor;
+}
+
+// Função para calcular totais
+function calcularTotais() {
+    console.log('Calculando totais...');
+    
+    // Total carregamentos
+    // Coluna 1: Tipo, Coluna 2: Cliente/Descrição, Coluna 3: Valor
+    let totalCarregamentos = 0;
+    const linhasCarregamentos = document.querySelectorAll('#tbodyCarregamentos tr[data-carregamento-id]');
+    console.log('Linhas de carregamentos encontradas:', linhasCarregamentos.length);
+    
+    linhasCarregamentos.forEach((tr, index) => {
+        const valorElement = tr.querySelector('td:nth-child(3) strong');
+        if (valorElement) {
+            const valorTexto = valorElement.textContent;
+            const valor = parsearValor(valorTexto);
+            console.log(`Carregamento ${index + 1}: "${valorTexto}" -> ${valor}`);
+            totalCarregamentos += valor;
+        } else {
+            console.warn(`Linha ${index + 1} não tem elemento de valor`);
+        }
+    });
+    
+    // Total funcionários
+    // Coluna 1: Tipo, Coluna 2: Descrição, Coluna 3: Valor
+    let totalFuncionarios = 0;
+    const linhasFuncionarios = document.querySelectorAll('#tbodyDistribuicoes tr[data-tipo="funcionario"]');
+    console.log('Linhas de funcionários encontradas:', linhasFuncionarios.length);
+    
+    linhasFuncionarios.forEach((tr, index) => {
+        const valorElement = tr.querySelector('td:nth-child(3) strong');
+        if (valorElement) {
+            const valorTexto = valorElement.textContent;
+            const valor = parsearValor(valorTexto);
+            console.log(`Funcionário ${index + 1}: "${valorTexto}" -> ${valor}`);
+            totalFuncionarios += valor;
+        } else {
+            console.warn(`Linha ${index + 1} não tem elemento de valor`);
+        }
+    });
+    
+    // Valor Estelar (buscar da tabela)
+    let valorEstelar = 0;
+    const linhaEstelar = document.getElementById('linhaEstelar');
+    if (linhaEstelar) {
+        const valorElement = linhaEstelar.querySelector('td:nth-child(3) strong');
+        if (valorElement) {
+            const valorTexto = valorElement.textContent;
+            valorEstelar = parsearValor(valorTexto);
+            console.log('Valor Estelar encontrado na tabela:', valorEstelar);
+        }
+    }
+    console.log('Valor Estelar:', valorEstelar);
+    
+    // Total distribuído
+    const totalDistribuido = valorEstelar + totalFuncionarios;
+    
+    console.log('Totais calculados:', {
+        totalCarregamentos,
+        totalFuncionarios,
+        valorEstelar,
+        totalDistribuido
+    });
+    
+    // Atualizar totais
+    const totalCarregamentosEl = document.getElementById('totalCarregamentos');
+    const totalFuncionariosEl = document.getElementById('totalFuncionarios');
+    const totalDistribuidoEl = document.getElementById('totalDistribuido');
+    const validacaoTotalCarregamentosEl = document.getElementById('validacaoTotalCarregamentos');
+    const validacaoTotalDistribuidoEl = document.getElementById('validacaoTotalDistribuido');
+    
+    if (totalCarregamentosEl) totalCarregamentosEl.textContent = formatarMoeda(totalCarregamentos);
+    if (totalFuncionariosEl) totalFuncionariosEl.textContent = formatarMoeda(totalFuncionarios);
+    if (totalDistribuidoEl) totalDistribuidoEl.textContent = formatarMoeda(totalDistribuido);
+    if (validacaoTotalCarregamentosEl) validacaoTotalCarregamentosEl.textContent = formatarMoeda(totalCarregamentos);
+    if (validacaoTotalDistribuidoEl) validacaoTotalDistribuidoEl.textContent = formatarMoeda(totalDistribuido);
+    
+    // Validação
+    const diferenca = Math.abs(totalCarregamentos - totalDistribuido);
+    const validacaoDiv = document.getElementById('validacaoResultado');
+    
+    if (!validacaoDiv) {
+        console.error('Elemento validacaoResultado não encontrado');
+        return;
+    }
+    
+    if (diferenca < 0.01) {
+        validacaoDiv.className = 'alert alert-success';
+        validacaoDiv.innerHTML = '<i class="fas fa-check-circle"></i> <strong>Validação OK!</strong> Os valores estão corretos.';
+    } else {
+        validacaoDiv.className = 'alert alert-danger';
+        validacaoDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <strong>Diferença:</strong> ${formatarMoeda(diferenca)}`;
+    }
+}
+
+// Função para alternar entre cliente e descarga
+function toggleTipoRegistro() {
+    const tipo = document.getElementById('tipo_registro').value;
+    const divCliente = document.getElementById('divCliente');
+    const divDescricao = document.getElementById('divDescricao');
+    const divTipoPagamento = document.getElementById('divTipoPagamento');
+    const clienteSelect = document.getElementById('cliente_id');
+    const descricaoInput = document.getElementById('descricao');
+    const tipoPagamentoSelect = document.getElementById('tipo_pagamento');
+    
+    if (tipo === 'cliente') {
+        divCliente.style.display = 'block';
+        divDescricao.style.display = 'none';
+        divTipoPagamento.style.display = 'none';
+        clienteSelect.required = true;
+        descricaoInput.required = false;
+        tipoPagamentoSelect.required = false;
+        descricaoInput.value = '';
+        tipoPagamentoSelect.value = 'Dinheiro';
+    } else if (tipo === 'descarga') {
+        divCliente.style.display = 'none';
+        divDescricao.style.display = 'block';
+        divTipoPagamento.style.display = 'block';
+        clienteSelect.required = false;
+        descricaoInput.required = true;
+        tipoPagamentoSelect.required = true;
+        clienteSelect.value = '';
+    } else {
+        divCliente.style.display = 'none';
+        divDescricao.style.display = 'none';
+        divTipoPagamento.style.display = 'none';
+        clienteSelect.required = false;
+        descricaoInput.required = false;
+        tipoPagamentoSelect.required = false;
+    }
+}
+
+// Adicionar Cliente ou Descarga
+document.getElementById('btnSalvarCliente').addEventListener('click', function() {
+    const form = document.getElementById('formAdicionarCliente');
+    const tipo = document.getElementById('tipo_registro').value;
+    
+    if (!tipo) {
+        alert('Selecione o tipo (Carregamento ou Descarga)');
+        return;
+    }
+    
+    const formData = new FormData(form);
+    formData.append('acerto_id', acertoId);
+    
+    // Remover campos não utilizados baseado no tipo
+    if (tipo === 'cliente') {
+        formData.delete('descricao');
+        formData.delete('tipo_pagamento');
+    } else {
+        formData.delete('cliente_id');
+    }
+    
+    fetch('{% url "financeiro:adicionar_carregamento_cliente_ajax" %}', {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken},
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Adicionar linha na tabela
+            const tbody = document.getElementById('tbodyCarregamentos');
+            const linhaVazia = document.getElementById('linhaVaziaCarregamentos');
+            if (linhaVazia) linhaVazia.remove();
+            
+            const badgeClass = data.tipo === 'Carregamento' ? 'bg-primary' : 'bg-warning';
+            const observacoes = formData.get('observacoes') || '-';
+            const valorFormatado = formatarMoeda(parseFloat(data.valor));
+            const tipoPagamento = formData.get('tipo_pagamento') || '';
+            let pagamentoHtml = '<span class="text-muted">-</span>';
+            if (data.tipo === 'Descarga') {
+                if (tipoPagamento === 'Dinheiro') {
+                    pagamentoHtml = '<span class="badge bg-success">Dinheiro</span>';
+                } else if (tipoPagamento === 'Deposito') {
+                    pagamentoHtml = '<span class="badge bg-info">Depósito</span>';
+                }
+            }
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-carregamento-id', data.carregamento_id);
+            tr.innerHTML = `
+                <td><span class="badge ${badgeClass}">${data.tipo}</span></td>
+                <td>${data.nome_display}</td>
+                <td><strong>${valorFormatado}</strong></td>
+                <td>${pagamentoHtml}</td>
+                <td>${observacoes}</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger btnRemoverCarregamento" data-id="${data.carregamento_id}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+            
+            // Adicionar event listener ao botão
+            tr.querySelector('.btnRemoverCarregamento').addEventListener('click', removerCarregamento);
+            
+            // Fechar modal e recalcular
+            bootstrap.Modal.getInstance(document.getElementById('modalAdicionarCliente')).hide();
+            form.reset();
+            toggleTipoRegistro(); // Resetar campos
+            calcularTotais();
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    });
+});
+
+// Adicionar/Editar Valor Estelar
+document.getElementById('btnSalvarEstelar').addEventListener('click', function() {
+    const form = document.getElementById('formAdicionarEstelar');
+    const formData = new FormData(form);
+    formData.append('acerto_id', acertoId);
+    
+    fetch('{% url "financeiro:salvar_valor_estelar_ajax" %}', {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken},
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Verificar se já existe linha Estelar
+            let linhaEstelar = document.getElementById('linhaEstelar');
+            const linhaVaziaEstelar = document.getElementById('linhaVaziaEstelar');
+            const linhaVaziaDistribuicoes = document.getElementById('linhaVaziaDistribuicoes');
+            
+            const valorFormatado = formatarMoeda(parseFloat(data.valor));
+            
+            if (linhaEstelar) {
+                // Atualizar linha existente
+                linhaEstelar.querySelector('td:nth-child(3) strong').textContent = valorFormatado;
+            } else {
+                // Criar nova linha
+                const tbody = document.getElementById('tbodyDistribuicoes');
+                
+                // Remover linhas vazias
+                if (linhaVaziaEstelar) linhaVaziaEstelar.remove();
+                if (linhaVaziaDistribuicoes) linhaVaziaDistribuicoes.remove();
+                
+                linhaEstelar = document.createElement('tr');
+                linhaEstelar.id = 'linhaEstelar';
+                linhaEstelar.setAttribute('data-tipo', 'estelar');
+                linhaEstelar.innerHTML = `
+                    <td><span class="badge bg-info">Estelar</span></td>
+                    <td>Valor Estelar</td>
+                    <td><strong>${valorFormatado}</strong></td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-sm btn-warning btnEditarEstelar" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger btnRemoverEstelar" title="Remover">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                // Inserir no início da tabela
+                tbody.insertBefore(linhaEstelar, tbody.firstChild);
+                
+                // Adicionar event listeners
+                linhaEstelar.querySelector('.btnEditarEstelar').addEventListener('click', editarEstelar);
+                linhaEstelar.querySelector('.btnRemoverEstelar').addEventListener('click', removerEstelar);
+            }
+            
+            // Fechar modal e recalcular
+            bootstrap.Modal.getInstance(document.getElementById('modalAdicionarEstelar')).hide();
+            form.reset();
+            document.getElementById('modalEstelarTitle').textContent = 'Adicionar Valor Estelar';
+            calcularTotais();
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    });
+});
+
+// Editar Valor Estelar
+function editarEstelar(e) {
+    const linhaEstelar = document.getElementById('linhaEstelar');
+    if (!linhaEstelar) return;
+    
+    const valorElement = linhaEstelar.querySelector('td:nth-child(3) strong');
+    const valorTexto = valorElement.textContent;
+    const valor = parsearValor(valorTexto);
+    
+    // Preencher modal com valor atual
+    document.getElementById('valorEstelarInput').value = valor.toFixed(2);
+    document.getElementById('modalEstelarTitle').textContent = 'Editar Valor Estelar';
+    
+    // Abrir modal
+    const modal = new bootstrap.Modal(document.getElementById('modalAdicionarEstelar'));
+    modal.show();
+}
+
+// Remover Valor Estelar
+function removerEstelar(e) {
+    if (!confirm('Tem certeza que deseja remover o valor Estelar?')) return;
+    
+    const formData = new FormData();
+    formData.append('acerto_id', acertoId);
+    formData.append('valor', '0');
+    
+    fetch('{% url "financeiro:salvar_valor_estelar_ajax" %}', {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken},
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const linhaEstelar = document.getElementById('linhaEstelar');
+            if (linhaEstelar) {
+                linhaEstelar.remove();
+            }
+            
+            // Verificar se precisa adicionar linha vazia
+            const tbody = document.getElementById('tbodyDistribuicoes');
+            const linhas = tbody.querySelectorAll('tr[data-tipo]');
+            if (linhas.length === 0) {
+                const tr = document.createElement('tr');
+                tr.id = 'linhaVaziaDistribuicoes';
+                tr.innerHTML = '<td colspan="4" class="text-center text-muted">Nenhuma distribuição registrada</td>';
+                tbody.appendChild(tr);
+            }
+            
+            calcularTotais();
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    });
+}
+
+// Adicionar/Editar Funcionário
+document.getElementById('btnSalvarFuncionarioDistribuicao').addEventListener('click', function() {
+    const form = document.getElementById('formAdicionarFuncionario');
+    const formData = new FormData(form);
+    formData.append('acerto_id', acertoId);
+    
+    // Se estiver editando, a view já atualiza automaticamente (get_or_create)
+    fetch('{% url "financeiro:adicionar_distribuicao_funcionario_ajax" %}', {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken},
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const distribuicaoId = data.distribuicao_id;
+            const tbody = document.getElementById('tbodyDistribuicoes');
+            const linhaVazia = document.getElementById('linhaVaziaDistribuicoes');
+            if (linhaVazia) linhaVazia.remove();
+            
+            let tr = document.querySelector(`tr[data-distribuicao-id="${distribuicaoId}"]`);
+            const valorFormatado = formatarMoeda(parseFloat(data.valor));
+            
+            if (tr) {
+                // Atualizar linha existente
+                tr.querySelector('td:nth-child(2)').textContent = data.funcionario_nome;
+                tr.querySelector('td:nth-child(3) strong').textContent = valorFormatado;
+            } else {
+                // Criar nova linha
+                tr = document.createElement('tr');
+                tr.setAttribute('data-distribuicao-id', distribuicaoId);
+                tr.setAttribute('data-tipo', 'funcionario');
+                tr.innerHTML = `
+                    <td><span class="badge bg-success">Funcionário</span></td>
+                    <td>${data.funcionario_nome}</td>
+                    <td><strong>${valorFormatado}</strong></td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-sm btn-warning btnEditarDistribuicao" data-id="${distribuicaoId}" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger btnRemoverDistribuicao" data-id="${distribuicaoId}" title="Remover">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+                
+                // Adicionar event listeners
+                tr.querySelector('.btnEditarDistribuicao').addEventListener('click', editarDistribuicao);
+                tr.querySelector('.btnRemoverDistribuicao').addEventListener('click', removerDistribuicao);
+            }
+            
+            // Fechar modal e recalcular
+            bootstrap.Modal.getInstance(document.getElementById('modalAdicionarFuncionario')).hide();
+            form.reset();
+            document.getElementById('distribuicao_id_edicao').value = '';
+            document.getElementById('modalFuncionarioTitle').textContent = 'Adicionar Distribuição para Funcionário';
+            calcularTotais();
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    });
+});
+
+// Remover Carregamento
+function removerCarregamento(e) {
+    const id = e.target.closest('button').getAttribute('data-id');
+    if (!confirm('Tem certeza que deseja remover este carregamento?')) return;
+    
+    fetch(`{% url 'financeiro:remover_carregamento_cliente_ajax' 0 %}`.replace('0', id), {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken}
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const tr = document.querySelector(`tr[data-carregamento-id="${id}"]`);
+            tr.remove();
+            
+            // Se não houver mais linhas, adicionar linha vazia
+            if (document.querySelectorAll('#tbodyCarregamentos tr[data-carregamento-id]').length === 0) {
+                const tbody = document.getElementById('tbodyCarregamentos');
+                const tr = document.createElement('tr');
+                tr.id = 'linhaVaziaCarregamentos';
+                tr.innerHTML = '<td colspan="5" class="text-center text-muted">Nenhum registro</td>';
+                tbody.appendChild(tr);
+            }
+            
+            calcularTotais();
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    });
+}
+
+// Editar Distribuição
+function editarDistribuicao(e) {
+    const distribuicaoId = e.target.closest('button').getAttribute('data-id');
+    const tr = document.querySelector(`tr[data-distribuicao-id="${distribuicaoId}"]`);
+    if (!tr) return;
+    
+    // Buscar dados da linha
+    const funcionarioNome = tr.querySelector('td:nth-child(2)').textContent.trim();
+    const valorElement = tr.querySelector('td:nth-child(3) strong');
+    const valorTexto = valorElement.textContent;
+    const valor = parsearValor(valorTexto);
+    
+    // Preencher modal com dados atuais
+    const select = document.getElementById('funcionario_id_select');
+    // Encontrar o funcionário pelo nome
+    for (let option of select.options) {
+        if (option.textContent.trim() === funcionarioNome) {
+            option.selected = true;
+            break;
+        }
+    }
+    document.getElementById('valorFuncionarioInput').value = valor.toFixed(2);
+    document.getElementById('distribuicao_id_edicao').value = distribuicaoId;
+    document.getElementById('modalFuncionarioTitle').textContent = 'Editar Distribuição para Funcionário';
+    
+    // Abrir modal
+    const modal = new bootstrap.Modal(document.getElementById('modalAdicionarFuncionario'));
+    modal.show();
+}
+
+// Remover Distribuição
+function removerDistribuicao(e) {
+    const id = e.target.closest('button').getAttribute('data-id');
+    if (!confirm('Tem certeza que deseja remover esta distribuição?')) return;
+    
+    fetch(`{% url 'financeiro:remover_distribuicao_funcionario_ajax' 0 %}`.replace('0', id), {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken}
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const tr = document.querySelector(`tr[data-distribuicao-id="${id}"]`);
+            tr.remove();
+            
+            // Se não houver mais linhas, adicionar linha vazia
+            const tbody = document.getElementById('tbodyDistribuicoes');
+            const linhas = tbody.querySelectorAll('tr[data-tipo]');
+            if (linhas.length === 0) {
+                const tr = document.createElement('tr');
+                tr.id = 'linhaVaziaDistribuicoes';
+                tr.innerHTML = '<td colspan="4" class="text-center text-muted">Nenhuma distribuição registrada</td>';
+                tbody.appendChild(tr);
+            }
+            
+            calcularTotais();
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    });
+}
+
+// Event listeners para botões de remover existentes
+document.querySelectorAll('.btnRemoverCarregamento').forEach(btn => {
+    btn.addEventListener('click', removerCarregamento);
+});
+
+document.querySelectorAll('.btnRemoverDistribuicao').forEach(btn => {
+    btn.addEventListener('click', removerDistribuicao);
+});
+
+document.querySelectorAll('.btnEditarDistribuicao').forEach(btn => {
+    btn.addEventListener('click', editarDistribuicao);
+});
+
+// Event listeners para botões Estelar
+const btnEditarEstelar = document.querySelector('.btnEditarEstelar');
+if (btnEditarEstelar) {
+    btnEditarEstelar.addEventListener('click', editarEstelar);
+}
+
+const btnRemoverEstelar = document.querySelector('.btnRemoverEstelar');
+if (btnRemoverEstelar) {
+    btnRemoverEstelar.addEventListener('click', removerEstelar);
+}
+
+// Resetar modal Estelar ao fechar
+document.getElementById('modalAdicionarEstelar').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('formAdicionarEstelar').reset();
+    document.getElementById('modalEstelarTitle').textContent = 'Adicionar Valor Estelar';
+});
+
+// Resetar modal Funcionário ao fechar
+document.getElementById('modalAdicionarFuncionario').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('formAdicionarFuncionario').reset();
+    document.getElementById('distribuicao_id_edicao').value = '';
+    document.getElementById('modalFuncionarioTitle').textContent = 'Adicionar Distribuição para Funcionário';
+});
+
+// Criar Novo Funcionário
+document.getElementById('btnSalvarFuncionario').addEventListener('click', function() {
+    const form = document.getElementById('formCriarFuncionario');
+    const formData = new FormData(form);
+    const btn = this;
+    
+    // Validação básica
+    if (!formData.get('nome')) {
+        alert('Por favor, preencha o nome do funcionário.');
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...';
+    
+    fetch('{% url "financeiro:criar_funcionario_ajax" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Adicionar novo funcionário ao select
+            const select = document.getElementById('funcionario_id_select');
+            const option = document.createElement('option');
+            option.value = data.funcionario_id;
+            option.textContent = data.nome;
+            option.selected = true;
+            select.appendChild(option);
+            
+            // Fechar modal de criar funcionário
+            bootstrap.Modal.getInstance(document.getElementById('modalCriarFuncionario')).hide();
+            
+            // Focar no select de funcionário no modal de adicionar
+            select.focus();
+            
+            form.reset();
+        } else {
+            alert('Erro: ' + (data.message || 'Erro ao criar funcionário'));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Salvar';
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao criar funcionário. Tente novamente.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Salvar';
+    });
+});
+
+// Resetar modal de criar funcionário ao fechar
+document.getElementById('modalCriarFuncionario').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('formCriarFuncionario').reset();
+    const btn = document.getElementById('btnSalvarFuncionario');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save"></i> Salvar';
+});
+
+// Salvar Acerto
+document.getElementById('btnSalvarAcerto').addEventListener('click', function() {
+    const form = document.getElementById('formAcertoDiario');
+    const formData = new FormData(form);
+    
+    fetch('{% url "financeiro:salvar_acerto_diario" %}', {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken},
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Acerto salvo com sucesso!');
+            // Redirecionar para a página de listagem de acertos diários
+            window.location.href = '{% url "financeiro:acerto_diario_carregamento" %}';
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    });
+});
+
+// Calcular totais ao carregar e após um pequeno delay para garantir que o DOM está pronto
+document.addEventListener('DOMContentLoaded', function() {
+    // Pequeno delay para garantir que todos os elementos estão renderizados
+    setTimeout(function() {
+        calcularTotais();
+    }, 100);
+});
+</script>
+    {% endif %}
+{% endblock %}
+

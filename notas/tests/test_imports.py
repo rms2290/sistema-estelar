@@ -16,7 +16,7 @@ class TestImports(TestCase):
             listar_veiculos, adicionar_veiculo,
             listar_notas_fiscais, adicionar_nota_fiscal,
             listar_romaneios, adicionar_romaneio,
-            listar_agenda_entregas, cobranca_carregamento,
+            cobranca_carregamento,
             listar_logs_auditoria, totalizador_por_estado,
         )
         self.assertTrue(True)  # Se chegou aqui, imports funcionaram

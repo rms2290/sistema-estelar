@@ -1,50 +1,20 @@
 """
-Views modulares do sistema Estelar
-Este arquivo centraliza todos os imports das views divididas em módulos
+Views modulares do sistema Estelar.
+Reexporta as views por submódulo e nomes individuais para compatibilidade com urls e testes.
 """
+# Submódulos para uso em urls (from .views import auth_views, dashboard_views, ...)
+from . import auth_views
+from . import dashboard_views
+from . import cliente_views
+from . import nota_fiscal_views
+from . import motorista_views
+from . import veiculo_views
+from . import romaneio_views
+from . import admin_views
+from . import relatorio_views
+from . import api_views
+from . import api_fechamento_views
 
-# Imports comuns que serão usados em todas as views
-from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
-from django.db.models import Q, Max
-from django.db import IntegrityError
-from django.contrib import messages
-from django.utils import timezone
-from django.contrib.auth.decorators import login_required, user_passes_test
-
-# Importação opcional de django_ratelimit
-try:
-    from django_ratelimit.decorators import ratelimit
-    from django_ratelimit.exceptions import Ratelimited
-except ImportError:
-    # Se django_ratelimit não estiver instalado, criar um decorator dummy
-    def ratelimit(*args, **kwargs):
-        def decorator(func):
-            return func
-        return decorator
-    Ratelimited = Exception
-
-# Importar decorators customizados
-from ..decorators import admin_required, funcionario_required, cliente_required
-
-# Importar modelos
-from ..models import (
-    NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem,
-    HistoricoConsulta, TabelaSeguro, AgendaEntrega, AuditoriaLog,
-    CobrancaCarregamento, Usuario
-)
-
-# Importar formulários
-from ..forms import (
-    NotaFiscalForm, ClienteForm, MotoristaForm, VeiculoForm,
-    RomaneioViagemForm, NotaFiscalSearchForm, ClienteSearchForm,
-    MotoristaSearchForm, HistoricoConsultaForm, VeiculoSearchForm,
-    RomaneioSearchForm, MercadoriaDepositoSearchForm, TabelaSeguroForm,
-    AgendaEntregaForm, CobrancaCarregamentoForm, CadastroUsuarioForm,
-    LoginForm, AlterarSenhaForm
-)
-
-# Importar utilitários comuns
 from .base import (
     formatar_valor_brasileiro,
     formatar_peso_brasileiro,
@@ -55,7 +25,6 @@ from .base import (
     is_cliente,
 )
 
-# Importar todas as views dos módulos
 from .auth_views import (
     login_view,
     logout_view,
@@ -136,18 +105,6 @@ from .admin_views import (
     listar_tabela_seguros,
     editar_tabela_seguro,
     atualizar_tabela_seguro_ajax,
-    listar_agenda_entregas,
-    adicionar_agenda_entrega,
-    editar_agenda_entrega,
-    excluir_agenda_entrega,
-    detalhes_agenda_entrega,
-    alterar_status_agenda,
-    marcar_em_andamento,
-    marcar_concluida,
-    marcar_entregue,
-    marcar_cancelada,
-    widget_agenda_entregas,
-    test_widget_agenda,
     criar_cobranca_carregamento,
     editar_cobranca_carregamento,
     excluir_cobranca_carregamento,
@@ -199,45 +156,6 @@ from .api_fechamento_views import (
     buscar_romaneios_filtrados,
 )
 
-from .fluxo_caixa_views import (
-    dashboard_fluxo_caixa,
-    criar_receita_empresa,
-    editar_receita_empresa,
-    excluir_receita_empresa,
-    criar_caixa_funcionario,
-    acertar_caixa_funcionario,
-    criar_movimento_bancario,
-    editar_movimento_bancario,
-    excluir_movimento_bancario,
-    atualizar_controle_saldo,
-    criar_funcionario_ajax,
-    acerto_diario_carregamento,
-    listar_acertos_diarios,
-    salvar_acerto_diario,
-    adicionar_carregamento_cliente_ajax,
-    remover_carregamento_cliente_ajax,
-    adicionar_distribuicao_funcionario_ajax,
-    remover_distribuicao_funcionario_ajax,
-    salvar_valor_estelar_ajax,
-    gerenciar_movimento_caixa,
-    criar_movimento_caixa_ajax,
-    editar_movimento_caixa_ajax,
-    excluir_movimento_caixa_ajax,
-    obter_movimento_caixa_ajax,
-    obter_acumulado_funcionario_ajax,
-    iniciar_periodo_movimento_caixa,
-    pesquisar_periodo_movimento_caixa,
-    fechar_periodo_movimento_caixa_ajax,
-    editar_periodo_movimento_caixa_ajax,
-    obter_periodo_movimento_caixa_ajax,
-    excluir_periodo_movimento_caixa_ajax,
-    pesquisar_periodo_movimento_caixa,
-    visualizar_periodo_movimento_caixa,
-    imprimir_periodo_movimento_caixa,
-    fechamento_caixa,
-)
-
-# Manter compatibilidade com código antigo
 __all__ = [
     # Auth
     'login_view', 'logout_view', 'alterar_senha', 'perfil_usuario',
@@ -268,10 +186,6 @@ __all__ = [
     # Admin
     'cadastrar_usuario', 'listar_usuarios', 'editar_usuario', 'toggle_status_usuario', 'excluir_usuario',
     'listar_tabela_seguros', 'editar_tabela_seguro', 'atualizar_tabela_seguro_ajax',
-    'listar_agenda_entregas', 'adicionar_agenda_entrega', 'editar_agenda_entrega',
-    'excluir_agenda_entrega', 'detalhes_agenda_entrega', 'alterar_status_agenda',
-    'marcar_em_andamento', 'marcar_concluida', 'marcar_entregue', 'marcar_cancelada',
-    'widget_agenda_entregas', 'test_widget_agenda',
     'criar_cobranca_carregamento', 'editar_cobranca_carregamento',
     'excluir_cobranca_carregamento', 'baixar_cobranca_carregamento',
     'gerar_relatorio_cobranca_carregamento_pdf', 'gerar_relatorio_consolidado_cobranca_pdf',
@@ -288,26 +202,8 @@ __all__ = [
     'load_notas_fiscais', 'load_notas_fiscais_edicao', 'load_notas_fiscais_para_romaneio',
     'validar_credenciais_admin_ajax', 'filtrar_veiculos_por_composicao',
     'carregar_romaneios_cliente', 'salvar_ocorrencia_nota_fiscal', 'editar_ocorrencia_nota_fiscal', 'excluir_ocorrencia_nota_fiscal', 'obter_ocorrencia_nota_fiscal', 'obter_tipo_veiculo',
-    # Fluxo de Caixa
-    'dashboard_fluxo_caixa', 'criar_receita_empresa', 'editar_receita_empresa',
-    'excluir_receita_empresa', 'criar_caixa_funcionario', 'acertar_caixa_funcionario',
-    'criar_movimento_bancario', 'editar_movimento_bancario', 'excluir_movimento_bancario',
-    'atualizar_controle_saldo', 'criar_funcionario_ajax',
-    'acerto_diario_carregamento', 'listar_acertos_diarios', 'salvar_acerto_diario',
-    'adicionar_carregamento_cliente_ajax', 'remover_carregamento_cliente_ajax',
-    'adicionar_distribuicao_funcionario_ajax', 'remover_distribuicao_funcionario_ajax',
-    'salvar_valor_estelar_ajax',
-    'gerenciar_movimento_caixa', 'criar_movimento_caixa_ajax',
-    'editar_movimento_caixa_ajax', 'excluir_movimento_caixa_ajax',
-    'obter_movimento_caixa_ajax', 'obter_acumulado_funcionario_ajax',
-    'iniciar_periodo_movimento_caixa', 'pesquisar_periodo_movimento_caixa',
-    'fechar_periodo_movimento_caixa_ajax', 'editar_periodo_movimento_caixa_ajax',
-    'obter_periodo_movimento_caixa_ajax', 'excluir_periodo_movimento_caixa_ajax',
-    'visualizar_periodo_movimento_caixa', 'imprimir_periodo_movimento_caixa',
-    'fechamento_caixa',
-    # Utilitários
+    # Utilitários (base)
     'formatar_valor_brasileiro', 'formatar_peso_brasileiro',
     'get_next_romaneio_codigo', 'get_next_romaneio_generico_codigo',
     'is_admin', 'is_funcionario', 'is_cliente',
 ]
-

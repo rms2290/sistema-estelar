@@ -11,7 +11,7 @@ from django.utils import timezone
 from notas.models import (
     Cliente, Motorista, Veiculo, NotaFiscal, 
     RomaneioViagem, Usuario, TabelaSeguro,
-    AgendaEntrega, HistoricoConsulta, CobrancaCarregamento
+    HistoricoConsulta, CobrancaCarregamento
 )
 from notas.tests.conftest import (
     ClienteFactory, MotoristaFactory, VeiculoFactory,

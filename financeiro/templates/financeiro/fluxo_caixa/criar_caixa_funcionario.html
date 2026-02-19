@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Criar Caixa de Funcionário - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4><i class="fas fa-user-tie"></i> Criar Caixa de Funcionário</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST" id="formCaixaFuncionario">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Funcionário *</label>
+                        <div class="input-group">
+                            <select name="funcionario" id="funcionario_select" class="form-select" required>
+                                <option value="">Selecione...</option>
+                            {% for funcionario in funcionarios %}
+                            <option value="{{ funcionario.pk }}">{{ funcionario.nome }}</option>
+                            {% endfor %}
+                            </select>
+                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalCriarFuncionario">
+                                <i class="fas fa-plus"></i> Novo
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Tipo de Período *</label>
+                        <select name="periodo_tipo" class="form-select" id="periodo_tipo" required>
+                            <option value="">Selecione...</option>
+                            <option value="Semanal">Semanal</option>
+                            <option value="Diario">Diário</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3" id="div_semana" style="display:none;">
+                        <label class="form-label">Início da Semana</label>
+                        <input type="date" name="semana_inicio" class="form-control" id="semana_inicio">
+                    </div>
+                    <div class="col-md-6 mb-3" id="div_semana_fim" style="display:none;">
+                        <label class="form-label">Fim da Semana</label>
+                        <input type="date" name="semana_fim" class="form-control" id="semana_fim">
+                    </div>
+                    <div class="col-md-6 mb-3" id="div_data" style="display:none;">
+                        <label class="form-label">Data</label>
+                        <input type="date" name="data" class="form-control" id="data">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Valor Coletado (R$) *</label>
+                        <input type="number" name="valor_coletado" class="form-control" step="0.01" min="0" required>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Observações</label>
+                        <textarea name="observacoes" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'financeiro:dashboard_fluxo_caixa' %}" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Criar Funcionário -->
+<div class="modal fade" id="modalCriarFuncionario" tabindex="-1" aria-labelledby="modalCriarFuncionarioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalCriarFuncionarioLabel">
+                    <i class="fas fa-user-plus"></i> Criar Novo Funcionário
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formCriarFuncionario">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Nome do Funcionário *</label>
+                        <input type="text" name="nome" class="form-control" required maxlength="100" placeholder="Digite o nome do funcionário">
+                        <small class="form-text text-muted">Apenas o nome é necessário para o fluxo de caixa</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnSalvarFuncionario">
+                    <i class="fas fa-save"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('periodo_tipo').addEventListener('change', function() {
+    const periodo = this.value;
+    const divSemana = document.getElementById('div_semana');
+    const divSemanaFim = document.getElementById('div_semana_fim');
+    const divData = document.getElementById('div_data');
+    
+    if (periodo === 'Semanal') {
+        divSemana.style.display = 'block';
+        divSemanaFim.style.display = 'block';
+        divData.style.display = 'none';
+        document.getElementById('data').required = false;
+        document.getElementById('semana_inicio').required = true;
+        document.getElementById('semana_fim').required = true;
+    } else if (periodo === 'Diario') {
+        divSemana.style.display = 'none';
+        divSemanaFim.style.display = 'none';
+        divData.style.display = 'block';
+        document.getElementById('data').required = true;
+        document.getElementById('semana_inicio').required = false;
+        document.getElementById('semana_fim').required = false;
+    } else {
+        divSemana.style.display = 'none';
+        divSemanaFim.style.display = 'none';
+        divData.style.display = 'none';
+    }
+});
+
+// Criar funcionário via AJAX
+document.getElementById('btnSalvarFuncionario').addEventListener('click', function() {
+    const form = document.getElementById('formCriarFuncionario');
+    const formData = new FormData(form);
+    const btn = this;
+    
+    // Validação básica
+    if (!formData.get('nome')) {
+        alert('Por favor, preencha o nome do funcionário.');
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...';
+    
+    fetch('{% url "financeiro:criar_funcionario_ajax" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Adicionar novo funcionário ao select
+            const select = document.getElementById('funcionario_select');
+            const option = document.createElement('option');
+            option.value = data.funcionario_id;
+            option.textContent = data.nome;
+            option.selected = true;
+            select.appendChild(option);
+            
+            // Fechar modal e limpar formulário
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalCriarFuncionario'));
+            modal.hide();
+            form.reset();
+            
+            alert('Funcionário criado com sucesso!');
+        } else {
+            alert('Erro: ' + (data.message || 'Erro ao criar funcionário'));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Salvar';
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao criar funcionário. Tente novamente.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Salvar';
+    });
+});
+
+// Limpar formulário ao fechar modal
+document.getElementById('modalCriarFuncionario').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('formCriarFuncionario').reset();
+    const btn = document.getElementById('btnSalvarFuncionario');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save"></i> Salvar';
+});
+</script>
+{% endblock %}
+

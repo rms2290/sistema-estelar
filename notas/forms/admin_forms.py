@@ -6,7 +6,8 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from decimal import Decimal
 
-from ..models import TabelaSeguro, AgendaEntrega, CobrancaCarregamento, Cliente, RomaneioViagem, SetorBancario
+from ..models import TabelaSeguro, CobrancaCarregamento, Cliente, RomaneioViagem
+from financeiro.models import SetorBancario
 from .base import UpperCaseCharField
 
 
@@ -42,93 +43,6 @@ class TabelaSeguroForm(forms.ModelForm):
             if percentual > 100:
                 raise ValidationError('O percentual não pode ser maior que 100%.')
         return percentual
-
-
-class AgendaEntregaForm(forms.ModelForm):
-    """Formulário para agendar entregas de mercadorias"""
-    
-    cliente = forms.ModelChoiceField(
-        queryset=Cliente.objects.filter(status='Ativo').order_by('razao_social'),
-        label='Cliente',
-        empty_label="--- Selecione um cliente ---",
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    data_entrega = forms.DateField(
-        label='Data da Entrega',
-        widget=forms.DateInput(attrs={
-            'class': 'form-control',
-            'type': 'date',
-            'min': timezone.now().date().strftime('%Y-%m-%d')
-        })
-    )
-    
-    empresa_entrega = UpperCaseCharField(
-        label='Empresa que vai Entregar',
-        max_length=255,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Nome da empresa responsável pela entrega'
-        })
-    )
-    
-    quantidade = forms.DecimalField(
-        label='Quantidade',
-        max_digits=10,
-        decimal_places=2,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Quantidade de mercadorias',
-            'step': '0.01',
-            'min': '0'
-        })
-    )
-    
-    volume = UpperCaseCharField(
-        label='Volume',
-        max_length=100,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Ex: 10 caixas, 5 pallets'
-        })
-    )
-    
-    observacoes = forms.CharField(
-        label='Observações',
-        required=False,
-        widget=forms.Textarea(attrs={
-            'class': 'form-control',
-            'rows': 3,
-            'placeholder': 'Observações adicionais sobre a entrega'
-        })
-    )
-    
-    status = forms.ChoiceField(
-        choices=AgendaEntrega.STATUS_ENTREGA_CHOICES,
-        label='Status da Entrega',
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    class Meta:
-        model = AgendaEntrega
-        fields = [
-            'cliente', 'data_entrega', 'empresa_entrega', 
-            'quantidade', 'volume', 'observacoes', 'status'
-        ]
-    
-    def clean_data_entrega(self):
-        data_entrega = self.cleaned_data.get('data_entrega')
-        if data_entrega:
-            if data_entrega < timezone.now().date():
-                raise ValidationError('A data da entrega não pode ser no passado.')
-        return data_entrega
-    
-    def clean_quantidade(self):
-        quantidade = self.cleaned_data.get('quantidade')
-        if quantidade is not None:
-            if quantidade <= 0:
-                raise ValidationError('A quantidade deve ser maior que zero.')
-        return quantidade
 
 
 class CobrancaCarregamentoForm(forms.ModelForm):
@@ -330,4 +244,3 @@ class SetorBancarioForm(forms.ModelForm):
             'tipo_chave_pix': 'Tipo de Chave PIX',
             'ativo': 'Ativo',
         }
-

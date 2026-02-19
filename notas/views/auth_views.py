@@ -1,11 +1,15 @@
 """
 Views de autenticação e perfil de usuário
 """
+import logging
+
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 # Importação opcional de django_ratelimit
 try:
@@ -34,6 +38,7 @@ def login_view(request):
     
     # Verificar se foi bloqueado por rate limit
     if getattr(request, 'limited', False):
+        logger.warning('Login bloqueado por rate limit: IP=%s', request.META.get('REMOTE_ADDR', '?'))
         error_message = 'Muitas tentativas de login. Aguarde 1 minuto antes de tentar novamente.'
         form = LoginForm()
         return render(request, 'notas/auth/login.html', {'form': form, 'error_message': error_message})
@@ -50,10 +55,11 @@ def login_view(request):
                 # Atualizar último acesso
                 user.ultimo_acesso = timezone.now()
                 user.save()
-                
+                logger.info('Login realizado: usuario=%s', user.username)
                 messages.success(request, f'Bem-vindo, {user.get_full_name()}!')
                 return redirect('notas:dashboard')
             else:
+                logger.warning('Login falhou: credenciais inválidas para usuario=%s', username)
                 error_message = 'Nome de usuário ou senha inválidos.'
     else:
         form = LoginForm()
@@ -63,6 +69,8 @@ def login_view(request):
 
 def logout_view(request):
     """View para fazer logout do usuário"""
+    if request.user.is_authenticated:
+        logger.info('Logout: usuario=%s', request.user.username)
     logout(request)
     messages.info(request, 'Você foi desconectado com sucesso.')
     return redirect('notas:login')

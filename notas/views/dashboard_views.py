@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Sum, Q
 from datetime import datetime, date, timedelta
 
-from ..models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem, AgendaEntrega
+from ..models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem
 
 
 @login_required
@@ -61,28 +61,8 @@ def dashboard(request):
         valor_deposito=Sum('notas_fiscais__valor', filter=Q(notas_fiscais__status='Depósito'))
     ).filter(valor_deposito__gt=0).order_by('-valor_deposito')[:5]
     
-    # Dados da agenda de entregas
     hoje = date.today()
-    proxima_semana = hoje + timedelta(days=7)
     now = datetime.now()
-    proximas_entregas = AgendaEntrega.objects.filter(
-        data_entrega__gte=hoje,
-        data_entrega__lte=proxima_semana,
-        status__in=['Agendada', 'Em Andamento']
-    ).select_related('cliente').order_by('data_entrega')[:5]
-    
-    entregas_hoje = AgendaEntrega.objects.filter(
-        data_entrega=hoje,
-        status__in=['Agendada', 'Em Andamento']
-    ).select_related('cliente').order_by('cliente__razao_social')
-    
-    # Entregas agendadas para o dashboard (apenas status 'Agendada')
-    entregas_agendadas = AgendaEntrega.objects.filter(
-        status='Agendada'
-    ).select_related('cliente').order_by('data_entrega')[:10]
-    
-    total_agendadas = AgendaEntrega.objects.filter(status='Agendada').count()
-    total_em_andamento = AgendaEntrega.objects.filter(status='Em Andamento').count()
     
     context = {
         'title': 'Dashboard - Agência Estelar',
@@ -110,12 +90,6 @@ def dashboard(request):
         # Top clientes
         'top_clientes_deposito': top_clientes_deposito,
         
-        # Dados da agenda
-        'proximas_entregas': proximas_entregas,
-        'entregas_hoje': entregas_hoje,
-        'entregas_agendadas': entregas_agendadas,
-        'total_agendadas': total_agendadas,
-        'total_em_andamento': total_em_andamento,
         'hoje': hoje,
         'now': now,
     }

@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Criar Receita - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4><i class="fas fa-money-bill-wave"></i> Criar Receita da Empresa</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Data *</label>
+                        <input type="date" name="data" class="form-control" required value="{{ request.GET.data|default:'' }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Tipo de Receita *</label>
+                        <select name="tipo_receita" class="form-select" required>
+                            <option value="">Selecione...</option>
+                            {% for value, label in tipos_receita %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Valor (R$) *</label>
+                        <input type="number" name="valor" class="form-control" step="0.01" min="0" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Cliente</label>
+                        <select name="cliente" class="form-select">
+                            <option value="">Nenhum</option>
+                            {% for cliente in clientes %}
+                            <option value="{{ cliente.pk }}">{{ cliente.razao_social }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Cobrança de Carregamento</label>
+                        <select name="cobranca_carregamento" class="form-select">
+                            <option value="">Nenhuma</option>
+                            {% for cobranca in cobrancas %}
+                            <option value="{{ cobranca.pk }}">Cobrança #{{ cobranca.pk }} - {{ cobranca.cliente.razao_social }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Descrição</label>
+                        <textarea name="descricao" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'financeiro:dashboard_fluxo_caixa' %}" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

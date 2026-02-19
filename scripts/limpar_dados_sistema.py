@@ -13,7 +13,6 @@ django.setup()
 
 from django.db import transaction
 from notas.models import (
-    # Dados principais
     Cliente,
     NotaFiscal,
     Motorista,
@@ -21,24 +20,17 @@ from notas.models import (
     RomaneioViagem,
     PlacaVeiculo,
     TipoVeiculo,
-    
-    # Relatórios e fechamentos
     FechamentoFrete,
     ItemFechamentoFrete,
     DetalheItemFechamento,
-    
-    # Cobranças
     CobrancaCarregamento,
-    
-    # Ocorrências
     OcorrenciaNotaFiscal,
     FotoOcorrencia,
-    
-    # Histórico e auditoria
     HistoricoConsulta,
     AuditoriaLog,
-    
-    # Fluxo de Caixa
+    TabelaSeguro,
+)
+from financeiro.models import (
     ReceitaEmpresa,
     FuncionarioFluxoCaixa,
     CaixaFuncionario,
@@ -49,9 +41,9 @@ from notas.models import (
     CarregamentoCliente,
     DistribuicaoFuncionario,
     AcumuladoFuncionario,
-    
-    # Tabelas auxiliares
-    TabelaSeguro,
+    MovimentoCaixa,
+    PeriodoMovimentoCaixa,
+    SetorBancario,
 )
 
 def limpar_dados_sistema():
@@ -78,6 +70,8 @@ def limpar_dados_sistema():
             
             # 1. Limpar Fluxo de Caixa (dependências primeiro)
             print("Limpando Fluxo de Caixa...")
+            contadores['MovimentoCaixa'] = MovimentoCaixa.objects.all().delete()[0]
+            contadores['PeriodoMovimentoCaixa'] = PeriodoMovimentoCaixa.objects.all().delete()[0]
             contadores['AcumuladoFuncionario'] = AcumuladoFuncionario.objects.all().delete()[0]
             contadores['DistribuicaoFuncionario'] = DistribuicaoFuncionario.objects.all().delete()[0]
             contadores['CarregamentoCliente'] = CarregamentoCliente.objects.all().delete()[0]
@@ -88,7 +82,8 @@ def limpar_dados_sistema():
             contadores['ControleSaldoSemanal'] = ControleSaldoSemanal.objects.all().delete()[0]
             contadores['ReceitaEmpresa'] = ReceitaEmpresa.objects.all().delete()[0]
             contadores['FuncionarioFluxoCaixa'] = FuncionarioFluxoCaixa.objects.all().delete()[0]
-            
+            contadores['SetorBancario'] = SetorBancario.objects.all().delete()[0]
+
             # 2. Limpar Ocorrências
             print("Limpando Ocorrências...")
             contadores['FotoOcorrencia'] = FotoOcorrencia.objects.all().delete()[0]

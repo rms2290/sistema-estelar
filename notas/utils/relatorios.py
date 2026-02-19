@@ -1,7 +1,7 @@
 """
 Utilitários para geração de relatórios em PDF e Excel
 """
-
+import logging
 import io
 import os
 import tempfile
@@ -18,6 +18,8 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
+
+logger = logging.getLogger(__name__)
 
 
 def format_brazilian_currency(value):
@@ -87,8 +89,8 @@ def add_logo_to_story(story, para_style, width=4*cm):
                 story.append(logo_img)
                 story.append(Spacer(1, 10))
                 return True
-        except Exception:
-            # Se houver erro ao carregar a imagem, continuar sem ela
+        except Exception as e:
+            logger.debug('Erro ao carregar logo no PDF: %s', e)
             return False
     return False
 
@@ -989,17 +991,17 @@ def gerar_relatorio_pdf_cobranca_mensalista(cobranca):
     story.append(Paragraph("INSTRUÇÕES DE PAGAMENTO", estilos['section']))
     
     # Buscar dados bancários dos setores
-    from ..models import SetorBancario
-    
+    from financeiro.models import SetorBancario
+
     # Calcular valores por setor
     # Setor de Carregamento: Carregamento + CTE/Manifesto
     valor_carregamento = Decimal(str(cobranca.valor_carregamento)) if cobranca.valor_carregamento else Decimal('0.00')
     valor_cte_manifesto = Decimal(str(cobranca.valor_cte_manifesto)) if cobranca.valor_cte_manifesto else Decimal('0.00')
     valor_setor_carregamento = valor_carregamento + valor_cte_manifesto
-    
+
     # Setor de Armazenagem: Armazenamento + Seguro
     valor_armazenagem = valor_armazenamento + total_seguro
-    
+
     # Setor de Carregamento
     try:
         setor_carregamento = SetorBancario.objects.filter(setor='Carregamento', ativo=True).first()
@@ -1013,8 +1015,8 @@ def gerar_relatorio_pdf_cobranca_mensalista(cobranca):
             story.append(Paragraph(f"PIX: {setor_carregamento.get_chave_pix_formatada()}", estilos['info']))
             story.append(Paragraph(f"Beneficiário: {setor_carregamento.nome_responsavel}", estilos['info']))
             story.append(Spacer(1, 4))
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning('Erro ao adicionar dados bancários (setor carregamento) ao PDF: %s', e)
     
     # Setor de Armazenagem
     try:
@@ -1029,8 +1031,8 @@ def gerar_relatorio_pdf_cobranca_mensalista(cobranca):
             story.append(Paragraph(f"PIX: {setor_armazenagem.get_chave_pix_formatada()}", estilos['info']))
             story.append(Paragraph(f"Beneficiário: {setor_armazenagem.nome_responsavel}", estilos['info']))
             story.append(Spacer(1, 4))
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning('Erro ao adicionar dados bancários (setor armazenagem) ao PDF: %s', e)
     
     # Observações
     observacoes = getattr(cobranca, 'observacoes', None)
@@ -1199,8 +1201,8 @@ def gerar_relatorio_pdf_cobranca_por_cubagem(cobranca):
     story.append(Paragraph("INSTRUÇÕES DE PAGAMENTO", estilos['section']))
     
     # Buscar dados bancários dos setores
-    from ..models import SetorBancario
-    
+    from financeiro.models import SetorBancario
+
     # Calcular valores por setor
     # Setor de Carregamento: Carregamento + CTE/Manifesto
     valor_carregamento = Decimal(str(cobranca.valor_carregamento)) if cobranca.valor_carregamento else Decimal('0.00')
@@ -1262,7 +1264,8 @@ def gerar_relatorio_pdf_cobranca_por_cubagem(cobranca):
             coluna_esquerda.append(Paragraph(f"<b>Conta:</b> {setor_carregamento.conta_corrente}", info_bancaria_style))
             coluna_esquerda.append(Paragraph(f"<b>PIX:</b> {setor_carregamento.get_chave_pix_formatada()}", info_bancaria_style))
             coluna_esquerda.append(Paragraph(f"<b>Beneficiário:</b> {setor_carregamento.nome_responsavel}", info_bancaria_style))
-    except Exception:
+    except Exception as e:
+        logger.warning('Erro ao adicionar dados bancários (coluna esquerda) ao PDF consolidado: %s', e)
         coluna_esquerda.append(Paragraph("", info_bancaria_style))
     
     # Coluna Direita - Setor de Armazenagem
@@ -1279,7 +1282,8 @@ def gerar_relatorio_pdf_cobranca_por_cubagem(cobranca):
             coluna_direita.append(Paragraph(f"<b>Conta:</b> {setor_armazenagem.conta_corrente}", info_bancaria_style))
             coluna_direita.append(Paragraph(f"<b>PIX:</b> {setor_armazenagem.get_chave_pix_formatada()}", info_bancaria_style))
             coluna_direita.append(Paragraph(f"<b>Beneficiário:</b> {setor_armazenagem.nome_responsavel}", info_bancaria_style))
-    except Exception:
+    except Exception as e:
+        logger.warning('Erro ao adicionar dados bancários (coluna direita) ao PDF consolidado: %s', e)
         coluna_direita.append(Paragraph("", info_bancaria_style))
     
     # Criar tabela com duas colunas

@@ -60,7 +60,7 @@ def serializer_modelo_para_dict(instance):
                                 'id': val.pk,
                                 'repr': str(val)[:100] if hasattr(val, '__str__') else None
                             }
-                        except:
+                        except Exception:
                             return val.pk if val else None
                     elif isinstance(val, (list, tuple)):
                         return [convert_to_serializable(item) for item in val[:10]]
@@ -71,7 +71,7 @@ def serializer_modelo_para_dict(instance):
                         try:
                             str_val = str(val)
                             return str_val[:200] if len(str_val) > 200 else str_val
-                        except:
+                        except Exception:
                             return None
                 
                 dados[field_name] = convert_to_serializable(value)
@@ -80,7 +80,7 @@ def serializer_modelo_para_dict(instance):
                 # Se houver erro ao acessar o campo, pular mas registrar nome do campo
                 try:
                     dados[field_name] = f'[Erro ao serializar: {str(e)[:50]}]'
-                except:
+                except Exception:
                     continue
         
         # Adicionar ManyToMany como lista de IDs (se houver)
@@ -93,7 +93,7 @@ def serializer_modelo_para_dict(instance):
             except Exception as e:
                 try:
                     dados[field_name] = f'[Erro ao serializar relacionamento: {str(e)[:50]}]'
-                except:
+                except Exception:
                     continue
                 
     except Exception as e:
@@ -105,7 +105,7 @@ def serializer_modelo_para_dict(instance):
                 'model': instance._meta.model_name if hasattr(instance, '_meta') else 'Desconhecido',
                 'error': f'Erro ao serializar: {str(e)[:100]}'
             }
-        except:
+        except Exception:
             dados = {'error': 'Erro crítico ao serializar objeto'}
     
     # Garantir que o resultado final é JSON-serializável usando json.dumps
@@ -333,10 +333,17 @@ def restaurar_registro(modelo, objeto_id, usuario=None, request=None):
     """
     from ..models import (
         NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem,
-        HistoricoConsulta, TabelaSeguro, AgendaEntrega, CobrancaCarregamento
+        HistoricoConsulta, TabelaSeguro, CobrancaCarregamento
     )
-    
-    # Mapear nomes de modelos para classes
+    from financeiro.models import (
+        ReceitaEmpresa, MovimentoBancario, ControleSaldoSemanal,
+        AcertoDiarioCarregamento, FuncionarioFluxoCaixa, SetorBancario,
+        CaixaFuncionario, MovimentoCaixaFuncionario, MovimentoCaixa,
+        PeriodoMovimentoCaixa, CarregamentoCliente, DistribuicaoFuncionario,
+        AcumuladoFuncionario,
+    )
+
+    # Mapear nomes de modelos para classes (notas + financeiro)
     MODELOS_DISPONIVEIS = {
         'NotaFiscal': NotaFiscal,
         'Notafiscal': NotaFiscal,  # Variante
@@ -349,13 +356,26 @@ def restaurar_registro(modelo, objeto_id, usuario=None, request=None):
         'Romaneio': RomaneioViagem,  # Variante
         'HistoricoConsulta': HistoricoConsulta,
         'TabelaSeguro': TabelaSeguro,
-        'AgendaEntrega': AgendaEntrega,
         'CobrancaCarregamento': CobrancaCarregamento,
+        # Financeiro
+        'ReceitaEmpresa': ReceitaEmpresa,
+        'MovimentoBancario': MovimentoBancario,
+        'ControleSaldoSemanal': ControleSaldoSemanal,
+        'AcertoDiarioCarregamento': AcertoDiarioCarregamento,
+        'FuncionarioFluxoCaixa': FuncionarioFluxoCaixa,
+        'SetorBancario': SetorBancario,
+        'CaixaFuncionario': CaixaFuncionario,
+        'MovimentoCaixaFuncionario': MovimentoCaixaFuncionario,
+        'MovimentoCaixa': MovimentoCaixa,
+        'PeriodoMovimentoCaixa': PeriodoMovimentoCaixa,
+        'CarregamentoCliente': CarregamentoCliente,
+        'DistribuicaoFuncionario': DistribuicaoFuncionario,
+        'AcumuladoFuncionario': AcumuladoFuncionario,
     }
-    
+
     # Normalizar nome do modelo - tentar diferentes variações
     modelo_lower = modelo.lower()
-    
+
     # Mapear variações comuns para o nome correto
     variacoes_modelos = {
         'romaneioviagem': 'RomaneioViagem',
@@ -368,10 +388,21 @@ def restaurar_registro(modelo, objeto_id, usuario=None, request=None):
         'historico_consulta': 'HistoricoConsulta',
         'tabelaseguro': 'TabelaSeguro',
         'tabela_seguro': 'TabelaSeguro',
-        'agendaentrega': 'AgendaEntrega',
-        'agenda_entrega': 'AgendaEntrega',
         'cobrancacarregamento': 'CobrancaCarregamento',
         'cobranca_carregamento': 'CobrancaCarregamento',
+        'receitaempresa': 'ReceitaEmpresa',
+        'movimentobancario': 'MovimentoBancario',
+        'controlesaldosemanal': 'ControleSaldoSemanal',
+        'acertodiariocarregamento': 'AcertoDiarioCarregamento',
+        'funcionariofluxocaixa': 'FuncionarioFluxoCaixa',
+        'setorbancario': 'SetorBancario',
+        'caixafuncionario': 'CaixaFuncionario',
+        'movimentocaixafuncionario': 'MovimentoCaixaFuncionario',
+        'movimentocaixa': 'MovimentoCaixa',
+        'periodomovimentocaixa': 'PeriodoMovimentoCaixa',
+        'carregamentocliente': 'CarregamentoCliente',
+        'distribuicaofuncionario': 'DistribuicaoFuncionario',
+        'acumuladofuncionario': 'AcumuladoFuncionario',
     }
     
     # Tentar encontrar o modelo correto
@@ -476,7 +507,7 @@ def restaurar_registro(modelo, objeto_id, usuario=None, request=None):
                     ids_relacionados = ast.literal_eval(ids_relacionados)
                     if isinstance(ids_relacionados, list):
                         dados_manytomany[field.name] = ids_relacionados
-                except:
+                except Exception:
                     pass
     
     # Tratar campos especiais
@@ -506,13 +537,13 @@ def restaurar_registro(modelo, objeto_id, usuario=None, request=None):
                         try:
                             # Tentar formato ISO primeiro
                             parsed = datetime.fromisoformat(valor.replace('Z', '+00:00'))
-                        except:
+                        except Exception:
                             # Tentar outros formatos comuns
                             for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f']:
                                 try:
                                     parsed = datetime.strptime(valor, fmt)
                                     break
-                                except:
+                                except Exception:
                                     continue
                             else:
                                 raise ValueError("Formato de data não reconhecido")
@@ -525,11 +556,11 @@ def restaurar_registro(modelo, objeto_id, usuario=None, request=None):
                         # Date apenas
                         try:
                             parsed = datetime.fromisoformat(valor)
-                        except:
+                        except Exception:
                             # Tentar formato de data simples
                             try:
                                 parsed = datetime.strptime(valor, '%Y-%m-%d')
-                            except:
+                            except Exception:
                                 raise ValueError("Formato de data não reconhecido")
                         dados_limpos[field.name] = parsed.date() if isinstance(field, models.DateField) else parsed
                 except Exception as e:
@@ -582,7 +613,7 @@ def restaurar_registro(modelo, objeto_id, usuario=None, request=None):
                                 campo_id = campo_constraint + '_id'
                                 if campo_id in dados_limpos:
                                     valor_campo = dados_limpos[campo_id]
-                        except:
+                        except Exception:
                             pass
                     
                     if valor_campo is not None:
@@ -609,7 +640,7 @@ def restaurar_registro(modelo, objeto_id, usuario=None, request=None):
                                                 related_model = ModeloClasse._meta.get_field(field_name).related_model
                                                 if related_model.objects.filter(pk=id_val).exists():
                                                     ids_validos.append(id_val)
-                                            except:
+                                            except Exception:
                                                 ids_validos.append(id_val)
                                     if ids_validos:
                                         getattr(objeto_existente_unique, field_name).set(ids_validos)
@@ -699,7 +730,7 @@ def restaurar_registro(modelo, objeto_id, usuario=None, request=None):
                 
                 # Se não encontrou, relançar o erro original
                 raise create_error
-            except:
+            except Exception:
                 raise create_error
         else:
             raise create_error
@@ -724,7 +755,7 @@ def restaurar_registro(modelo, objeto_id, usuario=None, request=None):
                                 # Se houver erro, tentar mesmo assim (pode ser problema de tipo)
                                 try:
                                     ids_validos.append(int(id_val))
-                                except:
+                                except Exception:
                                     pass
                     
                     # Restaurar os relacionamentos ManyToMany
@@ -750,7 +781,7 @@ def restaurar_registro(modelo, objeto_id, usuario=None, request=None):
                         # Tentar usar o nome do campo diretamente
                         manytomany_manager = getattr(objeto_restaurado, field_name)
                         manytomany_manager.set(ids_relacionados)
-                    except:
+                    except Exception:
                         pass
         
         # Registrar a restauração na auditoria

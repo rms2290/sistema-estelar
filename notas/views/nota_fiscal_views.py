@@ -3,8 +3,9 @@ Views relacionadas a Notas Fiscais
 """
 import logging
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
 from django.contrib import messages
+
+from sistema_estelar.api_utils import json_success, json_error
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Sum, Count, Q
@@ -15,6 +16,7 @@ from datetime import datetime
 from ..models import NotaFiscal, CobrancaCarregamento, OcorrenciaNotaFiscal
 from ..forms import NotaFiscalForm, NotaFiscalSearchForm, MercadoriaDepositoSearchForm
 from ..decorators import rate_limit_critical
+from ..utils.date_utils import parse_date_iso
 from .base import is_cliente
 
 # Configurar logger
@@ -127,10 +129,7 @@ def excluir_nota_fiscal(request, pk):
                     username_admin = data.get('username_admin', '')
                     senha_admin = data.get('senha_admin', '')
                 except (json.JSONDecodeError, ValueError):
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Erro ao processar requisição JSON'
-                    }, status=400)
+                    return json_error('Erro ao processar requisição JSON', status=400)
             else:
                 username_admin = request.POST.get('username_admin', '')
                 senha_admin = request.POST.get('senha_admin', '')
@@ -149,10 +148,7 @@ def excluir_nota_fiscal(request, pk):
         
         if not valido:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': False,
-                    'message': mensagem_erro
-                }, status=400)
+                return json_error(mensagem_erro, status=400)
             messages.error(request, mensagem_erro)
             return render(request, 'notas/excluir_nota.html', {
                 'nota': nota,
@@ -182,11 +178,10 @@ def excluir_nota_fiscal(request, pk):
             nota.delete()
             
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': True,
-                    'message': 'Nota fiscal excluída com sucesso!',
-                    'redirect_url': '/notas/notas/'
-                })
+                return json_success(
+                    message='Nota fiscal excluída com sucesso!',
+                    redirect_url='/notas/notas/',
+                )
             
             messages.success(request, 'Nota fiscal excluída com sucesso!')
             return redirect('notas:listar_notas_fiscais')
@@ -202,7 +197,7 @@ def excluir_nota_fiscal(request, pk):
             )
             error_msg = 'Não foi possível excluir a nota fiscal. Ela pode estar vinculada a outros registros.'
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'message': error_msg}, status=400)
+                return json_error(error_msg, status=400)
             messages.error(request, error_msg)
         except Exception as e:
             logger.error(
@@ -217,7 +212,7 @@ def excluir_nota_fiscal(request, pk):
             )
             error_msg = 'Erro inesperado ao excluir nota fiscal. Tente novamente ou entre em contato com o suporte.'
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'message': error_msg}, status=500)
+                return json_error(error_msg, status=500)
             messages.error(request, error_msg)
             return render(request, 'notas/excluir_nota.html', {
                 'nota': nota,
@@ -599,19 +594,12 @@ def minhas_cobrancas_carregamento(request):
     if status_filter:
         cobrancas = cobrancas.filter(status=status_filter)
     
-    if data_inicio:
-        try:
-            data_inicio_obj = datetime.strptime(data_inicio, '%Y-%m-%d').date()
-            cobrancas = cobrancas.filter(criado_em__gte=data_inicio_obj)
-        except ValueError:
-            pass
-    
-    if data_fim:
-        try:
-            data_fim_obj = datetime.strptime(data_fim, '%Y-%m-%d').date()
-            cobrancas = cobrancas.filter(criado_em__lte=data_fim_obj)
-        except ValueError:
-            pass
+    data_inicio_obj = parse_date_iso(data_inicio) if data_inicio else None
+    if data_inicio_obj:
+        cobrancas = cobrancas.filter(criado_em__gte=data_inicio_obj)
+    data_fim_obj = parse_date_iso(data_fim) if data_fim else None
+    if data_fim_obj:
+        cobrancas = cobrancas.filter(criado_em__lte=data_fim_obj)
     
     return render(request, 'notas/auth/minhas_cobrancas_carregamento.html', {
         'cobrancas': cobrancas

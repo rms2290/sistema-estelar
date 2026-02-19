@@ -1,14 +1,19 @@
 """
 Views AJAX/API para requisições assíncronas
 """
-from django.http import JsonResponse
+import logging
+
 from django.contrib.auth.decorators import login_required
+
+from sistema_estelar.api_utils import json_success, json_error
 from django.contrib.auth import authenticate
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 
 from ..models import NotaFiscal, Cliente, RomaneioViagem, Veiculo, OcorrenciaNotaFiscal, FotoOcorrencia
 from ..decorators import admin_required
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -29,9 +34,9 @@ def load_notas_fiscais(request):
             'peso': str(nota.peso),
         } for nota in notas]
         
-        return JsonResponse({'notas': notas_data})
+        return json_success(notas=notas_data)
     
-    return JsonResponse({'notas': []})
+    return json_success(notas=[])
 
 
 @login_required
@@ -41,7 +46,7 @@ def load_notas_fiscais_edicao(request):
     romaneio_id = request.GET.get('romaneio_id')
     
     if not cliente_id:
-        return JsonResponse([], safe=False)
+        return json_success(data=[])
     
     try:
         notas = NotaFiscal.objects.filter(cliente_id=cliente_id)
@@ -74,13 +79,11 @@ def load_notas_fiscais_edicao(request):
                 'data_emissao': nota.data.strftime('%d/%m/%Y') if nota.data else '',
             })
         
-        return JsonResponse(notas_data, safe=False)
+        return json_success(data=notas_data)
     
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f'Erro ao carregar notas fiscais para edição: {str(e)}', exc_info=True)
-        return JsonResponse({'error': 'Erro ao carregar notas fiscais'}, status=500)
+        logger.error('Erro ao carregar notas fiscais para edição: %s', str(e), exc_info=True)
+        return json_error('Erro ao carregar notas fiscais', status=500)
 
 
 @login_required
@@ -104,7 +107,7 @@ def load_notas_fiscais_para_romaneio(request, cliente_id):
             'data_emissao': nota.data.strftime('%d/%m/%Y') if nota.data else '',
         })
     
-    return JsonResponse({'notas_fiscais': notas_data})
+    return json_success(notas_fiscais=notas_data)
 
 
 @login_required
@@ -120,13 +123,13 @@ def validar_credenciais_admin_ajax(request):
             user = authenticate(request, username=username, password=password)
             
             if user and user.is_admin:
-                return JsonResponse({'valid': True})
+                return json_success(valid=True)
             else:
-                return JsonResponse({'valid': False, 'message': 'Credenciais inválidas'})
+                return json_success(valid=False, message='Credenciais inválidas')
         except json.JSONDecodeError:
-            return JsonResponse({'valid': False, 'message': 'Erro ao processar requisição'})
+            return json_success(valid=False, message='Erro ao processar requisição')
     
-    return JsonResponse({'valid': False, 'message': 'Método não permitido'})
+    return json_success(valid=False, message='Método não permitido')
 
 
 @login_required
@@ -143,9 +146,9 @@ def filtrar_veiculos_por_composicao(request):
             'tipo_unidade': veiculo.tipo_unidade,
         } for veiculo in veiculos]
         
-        return JsonResponse({'veiculos': veiculos_data})
+        return json_success(veiculos=veiculos_data)
     
-    return JsonResponse({'veiculos': []})
+    return json_success(veiculos=[])
 
 
 @login_required
@@ -161,27 +164,26 @@ def carregar_romaneios_cliente(request, cliente_id):
         'valor_total': str(romaneio.valor_total),
     } for romaneio in romaneios]
     
-    return JsonResponse({'romaneios': romaneios_data})
+    return json_success(romaneios=romaneios_data)
 
 
 @login_required
 def salvar_ocorrencia_nota_fiscal(request, nota_id):
     """Salva uma ocorrência de nota fiscal via AJAX"""
     if request.method != 'POST':
-        return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+        return json_error('Método não permitido', status=405)
     
     try:
         nota = get_object_or_404(NotaFiscal, pk=nota_id)
         
-        # Validar acesso: apenas administradores e funcionários podem registrar ocorrências
         if request.user.is_cliente:
-            return JsonResponse({'success': False, 'message': 'Acesso negado. Apenas administradores e funcionários podem registrar ocorrências.'}, status=403)
+            return json_error('Acesso negado. Apenas administradores e funcionários podem registrar ocorrências.', status=403)
         
         observacoes = request.POST.get('observacoes', '').strip()
-        fotos = request.FILES.getlist('fotos')  # getlist para múltiplos arquivos
+        fotos = request.FILES.getlist('fotos')
         
         if not observacoes and not fotos:
-            return JsonResponse({'success': False, 'message': 'Por favor, preencha as observações ou anexe pelo menos uma foto.'})
+            return json_error('Por favor, preencha as observações ou anexe pelo menos uma foto.')
         
         # Criar ocorrência
         ocorrencia = OcorrenciaNotaFiscal.objects.create(
@@ -202,44 +204,40 @@ def salvar_ocorrencia_nota_fiscal(request, nota_id):
                 'url': foto_obj.foto.url
             })
         
-        return JsonResponse({
-            'success': True,
-            'message': f'Ocorrência registrada com sucesso! {len(fotos_criadas)} foto(s) anexada(s).',
-            'ocorrencia': {
+        return json_success(
+            message=f'Ocorrência registrada com sucesso! {len(fotos_criadas)} foto(s) anexada(s).',
+            ocorrencia={
                 'id': ocorrencia.id,
                 'observacoes': ocorrencia.observacoes,
                 'fotos': fotos_criadas,
                 'data_criacao': ocorrencia.data_criacao.strftime('%d/%m/%Y %H:%M'),
                 'usuario': ocorrencia.usuario_criacao.username if ocorrencia.usuario_criacao else 'Sistema',
-            }
-        })
+            },
+        )
         
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f'Erro ao salvar ocorrência: {str(e)}', exc_info=True)
-        return JsonResponse({'success': False, 'message': f'Erro ao salvar ocorrência: {str(e)}'}, status=500)
+        logger.error('Erro ao salvar ocorrência: %s', str(e), exc_info=True)
+        return json_error(f'Erro ao salvar ocorrência: {str(e)}', status=500)
 
 
 @login_required
 def editar_ocorrencia_nota_fiscal(request, ocorrencia_id):
     """Edita uma ocorrência de nota fiscal via AJAX"""
     if request.method != 'POST':
-        return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+        return json_error('Método não permitido', status=405)
     
-    # Validar acesso: apenas administradores e funcionários podem editar ocorrências
     if request.user.is_cliente:
-        return JsonResponse({'success': False, 'message': 'Acesso negado. Apenas administradores e funcionários podem editar ocorrências.'}, status=403)
+        return json_error('Acesso negado. Apenas administradores e funcionários podem editar ocorrências.', status=403)
     
     try:
         ocorrencia = get_object_or_404(OcorrenciaNotaFiscal, pk=ocorrencia_id)
         
         observacoes = request.POST.get('observacoes', '').strip()
-        fotos_novas = request.FILES.getlist('fotos')  # Novas fotos para adicionar
-        fotos_remover_ids = request.POST.getlist('fotos_remover')  # IDs das fotos a remover
+        fotos_novas = request.FILES.getlist('fotos')
+        fotos_remover_ids = request.POST.getlist('fotos_remover')
         
         if not observacoes:
-            return JsonResponse({'success': False, 'message': 'Por favor, preencha as observações.'})
+            return json_error('Por favor, preencha as observações.')
         
         # Atualizar observações
         ocorrencia.observacoes = observacoes
@@ -274,51 +272,39 @@ def editar_ocorrencia_nota_fiscal(request, ocorrencia_id):
         if len(fotos_criadas) > 0:
             mensagem += f' {len(fotos_criadas)} nova(s) foto(s) anexada(s).'
         
-        return JsonResponse({
-            'success': True,
-            'message': mensagem,
-            'ocorrencia': {
+        return json_success(
+            message=mensagem,
+            ocorrencia={
                 'id': ocorrencia.id,
                 'observacoes': ocorrencia.observacoes,
                 'fotos': fotos_criadas,
-            }
-        })
+            },
+        )
         
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f'Erro ao editar ocorrência: {str(e)}', exc_info=True)
-        return JsonResponse({'success': False, 'message': f'Erro ao editar ocorrência: {str(e)}'}, status=500)
+        logger.error('Erro ao editar ocorrência: %s', str(e), exc_info=True)
+        return json_error(f'Erro ao editar ocorrência: {str(e)}', status=500)
 
 
 @login_required
 def excluir_ocorrencia_nota_fiscal(request, ocorrencia_id):
     """Exclui uma ocorrência de nota fiscal via AJAX"""
     if request.method != 'POST':
-        return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+        return json_error('Método não permitido', status=405)
     
-    # Validar acesso: apenas administradores e funcionários podem excluir ocorrências
     if request.user.is_cliente:
-        return JsonResponse({'success': False, 'message': 'Acesso negado. Apenas administradores e funcionários podem excluir ocorrências.'}, status=403)
+        return json_error('Acesso negado. Apenas administradores e funcionários podem excluir ocorrências.', status=403)
     
     try:
         ocorrencia = get_object_or_404(OcorrenciaNotaFiscal, pk=ocorrencia_id)
         nota_id = ocorrencia.nota_fiscal.id
-        
-        # Excluir ocorrência (as fotos serão excluídas automaticamente via CASCADE)
         ocorrencia.delete()
         
-        return JsonResponse({
-            'success': True,
-            'message': 'Ocorrência excluída com sucesso!',
-            'nota_id': nota_id
-        })
+        return json_success(message='Ocorrência excluída com sucesso!', nota_id=nota_id)
         
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f'Erro ao excluir ocorrência: {str(e)}', exc_info=True)
-        return JsonResponse({'success': False, 'message': f'Erro ao excluir ocorrência: {str(e)}'}, status=500)
+        logger.error('Erro ao excluir ocorrência: %s', str(e), exc_info=True)
+        return json_error(f'Erro ao excluir ocorrência: {str(e)}', status=500)
 
 
 @login_required
@@ -326,51 +312,37 @@ def obter_tipo_veiculo(request, veiculo_id):
     """Obtém o tipo de unidade de um veículo via AJAX"""
     try:
         veiculo = get_object_or_404(Veiculo, pk=veiculo_id)
-        return JsonResponse({
-            'tipo_unidade': veiculo.tipo_unidade,
-            'placa': veiculo.placa
-        })
+        return json_success(tipo_unidade=veiculo.tipo_unidade, placa=veiculo.placa)
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f'Erro ao obter tipo do veículo: {str(e)}', exc_info=True)
-        return JsonResponse({'error': 'Erro ao obter tipo do veículo'}, status=500)
+        logger.error('Erro ao obter tipo do veículo: %s', str(e), exc_info=True)
+        return json_error('Erro ao obter tipo do veículo', status=500)
 
 
 @login_required
 def obter_ocorrencia_nota_fiscal(request, ocorrencia_id):
     """Obtém os dados de uma ocorrência para edição via AJAX"""
     if request.method != 'GET':
-        return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+        return json_error('Método não permitido', status=405)
     
-    # Validar acesso: apenas administradores e funcionários podem visualizar dados de ocorrências
     if request.user.is_cliente:
-        return JsonResponse({'success': False, 'message': 'Acesso negado.'}, status=403)
+        return json_error('Acesso negado.', status=403)
     
     try:
         ocorrencia = get_object_or_404(OcorrenciaNotaFiscal, pk=ocorrencia_id)
         
-        fotos = []
-        for foto in ocorrencia.fotos.all():
-            fotos.append({
-                'id': foto.id,
-                'url': foto.foto.url
-            })
+        fotos = [{'id': foto.id, 'url': foto.foto.url} for foto in ocorrencia.fotos.all()]
         
-        return JsonResponse({
-            'success': True,
-            'ocorrencia': {
+        return json_success(
+            ocorrencia={
                 'id': ocorrencia.id,
                 'observacoes': ocorrencia.observacoes,
                 'fotos': fotos,
                 'data_criacao': ocorrencia.data_criacao.strftime('%d/%m/%Y %H:%M'),
                 'usuario': ocorrencia.usuario_criacao.username if ocorrencia.usuario_criacao else 'Sistema',
-            }
-        })
+            },
+        )
         
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f'Erro ao obter ocorrência: {str(e)}', exc_info=True)
-        return JsonResponse({'success': False, 'message': f'Erro ao obter ocorrência: {str(e)}'}, status=500)
+        logger.error('Erro ao obter ocorrência: %s', str(e), exc_info=True)
+        return json_error(f'Erro ao obter ocorrência: {str(e)}', status=500)
 

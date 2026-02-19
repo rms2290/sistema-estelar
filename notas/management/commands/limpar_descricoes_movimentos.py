@@ -3,7 +3,7 @@ Comando para limpar descrições de movimentos de caixa, removendo
 a parte "- ACERTO DIÁRIO {data}" das descrições.
 """
 from django.core.management.base import BaseCommand
-from notas.models import MovimentoCaixa
+from financeiro.models import MovimentoCaixa
 import re
 
 

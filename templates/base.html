@@ -207,24 +207,6 @@
                         </ul>
                     </li>
                     
-                    <!-- Agenda - Apenas para Administradores -->
-                    {% if user.is_admin %}
-                    <li class="nav-group">
-                        <div class="nav-group-header">
-                            <i class="fas fa-calendar-alt"></i>
-                            <span>Agenda</span>
-                        </div>
-                        <ul class="nav-submenu">
-                            <li><a href="{% url 'notas:adicionar_agenda_entrega' %}">
-                                <i class="fas fa-plus"></i> Agendar Entrega
-                            </a></li>
-                            <li><a href="{% url 'notas:listar_agenda_entregas' %}">
-                                <i class="fas fa-list"></i> Listar Entregas
-                            </a></li>
-                        </ul>
-                    </li>
-                    {% endif %}
-                    
                     <!-- Depósito -->
                     <li class="nav-group">
                         <div class="nav-group-header">
@@ -249,19 +231,19 @@
                             <span>Fluxo de Caixa</span>
                         </div>
                         <ul class="nav-submenu">
-                            <li><a href="{% url 'notas:gerenciar_movimento_caixa' %}">
+                            <li><a href="{% url 'financeiro:gerenciar_movimento_caixa' %}">
                                 <i class="fas fa-cash-register"></i> Movimento de Caixa
                             </a></li>
-                            <li><a href="{% url 'notas:fechamento_caixa' %}">
+                            <li><a href="{% url 'financeiro:fechamento_caixa' %}">
                                 <i class="fas fa-lock"></i> Fechamento de Caixa
                             </a></li>
                             <li><a href="{% url 'notas:cobranca_carregamento' %}">
                                 <i class="fas fa-truck-loading"></i> Cobrança Carregamento
                             </a></li>
-                            <li><a href="{% url 'notas:dashboard_fluxo_caixa' %}">
+                            <li><a href="{% url 'financeiro:dashboard_fluxo_caixa' %}">
                                 <i class="fas fa-chart-line"></i> Dashboard
                             </a></li>
-                            <li><a href="{% url 'notas:pesquisar_periodo_movimento_caixa' %}">
+                            <li><a href="{% url 'financeiro:pesquisar_periodo_movimento_caixa' %}">
                                 <i class="fas fa-search"></i> Pesquisar Período
                             </a></li>
                         </ul>
@@ -708,12 +690,13 @@
                 const response = await fetch(url);
                 
                 const data = await response.json();
+                const notasList = data.success ? (data.data || []) : [];
                 
                 // Limpar container
                 notasContainer.innerHTML = '';
                 
                 // Adicionar notas fiscais
-                data.forEach((nota, index) => {
+                notasList.forEach((nota, index) => {
                     // Verificar se a nota está nas selecionadas inicialmente
                     const isChecked = selectedNotasIds && selectedNotasIds.includes(nota.id) ? 'checked' : '';
                     const notaHtml = `

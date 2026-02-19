@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load format_filters %}
+
+{% block title %}Acertar Caixa de Funcionário - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4><i class="fas fa-check-circle"></i> Acertar Caixa de Funcionário</h4>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <strong>Funcionário:</strong> {{ caixa.funcionario.nome }}<br>
+                <strong>Período:</strong> 
+                {% if caixa.periodo_tipo == 'Semanal' %}
+                    {{ caixa.semana_inicio|date:"d/m/Y" }} a {{ caixa.semana_fim|date:"d/m/Y" }}
+                {% else %}
+                    {{ caixa.data|date:"d/m/Y" }}
+                {% endif %}<br>
+                <strong>Valor Coletado:</strong> R$ {{ caixa.valor_coletado|format_brazilian_currency }}
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Valor Acertado (R$) *</label>
+                        <input type="number" name="valor_acertado" class="form-control" step="0.01" min="0" required value="{{ caixa.valor_coletado }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Data do Acerto *</label>
+                        <input type="date" name="data_acerto" class="form-control" required value="{% now 'Y-m-d' %}">
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Observações Adicionais</label>
+                        <textarea name="observacoes" class="form-control" rows="3" placeholder="Observações sobre o acerto..."></textarea>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'financeiro:dashboard_fluxo_caixa' %}" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-success">Confirmar Acerto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

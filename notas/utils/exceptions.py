@@ -1,5 +1,12 @@
 """
-Utilitários para tratamento de exceções específicas
+Utilitários para tratamento de exceções específicas.
+
+Use handle_model_exception() em views que redirecionam após sucesso e desejam
+tratamento padronizado (log + message + redirect) em caso de IntegrityError,
+ValidationError ou DoesNotExist. Ex.: em views de criação/edição que fazem
+redirect('...:listar') após save, envolva o save em try/except e retorne
+handle_model_exception(request, e, 'Cliente', 'criar', redirect_url) quando
+a função retornar um HttpResponse.
 """
 import logging
 from django.core.exceptions import ValidationError

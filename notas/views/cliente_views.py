@@ -21,8 +21,9 @@ Versão: 2.0
 import logging
 from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
 from django.contrib import messages
+
+from sistema_estelar.api_utils import json_success, json_error
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
@@ -242,10 +243,7 @@ def excluir_cliente(request, pk):
                 username_admin = data.get('username_admin', '')
                 senha_admin = data.get('senha_admin', '')
             except json.JSONDecodeError:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Erro ao processar requisição'
-                }, status=400)
+                return json_error('Erro ao processar requisição', status=400)
         else:
             username_admin = request.POST.get('username_admin', '')
             senha_admin = request.POST.get('senha_admin', '')
@@ -261,10 +259,7 @@ def excluir_cliente(request, pk):
         
         if not valido:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': False,
-                    'message': mensagem_erro
-                }, status=400)
+                return json_error(mensagem_erro, status=400)
             messages.error(request, mensagem_erro)
             return render(request, 'notas/excluir_cliente.html', {
                 'cliente': cliente,
@@ -308,11 +303,10 @@ def excluir_cliente(request, pk):
             )
             
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': True,
-                    'message': 'Cliente excluído com sucesso!',
-                    'redirect_url': '/notas/clientes/'
-                })
+                return json_success(
+                    message='Cliente excluído com sucesso!',
+                    redirect_url='/notas/clientes/',
+                )
             
             messages.success(request, 'Cliente excluído com sucesso!')
         except (IntegrityError, ValidationError) as e:
@@ -328,10 +322,7 @@ def excluir_cliente(request, pk):
                 exc_info=True
             )
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': False,
-                    'message': f'Não foi possível excluir o cliente: {error_msg}'
-                }, status=400)
+                return json_error(f'Não foi possível excluir o cliente: {error_msg}', status=400)
             messages.error(request, f'Não foi possível excluir o cliente: {error_msg}')
         
         if request.headers.get('X-Requested-With') != 'XMLHttpRequest':

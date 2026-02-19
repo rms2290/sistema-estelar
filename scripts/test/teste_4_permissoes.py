@@ -46,7 +46,7 @@ console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(
 if hasattr(console_handler.stream, 'reconfigure'):
     try:
         console_handler.stream.reconfigure(encoding='utf-8', errors='replace')
-    except:
+    except Exception:
         pass
 
 logging.basicConfig(

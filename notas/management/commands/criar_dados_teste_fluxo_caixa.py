@@ -7,14 +7,14 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from decimal import Decimal
 from datetime import date, timedelta
-from notas.models import (
+from notas.models import Usuario
+from financeiro.models import (
     MovimentoCaixa,
     PeriodoMovimentoCaixa,
     AcertoDiarioCarregamento,
     DistribuicaoFuncionario,
     CarregamentoCliente,
     FuncionarioFluxoCaixa,
-    Usuario,
 )
 
 

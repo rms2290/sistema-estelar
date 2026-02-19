@@ -39,17 +39,37 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'notas',
+    'financeiro',
     'crispy_forms',
     'crispy_bootstrap5',
     'django_filters',
+    # API REST (Fase 6)
+    'rest_framework',
+    'rest_framework.authtoken',
+    'drf_spectacular',
+    'api',
 ]
 
 # Configuração do modelo de usuário customizado
 AUTH_USER_MODEL = 'notas.Usuario'
 
+# Ordem de migrações: admin depende de notas.0016_usuario (evita erro em testes)
+MIGRATION_MODULES = {
+    'admin': 'sistema_estelar.admin_migrations',
+}
+
 # Crispy Forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+# Middleware de autenticação: URLs que não redirecionam para login
+PUBLIC_URL_PREFIXES = [
+    '/notas/login/',
+    '/admin/',
+    '/static/',
+    '/media/',
+]
+API_URL_PREFIX = '/api/'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -74,7 +94,7 @@ ROOT_URLCONF = 'sistema_estelar.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'], # <--- VERIFIQUE ESTA LINHA!
+        'DIRS': [BASE_DIR / 'financeiro' / 'templates', BASE_DIR / 'templates'],
         'APP_DIRS': True, # <--- E ESTA LINHA!
         'OPTIONS': {
             'context_processors': [
@@ -185,13 +205,17 @@ SESSION_COOKIE_AGE = 3600  # 1 hora
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 
-# Configurações de Log
+# Configurações de Log (Fase 5 – formato: timestamp, nível, logger, mensagem)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'format': '{asctime} {levelname} [{name}] {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{asctime} {levelname} {message}',
             'style': '{',
         },
     },
@@ -200,13 +224,52 @@ LOGGING = {
             'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'logs' / 'django.log',
+            'encoding': 'utf-8',
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
     },
+    'loggers': {
+        'notas': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'financeiro': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
     'root': {
-        'handlers': ['file'],
+        'handlers': ['file', 'console'],
         'level': 'INFO',
     },
+}
+
+# API REST (Fase 6) – Django REST Framework e documentação OpenAPI
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Sistema Estelar API',
+    'DESCRIPTION': 'API REST para integração com o Sistema Estelar (notas, clientes, romaneios).',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }
 
 # Criar diretório de logs se não existir

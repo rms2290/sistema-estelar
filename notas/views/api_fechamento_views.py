@@ -2,19 +2,17 @@
 Views API para Fechamento de Frete
 """
 import logging
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
+from sistema_estelar.api_utils import json_success, json_error
 from django.db.models import Sum, Q
-from django.contrib.auth.decorators import user_passes_test
 from datetime import datetime
 from ..models import RomaneioViagem, Cliente
-from .base import is_admin
+from ..decorators import admin_required
+from ..utils.date_utils import parse_date_iso
 
 logger = logging.getLogger(__name__)
 
 
-@login_required
-@user_passes_test(is_admin)
+@admin_required
 def carregar_dados_romaneios(request):
     """
     API para carregar dados de múltiplos romaneios
@@ -31,13 +29,13 @@ def carregar_dados_romaneios(request):
     romaneios_ids = request.GET.get('romaneios_ids', '')
     
     if not romaneios_ids:
-        return JsonResponse({'error': 'Nenhum romaneio selecionado'}, status=400)
+        return json_error('Nenhum romaneio selecionado', status=400)
     
     try:
         ids_list = [int(id.strip()) for id in romaneios_ids.split(',') if id.strip()]
         
         if not ids_list:
-            return JsonResponse({'error': 'IDs inválidos'}, status=400)
+            return json_error('IDs inválidos', status=400)
         
         romaneios = RomaneioViagem.objects.filter(
             pk__in=ids_list,
@@ -45,7 +43,7 @@ def carregar_dados_romaneios(request):
         ).select_related('motorista', 'cliente').prefetch_related('notas_fiscais')
         
         if not romaneios.exists():
-            return JsonResponse({'error': 'Nenhum romaneio encontrado'}, status=404)
+            return json_error('Nenhum romaneio encontrado', status=404)
         
         # Dados gerais (do primeiro romaneio)
         primeiro_romaneio = romaneios.first()
@@ -112,21 +110,20 @@ def carregar_dados_romaneios(request):
             'quantidade_romaneios': len(romaneios_data)
         }
         
-        return JsonResponse({
-            'motorista': motorista_data,
-            'data': data_emissao.strftime('%Y-%m-%d') if data_emissao else None,
-            'clientes': clientes_list,
-            'romaneios': romaneios_data,
-            'totais': totais
-        })
+        return json_success(
+            motorista=motorista_data,
+            data=data_emissao.strftime('%Y-%m-%d') if data_emissao else None,
+            clientes=clientes_list,
+            romaneios=romaneios_data,
+            totais=totais,
+        )
         
     except Exception as e:
-        logger.error(f'Erro ao carregar dados dos romaneios: {str(e)}', exc_info=True)
-        return JsonResponse({'error': f'Erro ao processar: {str(e)}'}, status=500)
+        logger.error('Erro ao carregar dados dos romaneios: %s', str(e), exc_info=True)
+        return json_error('Erro ao processar', status=500)
 
 
-@login_required
-@user_passes_test(is_admin)
+@admin_required
 def carregar_mais_romaneios(request):
     """
     API para carregar mais romaneios (scroll infinito)
@@ -166,19 +163,18 @@ def carregar_mais_romaneios(request):
         total_romaneios = RomaneioViagem.objects.filter(status='Emitido').count()
         has_more = (offset + limit) < total_romaneios
         
-        return JsonResponse({
-            'romaneios': romaneios_data,
-            'has_more': has_more,
-            'offset': offset + len(romaneios_data)
-        })
+        return json_success(
+            romaneios=romaneios_data,
+            has_more=has_more,
+            offset=offset + len(romaneios_data),
+        )
         
     except Exception as e:
-        logger.error(f'Erro ao carregar mais romaneios: {str(e)}', exc_info=True)
-        return JsonResponse({'error': f'Erro ao processar: {str(e)}'}, status=500)
+        logger.error('Erro ao carregar mais romaneios: %s', str(e), exc_info=True)
+        return json_error('Erro ao processar', status=500)
 
 
-@login_required
-@user_passes_test(is_admin)
+@admin_required
 def buscar_clientes_ativos(request):
     """
     API para buscar clientes ativos (para modal de seleção)
@@ -212,18 +208,17 @@ def buscar_clientes_ativos(request):
                 'estado': cliente.estado or '',
             })
         
-        return JsonResponse({
-            'clientes': clientes_data,
-            'total': len(clientes_data)
-        })
+        return json_success(
+            clientes=clientes_data,
+            total=len(clientes_data),
+        )
         
     except Exception as e:
-        logger.error(f'Erro ao buscar clientes: {str(e)}', exc_info=True)
-        return JsonResponse({'error': f'Erro ao processar: {str(e)}'}, status=500)
+        logger.error('Erro ao buscar clientes: %s', str(e), exc_info=True)
+        return json_error('Erro ao processar', status=500)
 
 
-@login_required
-@user_passes_test(is_admin)
+@admin_required
 def buscar_romaneios_filtrados(request):
     """
     API para buscar romaneios com filtros (para modal de seleção)
@@ -256,19 +251,13 @@ def buscar_romaneios_filtrados(request):
         )
         
         # Aplicar filtros
-        if data_inicio:
-            try:
-                data_inicio_obj = datetime.strptime(data_inicio, '%Y-%m-%d').date()
-                romaneios = romaneios.filter(data_emissao__date__gte=data_inicio_obj)
-            except ValueError:
-                pass
+        data_inicio_obj = parse_date_iso(data_inicio) if data_inicio else None
+        if data_inicio_obj:
+            romaneios = romaneios.filter(data_emissao__date__gte=data_inicio_obj)
         
-        if data_fim:
-            try:
-                data_fim_obj = datetime.strptime(data_fim, '%Y-%m-%d').date()
-                romaneios = romaneios.filter(data_emissao__date__lte=data_fim_obj)
-            except ValueError:
-                pass
+        data_fim_obj = parse_date_iso(data_fim) if data_fim else None
+        if data_fim_obj:
+            romaneios = romaneios.filter(data_emissao__date__lte=data_fim_obj)
         
         if cliente_id:
             try:
@@ -308,13 +297,13 @@ def buscar_romaneios_filtrados(request):
         
         has_more = (offset + limit) < total
         
-        return JsonResponse({
-            'romaneios': romaneios_data,
-            'total': total,
-            'has_more': has_more,
-            'offset': offset + len(romaneios_data)
-        })
+        return json_success(
+            romaneios=romaneios_data,
+            total=total,
+            has_more=has_more,
+            offset=offset + len(romaneios_data),
+        )
         
     except Exception as e:
-        logger.error(f'Erro ao buscar romaneios: {str(e)}', exc_info=True)
-        return JsonResponse({'error': f'Erro ao processar: {str(e)}'}, status=500)
+        logger.error('Erro ao buscar romaneios: %s', str(e), exc_info=True)
+        return json_error('Erro ao processar', status=500)
