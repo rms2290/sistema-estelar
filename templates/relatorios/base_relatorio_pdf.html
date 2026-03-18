@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <title>{% block title %}{{ titulo_relatorio }}{% endblock %}</title>
+    <style>
+        :root { color-scheme: light; }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            margin: 25px;
+            color: #000;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header .empresa {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .header .empresa-info {
+            font-size: 11px;
+            margin-bottom: 6px;
+        }
+        .header .titulo {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+        .header .periodo {
+            font-size: 11px;
+            margin-top: 4px;
+        }
+        .header .gerado {
+            font-size: 10px;
+            color: #444;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        thead {
+            background: #e8e8e8;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 6px;
+        }
+        .secao-estado tbody td {
+            padding: 3px 6px;
+            font-size: 11px;
+            line-height: 1.25;
+        }
+        tbody tr:nth-child(even) {
+            background: #f7f7f7;
+        }
+        .valor {
+            text-align: right;
+            white-space: nowrap;
+        }
+        tfoot td {
+            font-weight: bold;
+            background: #f0f0f0;
+            border-top: 1px solid #888;
+        }
+        .footer {
+            margin-top: 25px;
+            font-size: 10px;
+            text-align: center;
+            color: #555;
+        }
+        .secao-estado {
+            margin-top: 12px;
+        }
+        .secao-estado:first-child {
+            margin-top: 0;
+        }
+        .secao-estado-titulo {
+            font-size: 11px;
+            font-weight: bold;
+            background: #e0e0e0;
+            padding: 2px 6px;
+            margin-bottom: 0;
+            border: 1px solid #000;
+            border-bottom: none;
+            line-height: 1.3;
+        }
+        .secao-estado thead th {
+            padding: 3px 6px;
+            font-size: 11px;
+            line-height: 1.3;
+        }
+        .secao-estado table {
+            margin-top: 0;
+            table-layout: fixed;
+        }
+        /* Colunas alinhadas entre seções: CLIENTE (flex), UF fixo, valores fixos */
+        .secao-estado th:nth-child(1),
+        .secao-estado td:nth-child(1) {
+            width: auto;
+        }
+        .secao-estado th:nth-child(2),
+        .secao-estado td:nth-child(2) {
+            width: 3.5em;
+            min-width: 3.5em;
+            max-width: 3.5em;
+            text-align: left;
+        }
+        .secao-estado th:nth-child(3),
+        .secao-estado td:nth-child(3),
+        .secao-estado th:nth-child(4),
+        .secao-estado td:nth-child(4) {
+            width: 115px;
+            min-width: 115px;
+        }
+        .secao-estado tfoot tr.total-estado td {
+            font-weight: bold;
+            background: #e8e8e8;
+            border: 1px solid #000;
+            padding: 3px 6px;
+            font-size: 11px;
+        }
+        .tabela-total-geral {
+            margin-top: 15px;
+            table-layout: fixed;
+        }
+        .tabela-total-geral tfoot td:first-child {
+            width: auto;
+        }
+        .tabela-total-geral tfoot td:nth-child(3),
+        .tabela-total-geral tfoot td:nth-child(4) {
+            width: 115px;
+            min-width: 115px;
+        }
+        .tabela-total-geral tfoot td {
+            font-weight: bold;
+            background: #f0f0f0;
+            border: 1px solid #000;
+            border-top: 1px solid #888;
+            padding: 8px 6px;
+        }
+        /* Totalizador por estado: tabela única com 5 colunas, mesmo padrão compacto */
+        .tabela-totalizador-estado {
+            table-layout: fixed;
+        }
+        .tabela-totalizador-estado thead th {
+            padding: 3px 6px;
+            font-size: 11px;
+            line-height: 1.3;
+        }
+        .tabela-totalizador-estado tbody td {
+            padding: 3px 6px;
+            font-size: 11px;
+            line-height: 1.25;
+        }
+        .tabela-totalizador-estado .text-center {
+            text-align: center;
+        }
+        .tabela-totalizador-estado tfoot tr.total-geral-estado td {
+            font-weight: bold;
+            background: #e8e8e8;
+            border: 1px solid #000;
+            padding: 3px 6px;
+            font-size: 11px;
+        }
+        @media print {
+            @page {
+                size: A4;
+                margin: 1cm;
+            }
+            body {
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="empresa">
+        AGÊNCIA DE CARGAS ESTELAR LTDA
+    </div>
+    <div class="empresa-info">
+        CNPJ: 62.531.215/0001-96 | INSCRIÇÃO ESTADUAL: 108.208.056.112
+    </div>
+    <div class="titulo">
+        {{ titulo_relatorio }}
+    </div>
+    <div class="periodo">
+        Período: {{ data_inicio }} até {{ data_fim }}
+    </div>
+    <div class="gerado">
+        Gerado em: {{ data_geracao }}
+    </div>
+</div>
+
+{% block conteudo %}{% endblock %}
+
+<div class="footer">
+    Sistema Estelar - Relatório gerado automaticamente
+</div>
+
+</body>
+</html>

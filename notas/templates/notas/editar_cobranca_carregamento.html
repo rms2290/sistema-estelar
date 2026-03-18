@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load l10n %}
 
 {% block title %}Editar Cobrança de Carregamento - Sistema Estelar{% endblock %}
 
@@ -24,6 +25,7 @@
 
             <form method="POST" id="form-cobranca">
                 {% csrf_token %}
+                <input type="hidden" name="cliente" value="{{ cobranca.cliente.id }}">
                 
                 <!-- Informações do Cliente (somente leitura) -->
                 <div class="card mb-4">
@@ -129,12 +131,27 @@
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">
-                                    <i class="fas fa-truck-loading"></i> Valor Carregamento (R$) <span class="text-danger">*</span>
+                                    <i class="fas fa-truck-loading"></i> Valor repassado ao cliente (R$) <span class="text-danger">*</span>
                                 </label>
-                                <input type="number" name="valor_carregamento" step="0.01" min="0" 
+                                <input type="number" name="valor_carregamento" id="valor_carregamento" step="0.01" min="0" 
                                        class="form-control form-control-lg" required 
-                                       value="{{ cobranca.valor_carregamento }}">
+                                       value="{% localize off %}{{ cobranca.valor_carregamento|default:0|floatformat:2 }}{% endlocalize %}" oninput="atualizarMargem()">
                             </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-users"></i> Valor para distribuição trabalhadores (R$)
+                                </label>
+                                <input type="number" name="valor_distribuicao_trabalhadores" id="valor_distribuicao_trabalhadores" step="0.01" min="0" 
+                                       class="form-control form-control-lg" placeholder="0.00 (opcional)"
+                                       value="{% if cobranca.valor_distribuicao_trabalhadores %}{{ cobranca.valor_distribuicao_trabalhadores }}{% endif %}" oninput="atualizarMargem()">
+                                <small class="text-muted">Valor que entra no acerto diário para os trabalhadores. A diferença é a margem Estelar.</small>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label"><i class="fas fa-coins"></i> Margem Estelar (R$)</label>
+                                <div class="form-control form-control-lg bg-light" id="margem_exibicao" readonly>R$ {{ cobranca.margem_carregamento|floatformat:2 }}</div>
+                            </div>
+                        </div>
+                        <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">
                                     <i class="fas fa-file-alt"></i> Valor CTE/Manifesto (R$)
@@ -142,7 +159,7 @@
                                 <input type="number" name="valor_cte_manifesto" step="0.01" min="0" 
                                        class="form-control form-control-lg" 
                                        placeholder="0.00 (opcional)"
-                                       value="{% if cobranca.valor_cte_manifesto %}{{ cobranca.valor_cte_manifesto }}{% endif %}">
+                                       value="{% localize off %}{{ cobranca.valor_cte_manifesto|default:0|floatformat:2 }}{% endlocalize %}">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">
@@ -232,7 +249,16 @@ function calcularValorArmazenamento() {
     valorArmazenamentoCalculado.textContent = valorFormatado;
 }
 
+function atualizarMargem() {
+    const vCliente = parseFloat(document.getElementById('valor_carregamento').value) || 0;
+    const vDist = parseFloat(document.getElementById('valor_distribuicao_trabalhadores').value) || 0;
+    const margem = Math.max(0, vCliente - vDist);
+    const el = document.getElementById('margem_exibicao');
+    if (el) el.textContent = 'R$ ' + margem.toFixed(2).replace('.', ',');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    atualizarMargem();
     const selecionarTodos = document.getElementById('selecionar-todos');
     
     if (selecionarTodos) {

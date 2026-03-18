@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load format_filters %}
+
+{% block title %}Despesas - Fluxo de Caixa{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-arrow-up text-danger"></i> Despesas</h2>
+        <div>
+            <a href="{% url 'financeiro:fluxo_caixa_hub' %}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-th-large"></i> Fluxo de Caixa
+            </a>
+            <a href="{% url 'financeiro:criar_despesa' %}" class="btn btn-danger">
+                <i class="fas fa-plus"></i> Nova Despesa
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-filter"></i> Filtros</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Data início</label>
+                    <input type="date" name="data_inicio" class="form-control" value="{{ data_inicio }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Data fim</label>
+                    <input type="date" name="data_fim" class="form-control" value="{{ data_fim }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Categoria</label>
+                    <select name="categoria" class="form-select">
+                        <option value="">Todas</option>
+                        {% for cat_val, cat_label in categorias_saida %}
+                            <option value="{{ cat_val }}" {% if categoria_selecionada == cat_val %}selected{% endif %}>{{ cat_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2"><i class="fas fa-search"></i> Filtrar</button>
+                    <a href="{% url 'financeiro:listar_despesas' %}" class="btn btn-secondary">Limpar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-list"></i> Lista de despesas ({{ despesas.count }} registro{{ despesas.count|pluralize }})</h5>
+            <strong class="text-danger">Total: {{ total|format_brazilian_currency }}</strong>
+        </div>
+        <div class="card-body">
+            {% if despesas %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Categoria</th>
+                            <th class="text-end">Valor (R$)</th>
+                            <th>Descrição</th>
+                            <th>Destino</th>
+                            <th width="120">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in despesas %}
+                        <tr>
+                            <td>{{ d.data|date:"d/m/Y" }}</td>
+                            <td>{{ d.get_categoria_display }}</td>
+                            <td class="text-end text-danger fw-bold">- {{ d.valor|format_brazilian_currency }}</td>
+                            <td>{{ d.descricao|truncatewords:8 }}</td>
+                            <td>
+                                {% if d.funcionario %}<span class="badge bg-primary">{{ d.funcionario.nome }}</span>
+                                {% elif d.cliente %}<span class="badge bg-secondary">{{ d.cliente.razao_social|truncatewords:2 }}</span>
+                                {% else %}<span class="text-muted">Estelar / Geral</span>{% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'financeiro:editar_despesa' d.pk %}" class="btn btn-sm btn-warning" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'financeiro:excluir_despesa' d.pk %}" class="btn btn-sm btn-danger" title="Excluir">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-light">
+                            <th colspan="2">Total</th>
+                            <th class="text-end text-danger">{{ total|format_brazilian_currency }}</th>
+                            <th colspan="3"></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info mb-0">
+                <i class="fas fa-info-circle"></i> Nenhuma despesa encontrada com os filtros aplicados.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

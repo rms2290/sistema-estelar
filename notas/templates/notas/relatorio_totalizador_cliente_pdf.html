@@ -1,0 +1,63 @@
+{% extends "relatorios/base_relatorio_pdf.html" %}
+{% load format_filters %}
+
+{% block conteudo %}
+{% regroup resultados by uf as por_estado %}
+
+{% for estado in por_estado %}
+<div class="secao-estado">
+    <div class="secao-estado-titulo">{{ estado.grouper }}{% for k, v in nomes_estados.items %}{% if k == estado.grouper %} — {{ v }}{% endif %}{% endfor %}</div>
+    <table class="tabela-totalizador-cliente">
+        <colgroup>
+            <col style="width: auto;">
+            <col style="width: 3.5em;">
+            <col style="width: 115px;">
+            <col style="width: 115px;">
+        </colgroup>
+        <thead>
+            <tr>
+                <th>CLIENTE</th>
+                <th>UF</th>
+                <th>R$ MERCADORIA</th>
+                <th>R$ SEGURO</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in estado.list %}
+            <tr>
+                <td>{{ item.cliente.cnpj|format_cnpj }}{% if item.cliente.cnpj %} - {% endif %}{{ item.cliente.razao_social }}</td>
+                <td>{{ item.uf }}</td>
+                <td class="valor">{{ item.valor_mercadoria|format_brazilian_currency }}</td>
+                <td class="valor">{{ item.valor_seguro|format_brazilian_currency }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="total-estado">
+                {% with total_estado=totais_por_estado|get_item:estado.grouper %}
+                <td colspan="2"><strong>Total {{ estado.grouper }}</strong></td>
+                <td class="valor"><strong>{{ total_estado|get_item:'valor_mercadoria'|format_brazilian_currency }}</strong></td>
+                <td class="valor"><strong>{{ total_estado|get_item:'valor_seguro'|format_brazilian_currency }}</strong></td>
+                {% endwith %}
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% endfor %}
+
+<table class="tabela-total-geral">
+    <colgroup>
+        <col style="width: auto;">
+        <col style="width: 3.5em;">
+        <col style="width: 115px;">
+        <col style="width: 115px;">
+    </colgroup>
+    <tfoot>
+        <tr>
+            <td colspan="2">TOTAL GERAL</td>
+            <td class="valor">{{ total_geral|format_brazilian_currency }}</td>
+            <td class="valor">{{ total_seguro_geral|format_brazilian_currency }}</td>
+        </tr>
+    </tfoot>
+</table>
+{% endblock %}

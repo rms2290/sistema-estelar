@@ -120,6 +120,12 @@ class NotaFiscalSearchForm(forms.Form):
         required=False,
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+    status = forms.ChoiceField(
+        label='Status da Nota',
+        choices=[('', 'Todos')] + list(NotaFiscal.STATUS_NF_CHOICES),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
 
 
 class MercadoriaDepositoSearchForm(forms.Form):

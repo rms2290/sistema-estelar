@@ -1,7 +1,7 @@
 from django import template
 from django.template.defaultfilters import floatformat
 import locale
-from notas.utils.formatters import formatar_cnpj, formatar_cpf, formatar_telefone
+from notas.utils.formatters import formatar_cnpj, formatar_cpf, formatar_cpf_cnpj, formatar_telefone
 
 register = template.Library()
 
@@ -133,4 +133,22 @@ def format_telefone(value):
     """
     Formata um telefone no padrão brasileiro
     """
-    return formatar_telefone(value) 
+    return formatar_telefone(value)
+
+
+@register.filter
+def format_cpf_cnpj(value):
+    """
+    Formata CPF ou CNPJ no padrão brasileiro (detecta por 11 ou 14 dígitos)
+    """
+    return formatar_cpf_cnpj(value)
+
+
+@register.filter
+def get_item(d, key):
+    """
+    Retorna d[key] para uso em templates (ex.: totais_por_estado|get_item:estado.grouper).
+    """
+    if d is None or not isinstance(d, dict):
+        return None
+    return d.get(key)

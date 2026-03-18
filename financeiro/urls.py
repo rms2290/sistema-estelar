@@ -9,7 +9,8 @@ from . import views
 app_name = 'financeiro'
 
 urlpatterns = [
-    path('', views.dashboard_fluxo_caixa, name='dashboard_fluxo_caixa'),
+    path('', lambda request: redirect('financeiro:gerenciar_movimento_caixa'), name='fluxo_caixa_hub'),
+    path('dashboard/', lambda request: redirect('financeiro:gerenciar_movimento_caixa'), name='dashboard_fluxo_caixa'),
     path('receitas/criar/', views.criar_receita_empresa, name='criar_receita_empresa'),
     path('receitas/<int:pk>/editar/', views.editar_receita_empresa, name='editar_receita_empresa'),
     path('receitas/<int:pk>/excluir/', views.excluir_receita_empresa, name='excluir_receita_empresa'),
@@ -29,6 +30,8 @@ urlpatterns = [
     path('acerto-diario/distribuicao/adicionar/', views.adicionar_distribuicao_funcionario_ajax, name='adicionar_distribuicao_funcionario_ajax'),
     path('acerto-diario/distribuicao/<int:pk>/remover/', views.remover_distribuicao_funcionario_ajax, name='remover_distribuicao_funcionario_ajax'),
     path('acerto-diario/valor-estelar/salvar/', views.salvar_valor_estelar_ajax, name='salvar_valor_estelar_ajax'),
+    path('acerto-diario/cobrancas-pendentes/', views.listar_cobrancas_pendentes_ajax, name='listar_cobrancas_pendentes_ajax'),
+    path('acerto-diario/cobranca/adicionar/', views.adicionar_cobranca_ao_acerto_ajax, name='adicionar_cobranca_ao_acerto_ajax'),
     path('gerenciar-movimento-caixa/', views.gerenciar_movimento_caixa, name='gerenciar_movimento_caixa'),
     path('iniciar-periodo/', views.iniciar_periodo_movimento_caixa, name='iniciar_periodo_movimento_caixa'),
     path('pesquisar-periodo/', views.pesquisar_periodo_movimento_caixa, name='pesquisar_periodo_movimento_caixa'),
@@ -40,6 +43,10 @@ urlpatterns = [
     path('movimento-caixa/<int:pk>/obter/', views.obter_movimento_caixa_ajax, name='obter_movimento_caixa_ajax'),
     path('funcionario/<int:funcionario_id>/acumulado/', views.obter_acumulado_funcionario_ajax, name='obter_acumulado_funcionario_ajax'),
     path('fechamento-caixa/', views.fechamento_caixa, name='fechamento_caixa'),
+    path('despesas/', views.listar_despesas, name='listar_despesas'),
+    path('despesas/criar/', views.criar_despesa, name='criar_despesa'),
+    path('despesas/<int:pk>/editar/', views.editar_despesa, name='editar_despesa'),
+    path('despesas/<int:pk>/excluir/', views.excluir_despesa, name='excluir_despesa'),
     # API (chamadas sob fluxo-caixa/ quando incluído em notas/urls)
     path('api/periodo/<int:pk>/fechar/', views.fechar_periodo_movimento_caixa_ajax, name='fechar_periodo_movimento_caixa_ajax'),
     path('api/periodo/<int:pk>/editar/', views.editar_periodo_movimento_caixa_ajax, name='editar_periodo_movimento_caixa_ajax'),

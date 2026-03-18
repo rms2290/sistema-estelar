@@ -13,16 +13,10 @@
             <a href="{% url 'financeiro:acerto_diario_carregamento' %}" class="btn btn-info ms-2">
                 <i class="fas fa-list"></i> Ver Lista
             </a>
-            <a href="{% url 'financeiro:gerenciar_movimento_caixa' %}" class="btn btn-secondary ms-2">
-                <i class="fas fa-arrow-left"></i> Voltar
-            </a>
             {% else %}
-            <a href="{% url 'financeiro:acerto_diario_carregamento' %}?novo=1" class="btn btn-success ms-2">
-                <i class="fas fa-plus"></i> Novo Acerto
-            </a>
-            <a href="{% url 'financeiro:gerenciar_movimento_caixa' %}" class="btn btn-secondary ms-2">
-                <i class="fas fa-arrow-left"></i> Voltar
-            </a>
+            <button type="button" class="btn btn-success ms-2" data-bs-toggle="modal" data-bs-target="#modalEscolherDataAcerto" title="Adicionar ou abrir acerto (hoje ou data retroativa)">
+                <i class="fas fa-plus"></i> Adicionar
+            </button>
             {% endif %}
         </div>
     </div>
@@ -83,20 +77,20 @@
                             <td><strong>{{ acerto.data|date:"d/m/Y" }}</strong></td>
                             <td>{{ acerto.total_carregamentos|format_brazilian_currency }}</td>
                             <td>{{ acerto.valor_estelar|format_brazilian_currency }}</td>
-                            <td>{{ acerto.distribuicoes.count }}</td>
+                            <td>{{ acerto.total_funcionarios|format_brazilian_currency }}</td>
                             <td>{{ acerto.total_distribuido|format_brazilian_currency }}</td>
                             <td>
-                                {% if acerto.total_carregamentos == acerto.total_distribuido|add:acerto.valor_estelar %}
+                                {% if acerto.diferenca == 0 %}
                                     <span class="badge bg-success">R$ 0,00</span>
                                 {% else %}
-                                    <span class="badge bg-warning">Diferença</span>
+                                    <span class="badge bg-warning">{{ acerto.diferenca|format_brazilian_currency }}</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if acerto.total_carregamentos == acerto.total_distribuido|add:acerto.valor_estelar %}
+                                {% if acerto.diferenca == 0 %}
                                     <span class="badge bg-success">OK</span>
                                 {% else %}
-                                    <span class="badge bg-warning">Diferença</span>
+                                    <span class="badge bg-danger">Divergente</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -140,7 +134,43 @@
         </div>
     </div>
 
+    <!-- Modal: escolher data para adicionar/abrir acerto (hoje ou retroativo) -->
+    <div class="modal fade" id="modalEscolherDataAcerto" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="GET" action="{% url 'financeiro:acerto_diario_carregamento' %}" id="formEscolherDataAcerto">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Adicionar acerto diário</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted">Escolha a data do acerto. Será aberto o acerto do dia (criado automaticamente se ainda não existir).</p>
+                        <div class="mb-3">
+                            <label for="inputDataAcerto" class="form-label">Data do acerto</label>
+                            <input type="date" name="data_acerto" id="inputDataAcerto" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus"></i> Continuar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
+    // Ao abrir o modal "Adicionar", definir data padrão = hoje
+    document.getElementById('modalEscolherDataAcerto').addEventListener('show.bs.modal', function() {
+        var input = document.getElementById('inputDataAcerto');
+        if (input && !input.value) {
+            var hoje = new Date();
+            input.value = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0') + '-' + String(hoje.getDate()).padStart(2, '0');
+        }
+    });
+
     // Ver detalhes do acerto
     document.querySelectorAll('.btnVerDetalhes').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -180,34 +210,7 @@
         {% endfor %}
     {% endif %}
 
-    {% if novo_acerto and not acerto %}
-    <!-- Selecionar data para novo acerto -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">
-                <i class="fas fa-calendar-day"></i> Novo Acerto Diário
-            </h5>
-        </div>
-        <div class="card-body">
-            <form method="GET">
-                <input type="hidden" name="novo" value="1">
-                <div class="mb-3">
-                    <label class="form-label">Selecione a Data do Acerto *</label>
-                    <input type="date" name="data" class="form-control" required value="{% now 'Y-m-d' %}">
-                    <small class="text-muted">Escolha a data para criar o novo acerto diário</small>
-                </div>
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-check"></i> Criar Acerto
-                    </button>
-                    <a href="{% url 'financeiro:acerto_diario_carregamento' %}" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> Cancelar
-                    </a>
-                </div>
-            </form>
-        </div>
-    </div>
-    {% elif acerto %}
+    {% if acerto %}
     <!-- Formulário de edição com seletor de data -->
     <div class="card mb-4">
         <div class="card-header">
@@ -382,6 +385,11 @@
                             {% endfor %}
                         </tbody>
                         <tfoot>
+                            <tr class="table-secondary">
+                                <th>TOTAL ESTELAR:</th>
+                                <th colspan="2" id="totalEstelar">R$ {{ acerto.valor_estelar|format_brazilian_currency|default:"0,00" }}</th>
+                                <th></th>
+                            </tr>
                             <tr class="table-info">
                                 <th>TOTAL FUNCIONÁRIOS:</th>
                                 <th colspan="2" id="totalFuncionarios">R$ {{ acerto.total_funcionarios|format_brazilian_currency }}</th>
@@ -485,6 +493,17 @@
         </div>
     </div>
 </div>
+{% if acerto and abrir_modal_carregamento %}
+<script>
+(function() {
+    var modalEl = document.getElementById('modalAdicionarCliente');
+    if (modalEl) {
+        var modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+})();
+</script>
+{% endif %}
 
 <!-- Modal: Adicionar/Editar Valor Estelar -->
 <div class="modal fade" id="modalAdicionarEstelar" tabindex="-1">
@@ -670,12 +689,14 @@ function calcularTotais() {
     });
     
     // Atualizar totais
+    const totalEstelarEl = document.getElementById('totalEstelar');
     const totalCarregamentosEl = document.getElementById('totalCarregamentos');
     const totalFuncionariosEl = document.getElementById('totalFuncionarios');
     const totalDistribuidoEl = document.getElementById('totalDistribuido');
     const validacaoTotalCarregamentosEl = document.getElementById('validacaoTotalCarregamentos');
     const validacaoTotalDistribuidoEl = document.getElementById('validacaoTotalDistribuido');
     
+    if (totalEstelarEl) totalEstelarEl.textContent = formatarMoeda(valorEstelar);
     if (totalCarregamentosEl) totalCarregamentosEl.textContent = formatarMoeda(totalCarregamentos);
     if (totalFuncionariosEl) totalFuncionariosEl.textContent = formatarMoeda(totalFuncionarios);
     if (totalDistribuidoEl) totalDistribuidoEl.textContent = formatarMoeda(totalDistribuido);

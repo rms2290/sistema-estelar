@@ -135,7 +135,7 @@ def criar_receita_empresa(request):
             usuario_criacao=request.user
         )
         messages.success(request, 'Receita registrada com sucesso!')
-        return redirect('financeiro:dashboard_fluxo_caixa')
+        return redirect('financeiro:gerenciar_movimento_caixa')
 
     clientes = Cliente.objects.filter(status='Ativo').order_by('razao_social')
     cobrancas = CobrancaCarregamento.objects.filter(status='Pendente').order_by('-criado_em')
@@ -161,7 +161,7 @@ def editar_receita_empresa(request, pk):
         receita.cobranca_carregamento_id = request.POST.get('cobranca_carregamento', '') or None
         receita.save()
         messages.success(request, 'Receita atualizada com sucesso!')
-        return redirect('financeiro:dashboard_fluxo_caixa')
+        return redirect('financeiro:gerenciar_movimento_caixa')
     clientes = Cliente.objects.filter(status='Ativo').order_by('razao_social')
     cobrancas = CobrancaCarregamento.objects.filter(status='Pendente').order_by('-criado_em')
     context = {
@@ -181,7 +181,7 @@ def excluir_receita_empresa(request, pk):
     if request.method == 'POST':
         receita.delete()
         messages.success(request, 'Receita excluída com sucesso!')
-        return redirect('financeiro:dashboard_fluxo_caixa')
+        return redirect('financeiro:gerenciar_movimento_caixa')
     return render(request, 'financeiro/fluxo_caixa/excluir_receita_empresa.html', {'receita': receita})
 
 
@@ -208,7 +208,7 @@ def criar_caixa_funcionario(request):
             observacoes=observacoes
         )
         messages.success(request, 'Caixa de funcionário criado com sucesso!')
-        return redirect('financeiro:dashboard_fluxo_caixa')
+        return redirect('financeiro:gerenciar_movimento_caixa')
     funcionarios = FuncionarioFluxoCaixa.objects.filter(ativo=True).order_by('nome')
     return render(request, 'financeiro/fluxo_caixa/criar_caixa_funcionario.html', {'funcionarios': funcionarios})
 
@@ -229,7 +229,7 @@ def acertar_caixa_funcionario(request, pk):
             caixa.observacoes = (caixa.observacoes or '') + '\n' + observacoes
         caixa.save()
         messages.success(request, 'Caixa acertado com sucesso!')
-        return redirect('financeiro:dashboard_fluxo_caixa')
+        return redirect('financeiro:gerenciar_movimento_caixa')
     return render(request, 'financeiro/fluxo_caixa/acertar_caixa_funcionario.html', {'caixa': caixa})
 
 
@@ -248,7 +248,7 @@ def criar_movimento_bancario(request):
             usuario_criacao=request.user
         )
         messages.success(request, 'Movimento bancário registrado com sucesso!')
-        return redirect('financeiro:dashboard_fluxo_caixa')
+        return redirect('financeiro:gerenciar_movimento_caixa')
     receitas = ReceitaEmpresa.objects.all().order_by('-data')[:50]
     return render(request, 'financeiro/fluxo_caixa/criar_movimento_bancario.html', {
         'tipos': MovimentoBancario.TIPO_CHOICES,
@@ -270,7 +270,7 @@ def editar_movimento_bancario(request, pk):
         movimento.receita_empresa_id = request.POST.get('receita_empresa', '') or None
         movimento.save()
         messages.success(request, 'Movimento bancário atualizado com sucesso!')
-        return redirect('financeiro:dashboard_fluxo_caixa')
+        return redirect('financeiro:gerenciar_movimento_caixa')
     receitas = ReceitaEmpresa.objects.all().order_by('-data')[:50]
     return render(request, 'financeiro/fluxo_caixa/editar_movimento_bancario.html', {
         'movimento': movimento,
@@ -287,7 +287,7 @@ def excluir_movimento_bancario(request, pk):
     if request.method == 'POST':
         movimento.delete()
         messages.success(request, 'Movimento bancário excluído com sucesso!')
-        return redirect('financeiro:dashboard_fluxo_caixa')
+        return redirect('financeiro:gerenciar_movimento_caixa')
     return render(request, 'financeiro/fluxo_caixa/excluir_movimento_bancario.html', {'movimento': movimento})
 
 
@@ -306,7 +306,7 @@ def atualizar_controle_saldo(request, pk):
         controle.diferenca = controle.saldo_final_calculado - saldo_final_real
         controle.save()
         messages.success(request, 'Controle de saldo atualizado com sucesso!')
-        return redirect('financeiro:dashboard_fluxo_caixa')
+        return redirect('financeiro:gerenciar_movimento_caixa')
     return render(request, 'financeiro/fluxo_caixa/atualizar_controle_saldo.html', {'controle': controle})
 
 

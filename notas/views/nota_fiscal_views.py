@@ -1,6 +1,7 @@
 """
 Views relacionadas a Notas Fiscais
 """
+import json
 import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -8,12 +9,13 @@ from django.contrib import messages
 from sistema_estelar.api_utils import json_success, json_error
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import user_passes_test
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count
+from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from datetime import datetime
 
-from ..models import NotaFiscal, CobrancaCarregamento, OcorrenciaNotaFiscal
+from ..models import NotaFiscal, CobrancaCarregamento, OcorrenciaNotaFiscal, Cliente
 from ..forms import NotaFiscalForm, NotaFiscalSearchForm, MercadoriaDepositoSearchForm
 from ..decorators import rate_limit_critical
 from ..utils.date_utils import parse_date_iso
@@ -273,6 +275,7 @@ def listar_notas_fiscais(request):
         cliente = search_form.cleaned_data.get('cliente')
         data = search_form.cleaned_data.get('data')
         local = search_form.cleaned_data.get('local')
+        status = search_form.cleaned_data.get('status')
         
         if nota:
             queryset = queryset.filter(nota__icontains=nota)
@@ -282,6 +285,8 @@ def listar_notas_fiscais(request):
             queryset = queryset.filter(data=data)
         if local:
             queryset = queryset.filter(local=local)
+        if status:
+            queryset = queryset.filter(status=status)
         
         notas_fiscais = queryset.order_by('nota')
     
@@ -455,6 +460,42 @@ def pesquisar_mercadorias_deposito(request):
 def procurar_mercadorias_deposito(request):
     """Procurar mercadorias no depósito (tela vazia)"""
     return render(request, 'notas/procurar_mercadorias_deposito.html')
+
+
+@login_required
+def simular_carregamento(request):
+    """Tela para simular carregamento de mercadorias do depósito (clientes e totais)."""
+    # Clientes com mercadorias no depósito: totais de peso e valor por cliente
+    agregado = NotaFiscal.objects.filter(status='Depósito').values('cliente').annotate(
+        total_peso=Sum('peso'),
+        total_valor=Sum('valor'),
+    ).order_by('cliente')
+    clientes_deposito = []
+    for item in agregado:
+        try:
+            cliente = Cliente.objects.get(pk=item['cliente'])
+            clientes_deposito.append({
+                'cliente': cliente,
+                'total_peso': item['total_peso'] or Decimal('0'),
+                'total_valor': item['total_valor'] or Decimal('0'),
+            })
+        except Cliente.DoesNotExist:
+            continue
+    clientes_deposito.sort(key=lambda x: (x['cliente'].razao_social or '').upper())
+    # JSON para o front: listar clientes disponíveis e adicionar um por vez à tabela
+    clientes_deposito_json = json.dumps([
+        {
+            'id': item['cliente'].pk,
+            'razao_social': item['cliente'].razao_social or '',
+            'total_peso': str(item['total_peso']),
+            'total_valor': str(item['total_valor']),
+        }
+        for item in clientes_deposito
+    ], ensure_ascii=False)
+    return render(request, 'notas/simular_carregamento.html', {
+        'clientes_deposito': clientes_deposito,
+        'clientes_deposito_json': clientes_deposito_json,
+    })
 
 
 @login_required

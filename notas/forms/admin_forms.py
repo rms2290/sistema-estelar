@@ -57,6 +57,7 @@ class CobrancaCarregamentoForm(forms.ModelForm):
             'cubagem',
             'valor_cubagem',
             'valor_carregamento',
+            'valor_distribuicao_trabalhadores',
             'valor_cte_manifesto',
             'data_vencimento',
             'observacoes',
@@ -75,6 +76,12 @@ class CobrancaCarregamentoForm(forms.ModelForm):
                 'min': '0',
                 'placeholder': '0.00',
                 'required': True
+            }),
+            'valor_distribuicao_trabalhadores': forms.NumberInput(attrs={
+                'class': 'form-control form-control-lg',
+                'step': '0.01',
+                'min': '0',
+                'placeholder': '0.00 (opcional)',
             }),
             'valor_cte_manifesto': forms.NumberInput(attrs={
                 'class': 'form-control form-control-lg',
@@ -114,7 +121,8 @@ class CobrancaCarregamentoForm(forms.ModelForm):
             'tipo_cliente': 'Tipo de Cliente',
             'cubagem': 'Cubagem (m³)',
             'valor_cubagem': 'Valor da Cubagem (R$/m³)',
-            'valor_carregamento': 'Valor Carregamento (R$)',
+            'valor_carregamento': 'Valor repassado ao cliente (R$)',
+            'valor_distribuicao_trabalhadores': 'Valor para distribuição trabalhadores (R$)',
             'valor_cte_manifesto': 'Valor CTE/Manifesto (R$)',
             'data_vencimento': 'Data de Vencimento',
             'observacoes': 'Observações',
@@ -127,6 +135,12 @@ class CobrancaCarregamentoForm(forms.ModelForm):
         
         # Tornar campo valor_cte_manifesto opcional
         self.fields['valor_cte_manifesto'].required = False
+        # Valor distribuição trabalhadores: opcional; ajuda para acerto diário
+        self.fields['valor_distribuicao_trabalhadores'].required = False
+        self.fields['valor_distribuicao_trabalhadores'].help_text = (
+            'Valor que entra no acerto diário para divisão entre trabalhadores. '
+            'A diferença (valor ao cliente − este valor) é a margem Estelar.'
+        )
         
         # Determinar o cliente para filtrar romaneios
         cliente_para_filtrar = None
@@ -174,11 +188,32 @@ class CobrancaCarregamentoForm(forms.ModelForm):
                 return Decimal('0.00')
         
         return valor
-    
+
+    def clean_valor_distribuicao_trabalhadores(self):
+        """Converte vazio em None; valor não pode ser negativo."""
+        valor = self.cleaned_data.get('valor_distribuicao_trabalhadores')
+        if valor is None:
+            return None
+        if isinstance(valor, str) and valor.strip() == '':
+            return None
+        try:
+            v = Decimal(str(valor))
+            if v < 0:
+                raise ValidationError('Não pode ser negativo.')
+            return v
+        except (ValueError, TypeError):
+            return None
+
     def clean(self):
         cleaned_data = super().clean()
         cliente = cleaned_data.get('cliente')
         romaneios = cleaned_data.get('romaneios')
+        valor_carregamento = cleaned_data.get('valor_carregamento') or Decimal('0.00')
+        valor_dist = cleaned_data.get('valor_distribuicao_trabalhadores')
+        if valor_dist is not None and valor_carregamento is not None and valor_dist > valor_carregamento:
+            raise ValidationError(
+                {'valor_distribuicao_trabalhadores': 'O valor para distribuição não pode ser maior que o valor repassado ao cliente.'}
+            )
         
         # Validar que pelo menos um romaneio foi selecionado
         if not romaneios or romaneios.count() == 0:

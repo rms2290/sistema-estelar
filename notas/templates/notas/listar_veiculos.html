@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load format_filters %}
 
 {% block title %}Pesquisar Veículos{% endblock %}
 
@@ -88,7 +89,7 @@
                             <td>{{ veiculo.marca|default:"-" }}</td>
                             <td>{{ veiculo.modelo|default:"-" }}</td>
                             <td>{{ veiculo.proprietario_nome_razao_social|default:"-" }}</td>
-                            <td>{{ veiculo.proprietario_cpf_cnpj|default:"-" }}</td>
+                            <td>{{ veiculo.proprietario_cpf_cnpj|format_cpf_cnpj|default:"-" }}</td>
                             <td>
                                 <a href="{% url 'notas:detalhes_veiculo' veiculo.pk %}" class="btn btn-info btn-sm" title="Ver Detalhes">
                                     <i class="fas fa-eye"></i>
@@ -101,8 +102,8 @@
         </div>
     {% else %}
         {% if search_performed %}
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> Nenhum veículo encontrado com os filtros especificados.
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> Nenhum veículo encontrado com os filtros especificados.
             </div>
         {% else %}
             <div class="alert alert-info">

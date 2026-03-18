@@ -28,29 +28,49 @@ def fechamento_caixa(request):
     """
     Tela para fechamento de caixa.
     Permite visualizar períodos abertos e fechá-los.
+    Aceita GET periodo_id=X para exibir o fechamento de um período fechado (vindo da busca).
     """
+    periodo_id = request.GET.get('periodo_id')
+    periodo_selecionado = None
+    if periodo_id:
+        try:
+            pk = int(periodo_id)
+            periodo_selecionado = PeriodoMovimentoCaixa.objects.filter(pk=pk, status='Fechado').first()
+        except (ValueError, TypeError):
+            periodo_selecionado = None
+
     periodo_ativo = PeriodoCaixaService.obter_periodo_aberto()
+    # Período a exibir: se veio periodo_id e é fechado, usa esse; senão usa o período em aberto
+    periodo_exibido = periodo_selecionado if periodo_selecionado else periodo_ativo
     periodos_fechados = PeriodoMovimentoCaixa.objects.filter(
         status='Fechado'
     ).order_by('-data_fim', '-criado_em')[:10]
 
     funcionarios_acumulados = []
-    if periodo_ativo:
+    if periodo_exibido:
         movimentos = MovimentoCaixa.objects.filter(
-            periodo=periodo_ativo
+            periodo=periodo_exibido
         ).select_related(
             'funcionario', 'cliente', 'acerto_diario', 'usuario_criacao'
         )
-        total_entradas = sum(mov.valor for mov in movimentos if mov.is_entrada)
-        total_saidas = sum(mov.valor for mov in movimentos if mov.is_saida)
-        saldo_atual = periodo_ativo.valor_inicial_caixa + total_entradas - total_saidas
-        total_movimentos = movimentos.count()
+        # Mesma regra da tela Gerenciar Movimento: AcertoFuncionario sem acerto_diario = saída
+        def _eh_saida_na_tela(mov):
+            if mov.tipo == 'Saida':
+                return True
+            if mov.tipo == 'AcertoFuncionario' and not mov.acerto_diario_id:
+                return True
+            return False
+        movimentos_lista = list(movimentos)
+        total_entradas = sum(mov.valor for mov in movimentos_lista if not _eh_saida_na_tela(mov))
+        total_saidas = sum(mov.valor for mov in movimentos_lista if _eh_saida_na_tela(mov))
+        saldo_atual = periodo_exibido.valor_inicial_caixa + total_entradas - total_saidas
+        total_movimentos = len(movimentos_lista)
 
         acertos_periodo = AcertoDiarioCarregamento.objects.filter(
-            data__gte=periodo_ativo.data_inicio
+            data__gte=periodo_exibido.data_inicio
         )
-        if periodo_ativo.data_fim:
-            acertos_periodo = acertos_periodo.filter(data__lte=periodo_ativo.data_fim)
+        if periodo_exibido.data_fim:
+            acertos_periodo = acertos_periodo.filter(data__lte=periodo_exibido.data_fim)
 
         distribuicoes_agrupadas = DistribuicaoFuncionario.objects.filter(
             acerto_diario__in=acertos_periodo
@@ -60,7 +80,7 @@ def fechamento_caixa(request):
         )
 
         acertos_funcionarios = MovimentoCaixa.objects.filter(
-            periodo=periodo_ativo,
+            periodo=periodo_exibido,
             tipo='AcertoFuncionario',
             funcionario__isnull=False,
             acerto_diario__isnull=True
@@ -68,7 +88,7 @@ def fechamento_caixa(request):
         acertos_agrupados = acertos_funcionarios.values('funcionario').annotate(total_acertos=Sum('valor'))
 
         saidas_funcionarios = MovimentoCaixa.objects.filter(
-            periodo=periodo_ativo,
+            periodo=periodo_exibido,
             tipo='Saida',
             funcionario__isnull=False
         ).select_related('funcionario')
@@ -106,29 +126,39 @@ def fechamento_caixa(request):
         funcionarios_acumulados.sort(key=lambda x: x['funcionario'].nome)
 
         entradas_estelar_exato = MovimentoCaixa.objects.filter(
-            periodo=periodo_ativo,
+            periodo=periodo_exibido,
             tipo='Entrada',
             funcionario__isnull=True,
             descricao='Valor Estelar'
         )
         entradas_estelar_icontains = MovimentoCaixa.objects.filter(
-            periodo=periodo_ativo,
+            periodo=periodo_exibido,
             tipo='Entrada',
             funcionario__isnull=True,
             descricao__icontains='Estelar'
         )
         entradas_estelar_categoria = MovimentoCaixa.objects.filter(
-            periodo=periodo_ativo,
+            periodo=periodo_exibido,
             tipo='Entrada',
             funcionario__isnull=True,
-            categoria='RecebimentoCliente',
-            data__gte=periodo_ativo.data_inicio
+            categoria__in=['RecebimentoCliente', 'RecebimentoCarregamento'],
+            data__gte=periodo_exibido.data_inicio
         )
-        if periodo_ativo.data_fim:
-            entradas_estelar_categoria = entradas_estelar_categoria.filter(data__lte=periodo_ativo.data_fim)
+        if periodo_exibido.data_fim:
+            entradas_estelar_categoria = entradas_estelar_categoria.filter(data__lte=periodo_exibido.data_fim)
         entradas_estelar_categoria = entradas_estelar_categoria.exclude(
             Q(descricao__icontains='Descarga') | Q(descricao__icontains='descarga')
         )
+        # Descargas em dinheiro são entradas para a Estelar (categoria RecebimentoDescarga)
+        entradas_estelar_descarga = MovimentoCaixa.objects.filter(
+            periodo=periodo_exibido,
+            tipo='Entrada',
+            funcionario__isnull=True,
+            categoria='RecebimentoDescarga',
+            data__gte=periodo_exibido.data_inicio
+        )
+        if periodo_exibido.data_fim:
+            entradas_estelar_descarga = entradas_estelar_descarga.filter(data__lte=periodo_exibido.data_fim)
 
         entradas_estelar_ids = set()
         entradas_estelar_list = []
@@ -144,6 +174,10 @@ def fechamento_caixa(request):
             if entrada.id not in entradas_estelar_ids:
                 entradas_estelar_ids.add(entrada.id)
                 entradas_estelar_list.append(entrada)
+        for entrada in entradas_estelar_descarga:
+            if entrada.id not in entradas_estelar_ids:
+                entradas_estelar_ids.add(entrada.id)
+                entradas_estelar_list.append(entrada)
 
         total_estelar_entradas = sum(Decimal(str(entrada.valor)) for entrada in entradas_estelar_list)
         if total_estelar_entradas == 0 or len(entradas_estelar_list) == 0:
@@ -156,7 +190,7 @@ def fechamento_caixa(request):
             total_estelar_entradas = Decimal(str(total_estelar_entradas))
 
         saidas_estelar = MovimentoCaixa.objects.filter(
-            periodo=periodo_ativo,
+            periodo=periodo_exibido,
             tipo='Saida',
             funcionario__isnull=True,
             cliente__isnull=True
@@ -170,8 +204,8 @@ def fechamento_caixa(request):
 
         debug_info = {
             'periodo': {
-                'data_inicio': periodo_ativo.data_inicio.strftime('%d/%m/%Y') if periodo_ativo.data_inicio else '',
-                'data_fim': periodo_ativo.data_fim.strftime('%d/%m/%Y') if periodo_ativo.data_fim else 'Aberto',
+                'data_inicio': periodo_exibido.data_inicio.strftime('%d/%m/%Y') if periodo_exibido.data_inicio else '',
+                'data_fim': periodo_exibido.data_fim.strftime('%d/%m/%Y') if periodo_exibido.data_fim else 'Aberto',
             },
             'acertos_diarios': [
                 {'id': a.pk, 'data': a.data.strftime('%d/%m/%Y'), 'valor_estelar': str(a.valor_estelar) if a.valor_estelar else '0.00'}
@@ -223,17 +257,19 @@ def fechamento_caixa(request):
 
     context = {
         'periodo_ativo': periodo_ativo,
+        'periodo_exibido': periodo_exibido,
+        'periodo_fechado_selecionado': bool(periodo_selecionado),
         'periodos_fechados': periodos_fechados,
-        'total_entradas': total_entradas if periodo_ativo else Decimal('0.00'),
-        'total_saidas': total_saidas if periodo_ativo else Decimal('0.00'),
-        'valor_inicial_caixa': periodo_ativo.valor_inicial_caixa if periodo_ativo else Decimal('0.00'),
-        'saldo_atual': saldo_atual if periodo_ativo else Decimal('0.00'),
-        'total_movimentos': total_movimentos if periodo_ativo else 0,
+        'total_entradas': total_entradas if periodo_exibido else Decimal('0.00'),
+        'total_saidas': total_saidas if periodo_exibido else Decimal('0.00'),
+        'valor_inicial_caixa': periodo_exibido.valor_inicial_caixa if periodo_exibido else Decimal('0.00'),
+        'saldo_atual': saldo_atual if periodo_exibido else Decimal('0.00'),
+        'total_movimentos': total_movimentos if periodo_exibido else 0,
         'funcionarios_acumulados': funcionarios_acumulados,
-        'total_acumulado_funcionarios': total_acumulado_funcionarios if periodo_ativo else Decimal('0.00'),
-        'valor_acumulado_estelar': valor_acumulado_estelar if periodo_ativo else Decimal('0.00'),
-        'total_estelar_entradas': total_estelar_entradas if periodo_ativo else Decimal('0.00'),
-        'total_estelar_saidas': total_estelar_saidas if periodo_ativo else Decimal('0.00'),
+        'total_acumulado_funcionarios': total_acumulado_funcionarios if periodo_exibido else Decimal('0.00'),
+        'valor_acumulado_estelar': valor_acumulado_estelar if periodo_exibido else Decimal('0.00'),
+        'total_estelar_entradas': total_estelar_entradas if periodo_exibido else Decimal('0.00'),
+        'total_estelar_saidas': total_estelar_saidas if periodo_exibido else Decimal('0.00'),
         'clientes_cobrancas_pendentes': clientes_cobrancas_lista,
         'total_cobrancas_pendentes': total_cobrancas_pendentes,
     }

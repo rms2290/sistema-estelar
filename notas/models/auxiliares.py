@@ -110,6 +110,15 @@ class CobrancaCarregamento(UpperCaseMixin, models.Model):
     valor_cte_manifesto = models.DecimalField(
         max_digits=10, decimal_places=2, default=0.00, verbose_name="Valor CTE/Manifesto (R$)"
     )
+    valor_distribuicao_trabalhadores = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        blank=True,
+        null=True,
+        verbose_name="Valor para distribuição trabalhadores (R$)",
+        help_text="Valor que entra no acerto diário para divisão entre trabalhadores. Se vazio, usa o valor do carregamento."
+    )
     tipo_cliente = models.CharField(
         max_length=20, choices=TIPO_CLIENTE_CHOICES, default='Mensalista', verbose_name="Tipo de Cliente"
     )
@@ -155,6 +164,15 @@ class CobrancaCarregamento(UpperCaseMixin, models.Model):
         if tipo == 'POR_CUBAGEM':
             total += self.valor_armazenamento
         return total
+
+    @property
+    def margem_carregamento(self):
+        """Margem Estelar (valor cobrado ao cliente menos valor para trabalhadores)."""
+        v_cobrado = self.valor_carregamento or Decimal('0.00')
+        v_dist = self.valor_distribuicao_trabalhadores
+        if v_dist is None:
+            return Decimal('0.00')
+        return max(Decimal('0.00'), v_cobrado - v_dist)
 
     def baixar(self):
         self.status = 'Baixado'

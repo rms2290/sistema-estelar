@@ -70,6 +70,12 @@ class AcertoDiarioCarregamento(UpperCaseMixin, models.Model):
     def total_distribuido(self):
         return self.valor_estelar + self.total_funcionarios
 
+    @property
+    def diferenca(self):
+        """Diferença entre total de carregamentos e total distribuído (Estelar + funcionários)."""
+        from decimal import Decimal
+        return (self.total_carregamentos - self.total_distribuido).quantize(Decimal('0.01'))
+
     def __str__(self):
         return f"Acerto - {self.data}"
 
@@ -91,6 +97,15 @@ class CarregamentoCliente(UpperCaseMixin, models.Model):
         null=True,
         blank=True,
         help_text="Deixe em branco para registrar uma descarga"
+    )
+    cobranca_carregamento = models.ForeignKey(
+        'notas.CobrancaCarregamento',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='carregamentos_acerto',
+        verbose_name="Cobrança de Carregamento",
+        help_text="Vincule quando o carregamento vier de uma cobrança"
     )
     descricao = models.CharField(
         max_length=255,
@@ -664,20 +679,15 @@ class MovimentoCaixa(UpperCaseMixin, models.Model):
         ('Saida', 'Saída de Dinheiro'),
     ]
     CATEGORIA_ENTRADA_CHOICES = [
-        ('RecebimentoCliente', 'Recebimento de Cliente'),
-        ('Venda', 'Venda'),
+        ('RecebimentoCarregamento', 'Recebimento de carregamento'),
+        ('RecebimentoDescarga', 'Recebimento de descarga'),
         ('Reembolso', 'Reembolso'),
         ('Outros', 'Outros'),
     ]
     CATEGORIA_SAIDA_CHOICES = [
-        ('Combustivel', 'Combustível'),
+        ('Estelar', 'Estelar'),
         ('Manutencao', 'Manutenção'),
-        ('Alimentacao', 'Alimentação'),
-        ('Pedagio', 'Pedágio'),
-        ('Multa', 'Multa'),
-        ('Salario', 'Salário'),
-        ('Fornecedor', 'Fornecedor'),
-        ('Imposto', 'Imposto'),
+        ('ValeTransporte', 'Vale transporte'),
         ('Outros', 'Outros'),
     ]
 
@@ -760,6 +770,17 @@ class MovimentoCaixa(UpperCaseMixin, models.Model):
     @property
     def valor_formatado(self):
         return f"R$ {self.valor:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+    @property
+    def descricao_exibicao(self):
+        """Para exibição na lista: se descricao for 'Carregamento: Cliente', retorna (Cliente, 'Carregamento')."""
+        if not self.descricao:
+            return (self.descricao or '', None)
+        d = self.descricao.strip()
+        if d.upper().startswith('CARREGAMENTO:'):
+            parte = d.split(':', 1)[1].strip() if ':' in d else d
+            return (parte, 'CARREGAMENTO')
+        return (d, None)
 
     @property
     def is_entrada(self):

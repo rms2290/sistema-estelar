@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Simular Carregamento - Depósito{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4 class="card-title mb-0">
+                <i class="fas fa-truck-loading"></i> Simular Carregamento
+            </h4>
+        </div>
+        <div class="card-body">
+            <!-- Adicionar clientes: botão abre seletor; tabela acumula um cliente por vez -->
+            <div class="mb-3">
+                <button type="button" id="btn_adicionar_clientes" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Adicionar clientes
+                </button>
+            </div>
+            <div id="painel_selecionar_cliente" class="mb-3 p-3 border rounded" style="display: none;">
+                <label class="form-label mb-2">Selecione o cliente para adicionar à simulação:</label>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <select id="select_cliente_adicionar" class="form-select" style="max-width: 320px;">
+                        <option value="">— Selecione um cliente —</option>
+                    </select>
+                    <button type="button" id="btn_confirmar_adicionar_cliente" class="btn btn-success btn-sm">
+                        <i class="fas fa-plus"></i> Adicionar à tabela
+                    </button>
+                    <button type="button" id="btn_fechar_seletor" class="btn btn-outline-secondary btn-sm">Fechar</button>
+                </div>
+            </div>
+            <div id="secao_clientes_simulacao" class="mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-users"></i> Clientes na simulação</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Totais: soma dos clientes na simulação (estilo igual à tela de mercadorias no depósito) -->
+                        <div class="row g-3 mb-3 totalizadores-simulacao">
+                            <div class="col-md-4">
+                                <div class="border rounded p-3 totalizador-card">
+                                    <div class="small fw-bold totalizador-label">Total de Peso</div>
+                                    <div class="fs-5 fw-bold totalizador-valor" id="total_peso_display">0 kg</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="border rounded p-3 totalizador-card">
+                                    <div class="small fw-bold totalizador-label">Total de Valor</div>
+                                    <div class="fs-5 fw-bold totalizador-valor" id="total_valor_display">R$ 0,00</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="border rounded p-3 totalizador-card">
+                                    <div class="small fw-bold totalizador-label">Total de Cubagem</div>
+                                    <div class="fs-5 fw-bold totalizador-valor" id="total_cubagem_display">0,00 m³</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" id="tabela_clientes_simulacao">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th class="text-end">Peso (kg)</th>
+                                        <th class="text-end">Valor (R$)</th>
+                                        <th class="text-end" style="min-width: 120px;">Cubagem (m³)</th>
+                                        <th style="width: 80px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody_clientes_simulacao">
+                                    <tr id="linha_vazia_clientes" class="text-center text-muted">
+                                        <td colspan="5" class="py-4">Nenhum cliente adicionado. Clique em &quot;Adicionar clientes&quot; e selecione um cliente.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Totalizadores: tema claro */
+#secao_clientes_simulacao .totalizador-card {
+    background-color: #fff;
+    border-color: rgba(0,0,0,.125);
+}
+#secao_clientes_simulacao .totalizador-label { color: #6c757d; }
+#secao_clientes_simulacao .totalizador-valor { color: #212529; }
+
+/* Totalizadores: tema dark — cinza com letras brancas */
+[data-theme="dark"] #secao_clientes_simulacao .totalizador-card {
+    background-color: #565b62 !important;
+    border-color: #6c7076;
+}
+[data-theme="dark"] #secao_clientes_simulacao .totalizador-label,
+[data-theme="dark"] #secao_clientes_simulacao .totalizador-valor {
+    color: #ffffff !important;
+}
+</style>
+
+<script>
+(function() {
+    // --- Clientes na simulação: adicionar um por vez, sem remover os já adicionados ---
+    var clientesDeposito = {{ clientes_deposito_json|safe }};
+    var clientesAdicionados = []; // lista de ids já na tabela
+    var tbody = document.getElementById('tbody_clientes_simulacao');
+    var linhaVazia = document.getElementById('linha_vazia_clientes');
+    var painelSeletor = document.getElementById('painel_selecionar_cliente');
+    var selectCliente = document.getElementById('select_cliente_adicionar');
+    var btnConfirmar = document.getElementById('btn_confirmar_adicionar_cliente');
+    var btnFechar = document.getElementById('btn_fechar_seletor');
+
+    function formatarNumero(val) {
+        var n = parseFloat(val);
+        if (isNaN(n)) return '0,00';
+        var partes = n.toFixed(2).split('.');
+        var inteiro = partes[0];
+        var decimal = partes[1];
+        var comMilhares = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return comMilhares + ',' + decimal;
+    }
+
+    function atualizarTotais() {
+        var totalPeso = 0;
+        var totalValor = 0;
+        var totalCubagem = 0;
+        clientesAdicionados.forEach(function(id) {
+            var c = clientesDeposito.find(function(x) { return String(x.id) === String(id); });
+            if (c) {
+                totalPeso += parseFloat(c.total_peso) || 0;
+                totalValor += parseFloat(c.total_valor) || 0;
+            }
+        });
+        var inputsCubagem = tbody ? tbody.querySelectorAll('input[name^="cubagem_cliente_"]') : [];
+        inputsCubagem.forEach(function(inp) {
+            totalCubagem += parseFloat(inp.value) || 0;
+        });
+        var elPeso = document.getElementById('total_peso_display');
+        var elValor = document.getElementById('total_valor_display');
+        var elCubagem = document.getElementById('total_cubagem_display');
+        if (elPeso) elPeso.textContent = formatarNumero(totalPeso) + ' kg';
+        if (elValor) elValor.textContent = 'R$ ' + formatarNumero(totalValor);
+        if (elCubagem) elCubagem.textContent = formatarNumero(totalCubagem) + ' m³';
+    }
+
+    function preencherSelectClientes() {
+        if (!selectCliente) return;
+        selectCliente.innerHTML = '<option value="">— Selecione um cliente —</option>';
+        clientesDeposito.forEach(function(c) {
+            if (clientesAdicionados.indexOf(c.id) === -1) {
+                var opt = document.createElement('option');
+                opt.value = c.id;
+                opt.setAttribute('data-peso', c.total_peso);
+                opt.setAttribute('data-valor', c.total_valor);
+                opt.textContent = c.razao_social;
+                selectCliente.appendChild(opt);
+            }
+        });
+    }
+
+    function adicionarClienteNaTabela(cliente) {
+        if (clientesAdicionados.indexOf(cliente.id) !== -1) return;
+        clientesAdicionados.push(cliente.id);
+        if (linhaVazia) linhaVazia.style.display = 'none';
+        var tr = document.createElement('tr');
+        tr.setAttribute('data-cliente-id', cliente.id);
+        var peso = formatarNumero(cliente.total_peso);
+        var valor = formatarNumero(cliente.total_valor);
+        tr.innerHTML =
+            '<td>' + (cliente.razao_social || '') + '</td>' +
+            '<td class="text-end">' + peso + '</td>' +
+            '<td class="text-end">R$ ' + valor + '</td>' +
+            '<td class="text-end">' +
+            '<input type="number" name="cubagem_cliente_' + cliente.id + '" class="form-control form-control-sm text-end" step="0.01" min="0" placeholder="0,00" style="max-width: 100px; margin-left: auto;">' +
+            '</td>' +
+            '<td class="text-center">' +
+            '<button type="button" class="btn btn-outline-danger btn-sm btn-remover-cliente" title="Remover"><i class="fas fa-times"></i></button>' +
+            '</td>';
+        tbody.appendChild(tr);
+        tr.querySelector('.btn-remover-cliente').addEventListener('click', function() {
+            var id = parseInt(tr.getAttribute('data-cliente-id'), 10);
+            clientesAdicionados = clientesAdicionados.filter(function(x) { return x !== id; });
+            tr.remove();
+            if (clientesAdicionados.length === 0 && linhaVazia) linhaVazia.style.display = '';
+            preencherSelectClientes();
+            atualizarTotais();
+        });
+        preencherSelectClientes();
+        atualizarTotais();
+    }
+
+    document.getElementById('btn_adicionar_clientes').addEventListener('click', function() {
+        painelSeletor.style.display = 'block';
+        preencherSelectClientes();
+    });
+
+    if (btnFechar) btnFechar.addEventListener('click', function() {
+        painelSeletor.style.display = 'none';
+    });
+
+    if (btnConfirmar && selectCliente) btnConfirmar.addEventListener('click', function() {
+        var opt = selectCliente.options[selectCliente.selectedIndex];
+        if (!opt || !opt.value) return;
+        var cliente = clientesDeposito.find(function(c) { return String(c.id) === String(opt.value); });
+        if (cliente) {
+            adicionarClienteNaTabela(cliente);
+            selectCliente.selectedIndex = 0;
+            atualizarTotais();
+        }
+    });
+
+    if (tbody) tbody.addEventListener('input', function(e) {
+        if (e.target && e.target.name && e.target.name.indexOf('cubagem_cliente_') === 0) atualizarTotais();
+    });
+})();
+</script>
+{% endblock %}

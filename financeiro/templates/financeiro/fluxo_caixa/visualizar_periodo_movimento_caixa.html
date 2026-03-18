@@ -152,8 +152,8 @@
                                     <br><small class="text-muted">Cliente: {{ item.movimento.cliente.razao_social }}</small>
                                 {% endif %}
                             </td>
-                            <td class="{% if item.movimento.is_entrada %}text-success{% else %}text-danger{% endif %}">
-                                {% if item.movimento.is_entrada %}+{% else %}-{% endif %}{{ item.movimento.valor|format_brazilian_currency }}
+                            <td class="{% if item.exibir_como_saida %}text-danger{% else %}text-success{% endif %}">
+                                {% if item.exibir_como_saida %}-{% else %}+{% endif %}{{ item.movimento.valor|format_brazilian_currency }}
                             </td>
                             <td class="fw-bold">{{ item.saldo_acumulado|format_brazilian_currency }}</td>
                         </tr>

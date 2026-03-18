@@ -176,6 +176,13 @@ class VeiculoForm(forms.ModelForm):
         decimal_places=2,
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'readonly': 'readonly'})
     )
+    capacidade_maxima_kg = forms.DecimalField(
+        label='Capacidade máxima (kg)',
+        required=False,
+        max_digits=10,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'placeholder': '---'})
+    )
     
     # Campos do proprietário
     proprietario_nome_razao_social = UpperCaseCharField(

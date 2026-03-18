@@ -1,5 +1,5 @@
 """
-Comando Django para limpar todos os dados do sistema, mantendo apenas usuários.
+Comando Django para limpar todos os dados do sistema, mantendo apenas o usuário admin.
 Uso: python manage.py limpar_dados_sistema --confirmar
 """
 from django.core.management.base import BaseCommand
@@ -13,6 +13,7 @@ from notas.models import (
     RomaneioViagem,
     PlacaVeiculo,
     TipoVeiculo,
+    Usuario,
     # Relatórios e fechamentos
     FechamentoFrete,
     ItemFechamentoFrete,
@@ -46,7 +47,7 @@ from financeiro.models import (
 
 
 class Command(BaseCommand):
-    help = 'Limpa todos os dados do sistema, mantendo apenas usuários do sistema'
+    help = 'Limpa todos os dados do sistema (notas, motoristas, veículos, clientes, caixa), mantendo apenas o usuário admin'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -60,7 +61,7 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.ERROR(
                     '\nATENÇÃO: Esta operação irá REMOVER TODOS os dados do sistema!\n'
-                    'Serão mantidos apenas os usuários do sistema.\n\n'
+                    'Serão mantidos apenas o usuário "admin". Demais usuários serão removidos.\n\n'
                     'Para confirmar, execute: python manage.py limpar_dados_sistema --confirmar\n'
                 )
             )
@@ -120,23 +121,31 @@ class Command(BaseCommand):
                 contadores['HistoricoConsulta'] = HistoricoConsulta.objects.all().delete()[0]
                 contadores['AuditoriaLog'] = AuditoriaLog.objects.all().delete()[0]
                 
-                # 8. Limpar Clientes
+                # 8. Desvincular usuários de clientes (evita CASCADE ao apagar clientes)
+                self.stdout.write('Desvinculando usuários de clientes...')
+                Usuario.objects.update(cliente=None)
+                
+                # 9. Limpar Clientes
                 self.stdout.write('Limpando Clientes...')
                 contadores['Cliente'] = Cliente.objects.all().delete()[0]
                 
-                # 9. Limpar Veículos e Placas
+                # 10. Limpar Veículos e Placas
                 self.stdout.write('Limpando Veículos...')
                 contadores['PlacaVeiculo'] = PlacaVeiculo.objects.all().delete()[0]
                 contadores['Veiculo'] = Veiculo.objects.all().delete()[0]
                 contadores['TipoVeiculo'] = TipoVeiculo.objects.all().delete()[0]
                 
-                # 10. Limpar Motoristas
+                # 11. Limpar Motoristas
                 self.stdout.write('Limpando Motoristas...')
                 contadores['Motorista'] = Motorista.objects.all().delete()[0]
                 
-                # 11. Limpar Tabela de Seguro
+                # 12. Limpar Tabela de Seguro
                 self.stdout.write('Limpando Tabela de Seguro...')
                 contadores['TabelaSeguro'] = TabelaSeguro.objects.all().delete()[0]
+                
+                # 13. Remover todos os usuários exceto admin
+                self.stdout.write('Removendo usuários (mantendo apenas admin)...')
+                contadores['Usuario'] = Usuario.objects.exclude(username='admin').delete()[0]
                 
                 self.stdout.write('\n' + '=' * 60)
                 self.stdout.write(self.style.SUCCESS('LIMPEZA CONCLUÍDA!'))
@@ -150,7 +159,7 @@ class Command(BaseCommand):
                         total += quantidade
                 
                 self.stdout.write(f'\nTotal: {total} registro(s) removido(s)')
-                self.stdout.write('\nUsuários do sistema foram mantidos.')
+                self.stdout.write('\nApenas o usuário "admin" foi mantido. Sistema zerado para testes iniciais.')
                 self.stdout.write('=' * 60 + '\n')
                 
         except Exception as e:

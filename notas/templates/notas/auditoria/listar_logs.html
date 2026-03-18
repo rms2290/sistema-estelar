@@ -151,8 +151,8 @@
                         </table>
                     </div>
                 {% else %}
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> 
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> 
                         {% if acao_atual or modelo_atual or usuario_atual or data_inicio_atual or data_fim_atual %}
                             Nenhum log encontrado com os filtros aplicados. Tente ajustar os filtros.
                         {% else %}
@@ -192,8 +192,8 @@
                         </nav>
                     {% endif %}
             {% else %}
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> 
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> 
                     Nenhum log de auditoria registrado ainda. Os logs serão exibidos aqui quando ações forem registradas no sistema.
                 </div>
             {% endif %}

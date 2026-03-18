@@ -138,17 +138,28 @@ def gerenciar_movimento_caixa(request):
 
     valor_inicial = periodo_selecionado.valor_inicial_caixa if periodo_selecionado else Decimal('0.00')
     movimentos_lista = list(movimentos)
+    # Só nesta tela: "Acertar Funcionário" (AcertoFuncionario sem acerto_diario) = saída; acerto diário continua entrada
+    def _eh_saida_na_tela(mov):
+        if mov.tipo == 'Saida':
+            return True
+        if mov.tipo == 'AcertoFuncionario' and not mov.acerto_diario_id:
+            return True  # veio do botão "Acertar Funcionário"
+        return False
     saldo_acumulado = valor_inicial
     movimentos_com_saldo = []
     for mov in movimentos_lista:
-        if mov.is_entrada:
-            saldo_acumulado += mov.valor
-        else:
+        if _eh_saida_na_tela(mov):
             saldo_acumulado -= mov.valor
-        movimentos_com_saldo.append({'movimento': mov, 'saldo_acumulado': saldo_acumulado})
+        else:
+            saldo_acumulado += mov.valor
+        movimentos_com_saldo.append({
+            'movimento': mov,
+            'saldo_acumulado': saldo_acumulado,
+            'exibir_como_saida': _eh_saida_na_tela(mov),
+        })
 
-    total_entradas = sum(mov.valor for mov in movimentos if mov.is_entrada)
-    total_saidas = sum(mov.valor for mov in movimentos if mov.is_saida)
+    total_entradas = sum(mov.valor for mov in movimentos_lista if not _eh_saida_na_tela(mov))
+    total_saidas = sum(mov.valor for mov in movimentos_lista if _eh_saida_na_tela(mov))
     saldo = valor_inicial + total_entradas - total_saidas
 
     funcionarios = FuncionarioFluxoCaixa.objects.filter(ativo=True).order_by('nome')

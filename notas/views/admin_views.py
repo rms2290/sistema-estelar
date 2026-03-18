@@ -16,6 +16,7 @@ from .tabela_seguro_views import (
 )
 from .cobranca_carregamento_views import (
     criar_cobranca_carregamento,
+    visualizar_cobranca_carregamento,
     editar_cobranca_carregamento,
     excluir_cobranca_carregamento,
     baixar_cobranca_carregamento,
@@ -43,6 +44,7 @@ __all__ = [
     'editar_tabela_seguro',
     'atualizar_tabela_seguro_ajax',
     'criar_cobranca_carregamento',
+    'visualizar_cobranca_carregamento',
     'editar_cobranca_carregamento',
     'excluir_cobranca_carregamento',
     'baixar_cobranca_carregamento',

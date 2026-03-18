@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load format_filters %}
+
+{% block title %}Excluir Despesa - Fluxo de Caixa{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card border-danger">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0"><i class="fas fa-trash"></i> Excluir Despesa</h4>
+        </div>
+        <div class="card-body">
+            <p>Tem certeza que deseja excluir esta despesa?</p>
+            <ul class="list-group mb-3">
+                <li class="list-group-item"><strong>Data:</strong> {{ despesa.data|date:"d/m/Y" }}</li>
+                <li class="list-group-item"><strong>Categoria:</strong> {{ despesa.get_categoria_display }}</li>
+                <li class="list-group-item"><strong>Valor:</strong> {{ despesa.valor|format_brazilian_currency }}</li>
+                <li class="list-group-item"><strong>Descrição:</strong> {{ despesa.descricao|truncatewords:15 }}</li>
+            </ul>
+            <form method="POST" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Sim, excluir</button>
+            </form>
+            <a href="{% url 'financeiro:listar_despesas' %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

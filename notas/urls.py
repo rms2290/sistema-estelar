@@ -85,6 +85,9 @@ urlpatterns = [
 # Nova URL para procurar mercadorias no depósito (tela vazia)
     path('procurar-mercadorias-deposito/', nota_fiscal_views.procurar_mercadorias_deposito, name='procurar_mercadorias_deposito'),
 
+# Simular Carregamento (Depósito)
+    path('simular-carregamento/', nota_fiscal_views.simular_carregamento, name='simular_carregamento'),
+
     # URLs de Autenticação
     path('login/', auth_views.login_view, name='login'),
     path('logout/', auth_views.logout_view, name='logout'),
@@ -134,6 +137,7 @@ urlpatterns = [
     
     # URLs para nova estrutura de cobrança de carregamento
     path('cobranca-carregamento/criar/', admin_views.criar_cobranca_carregamento, name='criar_cobranca_carregamento'),
+    path('cobranca-carregamento/<int:cobranca_id>/visualizar/', admin_views.visualizar_cobranca_carregamento, name='visualizar_cobranca_carregamento'),
     path('cobranca-carregamento/<int:cobranca_id>/editar/', admin_views.editar_cobranca_carregamento, name='editar_cobranca_carregamento'),
     path('cobranca-carregamento/<int:cobranca_id>/baixar/', admin_views.baixar_cobranca_carregamento, name='baixar_cobranca_carregamento'),
     path('cobranca-carregamento/<int:cobranca_id>/excluir/', admin_views.excluir_cobranca_carregamento, name='excluir_cobranca_carregamento'),

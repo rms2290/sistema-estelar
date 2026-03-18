@@ -69,10 +69,24 @@ def criar_cobranca_carregamento(request):
 
 
 @admin_required
+def visualizar_cobranca_carregamento(request, cobranca_id):
+    """View para visualizar uma cobrança de carregamento (somente leitura), com opções Editar e Excluir."""
+    cobranca = get_object_or_404(
+        CobrancaCarregamento.objects.select_related('cliente').prefetch_related('romaneios'),
+        pk=cobranca_id
+    )
+    context = {'cobranca': cobranca}
+    return render(request, 'notas/visualizar_cobranca_carregamento.html', context)
+
+
+@admin_required
 @rate_limit_critical
 def editar_cobranca_carregamento(request, cobranca_id):
     """View para editar uma cobrança de carregamento"""
-    cobranca = get_object_or_404(CobrancaCarregamento, pk=cobranca_id)
+    cobranca = get_object_or_404(
+        CobrancaCarregamento.objects.select_related('cliente').prefetch_related('romaneios'),
+        pk=cobranca_id
+    )
     
     if request.method == 'POST':
         form = CobrancaCarregamentoForm(request.POST, instance=cobranca)
@@ -85,9 +99,19 @@ def editar_cobranca_carregamento(request, cobranca_id):
     else:
         form = CobrancaCarregamentoForm(instance=cobranca)
     
+    # Romaneios do cliente (para exibir na tabela de seleção)
+    romaneios = RomaneioViagem.objects.filter(cliente=cobranca.cliente).order_by('-data_emissao')
+    # IDs dos romaneios selecionados: no POST use o que veio do formulário; no GET use os já vinculados
+    if request.method == 'POST' and request.POST.getlist('romaneios'):
+        romaneios_selecionados = [int(x) for x in request.POST.getlist('romaneios') if x.isdigit()]
+    else:
+        romaneios_selecionados = list(cobranca.romaneios.values_list('id', flat=True))
+    
     context = {
         'form': form,
         'cobranca': cobranca,
+        'romaneios': romaneios,
+        'romaneios_selecionados': romaneios_selecionados,
     }
     return render(request, 'notas/editar_cobranca_carregamento.html', context)
 

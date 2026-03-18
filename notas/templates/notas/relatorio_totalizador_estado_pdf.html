@@ -1,0 +1,44 @@
+{% extends "relatorios/base_relatorio_pdf.html" %}
+{% load format_filters %}
+
+{% block conteudo %}
+<div class="secao-estado">
+    <table class="tabela-totalizador-estado">
+        <colgroup>
+            <col style="width: auto;">
+            <col style="width: 4em;">
+            <col style="width: 115px;">
+            <col style="width: 4em;">
+            <col style="width: 115px;">
+        </colgroup>
+        <thead>
+            <tr>
+                <th>ESTADO</th>
+                <th>QTD. ROM.</th>
+                <th>R$ MERCADORIA</th>
+                <th>% SEG.</th>
+                <th>R$ SEGURO</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in resultados %}
+            <tr>
+                <td>{{ r.estado }} — {{ r.nome_estado|upper }}</td>
+                <td class="text-center">{{ r.quantidade_romaneios }}</td>
+                <td class="valor">{{ r.total_valor|format_brazilian_currency }}</td>
+                <td class="text-center">{{ r.percentual_seguro|floatformat:2 }}%</td>
+                <td class="valor">{{ r.valor_seguro|format_brazilian_currency }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="total-geral-estado">
+                <td colspan="2">TOTAL GERAL</td>
+                <td class="valor">{{ total_geral|format_brazilian_currency }}</td>
+                <td></td>
+                <td class="valor">{{ total_seguro_geral|format_brazilian_currency }}</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% endblock %}

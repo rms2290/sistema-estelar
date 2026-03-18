@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Visualizar Cobrança de Carregamento - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4 class="card-title mb-0">
+                <i class="fas fa-eye"></i> Visualizar Cobrança de Carregamento #{{ cobranca.id }}
+            </h4>
+        </div>
+        <div class="card-body">
+            <!-- Cliente -->
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-building"></i> Cliente</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0"><strong>{{ cobranca.cliente.razao_social }}</strong></p>
+                </div>
+            </div>
+
+            <!-- Romaneios -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-truck"></i> Romaneios</h5>
+                </div>
+                <div class="card-body">
+                    {% if cobranca.romaneios.all %}
+                    <ul class="list-group list-group-flush">
+                        {% for romaneio in cobranca.romaneios.all %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <strong>{{ romaneio.codigo }}</strong>
+                            <span class="text-muted">{{ romaneio.data_emissao|date:"d/m/Y" }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-0">Nenhum romaneio vinculado.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Valores e status -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-dollar-sign"></i> Valores e Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Status:</strong></div>
+                        <div class="col-md-8">
+                            {% if cobranca.status == 'Pendente' %}
+                            <span class="badge bg-warning"><i class="fas fa-clock"></i> Pendente</span>
+                            {% else %}
+                            <span class="badge bg-success"><i class="fas fa-check-circle"></i> Baixado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Data de criação:</strong></div>
+                        <div class="col-md-8">{{ cobranca.criado_em|date:"d/m/Y H:i" }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Tipo de cliente:</strong></div>
+                        <div class="col-md-8">{{ cobranca.get_tipo_cliente_display|default:cobranca.tipo_cliente }}</div>
+                    </div>
+                    {% if cobranca.tipo_cliente == 'Por_Cubagem' and cobranca.cubagem %}
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Cubagem (m³):</strong></div>
+                        <div class="col-md-8">{{ cobranca.cubagem }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Valor cubagem (R$/m³):</strong></div>
+                        <div class="col-md-8">R$ {{ cobranca.valor_cubagem|floatformat:2 }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Valor armazenamento:</strong></div>
+                        <div class="col-md-8">R$ {{ cobranca.valor_armazenamento|floatformat:2 }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Valor carregamento (R$):</strong></div>
+                        <div class="col-md-8">R$ {{ cobranca.valor_carregamento|floatformat:2 }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Valor CTE/Manifesto (R$):</strong></div>
+                        <div class="col-md-8">R$ {{ cobranca.valor_cte_manifesto|floatformat:2 }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Total (R$):</strong></div>
+                        <div class="col-md-8"><strong>R$ {{ cobranca.valor_total|floatformat:2 }}</strong></div>
+                    </div>
+                    {% if cobranca.valor_distribuicao_trabalhadores %}
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Distribuição trabalhadores (R$):</strong></div>
+                        <div class="col-md-8">R$ {{ cobranca.valor_distribuicao_trabalhadores|floatformat:2 }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Margem Estelar (R$):</strong></div>
+                        <div class="col-md-8">R$ {{ cobranca.margem_carregamento|floatformat:2 }}</div>
+                    </div>
+                    {% endif %}
+                    {% if cobranca.data_vencimento %}
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Data vencimento:</strong></div>
+                        <div class="col-md-8">{{ cobranca.data_vencimento|date:"d/m/Y" }}</div>
+                    </div>
+                    {% endif %}
+                    {% if cobranca.observacoes %}
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Observações:</strong></div>
+                        <div class="col-md-8">{{ cobranca.observacoes }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    {# Botões de Ação no rodapé (padrão das telas de visualização) #}
+    <div class="mt-4">
+        <a href="{% url 'notas:gerar_relatorio_cobranca_carregamento_pdf' cobranca.id %}" target="_blank" class="btn btn-primary me-2">
+            <i class="fas fa-file-pdf"></i> PDF
+        </a>
+        {% if cobranca.status == 'Pendente' %}
+        <a href="{% url 'notas:baixar_cobranca_carregamento' cobranca.id %}" class="btn btn-success me-2">
+            <i class="fas fa-check"></i> Baixar
+        </a>
+        {% endif %}
+        <a href="{% url 'notas:editar_cobranca_carregamento' cobranca.id %}" class="btn btn-warning me-2">
+            <i class="fas fa-edit"></i> Editar
+        </a>
+        <a href="{% url 'notas:excluir_cobranca_carregamento' cobranca.id %}" class="btn btn-danger me-2">
+            <i class="fas fa-trash"></i> Excluir
+        </a>
+        <a href="{% url 'notas:cobranca_carregamento' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Voltar à Pesquisa
+        </a>
+    </div>
+</div>
+{% endblock %}

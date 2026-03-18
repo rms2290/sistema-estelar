@@ -175,7 +175,11 @@
                             <td><strong>{{ mov.data|date:"d/m/Y" }}</strong></td>
                             <td>
                                 {% if mov.tipo == 'AcertoFuncionario' %}
-                                    <span class="badge bg-primary">Acerto Funcionário</span>
+                                    {% if mov.acerto_diario_id %}
+                                        <span class="badge bg-primary">Entrada</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Saída</span>
+                                    {% endif %}
                                 {% elif mov.tipo == 'Entrada' %}
                                     <span class="badge bg-success">Entrada</span>
                                 {% else %}
@@ -186,18 +190,21 @@
                                 {% if mov.tipo == 'AcertoFuncionario' and mov.funcionario %}
                                     {{ mov.funcionario.nome }}
                                 {% else %}
-                                    {{ mov.descricao }}
+                                    {{ mov.descricao_exibicao.0 }}
+                                    {% if mov.descricao_exibicao.1 %}
+                                        <br><small class="text-muted" style="color: #9ca3af !important;">{{ mov.descricao_exibicao.1 }}</small>
+                                    {% endif %}
                                     {% if mov.funcionario %}
                                         <br><small class="text-muted"><i class="fas fa-user"></i> Funcionário: {{ mov.funcionario.nome }}</small>
                                     {% endif %}
-                                    {% if mov.cliente %}
+                                    {% if mov.cliente and not mov.descricao_exibicao.1 %}
                                         <br><small class="text-muted"><i class="fas fa-building"></i> Cliente: {{ mov.cliente.razao_social }}</small>
                                     {% endif %}
                                 {% endif %}
                             </td>
                             <td class="text-end">
-                                <strong class="{% if mov.is_entrada %}text-success{% else %}text-danger{% endif %}">
-                                    {% if mov.is_entrada %}+{% else %}-{% endif %}{{ mov.valor|format_brazilian_currency }}
+                                <strong class="{% if item.exibir_como_saida %}text-danger{% elif mov.tipo == 'AcertoFuncionario' %}text-primary{% else %}text-success{% endif %}">
+                                    {% if item.exibir_como_saida %}-{% else %}+{% endif %}{{ mov.valor|format_brazilian_currency }}
                                 </strong>
                             </td>
                             <td class="text-end">
@@ -610,7 +617,7 @@ document.getElementById('btnSalvarEntrada').addEventListener('click', function()
         formData.delete('cliente_id'); // Remover cliente se houver
         const descricao = formData.get('descricao');
         if (!descricao.toLowerCase().includes('estelar')) {
-            formData.set('descricao', 'Estelar: ' + descricao);
+            formData.set('descricao', 'Estelar ' + descricao);
         }
     } else if (destino !== 'cliente') {
         // Se não for cliente, remover cliente_id
@@ -648,7 +655,7 @@ document.getElementById('btnSalvarSaida').addEventListener('click', function() {
         formData.delete('cliente_id'); // Remover cliente se houver
         const descricao = formData.get('descricao');
         if (!descricao.toLowerCase().includes('estelar')) {
-            formData.set('descricao', 'Estelar: ' + descricao);
+            formData.set('descricao', 'Estelar ' + descricao);
         }
     } else if (destino === 'funcionario') {
         // Se for funcionário, remover cliente

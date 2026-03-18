@@ -42,7 +42,7 @@
                 
                 <!-- Seleção de Cliente -->
                 <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
+                    <div class="card-header">
                         <h5 class="mb-0"><i class="fas fa-building"></i> 1. Selecionar Cliente</h5>
                     </div>
                     <div class="card-body">
@@ -72,9 +72,9 @@
 
                 <!-- Seleção de Romaneios -->
                 <div class="card mb-4" id="card-romaneios" style="display: none;">
-                    <div class="card-header bg-success text-white">
+                    <div class="card-header">
                         <h5 class="mb-0"><i class="fas fa-truck"></i> 2. Selecionar Romaneios</h5>
-                        <small class="text-white-50">Selecione um ou mais romaneios emitidos para esta cobrança</small>
+                        <small class="text-muted">Selecione um ou mais romaneios emitidos para esta cobrança</small>
                     </div>
                     <div class="card-body">
                         <div id="loading-romaneios" class="text-center" style="display: none;">
@@ -121,7 +121,7 @@
 
                 <!-- Valores da Cobrança -->
                 <div class="card mb-4">
-                    <div class="card-header bg-info text-white">
+                    <div class="card-header">
                         <h5 class="mb-0"><i class="fas fa-dollar-sign"></i> 3. Definir Valores</h5>
                     </div>
                     <div class="card-body">
@@ -163,11 +163,25 @@
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">
-                                    <i class="fas fa-truck-loading"></i> Valor Carregamento (R$) <span class="text-danger">*</span>
+                                    <i class="fas fa-truck-loading"></i> Valor repassado ao cliente (R$) <span class="text-danger">*</span>
                                 </label>
-                                <input type="number" name="valor_carregamento" step="0.01" min="0" 
-                                       class="form-control form-control-lg" required placeholder="0.00" value="0.00">
+                                <input type="number" name="valor_carregamento" id="valor_carregamento" step="0.01" min="0" 
+                                       class="form-control form-control-lg" required placeholder="0.00" value="0.00" oninput="atualizarMargem()">
                             </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-users"></i> Valor para distribuição trabalhadores (R$)
+                                </label>
+                                <input type="number" name="valor_distribuicao_trabalhadores" id="valor_distribuicao_trabalhadores" step="0.01" min="0" 
+                                       class="form-control form-control-lg" placeholder="0.00 (opcional)" value="" oninput="atualizarMargem()">
+                                <small class="text-muted">Valor que entra no acerto diário para os trabalhadores. A diferença é a margem Estelar.</small>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label"><i class="fas fa-coins"></i> Margem Estelar (R$)</label>
+                                <div class="form-control form-control-lg bg-light" id="margem_exibicao" readonly>R$ 0,00</div>
+                            </div>
+                        </div>
+                        <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">
                                     <i class="fas fa-file-alt"></i> Valor CTE/Manifesto (R$)
@@ -254,6 +268,14 @@ function calcularValorArmazenamento() {
     });
     
     valorArmazenamentoCalculado.textContent = valorFormatado;
+}
+
+function atualizarMargem() {
+    const vCliente = parseFloat(document.getElementById('valor_carregamento').value) || 0;
+    const vDist = parseFloat(document.getElementById('valor_distribuicao_trabalhadores').value) || 0;
+    const margem = Math.max(0, vCliente - vDist);
+    const el = document.getElementById('margem_exibicao');
+    if (el) el.textContent = 'R$ ' + margem.toFixed(2).replace('.', ',');
 }
 
 document.addEventListener('DOMContentLoaded', function() {

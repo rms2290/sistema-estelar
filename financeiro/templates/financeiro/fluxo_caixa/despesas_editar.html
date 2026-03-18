@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Editar Despesa - Fluxo de Caixa{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4><i class="fas fa-edit"></i> Editar Despesa</h4>
+            <small class="text-muted">Data original: {{ despesa.data|date:"d/m/Y" }} — R$ {{ despesa.valor }}</small>
+        </div>
+        <div class="card-body">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="POST">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Data *</label>
+                        <input type="date" name="data" class="form-control" required value="{{ despesa.data|date:'Y-m-d' }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Categoria *</label>
+                        <select name="categoria" class="form-select" required>
+                            {% for cat_val, cat_label in categorias_saida %}
+                                <option value="{{ cat_val }}" {% if despesa.categoria == cat_val %}selected{% endif %}>{{ cat_label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Valor (R$) *</label>
+                        <input type="number" name="valor" class="form-control" step="0.01" min="0.01" required value="{{ despesa.valor }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Funcionário (opcional)</label>
+                        <select name="funcionario_id" class="form-select">
+                            <option value="">Nenhum</option>
+                            {% for f in funcionarios %}
+                                <option value="{{ f.pk }}" {% if despesa.funcionario_id == f.pk %}selected{% endif %}>{{ f.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Cliente (opcional)</label>
+                        <select name="cliente_id" class="form-select">
+                            <option value="">Nenhum</option>
+                            {% for c in clientes %}
+                                <option value="{{ c.pk }}" {% if despesa.cliente_id == c.pk %}selected{% endif %}>{{ c.razao_social }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Descrição *</label>
+                        <textarea name="descricao" class="form-control" rows="3" required>{{ despesa.descricao }}</textarea>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'financeiro:listar_despesas' %}" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

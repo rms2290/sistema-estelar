@@ -5,214 +5,148 @@
 {% block title %}Totalizador por Cliente - Sistema Estelar{% endblock %}
 
 {% block content %}
+<style>
+    .tabela-totalizador-cliente-tela { table-layout: fixed; width: 100%; }
+    /* Coluna Cliente limitada para dar mais espaço às colunas à direita */
+    .tabela-totalizador-cliente-tela th:nth-child(1),
+    .tabela-totalizador-cliente-tela td:nth-child(1) { width: 45%; max-width: 45%; }
+    .tabela-totalizador-cliente-tela th:nth-child(2),
+    .tabela-totalizador-cliente-tela td:nth-child(2) { width: 5em; min-width: 5em; max-width: 5em; text-align: center; }
+    .tabela-totalizador-cliente-tela th:nth-child(3),
+    .tabela-totalizador-cliente-tela td:nth-child(3) { width: 22%; min-width: 160px; white-space: nowrap; }
+    .tabela-totalizador-cliente-tela th:nth-child(4),
+    .tabela-totalizador-cliente-tela td:nth-child(4) { width: 22%; min-width: 160px; white-space: nowrap; }
+    /* Tema escuro: azul mais suave e legível na coluna Valor Seguro e totais */
+    [data-theme="dark"] .tabela-totalizador-cliente-tela .text-primary,
+    [data-theme="dark"] .tabela-totalizador-cliente-tela td:nth-child(4) {
+        color: #93c5fd !important;
+    }
+</style>
 <div class="container mt-4">
-            <h2><i class="fas fa-chart-pie"></i> Totalizador por Cliente</h2>
-            
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-filter"></i> Filtros de Pesquisa
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <!-- Formulário de Filtros -->
-                    <form method="GET" class="mb-4">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="data_inicial" class="form-label">Data Inicial</label>
-                                    <input type="date" class="form-control" id="data_inicial" name="data_inicial" 
-                                           value="{{ data_inicial }}" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="data_final" class="form-label">Data Final</label>
-                                    <input type="date" class="form-control" id="data_final" name="data_final" 
-                                           value="{{ data_final }}" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-search"></i> Pesquisar
-                                </button>
-                                <a href="{% url 'notas:totalizador_por_cliente' %}" class="btn btn-secondary">
-                                    <i class="fas fa-times"></i> Limpar Filtros
-                                </a>
-                            </div>
-                        </div>
-                    </form>
-                    
+    <h2><i class="fas fa-users"></i> Totalizador por Cliente</h2>
 
-                    <!-- Resultados da Pesquisa -->
-                    {% if tem_resultados %}
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i> 
-                            Encontrados <strong>{{ resultados|length }}</strong> cliente(s) com movimentação no período.
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-filter"></i> Filtros de Pesquisa
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" id="form-totalizador-cliente" class="mb-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="data_inicial" class="form-label">Data Inicial</label>
+                            <input type="date" class="form-control" id="data_inicial" name="data_inicial"
+                                   value="{{ data_inicial }}" required>
                         </div>
-                        
-                        <!-- Resumo dos Totais -->
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <div class="card bg-light">
-                                    <div class="card-body">
-                                        <h6 class="card-title">Clientes com Movimentação</h6>
-                                        <p class="card-text h4">{{ resultados|length }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card bg-light">
-                                    <div class="card-body">
-                                        <h6 class="card-title">Valor Total</h6>
-                                        <p class="card-text h4">{{ total_geral|format_brazilian_currency }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card bg-light">
-                                    <div class="card-body">
-                                        <h6 class="card-title">Seguro Total</h6>
-                                        <p class="card-text h4">{{ total_seguro_geral|format_brazilian_currency }}</p>
-                                    </div>
-                                </div>
-                            </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="data_final" class="form-label">Data Final</label>
+                            <input type="date" class="form-control" id="data_final" name="data_final"
+                                   value="{{ data_final }}" required>
                         </div>
-                        
-                        <!-- Tabela Hierárquica por Estado -->
-                        <div class="table-responsive">
-                            <table class="table table-bordered">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>CLIENTE / ESTADO</th>
-                                        <th class="text-center">QTD. ROMANEIOS</th>
-                                        <th class="text-end">VALOR TOTAL</th>
-                                        <th class="text-center">% SEGURO</th>
-                                        <th class="text-end">VALOR SEGURO</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in lista_hierarquica %}
-                                        {% if item.tipo == 'estado' %}
-                                            <!-- Cabeçalho do Estado -->
-                                            <tr class="table-primary">
-                                                <td>
-                                                    <strong class="fs-6">
-                                                        <i class="fas fa-map-marker-alt"></i> {{ item.estado }} - {{ item.nome_estado }}
-                                                    </strong>
-                                                </td>
-                                                <td class="text-center">
-                                                    <span class="badge bg-primary">{{ item.quantidade_romaneios }}</span>
-                                                </td>
-                                                <td class="text-end">
-                                                    <strong class="fs-6 text-success">
-                                                        {{ item.total_valor|format_brazilian_currency }}
-                                                    </strong>
-                                                </td>
-                                                <td class="text-center">-</td>
-                                                <td class="text-end">
-                                                    <strong class="fs-6 text-primary">
-                                                        {{ item.total_seguro|format_brazilian_currency }}
-                                                    </strong>
-                                                </td>
-                                            </tr>
-                                        {% elif item.tipo == 'cliente' %}
-                                            <!-- Cliente -->
-                                            <tr>
-                                                <td class="ps-4">
-                                                    <strong>{{ item.cliente.razao_social }}</strong>
-                                                    <small class="text-muted d-block">{{ item.cliente.cnpj|format_cnpj }}</small>
-                                                </td>
-                                                <td class="text-center">
-                                                    <span class="badge bg-info">{{ item.quantidade_romaneios }}</span>
-                                                </td>
-                                                <td class="text-end">
-                                                    <strong class="text-success">
-                                                        {{ item.total_valor|format_brazilian_currency }}
-                                                    </strong>
-                                                </td>
-                                                <td class="text-center">
-                                                    <span class="badge bg-warning text-dark">
-                                                        {{ item.percentual_seguro|floatformat:2 }}%
-                                                    </span>
-                                                </td>
-                                                <td class="text-end">
-                                                    <strong class="text-primary">
-                                                        {{ item.valor_seguro|format_brazilian_currency }}
-                                                    </strong>
-                                                </td>
-                                            </tr>
-                                        {% elif item.tipo == 'total_estado' %}
-                                            <!-- Total do Estado -->
-                                            <tr class="table-light">
-                                                <td class="ps-3">
-                                                    <strong class="text-dark">
-                                                        <i class="fas fa-calculator"></i> TOTAL {{ item.estado }}
-                                                    </strong>
-                                                </td>
-                                                <td class="text-center">
-                                                    <strong class="text-dark">{{ item.quantidade_romaneios }}</strong>
-                                                </td>
-                                                <td class="text-end">
-                                                    <strong class="text-success">
-                                                        {{ item.total_valor|format_brazilian_currency }}
-                                                    </strong>
-                                                </td>
-                                                <td class="text-center">-</td>
-                                                <td class="text-end">
-                                                    <strong class="text-primary">
-                                                        {{ item.total_seguro|format_brazilian_currency }}
-                                                    </strong>
-                                                </td>
-                                            </tr>
-                                        {% endif %}
-                                    {% endfor %}
-                                </tbody>
-                                <tfoot class="table-dark">
-                                    <tr>
-                                        <th>
-                                            <i class="fas fa-chart-pie"></i> TOTAL GERAL
-                                        </th>
-                                        <th class="text-center">{{ resultados|length }}</th>
-                                        <th class="text-end">{{ total_geral|format_brazilian_currency }}</th>
-                                        <th class="text-center">-</th>
-                                        <th class="text-end">{{ total_seguro_geral|format_brazilian_currency }}</th>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-
-                    {% elif data_inicial and data_final %}
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle"></i> 
-                            Nenhum resultado encontrado para o período especificado.
-                        </div>
-                    {% else %}
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i> 
-                            Selecione as datas inicial e final para visualizar o totalizador por cliente.
-                        </div>
-                    {% endif %}
-                    
-                    <!-- Botões de Relatórios -->
-                    {% if data_inicial and data_final %}
-                        <div class="row mt-4">
-                            <div class="col-12">
-                                <div class="d-flex gap-2 justify-content-center">
-                                    <a href="{% url 'notas:totalizador_por_cliente_pdf' %}?data_inicial={{ data_inicial }}&data_final={{ data_final }}" 
-                                       class="btn btn-danger btn-lg" target="_blank">
-                                        <i class="fas fa-file-pdf"></i> Gerar PDF
-                                    </a>
-                                    <a href="{% url 'notas:totalizador_por_cliente_excel' %}?data_inicial={{ data_inicial }}&data_final={{ data_final }}" 
-                                       class="btn btn-success btn-lg" target="_blank">
-                                        <i class="fas fa-file-excel"></i> Gerar Excel
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    {% endif %}
+                    </div>
                 </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Pesquisar
+                    </button>
+                    <button type="button" class="btn btn-danger" id="btn-pdf-cliente" rel="noopener noreferrer">
+                        <i class="fas fa-file-pdf"></i> Gerar PDF
+                    </button>
+                    <button type="submit" formaction="{% url 'notas:totalizador_por_cliente_excel' %}" formtarget="_blank"
+                            class="btn btn-success" rel="noopener noreferrer">
+                        <i class="fas fa-file-excel"></i> Gerar Excel
+                    </button>
+                </div>
+            </form>
+
+            {% if tem_resultados %}
+            <hr class="my-4">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                Encontrados <strong>{{ resultados|length }}</strong> cliente(s) no período.
             </div>
+            <div class="table-responsive">
+                {% regroup resultados by uf as por_estado %}
+                {% for estado in por_estado %}
+                <h6 class="mt-4 mb-2">
+                    <strong>{{ estado.grouper }}</strong>
+                    {% for k, v in nomes_estados.items %}{% if k == estado.grouper %} — {{ v|upper }}{% endif %}{% endfor %}
+                </h6>
+                <table class="table table-striped table-hover tabela-totalizador-cliente-tela">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th class="text-center">UF</th>
+                            <th class="text-end">Valor Total</th>
+                            <th class="text-end">Valor Seguro</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in estado.list %}
+                        <tr>
+                            <td>
+                                {{ item.cliente.cnpj|format_cnpj }}{% if item.cliente.cnpj %} - {% endif %}{{ item.cliente.razao_social }}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-info">{{ item.uf }}</span>
+                            </td>
+                            <td class="text-end text-success">
+                                <strong>{{ item.valor_mercadoria|format_brazilian_currency }}</strong>
+                            </td>
+                            <td class="text-end text-primary">
+                                <strong>{{ item.valor_seguro|format_brazilian_currency }}</strong>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-secondary">
+                        <tr>
+                            {% with total_estado=totais_por_estado|get_item:estado.grouper %}
+                            <td colspan="2"><strong>Total {{ estado.grouper }}</strong></td>
+                            <td class="text-end"><strong>{{ total_estado|get_item:'valor_mercadoria'|format_brazilian_currency }}</strong></td>
+                            <td class="text-end"><strong>{{ total_estado|get_item:'valor_seguro'|format_brazilian_currency }}</strong></td>
+                            {% endwith %}
+                        </tr>
+                    </tfoot>
+                </table>
+                {% endfor %}
+                <table class="table table-striped table-hover tabela-totalizador-cliente-tela mt-2">
+                    <tfoot class="table-dark">
+                        <tr>
+                            <th colspan="2">TOTAL GERAL</th>
+                            <th class="text-end">{{ total_geral|format_brazilian_currency }}</th>
+                            <th class="text-end">{{ total_seguro_geral|format_brazilian_currency }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% elif data_inicial and data_final %}
+            <hr class="my-4">
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                Nenhum resultado encontrado para o período especificado.
+            </div>
+            {% else %}
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-info-circle"></i>
+                Selecione as datas inicial e final e clique em Pesquisar para visualizar o totalizador por cliente.
+            </div>
+            {% endif %}
+            <script>
+            document.getElementById('btn-pdf-cliente').addEventListener('click', function(e) {
+                e.preventDefault();
+                var form = document.getElementById('form-totalizador-cliente');
+                var di = form.data_inicial.value, df = form.data_final.value;
+                if (!di || !df) { form.reportValidity(); return; }
+                var url = "{% url 'notas:totalizador_por_cliente_pdf' %}?data_inicial=" + encodeURIComponent(di) + "&data_final=" + encodeURIComponent(df);
+                window.open(url, '_blank', 'noopener,noreferrer');
+            });
+            </script>
+        </div>
+    </div>
+</div>
 {% endblock %}

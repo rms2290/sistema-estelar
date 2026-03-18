@@ -15,7 +15,7 @@ from django.utils.safestring import mark_safe
 from django.utils import timezone
 
 from notas.decorators import admin_required
-from notas.models import Cliente
+from notas.models import Cliente, CobrancaCarregamento
 from financeiro.models import (
     AcertoDiarioCarregamento,
     CarregamentoCliente,
@@ -79,9 +79,37 @@ def acerto_diario_carregamento(request):
         except AcertoDiarioCarregamento.DoesNotExist:
             return json_error('Acerto não encontrado', status=404)
 
-    mostrar_formulario = request.GET.get('novo') == '1' or request.GET.get('acerto_id')
+    # "Adicionar" na lista: permite escolher a data (hoje ou retroativa); cria acerto se não existir e abre edição
+    data_acerto_param = request.GET.get('data_acerto')
+    if data_acerto_param:
+        try:
+            data_acerto_obj = datetime.strptime(data_acerto_param, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            data_acerto_obj = timezone.now().date()
+        acerto_data, _ = AcertoDiarioCarregamento.objects.get_or_create(
+            data=data_acerto_obj,
+            defaults={
+                'valor_estelar': Decimal('0.00'),
+                'observacoes': '',
+                'usuario_criacao': request.user,
+            },
+        )
+        return redirect(reverse('financeiro:acerto_diario_carregamento') + '?acerto_id=' + str(acerto_data.pk))
+    # Compatibilidade: acerto_hoje=1 continua abrindo o acerto de hoje (sem modal)
+    if request.GET.get('acerto_hoje') == '1':
+        data_hoje_obj = timezone.now().date()
+        acerto_hoje, _ = AcertoDiarioCarregamento.objects.get_or_create(
+            data=data_hoje_obj,
+            defaults={
+                'valor_estelar': Decimal('0.00'),
+                'observacoes': '',
+                'usuario_criacao': request.user,
+            },
+        )
+        return redirect(reverse('financeiro:acerto_diario_carregamento') + '?acerto_id=' + str(acerto_hoje.pk))
+
+    mostrar_formulario = bool(request.GET.get('acerto_id'))
     acerto_id = request.GET.get('acerto_id')
-    novo_acerto = request.GET.get('novo') == '1'
 
     if not mostrar_formulario:
         data_inicio = request.GET.get('data_inicio', '')
@@ -111,32 +139,6 @@ def acerto_diario_carregamento(request):
         except AcertoDiarioCarregamento.DoesNotExist:
             acerto = None
             data_obj = timezone.now().date()
-    elif novo_acerto:
-        data_selecionada = request.GET.get('data', '')
-        if data_selecionada:
-            try:
-                data_obj = datetime.strptime(data_selecionada, '%Y-%m-%d').date()
-                acerto_existente = AcertoDiarioCarregamento.objects.filter(data=data_obj).first()
-                if acerto_existente:
-                    return redirect('{}?acerto_id={}'.format(
-                        reverse('financeiro:acerto_diario_carregamento'), acerto_existente.pk
-                    ))
-                acerto = AcertoDiarioCarregamento.objects.create(
-                    data=data_obj,
-                    valor_estelar=Decimal('0.00'),
-                    observacoes='',
-                    usuario_criacao=request.user
-                )
-                return redirect('{}?acerto_id={}'.format(
-                    reverse('financeiro:acerto_diario_carregamento'), acerto.pk
-                ))
-            except Exception as e:
-                logger.error(f'Erro ao criar novo acerto: {str(e)}', exc_info=True)
-                acerto = None
-                data_obj = None
-        else:
-            acerto = None
-            data_obj = None
     else:
         acerto = None
         data_obj = timezone.now().date()
@@ -159,6 +161,7 @@ def acerto_diario_carregamento(request):
 
     clientes = Cliente.objects.filter(status='Ativo').order_by('razao_social')
     funcionarios = FuncionarioFluxoCaixa.objects.filter(ativo=True).order_by('nome')
+    abrir_modal_carregamento = request.GET.get('abrir_modal_carregamento') == '1'
     context = {
         'acerto': acerto,
         'data_selecionada': acerto.data if acerto else (data_obj if data_obj else None),
@@ -167,7 +170,7 @@ def acerto_diario_carregamento(request):
         'clientes': clientes,
         'funcionarios': funcionarios,
         'mostrar_formulario': True,
-        'novo_acerto': novo_acerto and not acerto,
+        'abrir_modal_carregamento': abrir_modal_carregamento,
     }
     return render(request, 'financeiro/fluxo_caixa/acerto_diario_carregamento.html', context)
 
@@ -175,17 +178,20 @@ def acerto_diario_carregamento(request):
 @login_required
 @admin_required
 def salvar_acerto_diario(request):
-    """Salva o acerto diário e cria movimentos de caixa automaticamente"""
+    """Salva o acerto diário e cria movimentos de caixa automaticamente.
+    Se acerto_id for enviado, usa esse acerto (evita ambiguidade por data)."""
     if request.method != 'POST':
         return json_error('Método não permitido', status=405)
     try:
-        data = request.POST.get('data')
+        data = request.POST.get('data', '').strip()
         observacoes = request.POST.get('observacoes', '')
+        acerto_id = request.POST.get('acerto_id', '').strip()
         from financeiro.services import AcertoDiarioService
         acerto, erro = AcertoDiarioService.salvar_acerto_e_criar_movimentos(
             data=data,
             observacoes=observacoes,
             usuario=request.user,
+            acerto_id=acerto_id or None,
         )
         if erro:
             return json_error(erro)
@@ -201,16 +207,34 @@ def salvar_acerto_diario(request):
 @login_required
 @admin_required
 def adicionar_carregamento_cliente_ajax(request):
-    """Adiciona um carregamento de cliente ou descarga via AJAX"""
+    """Adiciona um carregamento de cliente ou descarga via AJAX. Aceita acerto_id ou data_acerto (YYYY-MM-DD)."""
     if request.method != 'POST':
         return json_error('Método não permitido', status=405)
     try:
-        acerto_id = request.POST.get('acerto_id')
+        acerto_id = request.POST.get('acerto_id', '').strip()
+        data_acerto_str = request.POST.get('data_acerto', '').strip()
         cliente_id = request.POST.get('cliente_id', '').strip()
         descricao = request.POST.get('descricao', '').strip()
         valor = Decimal(request.POST.get('valor', '0.00'))
         observacoes = request.POST.get('observacoes', '')
-        acerto = get_object_or_404(AcertoDiarioCarregamento, pk=acerto_id)
+
+        if acerto_id:
+            acerto = get_object_or_404(AcertoDiarioCarregamento, pk=acerto_id)
+        elif data_acerto_str:
+            try:
+                data_acerto = datetime.strptime(data_acerto_str, '%Y-%m-%d').date()
+            except ValueError:
+                return json_error('Data do acerto inválida')
+            acerto, _ = AcertoDiarioCarregamento.objects.get_or_create(
+                data=data_acerto,
+                defaults={
+                    'valor_estelar': Decimal('0.00'),
+                    'observacoes': '',
+                    'usuario_criacao': request.user,
+                },
+            )
+        else:
+            return json_error('Informe acerto_id ou data_acerto')
         if valor <= 0:
             return json_error('Valor deve ser maior que zero')
         if not cliente_id and not descricao:
@@ -221,24 +245,28 @@ def adicionar_carregamento_cliente_ajax(request):
         if cliente_id:
             cliente = get_object_or_404(Cliente, pk=cliente_id)
         tipo_pagamento = request.POST.get('tipo_pagamento', 'Dinheiro') if not cliente else None
-        carregamento, created = CarregamentoCliente.objects.get_or_create(
-            acerto_diario=acerto,
-            cliente=cliente,
-            defaults={
-                'descricao': descricao if not cliente else '',
-                'valor': valor,
-                'observacoes': observacoes,
-                'tipo_pagamento': tipo_pagamento
-            }
-        )
-        if not created:
-            carregamento.cliente = cliente
-            carregamento.descricao = descricao if not cliente else ''
-            carregamento.valor = valor
-            carregamento.observacoes = observacoes
-            if not cliente:
-                carregamento.tipo_pagamento = tipo_pagamento
-            carregamento.save()
+
+        # Descargas e carregamentos: sempre criar novo registro (mesmo cliente pode ter vários no mesmo dia, ex.: 2 veículos).
+        if cliente is None:
+            carregamento = CarregamentoCliente.objects.create(
+                acerto_diario=acerto,
+                cliente=None,
+                descricao=descricao,
+                valor=valor,
+                observacoes=observacoes,
+                tipo_pagamento=tipo_pagamento,
+                cobranca_carregamento=None,
+            )
+        else:
+            carregamento = CarregamentoCliente.objects.create(
+                acerto_diario=acerto,
+                cliente=cliente,
+                descricao='',
+                valor=valor,
+                observacoes=observacoes,
+                tipo_pagamento=None,
+                cobranca_carregamento=None,
+            )
         return json_success(
             message='Registro adicionado com sucesso!',
             carregamento_id=carregamento.pk,
@@ -327,3 +355,114 @@ def salvar_valor_estelar_ajax(request):
         return json_success(message='Valor Estelar salvo com sucesso!', valor=str(valor))
     except Exception as e:
         return json_error(f'Erro ao salvar valor Estelar: {str(e)}')
+
+
+@login_required
+@admin_required
+def listar_cobrancas_pendentes_ajax(request):
+    """Lista cobranças pendentes para adicionar ao acerto diário (GET)."""
+    try:
+        cobrancas = CobrancaCarregamento.objects.filter(
+            status='Pendente'
+        ).select_related('cliente').order_by('-criado_em')[:50]
+        data_acerto = request.GET.get('data_acerto', '')
+        if data_acerto:
+            try:
+                data_obj = datetime.strptime(data_acerto, '%Y-%m-%d').date()
+                acerto = AcertoDiarioCarregamento.objects.filter(data=data_obj).first()
+                if acerto:
+                    ja_no_acerto = set(
+                        CarregamentoCliente.objects.filter(
+                            acerto_diario=acerto
+                        ).exclude(cobranca_carregamento__isnull=True).values_list('cobranca_carregamento_id', flat=True)
+                    )
+                    cobrancas = [c for c in cobrancas if c.pk not in ja_no_acerto]
+            except ValueError:
+                pass
+        lista = [
+            {
+                'id': c.pk,
+                'cliente': c.cliente.razao_social,
+                'valor_carregamento': str(c.valor_carregamento or '0.00'),
+                'valor_distribuicao_trabalhadores': str(c.valor_distribuicao_trabalhadores) if c.valor_distribuicao_trabalhadores is not None else '',
+                'margem': str(c.margem_carregamento),
+            }
+            for c in cobrancas
+        ]
+        return json_success(cobrancas=lista)
+    except Exception as e:
+        return json_error(f'Erro ao listar cobranças: {str(e)}')
+
+
+@login_required
+@admin_required
+def adicionar_cobranca_ao_acerto_ajax(request):
+    """Adiciona uma cobrança ao acerto do dia (POST: cobranca_id, data_acerto, opcional: distribuicoes JSON)."""
+    if request.method != 'POST':
+        return json_error('Método não permitido', status=405)
+    try:
+        import json as _json
+        cobranca_id = request.POST.get('cobranca_id', '').strip()
+        data_acerto_str = request.POST.get('data_acerto', '').strip()
+        if not cobranca_id or not data_acerto_str:
+            return json_error('Informe cobranca_id e data_acerto')
+        cobranca = get_object_or_404(CobrancaCarregamento, pk=cobranca_id, status='Pendente')
+        data_obj = datetime.strptime(data_acerto_str, '%Y-%m-%d').date()
+        acerto, _ = AcertoDiarioCarregamento.objects.get_or_create(
+            data=data_obj,
+            defaults={
+                'valor_estelar': Decimal('0.00'),
+                'observacoes': '',
+                'usuario_criacao': request.user,
+            },
+        )
+        if CarregamentoCliente.objects.filter(acerto_diario=acerto, cobranca_carregamento=cobranca).exists():
+            return json_error('Esta cobrança já foi adicionada ao acerto deste dia.')
+        valor = cobranca.valor_carregamento or Decimal('0.00')
+        if valor <= 0:
+            return json_error('Cobrança sem valor de carregamento.')
+        carregamento = CarregamentoCliente.objects.create(
+            acerto_diario=acerto,
+            cliente=cobranca.cliente,
+            valor=valor,
+            descricao='',
+            observacoes=f'Cobrança #{cobranca.pk}',
+            cobranca_carregamento=cobranca,
+        )
+        # Opcional: distribuições entre trabalhadores (JSON: [{"funcionario_id": 1, "valor": "100.00"}, ...])
+        distribuicoes_raw = request.POST.get('distribuicoes', '').strip()
+        if distribuicoes_raw:
+            try:
+                itens = _json.loads(distribuicoes_raw)
+                valores_por_funcionario = {}
+                for item in itens:
+                    fid = item.get('funcionario_id')
+                    v = Decimal(str(item.get('valor', 0)))
+                    if fid and v > 0:
+                        fid = int(fid)
+                        valores_por_funcionario[fid] = valores_por_funcionario.get(fid, Decimal('0')) + v
+                for fid, v in valores_por_funcionario.items():
+                    funcionario = FuncionarioFluxoCaixa.objects.filter(pk=fid).first()
+                    if funcionario:
+                        dist, created = DistribuicaoFuncionario.objects.get_or_create(
+                            acerto_diario=acerto,
+                            funcionario=funcionario,
+                            defaults={'valor': v},
+                        )
+                        if not created:
+                            dist.valor += v
+                            dist.save()
+            except (ValueError, TypeError) as e:
+                logger.warning('distribuicoes inválido em adicionar_cobranca_ao_acerto_ajax: %s', e)
+        return json_success(
+            message='Cobrança adicionada ao acerto!',
+            carregamento_id=carregamento.pk,
+            valor=str(carregamento.valor),
+            valor_distribuicao=str(cobranca.valor_distribuicao_trabalhadores or ''),
+            margem=str(cobranca.margem_carregamento),
+        )
+    except ValueError:
+        return json_error('Data inválida')
+    except Exception as e:
+        logger.exception('Erro ao adicionar cobrança ao acerto')
+        return json_error(f'Erro: {str(e)}')

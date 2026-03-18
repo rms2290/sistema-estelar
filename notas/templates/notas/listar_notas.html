@@ -56,6 +56,15 @@
                                     {% endif %}
                                 </div>
                             </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ search_form.status.label_tag }}
+                                    {{ search_form.status }}
+                                    {% if search_form.status.errors %}
+                                        <div class="text-danger">{{ search_form.status.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                         <div class="row">
                             <div class="col-12">

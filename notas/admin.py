@@ -81,7 +81,7 @@ class VeiculoAdmin(admin.ModelAdmin):
             'fields': ('pais', 'estado', 'cidade')
         }),
         ('Medidas', {
-            'fields': ('largura', 'altura', 'comprimento', 'cubagem')
+            'fields': ('largura', 'altura', 'comprimento', 'cubagem', 'capacidade_maxima_kg')
         }),
         ('Proprietário', {
             'fields': ('proprietario_cpf_cnpj', 'proprietario_nome_razao_social', 'proprietario_rg_ie')

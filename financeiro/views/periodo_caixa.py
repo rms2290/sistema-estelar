@@ -140,7 +140,7 @@ def excluir_periodo_movimento_caixa_ajax(request, pk):
 @login_required
 @admin_required
 def pesquisar_periodo_movimento_caixa(request):
-    """Página para pesquisar e listar períodos de movimento de caixa"""
+    """Página para pesquisar e listar períodos de movimento de caixa. Para uso no fechamento, use ?status=Fechado."""
     data_inicio = request.GET.get('data_inicio', '')
     data_fim = request.GET.get('data_fim', '')
     status = request.GET.get('status', '')
@@ -158,13 +158,17 @@ def pesquisar_periodo_movimento_caixa(request):
     if status:
         periodos = periodos.filter(status=status)
     periodos = periodos.order_by('-data_inicio', '-criado_em')
+    periodos_com_totais = []
     for periodo in periodos:
-        periodo._movimentos_count = periodo.movimentos.count()
-        periodo._total_entradas = periodo.total_entradas
-        periodo._total_saidas = periodo.total_saidas
-        periodo._saldo_atual = periodo.saldo_atual
+        periodos_com_totais.append({
+            'periodo': periodo,
+            'movimentos_count': periodo.movimentos.count(),
+            'total_entradas': getattr(periodo, 'total_entradas', Decimal('0')),
+            'total_saidas': getattr(periodo, 'total_saidas', Decimal('0')),
+            'saldo_atual': getattr(periodo, 'saldo_atual', Decimal('0')),
+        })
     return render(request, 'financeiro/fluxo_caixa/pesquisar_periodos.html', {
-        'periodos': periodos,
+        'periodos': periodos_com_totais,
         'data_inicio': data_inicio,
         'data_fim': data_fim,
         'status_selecionado': status,
@@ -182,16 +186,28 @@ def visualizar_periodo_movimento_caixa(request, pk):
     ).select_related(
         'funcionario', 'cliente', 'acerto_diario', 'usuario_criacao'
     ).order_by('data', 'criado_em')
+    # Mesma regra da tela Gerenciar Movimento: AcertoFuncionario sem acerto_diario = saída
+    def _eh_saida_na_tela(mov):
+        if mov.tipo == 'Saida':
+            return True
+        if mov.tipo == 'AcertoFuncionario' and not mov.acerto_diario_id:
+            return True
+        return False
+    movimentos_lista = list(movimentos)
     movimentos_com_saldo = []
     saldo_acumulado = periodo.valor_inicial_caixa
-    for mov in movimentos:
-        if mov.is_entrada:
-            saldo_acumulado += mov.valor
-        else:
+    for mov in movimentos_lista:
+        if _eh_saida_na_tela(mov):
             saldo_acumulado -= mov.valor
-        movimentos_com_saldo.append({'movimento': mov, 'saldo_acumulado': saldo_acumulado})
-    total_entradas = sum(mov.valor for mov in movimentos if mov.is_entrada)
-    total_saidas = sum(mov.valor for mov in movimentos if mov.is_saida)
+        else:
+            saldo_acumulado += mov.valor
+        movimentos_com_saldo.append({
+            'movimento': mov,
+            'saldo_acumulado': saldo_acumulado,
+            'exibir_como_saida': _eh_saida_na_tela(mov),
+        })
+    total_entradas = sum(mov.valor for mov in movimentos_lista if not _eh_saida_na_tela(mov))
+    total_saidas = sum(mov.valor for mov in movimentos_lista if _eh_saida_na_tela(mov))
     saldo = periodo.valor_inicial_caixa + total_entradas - total_saidas
     return render(request, 'financeiro/fluxo_caixa/visualizar_periodo_movimento_caixa.html', {
         'periodo': periodo,
@@ -200,7 +216,7 @@ def visualizar_periodo_movimento_caixa(request, pk):
         'total_saidas': total_saidas,
         'valor_inicial_caixa': periodo.valor_inicial_caixa,
         'saldo': saldo,
-        'total_movimentos': movimentos.count(),
+        'total_movimentos': len(movimentos_lista),
     })
 
 
@@ -214,16 +230,28 @@ def imprimir_periodo_movimento_caixa(request, pk):
     ).select_related(
         'funcionario', 'cliente', 'acerto_diario', 'usuario_criacao'
     ).order_by('data', 'criado_em')
+    # Mesma regra da tela Gerenciar Movimento: AcertoFuncionario sem acerto_diario = saída
+    def _eh_saida_na_tela(mov):
+        if mov.tipo == 'Saida':
+            return True
+        if mov.tipo == 'AcertoFuncionario' and not mov.acerto_diario_id:
+            return True
+        return False
+    movimentos_lista = list(movimentos)
     movimentos_com_saldo = []
     saldo_acumulado = periodo.valor_inicial_caixa
-    for mov in movimentos:
-        if mov.is_entrada:
-            saldo_acumulado += mov.valor
-        else:
+    for mov in movimentos_lista:
+        if _eh_saida_na_tela(mov):
             saldo_acumulado -= mov.valor
-        movimentos_com_saldo.append({'movimento': mov, 'saldo_acumulado': saldo_acumulado})
-    total_entradas = sum(mov.valor for mov in movimentos if mov.is_entrada)
-    total_saidas = sum(mov.valor for mov in movimentos if mov.is_saida)
+        else:
+            saldo_acumulado += mov.valor
+        movimentos_com_saldo.append({
+            'movimento': mov,
+            'saldo_acumulado': saldo_acumulado,
+            'exibir_como_saida': _eh_saida_na_tela(mov),
+        })
+    total_entradas = sum(mov.valor for mov in movimentos_lista if not _eh_saida_na_tela(mov))
+    total_saidas = sum(mov.valor for mov in movimentos_lista if _eh_saida_na_tela(mov))
     saldo = periodo.valor_inicial_caixa + total_entradas - total_saidas
     return render(request, 'financeiro/fluxo_caixa/imprimir_periodo_movimento_caixa.html', {
         'periodo': periodo,
@@ -232,5 +260,5 @@ def imprimir_periodo_movimento_caixa(request, pk):
         'total_saidas': total_saidas,
         'valor_inicial_caixa': periodo.valor_inicial_caixa,
         'saldo': saldo,
-        'total_movimentos': movimentos.count(),
+        'total_movimentos': len(movimentos_lista),
     })

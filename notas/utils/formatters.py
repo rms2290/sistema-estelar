@@ -100,6 +100,22 @@ def formatar_cnpj(cnpj):
     
     return f"{cnpj_limpo[:2]}.{cnpj_limpo[2:5]}.{cnpj_limpo[5:8]}/{cnpj_limpo[8:12]}-{cnpj_limpo[12:]}"
 
+
+def formatar_cpf_cnpj(value):
+    """
+    Formata CPF (11 dígitos) ou CNPJ (14 dígitos) no padrão brasileiro.
+    Detecta automaticamente pelo número de dígitos.
+    """
+    if not value:
+        return ''
+    digits = ''.join(filter(str.isdigit, str(value)))
+    if len(digits) == 11:
+        return formatar_cpf(value)
+    if len(digits) == 14:
+        return formatar_cnpj(value)
+    return value
+
+
 def formatar_telefone(telefone):
     """
     Formata telefone no padrão brasileiro

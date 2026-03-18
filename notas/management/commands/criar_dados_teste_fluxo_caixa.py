@@ -151,7 +151,7 @@ class Command(BaseCommand):
                 tipo='Entrada',
                 valor=valores['estelar'],
                 descricao=f'Estelar',
-                categoria='RecebimentoCliente',
+                categoria='RecebimentoCarregamento',
                 acerto_diario=acerto,
                 usuario_criacao=usuario_admin
             )

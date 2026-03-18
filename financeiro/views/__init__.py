@@ -5,7 +5,6 @@ Reexporta todas as views para manter compatibilidade com:
     from financeiro import views  # ou from . import views em urls
 """
 from .dashboard_receitas import (
-    dashboard_fluxo_caixa,
     criar_receita_empresa,
     editar_receita_empresa,
     excluir_receita_empresa,
@@ -26,6 +25,8 @@ from .acerto_diario import (
     adicionar_distribuicao_funcionario_ajax,
     remover_distribuicao_funcionario_ajax,
     salvar_valor_estelar_ajax,
+    listar_cobrancas_pendentes_ajax,
+    adicionar_cobranca_ao_acerto_ajax,
 )
 from .movimento_caixa import (
     movimento_caixa,
@@ -47,9 +48,14 @@ from .periodo_caixa import (
     excluir_periodo_movimento_caixa_ajax,
 )
 from .fechamento_caixa import fechamento_caixa
+from .despesas import (
+    listar_despesas,
+    criar_despesa,
+    editar_despesa,
+    excluir_despesa,
+)
 
 __all__ = [
-    'dashboard_fluxo_caixa',
     'criar_receita_empresa',
     'editar_receita_empresa',
     'excluir_receita_empresa',
@@ -68,6 +74,8 @@ __all__ = [
     'adicionar_distribuicao_funcionario_ajax',
     'remover_distribuicao_funcionario_ajax',
     'salvar_valor_estelar_ajax',
+    'listar_cobrancas_pendentes_ajax',
+    'adicionar_cobranca_ao_acerto_ajax',
     'movimento_caixa',
     'gerenciar_movimento_caixa',
     'criar_movimento_caixa_ajax',
@@ -84,4 +92,8 @@ __all__ = [
     'obter_periodo_movimento_caixa_ajax',
     'excluir_periodo_movimento_caixa_ajax',
     'fechamento_caixa',
+    'listar_despesas',
+    'criar_despesa',
+    'editar_despesa',
+    'excluir_despesa',
 ]

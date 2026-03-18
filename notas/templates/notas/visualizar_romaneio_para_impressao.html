@@ -9,655 +9,444 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta http-equiv="Last-Modified" content="{{ version }}">
-    <meta name="version" content="2025-01-portrait">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="version" content="2025-01-landscape-20linhas-v2">
     <meta name="robots" content="noindex, nofollow">
     <meta name="generator" content="Sistema Estelar v2.0">
-    <meta name="revisit-after" content="0">
-    <meta name="distribution" content="private">
-    <!-- Versão: {{ version }} - Layout Portrait - Padrão Relatório Clientes -->
     <style>
-        /* Versão: 2025-01 - Layout Portrait - Padrão Relatório Clientes */
+        /* ========== IMPRESSÃO (diretrizes técnicas estritas) ========== */
         @media print {
             @page {
-                size: A4 portrait;
+                size: A4 landscape;
                 margin: 0.8cm;
+                margin-right: 1.2cm;
             }
-            
             body {
-                margin: 0;
-                padding: 0;
+                margin: 0 !important;
+                padding: 0 !important;
                 font-family: Arial, sans-serif;
-                font-size: 11px;
-                line-height: 1.2;
+                font-size: 10pt;
+                line-height: 1.05;
             }
-            
-            .no-print {
-                display: none !important;
-            }
-            
-            .page-break {
-                page-break-before: always;
-            }
-            
-            .header {
-                text-align: center;
-                margin-bottom: 8px;
-                padding-bottom: 5px;
-                border-bottom: 2px solid #000;
-            }
-            
-            .header-top {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                margin-top: 0;
-                margin-bottom: 3px;
-                position: relative;
-            }
-            
-            .romaneio-codigo {
-                position: absolute;
-                right: 0;
-                top: 0;
-                font-size: 10px;
-                font-weight: bold;
-                color: #000;
-                background-color: #f0f0f0;
-                padding: 2px 6px;
-                border: 1px solid #ccc;
-                border-radius: 3px;
-            }
-            
-            .header h1 {
-                margin: 0;
-                font-size: 17px;
-                font-weight: bold;
-                color: #000;
-            }
-            
-            .header p {
-                margin: 2px 0;
-                font-size: 11px;
-                color: #000;
-                font-weight: bold;
-            }
-            
-            .empresa-info p {
-                margin: 2px 0;
-                font-size: 9px;
-                color: #000;
-                font-weight: bold;
-                text-align: center;
-            }
-            
-            .header-separator {
-                border-bottom: 1px solid #000;
-                margin: 5px 0;
-                width: 100%;
-            }
-            
-            .info-container {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 8px;
-                gap: 8px;
-                align-items: flex-start;
-            }
-            
-            .romaneio-info, .motorista-info, .cliente-info {
-                flex: 1;
-                padding: 5px;
-                background-color: #f9f9f9;
-                border: 1px solid #ddd;
-            }
-            
-            .romaneio-info h3, .cliente-info h3, .motorista-info h3 {
-                margin: 0 0 4px 0;
-                font-size: 11px;
-                font-weight: bold;
-                color: #000;
-                border-bottom: 1px solid #000;
-                padding-bottom: 2px;
-            }
-            
-            .romaneio-info p, .cliente-info p, .motorista-info p {
-                margin: 2px 0;
-                font-size: 10px;
-                text-align: left;
-            }
-            
-            .report-title {
-                text-align: center;
-                margin: 8px 0 5px 0;
-                font-size: 13px;
-                font-weight: bold;
-                color: #000;
-                border-bottom: 1px solid #000;
-                padding-bottom: 3px;
-            }
-            
-            .table {
+            /* Tabela: permitir fluxo após o cabeçalho (evita quebra entre header e tabela em romaneio de 1 página) */
+            .romaneio-print-table {
                 width: 100%;
                 border-collapse: collapse;
-                margin: 5px 0 8px 0;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
-            
-            .table th,
-            .table td {
-                border: 1px solid #ddd;
-                padding: 3px 4px;
-                font-size: 9px;
-                line-height: 1.1;
+            .romaneio-page {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                page-break-after: always;
             }
-            
-            .table th {
-                background-color: #f2f2f2;
+            .romaneio-page:last-child {
+                page-break-after: auto;
+            }
+            /* Primeira página: nunca quebrar antes, garantir que comece na página 1 */
+            .romaneio-page-first {
+                page-break-before: avoid !important;
+                break-before: avoid !important;
+            }
+            /* Repetição do cabeçalho em todas as páginas */
+            .romaneio-print-table thead {
+                display: table-header-group !important;
+            }
+            .romaneio-print-table thead,
+            .romaneio-print-table thead tr,
+            .romaneio-print-table thead th {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            /* Repetição do rodapé (aviso + assinatura) em todas as páginas */
+            .romaneio-print-table tfoot {
+                display: table-footer-group !important;
+            }
+            .romaneio-print-table tbody {
+                display: table-row-group;
+            }
+            .romaneio-print-table th,
+            .romaneio-print-table td {
+                border: 1px solid #000;
+                padding: 2px;
+                font-size: 7.5pt;
+                line-height: 1.0;
+            }
+            .romaneio-print-table thead th {
+                background-color: #e8e8e8;
                 font-weight: bold;
                 text-align: center;
             }
-            
-            .table tbody tr {
-                height: auto;
+            .romaneio-print-table thead th.col-quantidade,
+            .romaneio-print-table thead th.col-peso,
+            .romaneio-print-table thead th.col-valor {
+                text-align: right;
             }
-            
-            .table tbody tr:nth-child(even) {
-                background-color: #f9f9f9;
+            /* Marcador de página no rodapé (canto inferior direito) - usa valores do Django na impressão */
+            .romaneio-print-table .pagenum-footer {
+                text-align: right;
+                margin-top: 6px;
+                font-size: 8pt;
+                line-height: 1;
             }
-            
-            .col-nota {
-                width: 8%;
+            /* Proteção contra quebras: linhas de dados + altura fixa */
+            .romaneio-print-table tbody tr.tr-dados {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                height: 16px;
             }
-            
-            .col-fornecedor {
-                width: 30%;
+            .romaneio-print-table tbody tr.tr-dados:nth-child(even) {
+                background-color: #f5f5f5;
             }
-            
-            .col-mercadoria {
-                width: 30%;
+            /* Proteção contra quebras: linha de total (fica só no tbody, última página) */
+            .romaneio-print-table tbody tr.tr-total {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
             }
-            
-            .col-quantidade {
-                width: 8%;
+            /* Cabeçalho completo: apenas 1ª página (antes da tabela) */
+            .document-header {
+                margin-bottom: 6px;
+                page-break-after: avoid;
+                break-after: avoid;
+            }
+            .document-header .empresa-header {
+                position: relative;
                 text-align: center;
-            }
-            
-            .col-peso {
-                width: 8%;
-                text-align: center;
-            }
-            
-            .col-valor {
-                width: 8%;
-                text-align: center;
-            }
-            
-            .footer {
-                margin-top: 8px;
-                padding: 5px 0;
-            }
-            
-            .disclaimer {
-                margin: 5px 0;
-                padding: 4px;
-                font-size: 9px;
+                font-size: 12pt;
                 font-weight: bold;
-                text-align: center;
-                border: 1px solid #ddd;
-                background-color: #fff;
+                margin-bottom: 2px;
             }
-            
-            .signature-section {
-                display: flex;
-                gap: 15px;
-                margin-top: 8px;
-                padding: 5px 0;
-            }
-            
-            .driver-signature {
-                flex: 0 0 45%;
-                margin-left: auto;
-            }
-            
-            .signature-line {
-                border-bottom: 1px solid #000;
-                margin: 0 0 3px 0;
-                height: 12px;
-                width: 100%;
-            }
-            
-            .driver-details {
-                display: flex;
-                flex-direction: column;
-                gap: 2px;
-                text-align: left;
-            }
-            
-            .driver-field {
-                font-size: 9px;
-                line-height: 1.2;
-            }
-            
-            .driver-declaration {
-                flex: 1;
-            }
-            
-            .declaration-text {
-                font-size: 8px;
-                line-height: 1.3;
-                text-align: left;
-            }
-            
-            .date-info {
+            .document-header .empresa-header .romaneio-codigo {
                 position: absolute;
-                top: 0;
                 right: 0;
-                font-size: 10px;
-                color: #000;
+                top: 0;
+                font-size: 8pt;
+                font-weight: bold;
+                background-color: #e8e8e8;
+                padding: 1px 3px;
+                border: 1px solid #000;
+                border-radius: 2px;
             }
+            .document-header .empresa-dados {
+                text-align: center;
+                font-size: 7.5pt;
+                font-weight: bold;
+                margin-bottom: 4px;
+            }
+            .document-header .info-blocos {
+                display: flex;
+                gap: 8px;
+                margin-top: 4px;
+            }
+            .document-header .info-blocos .info-cell {
+                flex: 1;
+                font-size: 7.5pt;
+                padding: 2px 4px;
+                border: 1px solid #ccc;
+                background-color: #fafafa;
+            }
+            .document-header .info-blocos .info-cell h3 {
+                margin: 0 0 2px 0;
+                font-size: 7.5pt;
+                font-weight: bold;
+                background-color: #e8e8e8;
+                padding: 1px 2px;
+            }
+            .document-header .info-blocos .info-cell p {
+                margin: 0 0 0 2px;
+                padding: 0;
+            }
+            /* Cabeçalho simplificado: apenas páginas 2+ (sem fundo cinza) */
+            .romaneio-print-table thead .thead-simple th {
+                position: relative;
+                border: none;
+                padding: 2px 4px;
+                text-align: center;
+                font-weight: bold;
+                font-size: 9pt;
+                background-color: transparent;
+            }
+            .romaneio-print-table thead .thead-simple .empresa-nome {
+                display: inline-block;
+            }
+            .romaneio-print-table thead .thead-simple .romaneio-codigo {
+                position: absolute;
+                right: 4px;
+                top: 50%;
+                transform: translateY(-50%);
+                font-size: 8pt;
+                font-weight: bold;
+                background-color: transparent;
+                padding: 1px 3px;
+                border: 1px solid #000;
+                border-radius: 2px;
+            }
+            .romaneio-print-table thead .thead-report-title th {
+                border: none;
+                padding: 1px 2px;
+                vertical-align: top;
+                line-height: 1.0;
+                margin: 0;
+                text-align: center;
+                font-size: 9pt;
+                font-weight: bold;
+                border-bottom: 1px solid #000;
+                padding: 1px 0;
+                background-color: transparent;
+            }
+            .romaneio-print-table .info-cell {
+                font-size: 7.5pt;
+                text-align: left;
+                padding: 0;
+                padding-left: 2px;
+                margin: 0;
+            }
+            .romaneio-print-table .info-cell h3 {
+                margin: 0 0 0 0;
+                font-size: 7.5pt;
+                font-weight: bold;
+                background-color: #e8e8e8;
+                padding: 1px 2px;
+            }
+            .romaneio-print-table .info-cell p {
+                margin: 0;
+                padding: 0 0 0 2px;
+            }
+            .romaneio-print-table .col-nota { width: 8%; }
+            .romaneio-print-table .col-fornecedor { width: 30%; word-break: break-word; }
+            .romaneio-print-table .col-mercadoria { width: 30%; word-break: break-word; }
+            .romaneio-print-table .col-quantidade,
+            .romaneio-print-table .col-peso,
+            .romaneio-print-table .col-valor { text-align: right; }
+            .romaneio-print-table .col-quantidade { width: 8%; }
+            .romaneio-print-table .col-peso { width: 8%; }
+            .romaneio-print-table .col-valor { width: 10%; min-width: 80px; white-space: nowrap; }
+            .romaneio-print-table .tr-total td {
+                background-color: #e8e8e8;
+                font-weight: bold;
+                border: none;
+                border-bottom: 1px solid #000;
+                padding: 2px;
+                font-size: 7.5pt;
+            }
+            .romaneio-print-table tfoot .tr-disclaimer td,
+            .romaneio-print-table tfoot .tr-signature td {
+                border: none;
+                border-top: 1px solid #000;
+                font-size: 7.5pt;
+                padding: 2px 3px;
+                vertical-align: top;
+            }
+            .romaneio-print-table tfoot .tr-disclaimer td {
+                text-align: center;
+                font-weight: bold;
+            }
+            .romaneio-print-table .signature-line {
+                border-bottom: 1px solid #000;
+                height: 8px;
+                margin-bottom: 1px;
+            }
+            .romaneio-print-table .driver-details { font-size: 7.5pt; }
+            .romaneio-print-table .declaration-text { font-size: 6.5pt; line-height: 1.1; }
         }
-        
-        /* Estilos para visualização na tela */
+
+        /* ========== TELA ========== */
         body {
             font-family: Arial, sans-serif;
             font-size: 12px;
             line-height: 1.3;
             padding: 15px;
         }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #000;
-        }
-        
-        .header-top {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 0;
-            margin-bottom: 5px;
-            position: relative;
-        }
-        
-        .header h1 {
-            margin: 0;
-            font-size: 19px;
-            font-weight: bold;
-            color: #000;
-        }
-        
-        .header p {
-            margin: 2px 0;
-            font-size: 13px;
-            color: #000;
-            font-weight: bold;
-        }
-        
-        .empresa-info p {
-            margin: 2px 0;
-            font-size: 11px;
-            color: #000;
-            font-weight: bold;
-            text-align: center;
-        }
-        
-        .romaneio-codigo {
-            position: absolute;
-            right: 0;
-            top: 0;
-            font-size: 11px;
-            font-weight: bold;
-            color: #000;
-            background-color: #f0f0f0;
-            padding: 4px 8px;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-        }
-        
-        .header-separator {
-            border-bottom: 1px solid #000;
-            margin: 5px 0;
-            width: 100%;
-        }
-        
-        .info-container {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            gap: 10px;
-            align-items: flex-start;
-        }
-        
-        .romaneio-info, .motorista-info, .cliente-info {
-            flex: 1;
-            padding: 8px;
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-        }
-        
-        .romaneio-info h3, .cliente-info h3, .motorista-info h3 {
-            margin: 0 0 6px 0;
-            font-size: 12px;
-            font-weight: bold;
-            color: #000;
-            border-bottom: 1px solid #000;
-            padding-bottom: 3px;
-        }
-        
-        .romaneio-info p, .cliente-info p, .motorista-info p {
-            margin: 4px 0;
-            font-size: 11px;
-            text-align: left;
-        }
-        
-        .report-title {
-            text-align: center;
-            margin: 12px 0 8px 0;
-            font-size: 14px;
-            font-weight: bold;
-            color: #000;
-            border-bottom: 1px solid #000;
-            padding-bottom: 5px;
-        }
-        
-        .table {
+        .romaneio-print-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 15px;
         }
-        
-        .table th,
-        .table td {
+        .romaneio-print-table thead {
+            display: table-header-group;
+        }
+        .romaneio-print-table th,
+        .romaneio-print-table td {
             border: 1px solid #ddd;
             padding: 4px 6px;
             font-size: 10px;
             line-height: 1.2;
         }
-        
-        .table th {
+        .romaneio-print-table thead th {
             background-color: #f2f2f2;
             font-weight: bold;
             text-align: center;
         }
-        
-        .table tbody tr:nth-child(even) {
+        .romaneio-print-table thead th.col-quantidade,
+        .romaneio-print-table thead th.col-peso,
+        .romaneio-print-table thead th.col-valor {
+            text-align: right;
+        }
+        .romaneio-print-table tbody tr {
+            page-break-inside: avoid;
+        }
+        .romaneio-print-table tbody tr.tr-dados {
+            height: 16px;
+        }
+        .romaneio-print-table tbody tr.tr-dados:nth-child(even) {
             background-color: #f9f9f9;
         }
-        
-        .col-nota {
-            width: 8%;
-        }
-        
-        .col-fornecedor {
-            width: 30%;
-        }
-        
-        .col-mercadoria {
-            width: 30%;
-        }
-        
-        .col-quantidade {
-            width: 8%;
-            text-align: center;
-        }
-        
-        .col-peso {
-            width: 8%;
-            text-align: center;
-        }
-        
-        .col-valor {
-            width: 8%;
-            text-align: center;
-        }
-        
-        .footer {
-            margin-top: 12px;
-            padding: 8px 0;
-        }
-        
-        .disclaimer {
-            margin: 8px 0;
-            padding: 6px;
-            font-size: 10px;
+        .document-header { margin-bottom: 10px; }
+        .document-header .empresa-header { position: relative; text-align: center; font-size: 19px; font-weight: bold; margin-bottom: 4px; }
+        .document-header .empresa-header .romaneio-codigo { position: absolute; right: 0; top: 0; font-size: 11px; font-weight: bold; background-color: #f0f0f0; padding: 4px 8px; border: 1px solid #ccc; border-radius: 3px; }
+        .document-header .empresa-dados { text-align: center; font-size: 11px; font-weight: bold; margin-bottom: 8px; }
+        .document-header .info-blocos { display: flex; gap: 12px; margin-top: 8px; }
+        .document-header .info-blocos .info-cell { flex: 1; font-size: 11px; padding: 6px 8px; border: 1px solid #ddd; background-color: #fafafa; }
+        .document-header .info-blocos .info-cell h3 { margin: 0 0 4px 0; font-size: 12px; font-weight: bold; background-color: #e8e8e8; padding: 4px 8px; }
+        .document-header .info-blocos .info-cell p { margin: 2px 0; padding-left: 8px; }
+        .romaneio-print-table thead .thead-simple th { position: relative; border: none; padding: 6px 8px; text-align: center; font-weight: bold; font-size: 14px; background-color: transparent; }
+        .romaneio-print-table thead .thead-simple .romaneio-codigo { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: bold; background-color: transparent; padding: 4px 8px; border: 1px solid #ccc; border-radius: 3px; }
+        .romaneio-print-table thead .thead-report-title th { text-align: center; font-size: 14px; font-weight: bold; border: none; border-bottom: 1px solid #000; padding: 8px 0 5px 0; background-color: transparent; }
+        .romaneio-print-table .info-cell { font-size: 11px; }
+        .romaneio-print-table .info-cell h3 { margin: 0 0 4px 0; font-size: 12px; background-color: #e8e8e8; padding: 4px 8px; }
+        .romaneio-print-table .info-cell p { margin: 2px 0; padding-left: 8px; }
+        .romaneio-print-table .col-nota { width: 8%; }
+        .romaneio-print-table .col-fornecedor { width: 30%; word-break: break-word; }
+        .romaneio-print-table .col-mercadoria { width: 30%; word-break: break-word; }
+        .romaneio-print-table .col-quantidade,
+        .romaneio-print-table .col-peso,
+        .romaneio-print-table .col-valor { text-align: right; }
+        .romaneio-print-table .col-quantidade { width: 8%; }
+        .romaneio-print-table .col-peso { width: 8%; }
+        .romaneio-print-table .col-valor { width: 10%; min-width: 90px; white-space: nowrap; }
+        .romaneio-print-table .pagenum-footer { text-align: right; margin-top: 8px; font-size: 10px; }
+        .romaneio-print-table .tr-total td {
+            background-color: #e8e8e8;
             font-weight: bold;
-            text-align: center;
-            border: 1px solid #ddd;
-            background-color: #fff;
-        }
-        
-        .signature-section {
-            display: flex;
-            gap: 20px;
-            margin-top: 10px;
-            padding: 8px 0;
-        }
-        
-        .driver-signature {
-            flex: 0 0 45%;
-            margin-left: auto;
-        }
-        
-        .signature-line {
-            border-bottom: 1px solid #000;
-            margin: 0 0 5px 0;
-            height: 15px;
-            width: 100%;
-        }
-        
-        .driver-details {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            text-align: left;
-        }
-        
-        .driver-field {
-            font-size: 10px;
-            line-height: 1.3;
-        }
-        
-        .driver-declaration {
-            flex: 1;
-        }
-        
-        .declaration-text {
-            font-size: 9px;
-            line-height: 1.4;
-            text-align: left;
-        }
-        
-        .date-info {
-            position: absolute;
-            top: 0;
-            right: 0;
-            font-size: 11px;
-            color: #000;
-        }
-        
-        .print-button {
-            display: block;
-            margin: 30px auto;
-            background-color: #007bff;
-            color: white;
             border: none;
-            padding: 15px 30px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            text-align: center;
-            width: fit-content;
+            border-bottom: 1px solid #000;
         }
-        
-        .print-button:hover {
-            background-color: #0056b3;
-        }
-        
-        @media print {
-            .print-button {
-                display: none;
-            }
-        }
+        .romaneio-print-table tfoot .tr-disclaimer td,
+        .romaneio-print-table tfoot .tr-signature td { border: none; padding: 8px; font-size: 10px; vertical-align: top; }
+        .romaneio-print-table tfoot .tr-disclaimer td { text-align: center; font-weight: bold; }
+        .romaneio-print-table .signature-line { border-bottom: 1px solid #000; height: 15px; margin-bottom: 5px; }
+        .romaneio-print-table .driver-details { font-size: 10px; }
+        .romaneio-print-table .declaration-text { font-size: 9px; line-height: 1.4; }
     </style>
 </head>
 <body>
-    
-    <div class="date-info">
-        <strong>{{ romaneio.codigo }}</strong>
-    </div>
-    
-    <!-- Para cada página -->
-    {% for pagina in notas_paginas %}
-        <!-- Cabeçalho com Informações -->
-        <div class="header{% if not forloop.first %} page-break{% endif %}">
-            <div class="header-top">
-                <h1>AGÊNCIA DE CARGAS ESTELAR LTDA</h1>
-                <div class="romaneio-codigo">{{ romaneio.codigo }}</div>
-            </div>
-            <div class="empresa-info">
-                <p><strong>CNPJ: 2.531.215/0001-96 | INSCRIÇÃO ESTADUAL: 108.208.056.112 | CCM: 1.097.620-5 | ENDEREÇO: RUA MAUÁ, 898 - LUZ</strong></p>
-            </div>
-            <p>Sistema de Gestão de Armazenamento</p>
-            <div class="header-separator"></div>
-            
-            <!-- Container para Dados do Romaneio, Motorista e Cliente -->
-            <div class="info-container">
-                <!-- Dados do Romaneio -->
-                {% if romaneio %}
-                <div class="romaneio-info">
-                    <h3>DADOS DO ROMANEIO</h3>
-                    <p><strong>CÓDIGO:</strong> {{ romaneio.codigo }}</p>
-                    <p><strong>DATA DE EMISSÃO:</strong> {{ romaneio.data_emissao|date:"d/m/Y" }}</p>
-                    <p><strong>STATUS:</strong> {{ romaneio.get_status_display|upper }}</p>
-                    <p><strong>QUANTIDADE DE NOTAS:</strong> {{ notas_romaneadas.count }}</p>
-                </div>
-                {% endif %}
-                
-                <!-- Dados do Motorista -->
-                {% if romaneio.motorista %}
-                <div class="motorista-info">
-                    <h3>DADOS DO MOTORISTA</h3>
-                    <p><strong>NOME:</strong> {{ romaneio.motorista.nome }}</p>
-                    <p><strong>CNH:</strong> {{ romaneio.motorista.cnh|default:"N/A" }}</p>
-                    {% if romaneio.veiculo_principal %}
-                    <p><strong>VEÍCULO PRINCIPAL:</strong> {{ romaneio.veiculo_principal.placa }}</p>
-                    {% endif %}
-                    {% if romaneio.reboque_1 %}
-                    <p><strong>REBOQUE 1:</strong> {{ romaneio.reboque_1.placa }}</p>
-                    {% endif %}
-                    {% if romaneio.reboque_2 %}
-                    <p><strong>REBOQUE 2:</strong> {{ romaneio.reboque_2.placa }}</p>
-                    {% endif %}
-                </div>
-                {% endif %}
-                
-                <!-- Dados do Cliente -->
+    {% for pagina in paginas_notas %}
+    <div class="romaneio-page{% if forloop.first %} romaneio-page-first{% endif %}">
+    {% if forloop.first %}
+    <div class="document-header">
+        <div class="empresa-header">
+            <span class="empresa-nome">AGÊNCIA DE CARGAS ESTELAR LTDA</span>
+            <span class="romaneio-codigo">{{ romaneio.codigo }}</span>
+        </div>
+        <div class="empresa-dados"><strong>CNPJ: 62.531.215/0001-96 | INSCRIÇÃO ESTADUAL: 108.208.056.112 | CCM: 1.097.620-5 | ENDEREÇO: RUA MAUÁ, 898 - LUZ</strong></div>
+        <div class="info-blocos">
+            <div class="info-cell">
                 {% if romaneio.cliente %}
-                <div class="cliente-info">
-                    <h3>DADOS DO CLIENTE</h3>
-                    <p><strong>NOME:</strong> {{ romaneio.cliente.razao_social }}</p>
-                    <p><strong>CNPJ:</strong> {{ romaneio.cliente.cnpj|format_cnpj|default:"N/A" }}</p>
-                    <p><strong>ENDEREÇO:</strong> 
-                        {% if romaneio.cliente.endereco %}
-                            {{ romaneio.cliente.endereco }}{% if romaneio.cliente.numero %}, {{ romaneio.cliente.numero }}{% endif %}{% if romaneio.cliente.bairro %} - {{ romaneio.cliente.bairro }}{% endif %}
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </p>
-                    {% if romaneio.cliente.cidade %}
-                    <p><strong>CIDADE:</strong> {{ romaneio.cliente.cidade }}</p>
-                    {% endif %}
-                </div>
-                {% endif %}
+                <h3>DADOS DO CLIENTE</h3>
+                <p><strong>NOME:</strong> {{ romaneio.cliente.razao_social }}</p>
+                <p><strong>CNPJ:</strong> {{ romaneio.cliente.cnpj|format_cnpj|default:"N/A" }}</p>
+                <p><strong>ENDEREÇO:</strong> {% if romaneio.cliente.endereco %}{{ romaneio.cliente.endereco }}{% if romaneio.cliente.numero %}, {{ romaneio.cliente.numero }}{% endif %}{% if romaneio.cliente.bairro %} - {{ romaneio.cliente.bairro }}{% endif %}{% else %}N/A{% endif %}</p>
+                {% if romaneio.cliente.cidade %}<p><strong>CIDADE:</strong> {{ romaneio.cliente.cidade }}{% if romaneio.cliente.estado %} - {{ romaneio.cliente.estado }}{% endif %}</p>{% endif %}
+                {% else %}&nbsp;{% endif %}
             </div>
-            <div class="header-separator"></div>
+            <div class="info-cell">
+                {% if romaneio.motorista %}
+                <h3>DADOS DO MOTORISTA</h3>
+                <p><strong>NOME:</strong> {{ romaneio.motorista.nome }}</p>
+                <p><strong>CNH:</strong> {{ romaneio.motorista.cnh|default:"N/A" }}</p>
+                {% if romaneio.veiculo_principal %}<p><strong>VEÍCULO PRINCIPAL:</strong> {{ romaneio.veiculo_principal.placa }}</p>{% endif %}
+                {% if romaneio.reboque_1 %}<p><strong>REBOQUE 1:</strong> {{ romaneio.reboque_1.placa }}</p>{% endif %}
+                {% if romaneio.reboque_2 %}<p><strong>REBOQUE 2:</strong> {{ romaneio.reboque_2.placa }}</p>{% endif %}
+                {% else %}&nbsp;{% endif %}
+            </div>
+            <div class="info-cell">
+                <h3>DADOS DO ROMANEIO</h3>
+                <p><strong>DATA DE EMISSÃO:</strong> {{ romaneio.data_emissao|date:"d/m/Y" }}</p>
+                <p><strong>QUANTIDADE DE NOTAS:</strong> {{ notas_romaneadas|length }}</p>
+                <p><strong>PESO TOTAL:</strong> {{ total_peso|format_brazilian_weight }}</p>
+                <p><strong>VALOR TOTAL:</strong> {{ total_valor|format_brazilian_currency }}</p>
+            </div>
         </div>
-        
-        <!-- Título do Relatório -->
-        <div class="report-title">
-            RESUMO DE NOTAS FISCAIS
-        </div>
-        
-        <!-- Tabela de Notas -->
-        <table class="table">
-            <thead>
-                <tr>
-                    <th class="col-nota">NOTA</th>
-                    <th class="col-fornecedor">FORNECEDOR</th>
-                    <th class="col-mercadoria">MERCADORIA</th>
-                    <th class="col-quantidade">QUANTIDADE</th>
-                    <th class="col-peso">PESO</th>
-                    <th class="col-valor">VALOR</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for nota in pagina %}
-                <tr>
-                    <td class="col-nota"><strong>{{ nota.nota }}</strong></td>
-                    <td class="col-fornecedor">{{ nota.fornecedor }}</td>
-                    <td class="col-mercadoria">{{ nota.mercadoria }}</td>
-                    <td class="col-quantidade">{{ nota.quantidade|format_brazilian_quantity }}</td>
-                    <td class="col-peso">{{ nota.peso|format_brazilian_weight }}</td>
-                    <td class="col-valor">{{ nota.valor|format_brazilian_currency }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-            {% if forloop.last %}
-            <tfoot>
-                <tr style="background-color: #f0f0f0; font-weight: bold;">
-                    <td class="col-nota" colspan="3"><strong>TOTAL</strong></td>
-                    <td class="col-quantidade"><strong>{{ notas_romaneadas|sum_field:'quantidade'|format_brazilian_quantity }}</strong></td>
-                    <td class="col-peso"><strong>{{ notas_romaneadas|sum_field:'peso'|format_brazilian_weight }}</strong></td>
-                    <td class="col-valor"><strong>{{ notas_romaneadas|sum_field:'valor'|format_brazilian_currency }}</strong></td>
-                </tr>
-            </tfoot>
+    </div>
+    {% endif %}
+    <table class="romaneio-print-table">
+        <thead>
+            {% if not forloop.first %}
+            <tr class="thead-simple">
+                <th colspan="6">
+                    <span class="empresa-nome">AGÊNCIA DE CARGAS ESTELAR LTDA</span>
+                    <span class="romaneio-codigo">{{ romaneio.codigo }}</span>
+                </th>
+            </tr>
             {% endif %}
-        </table>
-        
-        <!-- Rodapé -->
-        <div class="footer">
-            <!-- Disclaimer bem próximo da tabela -->
-            <div class="disclaimer">
-                <strong>NÃO NOS RESPONSABILIZAMOS POR PERDA OU AVARIA DE MERCADORIA SAÍDA DE NOSSO ARMAZÉM.</strong>
-            </div>
-            
-            <!-- Assinatura do Motorista e Declaração -->
-            <div class="signature-section">
-                <div class="driver-signature">
-                    <div class="signature-line"></div>
-                    <div class="driver-details">
-                        <div class="driver-field"><strong>MOTORISTA:</strong> {{ romaneio.motorista.nome|default:"_________________" }}</div>
-                        <div class="driver-field"><strong>CPF:</strong> {{ romaneio.motorista.cpf|format_cpf|default:"_________________" }}</div>
-                        <div class="driver-field"><strong>CNH:</strong> {{ romaneio.motorista.cnh|default:"_________________" }}</div>
-                    </div>
-                </div>
-                
-                <div class="driver-declaration">
-                    <div class="declaration-text">
-                        Declaro ter recebido em perfeitas condições os volumes desta ordem, cujo carregamento foi por mim presenciado, não cabendo nenhuma responsabilidade à agência por falta de volumes em viagem. Obrigando-me ainda, a fazer as entregas em seu destino exato.
-                    </div>
-                </div>
-            </div>
-        </div>
+            <tr class="thead-report-title">
+                <th colspan="6">RESUMO DE NOTAS FISCAIS</th>
+            </tr>
+            <tr>
+                <th class="col-nota">NOTA</th>
+                <th class="col-fornecedor">FORNECEDOR</th>
+                <th class="col-mercadoria">MERCADORIA</th>
+                <th class="col-quantidade">QUANTIDADE</th>
+                <th class="col-peso">PESO</th>
+                <th class="col-valor">VALOR</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for nota in pagina %}
+            {% if nota %}
+            <tr class="tr-dados">
+                <td class="col-nota"><strong>{{ nota.nota }}</strong></td>
+                <td class="col-fornecedor">{{ nota.fornecedor }}</td>
+                <td class="col-mercadoria">{{ nota.mercadoria }}</td>
+                <td class="col-quantidade">{{ nota.quantidade|format_brazilian_quantity }}</td>
+                <td class="col-peso">{{ nota.peso|format_brazilian_weight }}</td>
+                <td class="col-valor">{{ nota.valor|format_brazilian_currency }}</td>
+            </tr>
+            {% else %}
+            <tr class="tr-dados tr-vazio">
+                <td class="col-nota" colspan="6">&nbsp;</td>
+            </tr>
+            {% endif %}
+            {% empty %}
+            <tr class="tr-dados">
+                <td colspan="6" style="text-align: center;">Nenhuma nota neste romaneio.</td>
+            </tr>
+            {% endfor %}
+            {% if forloop.last %}
+            <tr class="tr-total">
+                <td class="col-nota" colspan="3"><strong>TOTAL</strong></td>
+                <td class="col-quantidade"><strong>{{ notas_romaneadas|sum_field:'quantidade'|format_brazilian_quantity }}</strong></td>
+                <td class="col-peso"><strong>{{ notas_romaneadas|sum_field:'peso'|format_brazilian_weight }}</strong></td>
+                <td class="col-valor"><strong>{{ notas_romaneadas|sum_field:'valor'|format_brazilian_currency }}</strong></td>
+            </tr>
+            {% endif %}
+        </tbody>
+        <tfoot>
+            <tr class="tr-disclaimer">
+                <td colspan="6"><strong>NÃO NOS RESPONSABILIZAMOS POR PERDA OU AVARIA DE MERCADORIA SAÍDA DE NOSSO ARMAZÉM.</strong></td>
+            </tr>
+            <tr class="tr-signature">
+                <td colspan="6">
+                    <table style="width: 100%; border: none;"><tr>
+                        <td style="width: 45%; border: none; vertical-align: top;">
+                            <div class="signature-line"></div>
+                            <div class="driver-details">
+                                <div><strong>MOTORISTA:</strong> {{ romaneio.motorista.nome|default:"_________________" }}</div>
+                                <div><strong>CPF:</strong> {{ romaneio.motorista.cpf|format_cpf|default:"_________________" }}</div>
+                                <div><strong>CNH:</strong> {{ romaneio.motorista.cnh|default:"_________________" }}</div>
+                            </div>
+                        </td>
+                        <td style="width: 55%; border: none; padding-left: 10px; vertical-align: top;">
+                            <div class="declaration-text">
+                                {% with decl="Declaro ter recebido em perfeitas condições os volumes desta ordem, cujo carregamento foi por mim presenciado, não cabendo nenhuma responsabilidade à agência por falta de volumes em viagem. Obrigando-me ainda, a fazer as entregas em seu destino exato." %}{{ decl|upper }}{% endwith %}
+                            </div>
+                            <div class="pagenum-footer">Página {{ forloop.counter }} de {{ paginas_notas|length }}</div>
+                        </td>
+                    </tr></table>
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+    </div>
     {% endfor %}
-    
-    <script>
-        // Script simples para garantir que o cabeçalho e rodapé apareçam em todas as páginas
-        function ensurePrintLayout() {
-            // Força o reconhecimento das propriedades CSS de impressão
-            const tables = document.querySelectorAll('.table');
-            tables.forEach(table => {
-                table.style.pageBreakInside = 'auto';
-            });
-        }
-        
-        // Aplica estilos quando a página carrega
-        document.addEventListener('DOMContentLoaded', ensurePrintLayout);
-        
-        // Aplica estilos antes da impressão
-        window.addEventListener('beforeprint', ensurePrintLayout);
-    </script>
 </body>
 </html>

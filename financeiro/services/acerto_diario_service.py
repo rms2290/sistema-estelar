@@ -21,31 +21,46 @@ class AcertoDiarioService:
     )
 
     @classmethod
-    def salvar_acerto_e_criar_movimentos(cls, data, observacoes, usuario):
+    def salvar_acerto_e_criar_movimentos(cls, data, observacoes, usuario, acerto_id=None):
         """
         Salva ou atualiza o acerto diário e cria os movimentos de caixa correspondentes.
 
+        Se acerto_id for informado, usa esse acerto (garante que estamos atualizando o mesmo
+        acerto que o usuário está editando). Caso contrário, usa get_or_create por data.
+
         Regras:
         - Carregamentos (com cliente): Saída
-        - Descargas em dinheiro: Entrada (RecebimentoCliente)
+        - Descargas em dinheiro: Entrada (RecebimentoDescarga)
         - Descargas em depósito: Saída (Outros)
-        - Valor Estelar: Entrada (RecebimentoCliente)
+        - Valor Estelar: Entrada (RecebimentoCarregamento)
         - Distribuições para funcionários: AcertoFuncionario (entrada)
 
         Returns:
             tuple: (acerto, None) em sucesso ou (None, mensagem_erro) em falha.
         """
-        acerto, created = AcertoDiarioCarregamento.objects.get_or_create(
-            data=data,
-            defaults={
-                'valor_estelar': Decimal('0.00'),
-                'observacoes': observacoes,
-                'usuario_criacao': usuario,
-            },
-        )
-        if not created:
-            acerto.observacoes = observacoes
-            acerto.save()
+        if acerto_id:
+            try:
+                acerto = AcertoDiarioCarregamento.objects.get(pk=acerto_id)
+                acerto.observacoes = observacoes
+                acerto.save()
+            except (ValueError, AcertoDiarioCarregamento.DoesNotExist):
+                acerto = None
+            if not acerto:
+                return None, 'Acerto não encontrado.'
+        else:
+            if not data:
+                return None, 'Informe a data do acerto.'
+            acerto, created = AcertoDiarioCarregamento.objects.get_or_create(
+                data=data,
+                defaults={
+                    'valor_estelar': Decimal('0.00'),
+                    'observacoes': observacoes,
+                    'usuario_criacao': usuario,
+                },
+            )
+            if not created:
+                acerto.observacoes = observacoes
+                acerto.save()
 
         periodo_ativo = PeriodoMovimentoCaixa.objects.filter(
             status='Aberto'
@@ -82,7 +97,7 @@ class AcertoDiarioService:
                     tipo='Entrada',
                     valor=descarga.valor,
                     descricao=f"Descarga: {descarga.descricao or 'Descarga'}",
-                    categoria='RecebimentoCliente',
+                    categoria='RecebimentoDescarga',
                     acerto_diario=acerto,
                     periodo=periodo_ativo,
                     usuario_criacao=usuario,
@@ -105,7 +120,7 @@ class AcertoDiarioService:
                 tipo='Entrada',
                 valor=acerto.valor_estelar,
                 descricao="Valor Estelar",
-                categoria='RecebimentoCliente',
+                categoria='RecebimentoCarregamento',
                 acerto_diario=acerto,
                 periodo=periodo_ativo,
                 usuario_criacao=usuario,

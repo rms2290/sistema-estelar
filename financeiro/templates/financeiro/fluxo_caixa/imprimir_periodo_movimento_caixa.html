@@ -11,9 +11,14 @@
         @media print {
             body {
                 margin: 0;
-                padding: 15px;
+                padding: 6px;
                 background-color: #fff;
                 font-size: 9pt;
+            }
+            .container-fluid {
+                padding-left: 6px !important;
+                padding-right: 6px !important;
+                max-width: 100% !important;
             }
             .no-print {
                 display: none !important;
@@ -37,16 +42,16 @@
                 font-size: 8pt;
             }
             .header {
-                margin-bottom: 10px;
-                padding-bottom: 8px;
+                margin-bottom: 6px;
+                padding-bottom: 4px;
             }
             .header h1 {
                 margin: 0;
                 font-size: 11pt;
-                margin-bottom: 3px;
+                margin-bottom: 2px;
             }
             .header-info {
-                margin-top: 5px;
+                margin-top: 3px;
                 font-size: 8pt;
             }
             .header-info p {
@@ -55,20 +60,23 @@
             .card {
                 border: none;
                 box-shadow: none;
-                margin-bottom: 15px;
+                margin-bottom: 8px;
             }
             .card-header {
                 background-color: #f8f9fa;
                 border-bottom: 2px solid #000;
-                padding: 4px 6px;
+                padding: 3px 4px;
                 font-size: 8pt;
             }
             .card-body {
-                padding: 6px;
+                padding: 4px;
+            }
+            .card-body.duas-colunas-impressao {
+                padding: 4px 0;
             }
             .card-body h3 {
                 font-size: 8pt;
-                margin-bottom: 3px;
+                margin-bottom: 2px;
             }
             .card-header h3 {
                 font-size: 8pt;
@@ -76,7 +84,7 @@
             }
             .table-bordered th,
             .table-bordered td {
-                padding: 3px 6px;
+                padding: 3px 4px;
                 font-size: 7pt;
             }
             .table-bordered th {
@@ -88,6 +96,28 @@
             }
             .coluna-tipo {
                 display: none !important;
+            }
+            /* Duas colunas na folha A4 para Movimentos Detalhados */
+            .duas-colunas-impressao {
+                display: flex !important;
+                gap: 6px;
+                width: 100%;
+            }
+            .duas-colunas-impressao .col-tabela {
+                flex: 1;
+                min-width: 0;
+                page-break-inside: avoid;
+            }
+            .duas-colunas-impressao table {
+                width: 100%;
+                font-size: 7pt;
+            }
+            .duas-colunas-impressao th,
+            .duas-colunas-impressao td {
+                padding: 1px 3px;
+                font-size: 7pt;
+                line-height: 1.2;
+                vertical-align: middle;
             }
         }
         
@@ -172,6 +202,22 @@
             background-color: #f8f9fa;
             font-weight: bold;
         }
+        /* Duas colunas (tela e impressão) */
+        .duas-colunas-impressao {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+        }
+        .duas-colunas-impressao .col-tabela {
+            flex: 1;
+            min-width: 0;
+        }
+        .duas-colunas-impressao th,
+        .duas-colunas-impressao td {
+            padding: 2px 4px;
+            line-height: 1.25;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -230,13 +276,14 @@
                                 <th class="coluna-tipo">Tipo</th>
                                 <th>Descrição</th>
                                 <th class="text-end">Valor</th>
-                                <th class="text-end">Saldo Acumulado</th>
+                                <th class="text-end">Saldo Acum.</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- Linha de saldo inicial -->
                             <tr class="table-info">
-                                <td colspan="2"><strong>Saldo Inicial</strong></td>
+                                <td><strong>Saldo Inicial</strong></td>
+                                <td class="coluna-tipo"></td>
+                                <td>-</td>
                                 <td class="text-end">-</td>
                                 <td class="text-end"><strong>{{ valor_inicial_caixa|format_brazilian_currency }}</strong></td>
                             </tr>
@@ -245,35 +292,15 @@
                             <tr>
                                 <td>{{ mov.data|date:"d/m/Y" }}</td>
                                 <td class="coluna-tipo">
-                                    {% if mov.tipo == 'AcertoFuncionario' %}
-                                        <span class="badge bg-primary">Acerto Funcionário</span>
-                                    {% elif mov.tipo == 'Entrada' %}
-                                        <span class="badge bg-success">Entrada</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">Saída</span>
-                                    {% endif %}
+                                    {% if mov.tipo == 'AcertoFuncionario' %}<span class="badge bg-primary">Acerto</span>{% elif mov.tipo == 'Entrada' %}<span class="badge bg-success">Entrada</span>{% else %}<span class="badge bg-danger">Saída</span>{% endif %}
                                 </td>
                                 <td>
-                                    {% if mov.tipo == 'AcertoFuncionario' and mov.funcionario %}
-                                        {{ mov.funcionario.nome }}
-                                    {% else %}
-                                        {{ mov.descricao }}
-                                        {% if mov.funcionario %}
-                                            <br><small class="text-muted">Funcionário: {{ mov.funcionario.nome }}</small>
-                                        {% endif %}
-                                        {% if mov.cliente %}
-                                            <br><small class="text-muted">Cliente: {{ mov.cliente.razao_social }}</small>
-                                        {% endif %}
-                                    {% endif %}
+                                    {% if mov.tipo == 'AcertoFuncionario' and mov.funcionario %}{{ mov.funcionario.nome }}{% else %}{{ mov.descricao_exibicao.0 }}{% if mov.descricao_exibicao.1 %}<br><small class="text-muted">{{ mov.descricao_exibicao.1 }}</small>{% endif %}{% if mov.funcionario %}<br><small class="text-muted">Func.: {{ mov.funcionario.nome }}</small>{% endif %}{% if mov.cliente and not mov.descricao_exibicao.1 %}<br><small class="text-muted">Cliente: {{ mov.cliente.razao_social }}</small>{% endif %}{% endif %}
                                 </td>
                                 <td class="text-end">
-                                    <strong class="{% if mov.is_entrada %}text-success{% else %}text-danger{% endif %}">
-                                        {% if mov.is_entrada %}+{% else %}-{% endif %}{{ mov.valor|format_brazilian_currency }}
-                                    </strong>
+                                    <strong>{% if item.exibir_como_saida %}-{% else %}+{% endif %}{{ mov.valor|format_brazilian_currency }}</strong>
                                 </td>
-                                <td class="text-end">
-                                    <strong>{{ item.saldo_acumulado|format_brazilian_currency }}</strong>
-                                </td>
+                                <td class="text-end"><strong>{{ item.saldo_acumulado|format_brazilian_currency }}</strong></td>
                             </tr>
                             {% endwith %}
                             {% endfor %}

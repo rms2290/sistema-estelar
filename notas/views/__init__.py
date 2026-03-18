@@ -106,6 +106,7 @@ from .admin_views import (
     editar_tabela_seguro,
     atualizar_tabela_seguro_ajax,
     criar_cobranca_carregamento,
+    visualizar_cobranca_carregamento,
     editar_cobranca_carregamento,
     excluir_cobranca_carregamento,
     baixar_cobranca_carregamento,
@@ -186,8 +187,8 @@ __all__ = [
     # Admin
     'cadastrar_usuario', 'listar_usuarios', 'editar_usuario', 'toggle_status_usuario', 'excluir_usuario',
     'listar_tabela_seguros', 'editar_tabela_seguro', 'atualizar_tabela_seguro_ajax',
-    'criar_cobranca_carregamento', 'editar_cobranca_carregamento',
-    'excluir_cobranca_carregamento', 'baixar_cobranca_carregamento',
+    'criar_cobranca_carregamento', 'visualizar_cobranca_carregamento',
+    'editar_cobranca_carregamento', 'excluir_cobranca_carregamento', 'baixar_cobranca_carregamento',
     'gerar_relatorio_cobranca_carregamento_pdf', 'gerar_relatorio_consolidado_cobranca_pdf',
     'listar_logs_auditoria', 'detalhes_log_auditoria',
     'listar_registros_excluidos', 'restaurar_registro',

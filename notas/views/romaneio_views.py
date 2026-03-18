@@ -389,33 +389,49 @@ def imprimir_romaneio_novo(request, pk):
     )
     
     try:
-        notas_romaneadas = romaneio.notas_fiscais.all().order_by('data')
+        notas_romaneadas = romaneio.notas_fiscais.all().order_by('nota')
         
         # Usar serviço para calcular totais
         totais = RomaneioService.calcular_totais_romaneio(romaneio)
         total_peso = totais['total_peso']
         total_valor = totais['total_valor']
         
-        # Tentar caber tudo em uma página (aumentar limite se necessário)
+        # Paginação: 1ª página 17 notas (18 com TOTAL), 2ª em diante 24 notas por página
+        LINHAS_PRIMEIRA = 17
+        LINHAS_DEMAIS = 24
         notas_list = list(notas_romaneadas)
-        notas_paginas = []
-        # Aumentar para 30 notas por página para tentar caber tudo
-        for i in range(0, len(notas_list), 30):
-            pagina = notas_list[i:i + 30]
-            notas_paginas.append(pagina)
+        if not notas_list:
+            paginas_notas = [[]]
+        else:
+            primeira = notas_list[:LINHAS_PRIMEIRA]
+            restante = notas_list[LINHAS_PRIMEIRA:]
+            demais = [
+                restante[i:i + LINHAS_DEMAIS]
+                for i in range(0, len(restante), LINHAS_DEMAIS)
+            ]
+            paginas_notas = [primeira] + demais
+            while len(paginas_notas[0]) < LINHAS_PRIMEIRA:
+                paginas_notas[0].append(None)
+            for pagina in paginas_notas[1:]:
+                while len(pagina) < LINHAS_DEMAIS:
+                    pagina.append(None)
         
         version = int(time.time())
-        
         context = {
             'romaneio': romaneio,
             'notas_romaneadas': notas_romaneadas,
-            'notas_paginas': notas_paginas,
+            'paginas_notas': paginas_notas,
+            'total_paginas': len(paginas_notas),
             'total_peso': total_peso,
             'total_valor': total_valor,
             'version': version
         }
         
-        return render(request, 'notas/visualizar_romaneio_para_impressao.html', context)
+        response = render(request, 'notas/visualizar_romaneio_para_impressao.html', context)
+        response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        return response
     except (RomaneioViagem.DoesNotExist, AttributeError) as e:
         # Tratamento específico para erros conhecidos
         logger.error(
@@ -432,7 +448,8 @@ def imprimir_romaneio_novo(request, pk):
         return render(request, 'notas/visualizar_romaneio_para_impressao.html', {
             'romaneio': romaneio,
             'notas_romaneadas': [],
-            'notas_paginas': [],
+            'paginas_notas': [[]],
+            'total_paginas': 1,
             'total_peso': 0,
             'total_valor': 0,
             'version': int(time.time()),
@@ -453,7 +470,7 @@ def gerar_romaneio_pdf(request, pk):
         pk=pk
     )
     
-    notas_romaneadas = romaneio.notas_fiscais.all().order_by('data')
+    notas_romaneadas = romaneio.notas_fiscais.all().order_by('nota')
     
     # Usar serviço para calcular totais
     from ..services.romaneio_service import RomaneioService
@@ -461,21 +478,34 @@ def gerar_romaneio_pdf(request, pk):
     total_peso = totais['total_peso']
     total_valor = totais['total_valor']
     
-    # Dividir notas em páginas (30 por página)
+    # Paginação: 1ª página 17 notas, 2ª em diante 24 notas (igual à view de impressão)
+    LINHAS_PRIMEIRA = 17
+    LINHAS_DEMAIS = 24
     notas_list = list(notas_romaneadas)
-    notas_paginas = []
-    for i in range(0, len(notas_list), 30):
-        pagina = notas_list[i:i + 30]
-        notas_paginas.append(pagina)
+    if not notas_list:
+        paginas_notas = [[]]
+    else:
+        primeira = notas_list[:LINHAS_PRIMEIRA]
+        restante = notas_list[LINHAS_PRIMEIRA:]
+        demais = [
+            restante[i:i + LINHAS_DEMAIS]
+            for i in range(0, len(restante), LINHAS_DEMAIS)
+        ]
+        paginas_notas = [primeira] + demais
+        while len(paginas_notas[0]) < LINHAS_PRIMEIRA:
+            paginas_notas[0].append(None)
+        for pagina in paginas_notas[1:]:
+            while len(pagina) < LINHAS_DEMAIS:
+                pagina.append(None)
     
     import time
     version = int(time.time())
-    
     template = get_template('notas/visualizar_romaneio_para_impressao.html')
     html = template.render({
         'romaneio': romaneio,
         'notas_romaneadas': notas_romaneadas,
-        'notas_paginas': notas_paginas,
+        'paginas_notas': paginas_notas,
+        'total_paginas': len(paginas_notas),
         'total_peso': total_peso,
         'total_valor': total_valor,
         'version': version

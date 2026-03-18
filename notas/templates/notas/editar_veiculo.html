@@ -80,34 +80,39 @@
                 </div>
             </div>
 
-            {# Seção: Medidas do Baú #}
-            <div class="col-12 mt-3 mb-2"><h3>Medidas do Baú (metros)</h3></div>
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label for="{{ form.largura.id_for_label }}" class="form-label">{{ form.largura.label }}:</label>
-                    {{ form.largura }}
-                    {% if form.largura.errors %}<div class="text-danger">{{ form.largura.errors }}</div>{% endif %}
+            {# Seção: Medidas do Baú e Cubagem (oculta quando tipo = Cavalo) #}
+            <div id="secao-medidas-cubagem" class="col-12">
+                <div class="col-12 mt-3 mb-2"><h3>Medidas do Baú (metros)</h3></div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.largura.id_for_label }}" class="form-label">{{ form.largura.label }}:</label>
+                        {{ form.largura }}
+                        {% if form.largura.errors %}<div class="text-danger">{{ form.largura.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.altura.id_for_label }}" class="form-label">{{ form.altura.label }}:</label>
+                        {{ form.altura }}
+                        {% if form.altura.errors %}<div class="text-danger">{{ form.altura.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.comprimento.id_for_label }}" class="form-label">{{ form.comprimento.label }}:</label>
+                        {{ form.comprimento }}
+                        {% if form.comprimento.errors %}<div class="text-danger">{{ form.comprimento.errors }}</div>{% endif %}
+                    </div>
                 </div>
-                <div class="col-md-4 mb-3">
-                    <label for="{{ form.altura.id_for_label }}" class="form-label">{{ form.altura.label }}:</label>
-                    {{ form.altura }}
-                    {% if form.altura.errors %}<div class="text-danger">{{ form.altura.errors }}</div>{% endif %}
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label for="{{ form.comprimento.id_for_label }}" class="form-label">{{ form.comprimento.label }}:</label>
-                    {{ form.comprimento }}
-                    {% if form.comprimento.errors %}<div class="text-danger">{{ form.comprimento.errors }}</div>{% endif %}
-                </div>
-            </div>
-            
-            {# Seção: Cubagem Calculada #}
-            <div class="col-12 mt-3 mb-2"><h4>Cubagem Calculada</h4></div>
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label for="{{ form.cubagem.id_for_label }}" class="form-label">{{ form.cubagem.label }}:</label>
-                    {{ form.cubagem }}
-                    {% if form.cubagem.errors %}<div class="text-danger">{{ form.cubagem.errors }}</div>{% endif %}
-                    <small class="form-text text-muted">Calculada automaticamente: Largura × Altura × Comprimento</small>
+                <div class="col-12 mt-3 mb-2"><h4><i class="fas fa-calculator"></i> Cubagem Calculada</h4></div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.cubagem.id_for_label }}" class="form-label"><i class="fas fa-cube"></i> {{ form.cubagem.label }}:</label>
+                        {{ form.cubagem }}
+                        {% if form.cubagem.errors %}<div class="text-danger">{{ form.cubagem.errors }}</div>{% endif %}
+                        <small class="form-text text-muted">Calculada automaticamente: Largura × Altura × Comprimento</small>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.capacidade_maxima_kg.id_for_label }}" class="form-label"><i class="fas fa-weight-hanging"></i> {{ form.capacidade_maxima_kg.label }}:</label>
+                        {{ form.capacidade_maxima_kg }}
+                        {% if form.capacidade_maxima_kg.errors %}<div class="text-danger">{{ form.capacidade_maxima_kg.errors }}</div>{% endif %}
+                    </div>
                 </div>
             </div>
 
@@ -171,6 +176,24 @@
         <a href="{% url 'notas:detalhes_veiculo' veiculo.pk %}" class="btn btn-secondary mt-3">Cancelar</a>
     </form>
 
+    {# Ocultar Medidas do Baú e Cubagem quando tipo = Cavalo #}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tipoSelect = document.getElementById('id_tipo_unidade');
+            const secaoMedidas = document.getElementById('secao-medidas-cubagem');
+            function toggleSecaoMedidasBau() {
+                if (!secaoMedidas || !tipoSelect) return;
+                var isCavalo = tipoSelect.value === 'Cavalo';
+                secaoMedidas.style.display = isCavalo ? 'none' : 'block';
+                ['id_largura', 'id_altura', 'id_comprimento', 'id_cubagem', 'id_capacidade_maxima_kg'].forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) el.required = !isCavalo;
+                });
+            }
+            if (tipoSelect) tipoSelect.addEventListener('change', toggleSecaoMedidasBau);
+            toggleSecaoMedidasBau();
+        });
+    </script>
     {# JavaScript para cálculo da cubagem #}
     <script>
         document.addEventListener('DOMContentLoaded', function() {

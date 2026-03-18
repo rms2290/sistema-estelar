@@ -21,25 +21,25 @@ html {
 
 /* Variáveis CSS para Sistema de Temas */
 :root {
-    /* Tema Escuro Suave (Opção 1) */
-    --dark-bg-color: #1a1d23;        /* Azul escuro suave */
-    --dark-sidebar-bg: #252831;      /* Azul acinzentado */
-    --dark-header-bg: #1a1d23;       /* Azul escuro suave */
-    --dark-text-color: #e8eaed;      /* Branco suave */
-    --dark-secondary-text-color: #9aa0a6; /* Cinza claro */
-    --dark-border-color: #3c4043;    /* Cinza azulado */
-    --dark-card-bg: #252831;         /* Azul acinzentado */
-    --dark-card-header-bg: #2d3136;  /* Cinza azulado médio */
+    /* Tema Escuro Suave – ~30% mais claro, bem suave */
+    --dark-bg-color: #4e5258;        /* Cinza médio-claro */
+    --dark-sidebar-bg: #565b62;      /* Um tom acima do fundo */
+    --dark-header-bg: #252831;       /* Barra do cabeçalho mais escura, para diferenciar */
+    --dark-text-color: #ffffff;      /* Branco */
+    --dark-secondary-text-color: #e8eaed; /* Branco suave para secundário */
+    --dark-border-color: #6c7076;    /* Bordas discretas */
+    --dark-card-bg: #565b62;         /* Cards */
+    --dark-card-header-bg: #5e636a;   /* Cabeçalho de card */
     
-    /* Tema Claro Suave (Opção 1) - Cinza Suave */
+    /* Tema Claro Suave - mesmo cinza do menu lateral nas seções */
     --light-bg-color: #f5f7fa;        /* Azul muito claro suave */
     --light-sidebar-bg: #f8f9fa;      /* Cinza muito claro */
     --light-header-bg: #e9ecef;       /* Cinza claro */
     --light-text-color: #495057;      /* Cinza escuro */
     --light-secondary-text-color: #6c757d; /* Cinza médio */
     --light-border-color: #dee2e6;    /* Cinza médio */
-    --light-card-bg: #ffffff;         /* Branco puro */
-    --light-card-header-bg: #f8f9fa;  /* Cinza muito claro */
+    --light-card-bg: #e9ecef;         /* Cinza claro igual aos botões do menu */
+    --light-card-header-bg: #e2e4e8;  /* Cinza um pouco mais escuro no cabeçalho da seção */
     
     /* Cores comuns */
     --primary-color: #007bff;
@@ -187,8 +187,6 @@ body::-webkit-scrollbar {
 .sidebar {
     width: 220px;
     background: var(--card-bg);
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
     padding: 15px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     display: flex;
@@ -199,8 +197,7 @@ body::-webkit-scrollbar {
     overflow-y: auto;
     transition: all 0.3s ease;
     flex-shrink: 0;
-    margin: 10px;
-    margin-right: 0;
+    margin: 0;
     z-index: 1000;
 }
 
@@ -258,7 +255,6 @@ body::-webkit-scrollbar {
     background: var(--card-header-bg);
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
-    border-radius: 12px 12px 0 0;
     margin: -15px -15px 20px -15px;
 }
 
@@ -302,13 +298,20 @@ body::-webkit-scrollbar {
     margin-bottom: 8px;
     background-color: var(--card-header-bg);
     border-radius: 8px;
-    border: 1px solid var(--border-color);
 }
 
 .nav-group-header i {
     font-size: 0.9rem;
     width: 16px;
     text-align: center;
+}
+
+/* Tema escuro: azul mais claro e legível no menu */
+[data-theme="dark"] .nav-group-header {
+    color: #cbd5e1 !important; /* cinza-azulado claro (mais legível que o azul forte) */
+}
+[data-theme="dark"] .nav-group-header i {
+    color: #cbd5e1 !important;
 }
 
 /* Submenu */
@@ -451,8 +454,8 @@ body::-webkit-scrollbar {
     background-color: var(--bg-color);
     height: 100%;
     position: relative;
-    width: calc(100% - 240px); /* Ajustado para o novo sidebar com margem */
-    max-width: calc(100% - 240px);
+    width: calc(100% - 220px); /* Largura total menos a sidebar (sem margem) */
+    max-width: calc(100% - 220px);
     margin-left: 0;
     box-sizing: border-box;
     transition: all 0.3s ease;
@@ -515,6 +518,12 @@ body::-webkit-scrollbar {
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
+/* Tema escuro: hover do botão do menu com azul mais claro */
+[data-theme="dark"] .menu-toggle-btn:hover {
+    border-color: #93c5fd;
+    color: #93c5fd;
+}
+
 .menu-toggle-btn:focus {
     box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
     outline: none;
@@ -535,21 +544,21 @@ body::-webkit-scrollbar {
     transform: translateX(-50%) translateY(-50%);
 }
 
-/* Logo Estelar - Estilo Simples */
+/* Logo Estelar – cor e tipografia harmonizadas com o tema */
 .top-bar .logo {
     font-size: 1.1rem;
-    font-weight: 600;
+    font-weight: 500;
     font-family: inherit;
     text-decoration: none;
     display: flex;
     align-items: center;
-    color: #007bff;
-    letter-spacing: 1px;
+    color: var(--text-color);
+    letter-spacing: 0.5px;
     text-transform: uppercase;
 }
 
 .top-bar .logo:hover {
-    color: #0056b3;
+    color: var(--secondary-text-color);
     text-decoration: none;
 }
 
@@ -937,6 +946,8 @@ body::-webkit-scrollbar {
 /* Garantir que o texto da mensagem não interfira no alinhamento */
 .alert {
     position: relative;
+    display: flex;
+    align-items: center;
 }
 
 .alert:not(.alert-dismissible) {
@@ -980,6 +991,22 @@ body.login-page .card-footer .alert-danger {
 }
 .alert-info { background-color: #17a2b8; border: none !important; color: #fff; }
 .alert-warning { background-color: #ffc107; border: none !important; color: #212529; } /* Texto escuro para warning */
+
+/* Ícone em alertas: espaçamento e alinhamento com o texto (mensagens "nenhum resultado" etc.) */
+.alert > i.fas,
+.alert > i.fa {
+    flex: 0 0 auto !important;
+    margin-right: 0.4rem !important;
+    margin-left: 0;
+    vertical-align: middle;
+    line-height: 1.2;
+}
+
+/* Alertas com ícone + texto (sem botão fechar): manter ícone e texto juntos à esquerda */
+.alert:has(> i.fas:first-child):not(.alert-dismissible),
+.alert:has(> i.fa:first-child):not(.alert-dismissible) {
+    justify-content: flex-start !important;
+}
 
 /* Estilos para cards com fundo claro no tema escuro */
 .card.bg-light {
@@ -1806,6 +1833,8 @@ body {
 /* Garantir que o texto da mensagem não interfira no alinhamento */
 .alert {
     position: relative;
+    display: flex;
+    align-items: center;
 }
 
 .alert:not(.alert-dismissible) {
@@ -1832,6 +1861,23 @@ body {
 .alert.alert-info strong {
     display: inline-block;
     vertical-align: middle;
+}
+
+/* Alert com mensagem alinhada à esquerda (ex.: instrução cobrança carregamento) */
+.alert.alert-text-left {
+    justify-content: flex-start !important;
+    padding-left: 0.75rem !important;
+}
+.alert.alert-text-left > *:not(.btn-close) {
+    flex: 0 1 auto !important;
+    text-align: left !important;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+}
+.alert.alert-text-left > *:not(.btn-close) i.fas,
+.alert.alert-text-left > *:not(.btn-close) i.fa {
+    margin-left: 0 !important;
+    margin-right: 0.35rem !important;
 }
 
 /* Padronização de textos */
@@ -2255,9 +2301,11 @@ td .badge.bg-inativo,
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-/* Melhorias específicas para o tema escuro */
+/* Melhorias específicas para o tema escuro – barra do cabeçalho destacada */
 [data-theme="dark"] .top-bar {
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    background-color: var(--dark-header-bg) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
 [data-theme="dark"] .sidebar {
@@ -2270,6 +2318,55 @@ td .badge.bg-inativo,
 
 [data-theme="dark"] .table {
     box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    background-color: #5e636a;
+}
+[data-theme="dark"] .table th,
+[data-theme="dark"] .table td {
+    background-color: #5e636a;
+    color: var(--dark-text-color);
+    border-color: var(--dark-border-color);
+}
+[data-theme="dark"] .table tbody tr:nth-of-type(even) {
+    background-color: #565b62;
+}
+[data-theme="dark"] .table tbody tr:hover {
+    background-color: #6c7076;
+}
+[data-theme="dark"] .table thead th {
+    background-color: #4e5258;
+    color: var(--dark-text-color);
+    border-color: var(--dark-border-color);
+}
+/* Tema escuro: linha Saldo Inicial – fundo claro e texto cinza */
+[data-theme="dark"] .table tbody tr.table-info th,
+[data-theme="dark"] .table tbody tr.table-info td {
+    background-color: #d1d5db !important;
+    color: #374151 !important;
+    border-color: var(--dark-border-color) !important;
+}
+[data-theme="dark"] .table tbody tr.table-info .text-info,
+[data-theme="dark"] .table tbody tr.table-info strong {
+    color: #374151 !important;
+}
+[data-theme="dark"] .table tbody tr.table-info .text-warning {
+    color: #374151 !important;
+}
+
+/* Tema escuro: cores dos valores na tabela (melhor contraste) */
+[data-theme="dark"] .table td .text-danger {
+    color: #fca5a5 !important;
+}
+[data-theme="dark"] .table td .text-primary {
+    color: #7dd3fc !important;
+}
+[data-theme="dark"] .table td .text-success {
+    color: #86efac !important;
+}
+[data-theme="dark"] .table td .text-info {
+    color: #bae6fd !important;
+}
+[data-theme="dark"] .table td .text-warning {
+    color: #fcd34d !important;
 }
 
 /* Estilos do Dashboard */
@@ -2289,6 +2386,11 @@ td .badge.bg-inativo,
 .sidebar.collapsed + .main-content .dashboard-container {
     width: 100%;
     max-width: 100%;
+}
+
+/* Tema escuro: fundo do dashboard em cinza sólido (meio cinza) */
+[data-theme="dark"] .dashboard-container {
+    background: var(--bg-color) !important;
 }
 
 .dashboard-header {
@@ -2555,6 +2657,13 @@ body.login-page .card-tagline {
     line-height: 1.2 !important;
     margin-bottom: 0 !important;
     font-style: italic !important;
+}
+
+/* Tema escuro: título, subtítulo e tagline da tela de login em branco */
+[data-theme="dark"] body.login-page .card-title-main,
+[data-theme="dark"] body.login-page .card-subtitle,
+[data-theme="dark"] body.login-page .card-tagline {
+    color: #ffffff !important;
 }
 
 /* Ajustar o corpo do card */
