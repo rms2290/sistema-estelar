@@ -246,3 +246,222 @@ def gerar_resposta_excel(conteudo_excel, nome_arquivo):
     )
     response['Content-Disposition'] = f'attachment; filename="{nome_arquivo}"'
     return response
+
+
+def gerar_relatorio_pdf_cobranca_carregamento(cobranca):
+    """Gera PDF detalhado de uma cobrança de carregamento."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib import colors
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=2 * cm,
+        leftMargin=2 * cm,
+        topMargin=2 * cm,
+        bottomMargin=2 * cm,
+    )
+    styles = getSampleStyleSheet()
+    story = []
+
+    story.append(Paragraph(f"COBRANÇA DE CARREGAMENTO #{cobranca.id}", styles['Title']))
+    story.append(Spacer(1, 12))
+    story.append(Paragraph(f"Cliente: {cobranca.cliente.razao_social}", styles['Normal']))
+    story.append(Paragraph(f"Status: {cobranca.status}", styles['Normal']))
+    story.append(Paragraph(f"Criado em: {cobranca.criado_em.strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
+    story.append(Spacer(1, 12))
+
+    valores = [
+        ["Campo", "Valor"],
+        ["Valor carregamento", format_brazilian_currency(cobranca.valor_carregamento)],
+        ["Valor CTE/Manifesto", format_brazilian_currency(cobranca.valor_cte_manifesto)],
+        ["Valor CTE/Terceiro", format_brazilian_currency(getattr(cobranca, 'valor_cte_terceiro', 0) or 0)],
+        ["Margem Estelar", format_brazilian_currency(cobranca.margem_carregamento)],
+        ["Lucro CTE", format_brazilian_currency(getattr(cobranca, 'lucro_cte', 0) or 0)],
+        ["Valor total", format_brazilian_currency(cobranca.valor_total)],
+    ]
+    tabela = Table(valores, colWidths=[7 * cm, 7 * cm])
+    tabela.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a237e')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+    ]))
+    story.append(tabela)
+    story.append(Spacer(1, 12))
+
+    romaneios = list(cobranca.romaneios.all().order_by('codigo'))
+    if romaneios:
+        story.append(Paragraph("Romaneios vinculados", styles['Heading2']))
+        rows = [["Código", "Data Emissão"]]
+        for r in romaneios:
+            data_emissao = r.data_emissao.strftime('%d/%m/%Y') if r.data_emissao else '-'
+            rows.append([r.codigo, data_emissao])
+        tabela_romaneios = Table(rows, colWidths=[7 * cm, 7 * cm])
+        tabela_romaneios.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4472C4')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.beige]),
+        ]))
+        story.append(tabela_romaneios)
+
+    doc.build(story)
+    pdf_content = buffer.getvalue()
+    buffer.close()
+    return pdf_content
+
+
+def gerar_relatorio_pdf_consolidado_cobranca(cobrancas, cliente_selecionado=None):
+    """Gera PDF consolidado de cobranças de carregamento (layout paisagem)."""
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib import colors
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4),
+        rightMargin=1.2 * cm,
+        leftMargin=1.2 * cm,
+        topMargin=1.2 * cm,
+        bottomMargin=1.2 * cm,
+    )
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'ConsolidadoTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        spaceAfter=12,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#1a237e'),
+    )
+    subtitle_style = ParagraphStyle(
+        'ConsolidadoSubtitle',
+        parent=styles['Heading2'],
+        fontSize=11,
+        spaceAfter=8,
+        alignment=TA_CENTER,
+        textColor=colors.grey,
+    )
+    para_style = ParagraphStyle(
+        'ConsolidadoPara',
+        parent=styles['Normal'],
+        fontSize=9,
+        spaceAfter=8,
+    )
+    story = []
+
+    story.append(Paragraph("RELATÓRIO CONSOLIDADO DE COBRANÇAS DE CARREGAMENTO", title_style))
+    if cliente_selecionado:
+        story.append(Paragraph(f"Cliente: {cliente_selecionado.razao_social}", subtitle_style))
+    else:
+        story.append(Paragraph("Cliente: TODOS", subtitle_style))
+    story.append(Paragraph(f"Relatório gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}", para_style))
+    story.append(Spacer(1, 12))
+
+    # Resumo executivo no mesmo padrão visual dos totalizadores.
+    qtd = len(cobrancas)
+    rows = [[
+        "ID", "Cliente", "Status", "Carregamento", "CTE/Manif.", "CTE/Terceiro", "Lucro CTE", "Total"
+    ]]
+
+    total_carregamento = Decimal('0.00')
+    total_cte_manifesto = Decimal('0.00')
+    total_cte_terceiro = Decimal('0.00')
+    total_lucro_cte = Decimal('0.00')
+    total_geral = Decimal('0.00')
+
+    for c in cobrancas:
+        valor_carregamento = c.valor_carregamento or Decimal('0.00')
+        valor_cte_manifesto = c.valor_cte_manifesto or Decimal('0.00')
+        valor_cte_terceiro = getattr(c, 'valor_cte_terceiro', Decimal('0.00')) or Decimal('0.00')
+        lucro_cte = getattr(c, 'lucro_cte', valor_cte_manifesto - valor_cte_terceiro)
+        valor_total = c.valor_total or Decimal('0.00')
+
+        rows.append([
+            str(c.id),
+            c.cliente.razao_social,
+            c.status,
+            format_brazilian_currency(valor_carregamento),
+            format_brazilian_currency(valor_cte_manifesto),
+            format_brazilian_currency(valor_cte_terceiro),
+            format_brazilian_currency(lucro_cte),
+            format_brazilian_currency(valor_total),
+        ])
+
+        total_carregamento += valor_carregamento
+        total_cte_manifesto += valor_cte_manifesto
+        total_cte_terceiro += valor_cte_terceiro
+        total_lucro_cte += lucro_cte
+        total_geral += valor_total
+
+    resumo_data = [
+        ['Total de Cobranças', str(qtd)],
+        ['Carregamento Total', format_brazilian_currency(total_carregamento)],
+        ['CTE/Manifesto Total', format_brazilian_currency(total_cte_manifesto)],
+        ['CTE/Terceiro Total', format_brazilian_currency(total_cte_terceiro)],
+        ['Lucro CTE Total', format_brazilian_currency(total_lucro_cte)],
+        ['Valor Total Geral', format_brazilian_currency(total_geral)],
+    ]
+    resumo_table = Table(resumo_data, colWidths=[7 * cm, 6 * cm])
+    resumo_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 11),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+    ]))
+    story.append(Paragraph("RESUMO EXECUTIVO", styles['Heading2']))
+    story.append(Spacer(1, 8))
+    story.append(resumo_table)
+    story.append(Spacer(1, 12))
+
+    rows.append([
+        "TOTAL", "-", "-", format_brazilian_currency(total_carregamento),
+        format_brazilian_currency(total_cte_manifesto),
+        format_brazilian_currency(total_cte_terceiro),
+        format_brazilian_currency(total_lucro_cte),
+        format_brazilian_currency(total_geral),
+    ])
+
+    tabela = Table(
+        rows,
+        colWidths=[1.2 * cm, 8.2 * cm, 2.0 * cm, 3.0 * cm, 3.0 * cm, 3.0 * cm, 3.0 * cm, 3.0 * cm]
+    )
+    total_row = len(rows) - 1
+    tabela.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a237e')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('ALIGN', (0, 1), (2, -1), 'CENTER'),
+        ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),
+        ('ROWBACKGROUNDS', (0, 1), (-1, total_row - 1), [colors.white, colors.beige]),
+        ('BACKGROUND', (0, total_row), (-1, total_row), colors.HexColor('#D9E1F2')),
+        ('FONTNAME', (0, total_row), (-1, total_row), 'Helvetica-Bold'),
+    ]))
+
+    story.append(Paragraph("DETALHAMENTO DAS COBRANÇAS", styles['Heading2']))
+    story.append(Spacer(1, 8))
+    story.append(tabela)
+    doc.build(story)
+
+    pdf_content = buffer.getvalue()
+    buffer.close()
+    return pdf_content

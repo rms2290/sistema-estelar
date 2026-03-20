@@ -90,6 +90,14 @@
                         <div class="col-md-8">R$ {{ cobranca.valor_cte_manifesto|floatformat:2 }}</div>
                     </div>
                     <div class="row mb-2">
+                        <div class="col-md-4"><strong>Valor CTE/Terceiro (R$):</strong></div>
+                        <div class="col-md-8">R$ {{ cobranca.valor_cte_terceiro|default:0|floatformat:2 }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Lucro CTE (R$):</strong></div>
+                        <div class="col-md-8">R$ {{ cobranca.lucro_cte|floatformat:2 }}</div>
+                    </div>
+                    <div class="row mb-2">
                         <div class="col-md-4"><strong>Total (R$):</strong></div>
                         <div class="col-md-8"><strong>R$ {{ cobranca.valor_total|floatformat:2 }}</strong></div>
                     </div>
@@ -101,12 +109,6 @@
                     <div class="row mb-2">
                         <div class="col-md-4"><strong>Margem Estelar (R$):</strong></div>
                         <div class="col-md-8">R$ {{ cobranca.margem_carregamento|floatformat:2 }}</div>
-                    </div>
-                    {% endif %}
-                    {% if cobranca.data_vencimento %}
-                    <div class="row mb-2">
-                        <div class="col-md-4"><strong>Data vencimento:</strong></div>
-                        <div class="col-md-8">{{ cobranca.data_vencimento|date:"d/m/Y" }}</div>
                     </div>
                     {% endif %}
                     {% if cobranca.observacoes %}

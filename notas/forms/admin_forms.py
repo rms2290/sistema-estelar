@@ -3,6 +3,7 @@ Formulários administrativos
 """
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.utils import timezone
 from decimal import Decimal
 
@@ -59,7 +60,7 @@ class CobrancaCarregamentoForm(forms.ModelForm):
             'valor_carregamento',
             'valor_distribuicao_trabalhadores',
             'valor_cte_manifesto',
-            'data_vencimento',
+            'valor_cte_terceiro',
             'observacoes',
         ]
         widgets = {
@@ -89,9 +90,10 @@ class CobrancaCarregamentoForm(forms.ModelForm):
                 'min': '0',
                 'placeholder': '0.00 (opcional)',
             }),
-            'data_vencimento': forms.DateInput(attrs={
+            'valor_cte_terceiro': forms.NumberInput(attrs={
                 'class': 'form-control form-control-lg',
-                'type': 'date'
+                'step': '0.01',
+                'placeholder': '0.00 (opcional)',
             }),
             'observacoes': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -124,7 +126,7 @@ class CobrancaCarregamentoForm(forms.ModelForm):
             'valor_carregamento': 'Valor repassado ao cliente (R$)',
             'valor_distribuicao_trabalhadores': 'Valor para distribuição trabalhadores (R$)',
             'valor_cte_manifesto': 'Valor CTE/Manifesto (R$)',
-            'data_vencimento': 'Data de Vencimento',
+            'valor_cte_terceiro': 'Valor CTE/Terceiro (R$)',
             'observacoes': 'Observações',
         }
     
@@ -135,6 +137,7 @@ class CobrancaCarregamentoForm(forms.ModelForm):
         
         # Tornar campo valor_cte_manifesto opcional
         self.fields['valor_cte_manifesto'].required = False
+        self.fields['valor_cte_terceiro'].required = False
         # Valor distribuição trabalhadores: opcional; ajuda para acerto diário
         self.fields['valor_distribuicao_trabalhadores'].required = False
         self.fields['valor_distribuicao_trabalhadores'].help_text = (
@@ -159,9 +162,18 @@ class CobrancaCarregamentoForm(forms.ModelForm):
         
         # Definir queryset de romaneios baseado no cliente
         if cliente_para_filtrar:
-            self.fields['romaneios'].queryset = RomaneioViagem.objects.filter(
-                cliente=cliente_para_filtrar
-            ).order_by('-data_emissao')
+            romaneios_qs = RomaneioViagem.objects.filter(cliente=cliente_para_filtrar)
+            if self.instance and self.instance.pk:
+                # Em edição: permite manter romaneios já vinculados a esta cobrança
+                # e também selecionar romaneios livres (não vinculados a nenhuma outra).
+                romaneios_qs = romaneios_qs.filter(
+                    Q(cobrancas_vinculadas__isnull=True) | Q(cobrancas_vinculadas=self.instance)
+                ).distinct()
+            else:
+                # Em criação: só permite romaneios que ainda não estão em cobrança.
+                romaneios_qs = romaneios_qs.filter(cobrancas_vinculadas__isnull=True)
+
+            self.fields['romaneios'].queryset = romaneios_qs.order_by('-data_emissao')
         else:
             self.fields['romaneios'].queryset = RomaneioViagem.objects.all().order_by('-data_emissao')
         
@@ -187,6 +199,27 @@ class CobrancaCarregamentoForm(forms.ModelForm):
             except (ValueError, TypeError):
                 return Decimal('0.00')
         
+        return valor
+
+    def clean_valor_cte_terceiro(self):
+        """Limpa o campo valor_cte_terceiro, convertendo valores vazios para 0.00"""
+        valor = self.cleaned_data.get('valor_cte_terceiro')
+
+        if valor is None:
+            return Decimal('0.00')
+
+        if isinstance(valor, str) and valor.strip() == '':
+            return Decimal('0.00')
+
+        if isinstance(valor, (Decimal, float, int)):
+            return Decimal(str(valor))
+
+        if isinstance(valor, str):
+            try:
+                return Decimal(valor.strip()) if valor.strip() else Decimal('0.00')
+            except (ValueError, TypeError):
+                return Decimal('0.00')
+
         return valor
 
     def clean_valor_distribuicao_trabalhadores(self):
@@ -227,6 +260,27 @@ class CobrancaCarregamentoForm(forms.ModelForm):
                     f'Os seguintes romaneios não pertencem ao cliente selecionado: '
                     f'{", ".join([str(r.codigo) for r in romaneios_invalidos])}'
                 )
+
+        # Impedir romaneio já vinculado a outra cobrança (evita duplicidade)
+        if romaneios:
+            cobrancas_existentes = CobrancaCarregamento.objects.filter(romaneios__in=romaneios).distinct()
+            if self.instance and self.instance.pk:
+                cobrancas_existentes = cobrancas_existentes.exclude(pk=self.instance.pk)
+
+            if cobrancas_existentes.exists():
+                romaneio_ids = list(romaneios.values_list('id', flat=True))
+                romaneios_ja_vinculados = (
+                    RomaneioViagem.objects
+                    .filter(id__in=romaneio_ids, cobrancas_vinculadas__in=cobrancas_existentes)
+                    .distinct()
+                    .values_list('codigo', flat=True)
+                )
+                raise ValidationError({
+                    'romaneios': (
+                        'Os seguintes romaneios já estão vinculados a outra cobrança: '
+                        + ', '.join(romaneios_ja_vinculados)
+                    )
+                })
         
         return cleaned_data
 

@@ -1,0 +1,100 @@
+{% extends "relatorios/base_relatorio_pdf.html" %}
+{% load format_filters %}
+
+{% block extra_style %}
+/* Segue o mesmo padrão visual do consolidado, porém para 1 cobrança */
+.tabela-cobranca-individual {
+    table-layout: fixed;
+}
+.tabela-cobranca-individual thead th,
+.tabela-cobranca-individual tbody td,
+.tabela-cobranca-individual tfoot td {
+    padding: 3px 5px;
+    font-size: 10px;
+    line-height: 1.2;
+}
+.tabela-cobranca-individual .text-center {
+    text-align: center;
+}
+.tabela-cobranca-individual .total-geral td {
+    font-weight: bold;
+    background: #e8e8e8;
+}
+
+.tabela-romaneios {
+    table-layout: fixed;
+}
+.tabela-romaneios thead th,
+.tabela-romaneios tbody td {
+    padding: 3px 5px;
+    font-size: 10px;
+    line-height: 1.2;
+}
+.dados-romaneios {
+    border: 1px solid #000;
+    padding: 6px 8px;
+    font-size: 10px;
+    line-height: 1.35;
+}
+.dados-romaneio-item + .dados-romaneio-item {
+    border-top: 1px solid #cfcfcf;
+    margin-top: 5px;
+    padding-top: 5px;
+}
+.dados-romaneio-linha strong {
+    display: inline-block;
+    width: 65px;
+}
+{% endblock %}
+
+{% block conteudo %}
+<div class="secao-estado">
+    <div class="dados-romaneios">
+        {% for romaneio in romaneios %}
+        <div class="dados-romaneio-item">
+            <div class="dados-romaneio-linha"><strong>CLIENTE</strong> {{ romaneio.cliente.razao_social }}</div>
+            <div class="dados-romaneio-linha"><strong>ROMANEIO</strong> {{ romaneio.codigo }}</div>
+            <div class="dados-romaneio-linha"><strong>DATA</strong> {{ romaneio.data_emissao|date:"d/m/Y" }}</div>
+        </div>
+        {% empty %}
+        <div class="dados-romaneio-item">
+            <div class="dados-romaneio-linha">Nenhum romaneio vinculado.</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <table class="tabela-cobranca-individual" style="margin-top: 8px;">
+        <colgroup>
+            <col style="width: 48%;">
+            <col style="width: 12%;">
+            <col style="width: 13%;">
+            <col style="width: 13%;">
+            <col style="width: 14%;">
+        </colgroup>
+        <thead>
+            <tr>
+                <th>CLIENTE</th>
+                <th>STATUS</th>
+                <th>R$ CARREG.</th>
+                <th>R$ CTE/MANIF.</th>
+                <th>R$ TOTAL</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ cobranca.cliente.razao_social }}</td>
+                <td class="text-center">{{ cobranca.status }}</td>
+                <td class="valor">{{ cobranca.valor_carregamento|format_brazilian_currency }}</td>
+                <td class="valor">{{ cobranca.valor_cte_manifesto|format_brazilian_currency }}</td>
+                <td class="valor">{{ cobranca.valor_total|format_brazilian_currency }}</td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr class="total-geral">
+                <td colspan="4">TOTAL</td>
+                <td class="valor">{{ cobranca.valor_total|format_brazilian_currency }}</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% endblock %}

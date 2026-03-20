@@ -3,6 +3,8 @@ Views de cobrança de carregamento (apenas administradores).
 """
 import logging
 from datetime import datetime
+from decimal import Decimal
+from django.db.models import Q
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 
@@ -43,7 +45,11 @@ def criar_cobranca_carregamento(request):
             if cliente_id:
                 try:
                     cliente_obj = Cliente.objects.get(pk=cliente_id)
-                    romaneios = RomaneioViagem.objects.filter(cliente=cliente_obj).order_by('-data_emissao')
+                    romaneios = (
+                        RomaneioViagem.objects
+                        .filter(cliente=cliente_obj, cobrancas_vinculadas__isnull=True)
+                        .order_by('-data_emissao')
+                    )
                     form.fields['romaneios'].queryset = romaneios
                     cliente_selecionado_id = cliente_id
                 except (Cliente.DoesNotExist, ValueError):
@@ -54,7 +60,11 @@ def criar_cobranca_carregamento(request):
         if cliente_selecionado_id:
             try:
                 cliente_obj = Cliente.objects.get(pk=cliente_selecionado_id)
-                romaneios = RomaneioViagem.objects.filter(cliente=cliente_obj).order_by('-data_emissao')
+                romaneios = (
+                    RomaneioViagem.objects
+                    .filter(cliente=cliente_obj, cobrancas_vinculadas__isnull=True)
+                    .order_by('-data_emissao')
+                )
                 form.fields['romaneios'].queryset = romaneios
             except Cliente.DoesNotExist:
                 pass
@@ -100,7 +110,13 @@ def editar_cobranca_carregamento(request, cobranca_id):
         form = CobrancaCarregamentoForm(instance=cobranca)
     
     # Romaneios do cliente (para exibir na tabela de seleção)
-    romaneios = RomaneioViagem.objects.filter(cliente=cobranca.cliente).order_by('-data_emissao')
+    romaneios = (
+        RomaneioViagem.objects
+        .filter(cliente=cobranca.cliente)
+        .filter(Q(cobrancas_vinculadas__isnull=True) | Q(cobrancas_vinculadas=cobranca))
+        .distinct()
+        .order_by('-data_emissao')
+    )
     # IDs dos romaneios selecionados: no POST use o que veio do formulário; no GET use os já vinculados
     if request.method == 'POST' and request.POST.getlist('romaneios'):
         romaneios_selecionados = [int(x) for x in request.POST.getlist('romaneios') if x.isdigit()]
@@ -182,44 +198,65 @@ def baixar_cobranca_carregamento(request, cobranca_id):
 
 @admin_required
 def gerar_relatorio_cobranca_carregamento_pdf(request, cobranca_id):
-    """View para gerar PDF de uma cobrança de carregamento"""
-    from ..utils.relatorios import gerar_relatorio_pdf_cobranca_carregamento, gerar_resposta_pdf
-    
+    """Exibe relatório individual de cobrança no layout padrão de impressão."""
     cobranca = get_object_or_404(CobrancaCarregamento, pk=cobranca_id)
-    
-    try:
-        pdf_content = gerar_relatorio_pdf_cobranca_carregamento(cobranca)
-        nome_cliente = cobranca.cliente.razao_social.replace(' ', '_').replace('/', '_').replace('\\', '_')
-        nome_cliente = ''.join(c for c in nome_cliente if c.isalnum() or c in ('_', '-'))
-        nome_arquivo = f"cobranca_carregamento_{cobranca.id}_{nome_cliente}.pdf"
-        return gerar_resposta_pdf(pdf_content, nome_arquivo, inline=True)
-    except Exception as e:
-        messages.error(request, f'Erro ao gerar PDF: {str(e)}')
-        return redirect('notas:cobranca_carregamento')
+    romaneios = cobranca.romaneios.all().order_by('codigo')
+
+    data_ref = cobranca.criado_em.date() if cobranca.criado_em else None
+    data_ref_fmt = data_ref.strftime('%d/%m/%Y') if data_ref else '-'
+
+    context = {
+        'titulo_relatorio': 'RELATÓRIO DE COBRANÇA DE CARREGAMENTO',
+        'cobranca': cobranca,
+        'romaneios': romaneios,
+        'data_inicio': data_ref_fmt,
+        'data_fim': data_ref_fmt,
+        'data_geracao': datetime.now().strftime('%d/%m/%Y às %H:%M'),
+    }
+    response = render(request, 'notas/relatorio_cobranca_carregamento_pdf.html', context)
+    response['Content-Disposition'] = 'inline'
+    return response
 
 
 @admin_required
 def gerar_relatorio_consolidado_cobranca_pdf(request):
-    """View para gerar PDF consolidado de cobranças"""
-    from ..utils.relatorios import gerar_relatorio_pdf_consolidado_cobranca, gerar_resposta_pdf
-    
+    """Exibe relatório consolidado de cobranças no layout padrão de impressão."""
+    # Defesa em profundidade: cliente não deve acessar este relatório.
+    if getattr(request.user, 'tipo_usuario', None) == 'cliente':
+        messages.error(request, 'Acesso negado. Relatório consolidado indisponível para usuário cliente.')
+        return redirect('notas:dashboard')
+
     cliente_id = request.GET.get('cliente')
     status = request.GET.get('status')
     data_inicio = request.GET.get('data_inicio')
     data_fim = request.GET.get('data_fim')
-    
-    cobrancas = CobrancaCarregamento.objects.all().select_related('cliente').prefetch_related('romaneios')
-    
-    if cliente_id:
-        cobrancas = cobrancas.filter(cliente_id=cliente_id)
-    if status:
-        cobrancas = cobrancas.filter(status=status)
+
+    base_qs = CobrancaCarregamento.objects.all().select_related('cliente').prefetch_related('romaneios')
     data_inicio_obj = parse_date_iso(data_inicio) if data_inicio else None
-    if data_inicio_obj:
-        cobrancas = cobrancas.filter(criado_em__date__gte=data_inicio_obj)
     data_fim_obj = parse_date_iso(data_fim) if data_fim else None
-    if data_fim_obj:
-        cobrancas = cobrancas.filter(criado_em__date__lte=data_fim_obj)
+
+    # Se data foi informada mas inválida, não retorna tudo por engano.
+    if data_inicio and not data_inicio_obj:
+        messages.error(request, 'Data inicial inválida. Use o formato YYYY-MM-DD.')
+        base_qs = base_qs.none()
+    if data_fim and not data_fim_obj:
+        messages.error(request, 'Data final inválida. Use o formato YYYY-MM-DD.')
+        base_qs = base_qs.none()
+
+    tem_filtro = bool(cliente_id or status or data_inicio or data_fim)
+    if not tem_filtro:
+        # Consolidado sem filtro não deve exibir todos os registros.
+        cobrancas = base_qs.none()
+    else:
+        cobrancas = base_qs
+        if cliente_id:
+            cobrancas = cobrancas.filter(cliente_id=cliente_id)
+        if status:
+            cobrancas = cobrancas.filter(status=status)
+        if data_inicio_obj:
+            cobrancas = cobrancas.filter(criado_em__date__gte=data_inicio_obj)
+        if data_fim_obj:
+            cobrancas = cobrancas.filter(criado_em__date__lte=data_fim_obj)
     
     cliente_selecionado = None
     if cliente_id:
@@ -227,20 +264,44 @@ def gerar_relatorio_consolidado_cobranca_pdf(request):
             cliente_selecionado = Cliente.objects.get(pk=cliente_id)
         except Cliente.DoesNotExist:
             pass
-    
-    try:
-        pdf_content = gerar_relatorio_pdf_consolidado_cobranca(cobrancas, cliente_selecionado=cliente_selecionado)
-        nome_arquivo = f"relatorio_consolidado_cobrancas_{datetime.now().strftime('%Y%m%d')}.pdf"
-        return gerar_resposta_pdf(pdf_content, nome_arquivo, inline=True)
-    except Exception as e:
-        logger.error(
-            'Erro ao gerar relatorio consolidado de cobrancas',
-            extra={
-                'user': request.user.username if request.user.is_authenticated else 'anonymous',
-                'cliente_id': cliente_id,
-                'error': str(e)
-            },
-            exc_info=True
-        )
-        messages.error(request, f'Erro ao gerar PDF consolidado: {str(e)}')
-        return redirect('notas:cobranca_carregamento')
+
+    itens = list(cobrancas.order_by('-criado_em'))
+    total_carregamento = Decimal('0.00')
+    total_distribuicao = Decimal('0.00')
+    total_margem_estelar = Decimal('0.00')
+    total_cte_manifesto = Decimal('0.00')
+    total_cte_terceiro = Decimal('0.00')
+    total_lucro_cte = Decimal('0.00')
+    total_geral = Decimal('0.00')
+
+    for c in itens:
+        total_carregamento += c.valor_carregamento or Decimal('0.00')
+        total_distribuicao += c.valor_distribuicao_trabalhadores or Decimal('0.00')
+        total_margem_estelar += c.margem_carregamento or Decimal('0.00')
+        total_cte_manifesto += c.valor_cte_manifesto or Decimal('0.00')
+        total_cte_terceiro += c.valor_cte_terceiro or Decimal('0.00')
+        total_lucro_cte += c.lucro_cte or Decimal('0.00')
+        total_geral += c.valor_total or Decimal('0.00')
+
+    data_inicio_fmt = data_inicio_obj.strftime('%d/%m/%Y') if data_inicio_obj else '-'
+    data_fim_fmt = data_fim_obj.strftime('%d/%m/%Y') if data_fim_obj else '-'
+
+    context = {
+        'titulo_relatorio': 'RELATÓRIO CONSOLIDADO DE COBRANÇAS',
+        'itens': itens,
+        'mostrar_colunas_restritas': getattr(request.user, 'tipo_usuario', None) == 'cliente',
+        'data_inicio': data_inicio_fmt,
+        'data_fim': data_fim_fmt,
+        'data_geracao': datetime.now().strftime('%d/%m/%Y às %H:%M'),
+        'cliente_selecionado': cliente_selecionado,
+        'total_carregamento': total_carregamento,
+        'total_distribuicao': total_distribuicao,
+        'total_margem_estelar': total_margem_estelar,
+        'total_cte_manifesto': total_cte_manifesto,
+        'total_cte_terceiro': total_cte_terceiro,
+        'total_lucro_cte': total_lucro_cte,
+        'total_geral': total_geral,
+    }
+    response = render(request, 'notas/relatorio_consolidado_cobranca_pdf.html', context)
+    response['Content-Disposition'] = 'inline'
+    return response

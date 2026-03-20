@@ -1,6 +1,10 @@
 """
 Views da tabela de seguros por estado (apenas administradores).
 """
+import json
+from decimal import Decimal, InvalidOperation
+
+from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 
@@ -77,3 +81,70 @@ def atualizar_tabela_seguro_ajax(request, pk):
             return json_error('Valor inválido para percentual', status=400)
     
     return json_error('Método não permitido', status=405)
+
+
+@admin_required
+def atualizar_tabela_seguros_em_lote_ajax(request):
+    """
+    Atualiza vários registros da tabela de seguros de uma vez (AJAX).
+
+    Espera payload JSON:
+        { "updates": [ { "id": 1, "percentual_seguro": "3.45" }, ... ] }
+    """
+    if request.method != 'POST':
+        return json_error('Método não permitido', status=405)
+
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        return json_error('Payload JSON inválido', status=400)
+
+    updates = payload.get('updates', [])
+    if not isinstance(updates, list) or not updates:
+        return json_error('Nenhuma atualização enviada', status=400)
+
+    # Valida primeiro, para falhar rápido antes de escrever no banco.
+    validated = {}  # pk -> Decimal(2 casas)
+    order = []  # mantém ordem recebida (apenas ids únicos)
+    for item in updates:
+        try:
+            pk = int(item.get('id'))
+        except (TypeError, ValueError):
+            return json_error('ID inválido no payload', status=400)
+
+        percentual_raw = item.get('percentual_seguro')
+        try:
+            percentual = Decimal(str(percentual_raw)).quantize(Decimal('0.01'))
+        except (InvalidOperation, TypeError, ValueError):
+            return json_error('Percentual inválido no payload', status=400)
+
+        if percentual < 0 or percentual > 100:
+            return json_error('Percentual deve estar entre 0 e 100', status=400)
+
+        if pk not in validated:
+            validated[pk] = percentual
+            order.append(pk)
+
+    ids = list(validated.keys())
+    registros = list(TabelaSeguro.objects.filter(pk__in=ids))
+    if len(registros) != len(ids):
+        return json_error('Alguns registros não foram encontrados', status=404)
+
+    registros_por_id = {r.pk: r for r in registros}
+
+    with transaction.atomic():
+        resp_updates = []
+        for pk in order:
+            tabela_seguro = registros_por_id[pk]
+            tabela_seguro.percentual_seguro = validated[pk]
+            tabela_seguro.save(update_fields=['percentual_seguro'])
+            resp_updates.append({
+                'id': pk,
+                'percentual_seguro': f'{tabela_seguro.percentual_seguro:.2f}',
+                'data_atualizacao': tabela_seguro.data_atualizacao.strftime('%d/%m/%Y %H:%M'),
+            })
+
+    return json_success(
+        message='Tabela de seguros atualizada com sucesso!',
+        updates=resp_updates,
+    )

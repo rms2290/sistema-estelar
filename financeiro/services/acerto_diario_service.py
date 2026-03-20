@@ -1,10 +1,14 @@
 """
 Serviço de acerto diário: regras para salvar acerto e criar movimentos de caixa.
 """
+from datetime import timedelta
 from decimal import Decimal
+
+from django.db.models import Sum
 
 from financeiro.models import (
     AcertoDiarioCarregamento,
+    AcumuladoFuncionario,
     CarregamentoCliente,
     DistribuicaoFuncionario,
     MovimentoCaixa,
@@ -19,6 +23,61 @@ class AcertoDiarioService:
         'É necessário iniciar um período antes de salvar o acerto. '
         'Clique em "Iniciar Período" na página de gerenciamento.'
     )
+
+    @classmethod
+    def _recalcular_acumulado_funcionarios_semana(cls, data_referencia):
+        """
+        Recalcula AcumuladoFuncionario para a semana do `data_referencia`.
+
+        Regra:
+        - valor_acumulado = soma das DistribuicaoFuncionario da semana (por funcionário)
+        - se existir AcumuladoFuncionario com status=Depositado, não altera o valor
+        """
+        # Semana de segunda (0) a domingo (6)
+        semana_inicio = data_referencia - timedelta(days=data_referencia.weekday())
+        semana_fim = semana_inicio + timedelta(days=6)
+
+        acertos_semana = AcertoDiarioCarregamento.objects.filter(
+            data__gte=semana_inicio,
+            data__lte=semana_fim,
+        )
+
+        totals = dict(
+            DistribuicaoFuncionario.objects.filter(
+                acerto_diario__in=acertos_semana
+            )
+            .values('funcionario_id')
+            .annotate(total=Sum('valor'))
+            .values_list('funcionario_id', 'total')
+        )
+
+        totals = {fid: (t or Decimal('0.00')) for fid, t in totals.items()}
+
+        # Atualiza acumulados existentes (apenas Pendente)
+        acumulados_existentes = AcumuladoFuncionario.objects.filter(
+            semana_inicio=semana_inicio,
+            semana_fim=semana_fim,
+        )
+        for acc in acumulados_existentes:
+            if acc.status != 'Pendente':
+                continue
+            acc.valor_acumulado = totals.get(acc.funcionario_id, Decimal('0.00'))
+            acc.save(update_fields=['valor_acumulado'])
+
+        # Cria acumulados que existam na semana mas não existam na tabela
+        for funcionario_id, total in totals.items():
+            if total <= 0:
+                continue
+            acc, created = AcumuladoFuncionario.objects.get_or_create(
+                funcionario_id=funcionario_id,
+                semana_inicio=semana_inicio,
+                semana_fim=semana_fim,
+                defaults={'valor_acumulado': total, 'status': 'Pendente'},
+            )
+            if not created and acc.status == 'Pendente':
+                if acc.valor_acumulado != total:
+                    acc.valor_acumulado = total
+                    acc.save(update_fields=['valor_acumulado'])
 
     @classmethod
     def salvar_acerto_e_criar_movimentos(cls, data, observacoes, usuario, acerto_id=None):
@@ -92,16 +151,11 @@ class AcertoDiarioService:
         ):
             tipo_pagamento = (descarga.tipo_pagamento or 'Dinheiro').upper()
             if tipo_pagamento in ('DINHEIRO',):
-                MovimentoCaixa.objects.create(
-                    data=acerto.data,
-                    tipo='Entrada',
-                    valor=descarga.valor,
-                    descricao=f"Descarga: {descarga.descricao or 'Descarga'}",
-                    categoria='RecebimentoDescarga',
-                    acerto_diario=acerto,
-                    periodo=periodo_ativo,
-                    usuario_criacao=usuario,
-                )
+                # Regra do seu modelo: descarga em dinheiro já entra na divisão
+                # (Empresa/Funcionários) via valor_estelar + DistribuicaoFuncionario.
+                # Para evitar contabilização duplicada, não criamos MovimentoCaixa
+                # como RecebimentoDescarga.
+                continue
             elif tipo_pagamento in ('DEPOSITO', 'DEPÓSITO'):
                 MovimentoCaixa.objects.create(
                     data=acerto.data,
@@ -138,5 +192,8 @@ class AcertoDiarioService:
                 periodo=periodo_ativo,
                 usuario_criacao=usuario,
             )
+
+        # Gera/atualiza "contas a pagar" (valores derivados do acerto diário)
+        cls._recalcular_acumulado_funcionarios_semana(acerto.data)
 
         return acerto, None

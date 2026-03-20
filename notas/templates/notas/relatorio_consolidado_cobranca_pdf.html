@@ -1,0 +1,130 @@
+{% extends "relatorios/base_relatorio_pdf.html" %}
+{% load format_filters %}
+
+{% block extra_style %}
+@media print {
+    @page {
+        size: A4 landscape;
+        margin: 1cm;
+    }
+}
+
+/* Melhora leitura no modo paisagem para muitas colunas */
+.tabela-consolidado-cobranca {
+    table-layout: fixed;
+}
+.tabela-consolidado-cobranca thead th,
+.tabela-consolidado-cobranca tbody td,
+.tabela-consolidado-cobranca tfoot td {
+    padding: 3px 5px;
+    font-size: 10px;
+    line-height: 1.2;
+}
+.tabela-consolidado-cobranca .text-center {
+    text-align: center;
+}
+.tabela-consolidado-cobranca td.cliente {
+    word-break: break-word;
+}
+.tabela-consolidado-cobranca .total-geral td {
+    font-weight: bold;
+    background: #e8e8e8;
+}
+{% endblock %}
+
+{% block conteudo %}
+<div class="secao-estado">
+    <table class="tabela-consolidado-cobranca">
+        <colgroup>
+            {% if mostrar_colunas_restritas %}
+            <col style="width: 58%;">
+            <col style="width: 12%;">
+            <col style="width: 10%;">
+            <col style="width: 10%;">
+            <col style="width: 10%;">
+            {% else %}
+            <col style="width: 26%;">
+            <col style="width: 8%;">
+            <col style="width: 8%;">
+            <col style="width: 8%;">
+            <col style="width: 10%;">
+            <col style="width: 10%;">
+            <col style="width: 10%;">
+            <col style="width: 10%;">
+            <col style="width: 10%;">
+            {% endif %}
+        </colgroup>
+        <thead>
+            <tr>
+                {% if mostrar_colunas_restritas %}
+                <th>CLIENTE</th>
+                <th>STATUS</th>
+                <th>R$ CARREG.</th>
+                <th>R$ CTE/MANIF.</th>
+                <th>R$ TOTAL</th>
+                {% else %}
+                <th>CLIENTE</th>
+                <th>STATUS</th>
+                <th>R$ CARREG.</th>
+                <th>R$ DIST. TRAB.</th>
+                <th>R$ MARGEM ESTELAR</th>
+                <th>R$ CTE/MANIF.</th>
+                <th>R$ CTE/TERC.</th>
+                <th>R$ LUCRO CTE</th>
+                <th>R$ TOTAL</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in itens %}
+            <tr>
+                {% if mostrar_colunas_restritas %}
+                <td class="cliente">{{ item.cliente.razao_social }}</td>
+                <td class="text-center">{{ item.status }}</td>
+                <td class="valor">{{ item.valor_carregamento|format_brazilian_currency }}</td>
+                <td class="valor">{{ item.valor_cte_manifesto|format_brazilian_currency }}</td>
+                <td class="valor">{{ item.valor_total|format_brazilian_currency }}</td>
+                {% else %}
+                <td class="cliente">{{ item.cliente.razao_social }}</td>
+                <td class="text-center">{{ item.status }}</td>
+                <td class="valor">{{ item.valor_carregamento|format_brazilian_currency }}</td>
+                <td class="valor">{{ item.valor_distribuicao_trabalhadores|default:0|format_brazilian_currency }}</td>
+                <td class="valor">{{ item.margem_carregamento|format_brazilian_currency }}</td>
+                <td class="valor">{{ item.valor_cte_manifesto|format_brazilian_currency }}</td>
+                <td class="valor">{{ item.valor_cte_terceiro|format_brazilian_currency }}</td>
+                <td class="valor">{{ item.lucro_cte|format_brazilian_currency }}</td>
+                <td class="valor">{{ item.valor_total|format_brazilian_currency }}</td>
+                {% endif %}
+            </tr>
+            {% empty %}
+            <tr>
+                {% if mostrar_colunas_restritas %}
+                <td colspan="5" class="text-center">Nenhuma cobrança encontrada para os filtros informados.</td>
+                {% else %}
+                <td colspan="9" class="text-center">Nenhuma cobrança encontrada para os filtros informados.</td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="total-geral">
+                {% if mostrar_colunas_restritas %}
+                <td colspan="2">TOTAL GERAL</td>
+                <td class="valor">{{ total_carregamento|format_brazilian_currency }}</td>
+                <td class="valor">{{ total_cte_manifesto|format_brazilian_currency }}</td>
+                <td class="valor">{{ total_geral|format_brazilian_currency }}</td>
+                {% else %}
+                <td colspan="2">TOTAL GERAL</td>
+                <td class="valor">{{ total_carregamento|format_brazilian_currency }}</td>
+                <td class="valor">{{ total_distribuicao|format_brazilian_currency }}</td>
+                <td class="valor">{{ total_margem_estelar|format_brazilian_currency }}</td>
+                <td class="valor">{{ total_cte_manifesto|format_brazilian_currency }}</td>
+                <td class="valor">{{ total_cte_terceiro|format_brazilian_currency }}</td>
+                <td class="valor">{{ total_lucro_cte|format_brazilian_currency }}</td>
+                <td class="valor">{{ total_geral|format_brazilian_currency }}</td>
+                {% endif %}
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% endblock %}

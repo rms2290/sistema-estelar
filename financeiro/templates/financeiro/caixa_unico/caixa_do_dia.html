@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load format_filters %}
+
+{% block title %}Caixa do Dia - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="fas fa-wallet"></i> Caixa do Dia</h2>
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="btn btn-outline-secondary" href="{% url 'financeiro:a_receber' %}">
+        <i class="fas fa-hand-holding-usd"></i> A Receber
+      </a>
+      <a class="btn btn-outline-secondary" href="{% url 'financeiro:a_pagar' %}">
+        <i class="fas fa-user-clock"></i> A Pagar
+      </a>
+      <a class="btn btn-outline-secondary" href="{% url 'financeiro:acerto_diario_carregamento' %}">
+        <i class="fas fa-calendar-day"></i> Acerto Diário
+      </a>
+    </div>
+  </div>
+
+  {% if not periodo_ativo %}
+    <div class="card border-warning mb-4">
+      <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Nenhum Caixa do Dia aberto</h5>
+      </div>
+      <div class="card-body">
+        <p class="mb-3">Abra o caixa do dia informando a data e o saldo inicial em espécie.</p>
+        <form method="POST" class="row g-3">
+          {% csrf_token %}
+          <input type="hidden" name="acao" value="iniciar_periodo">
+          <div class="col-md-4">
+            <label class="form-label">Data</label>
+            <input type="date" name="data_inicio" class="form-control" value="{% now 'Y-m-d' %}" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Saldo inicial (R$)</label>
+            <input type="number" name="valor_inicial_caixa" class="form-control" step="0.01" min="0" value="0.00" required>
+          </div>
+          <div class="col-md-4 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="fas fa-play-circle"></i> Iniciar Caixa do Dia
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% else %}
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="card bg-light">
+          <div class="card-body">
+            <div class="text-muted">Período aberto</div>
+            <div class="h5 mb-0">{{ periodo_ativo.data_inicio|date:"d/m/Y" }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card bg-light">
+          <div class="card-body">
+            <div class="text-muted">Saldo inicial</div>
+            <div class="h5 mb-0">{{ saldo_inicial|format_brazilian_currency }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card bg-light">
+          <div class="card-body">
+            <div class="text-muted">Saldo atual</div>
+            <div class="h5 mb-0">{{ saldo_atual|format_brazilian_currency }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-list"></i> Movimentos do dia</h5>
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'financeiro:gerenciar_movimento_caixa' %}">
+          Abrir tela completa
+        </a>
+      </div>
+      <div class="card-body">
+        {% if movimentos_com_saldo %}
+          <div class="table-responsive">
+            <table class="table table-striped table-hover">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Tipo</th>
+                  <th>Descrição</th>
+                  <th>Cliente</th>
+                  <th>Funcionário</th>
+                  <th class="text-end">Valor</th>
+                  <th class="text-end">Saldo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in movimentos_com_saldo %}
+                  {% with mov=item.movimento %}
+                  <tr>
+                    <td><strong>{{ mov.data|date:"d/m/Y" }}</strong></td>
+                    <td>
+                      {% if item.exibir_como_saida %}
+                        <span class="badge bg-danger">Saída</span>
+                      {% else %}
+                        <span class="badge bg-success">Entrada</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ mov.descricao_exibicao.0|default:"-" }}</td>
+                    <td>{{ mov.cliente.razao_social|default:"-" }}</td>
+                    <td>{{ mov.funcionario.nome|default:"-" }}</td>
+                    <td class="text-end">
+                      <strong class="{% if item.exibir_como_saida %}text-danger{% else %}text-success{% endif %}">
+                        {{ item.sinal }}{{ mov.valor|format_brazilian_currency }}
+                      </strong>
+                    </td>
+                    <td class="text-end">
+                      <strong>{{ item.saldo|format_brazilian_currency }}</strong>
+                    </td>
+                  </tr>
+                  {% endwith %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="alert alert-info mb-0">
+            <i class="fas fa-info-circle"></i> Nenhum movimento registrado ainda para o período aberto.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+

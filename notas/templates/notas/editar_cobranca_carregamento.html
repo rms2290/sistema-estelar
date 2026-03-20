@@ -156,17 +156,23 @@
                                 <label class="form-label">
                                     <i class="fas fa-file-alt"></i> Valor CTE/Manifesto (R$)
                                 </label>
-                                <input type="number" name="valor_cte_manifesto" step="0.01" min="0" 
+                                <input type="number" name="valor_cte_manifesto" id="valor_cte_manifesto" step="0.01" min="0" 
                                        class="form-control form-control-lg" 
                                        placeholder="0.00 (opcional)"
-                                       value="{% localize off %}{{ cobranca.valor_cte_manifesto|default:0|floatformat:2 }}{% endlocalize %}">
+                                       value="{% localize off %}{{ cobranca.valor_cte_manifesto|default:0|floatformat:2 }}{% endlocalize %}" oninput="atualizarLucroCte()">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">
-                                    <i class="fas fa-calendar"></i> Data de Vencimento
+                                    <i class="fas fa-hand-holding-usd"></i> Valor CTE/Terceiro (R$)
                                 </label>
-                                <input type="date" name="data_vencimento" class="form-control form-control-lg"
-                                       value="{% if cobranca.data_vencimento %}{{ cobranca.data_vencimento|date:'Y-m-d' }}{% endif %}">
+                                <input type="number" name="valor_cte_terceiro" id="valor_cte_terceiro" step="0.01"
+                                       class="form-control form-control-lg"
+                                       placeholder="0.00 (opcional)"
+                                       value="{% localize off %}{{ cobranca.valor_cte_terceiro|default:0|floatformat:2 }}{% endlocalize %}" oninput="atualizarLucroCte()">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label"><i class="fas fa-chart-line"></i> Lucro CTE (R$)</label>
+                                <div class="form-control form-control-lg bg-light" id="lucro_cte_exibicao" readonly>R$ 0,00</div>
                             </div>
                         </div>
                         <div class="row">
@@ -257,8 +263,17 @@ function atualizarMargem() {
     if (el) el.textContent = 'R$ ' + margem.toFixed(2).replace('.', ',');
 }
 
+function atualizarLucroCte() {
+    const vManifesto = parseFloat(document.getElementById('valor_cte_manifesto').value) || 0;
+    const vTerceiro = parseFloat(document.getElementById('valor_cte_terceiro').value) || 0;
+    const lucro = vManifesto - vTerceiro;
+    const el = document.getElementById('lucro_cte_exibicao');
+    if (el) el.textContent = 'R$ ' + lucro.toFixed(2).replace('.', ',');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     atualizarMargem();
+    atualizarLucroCte();
     const selecionarTodos = document.getElementById('selecionar-todos');
     
     if (selecionarTodos) {

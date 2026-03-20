@@ -111,6 +111,7 @@ urlpatterns = [
     path('tabela-seguros/', admin_views.listar_tabela_seguros, name='listar_tabela_seguros'),
     path('tabela-seguros/editar/<int:pk>/', admin_views.editar_tabela_seguro, name='editar_tabela_seguro'),
     path('tabela-seguros/atualizar/<int:pk>/ajax/', admin_views.atualizar_tabela_seguro_ajax, name='atualizar_tabela_seguro_ajax'),
+    path('tabela-seguros/atualizar-em-lote/ajax/', admin_views.atualizar_tabela_seguros_em_lote_ajax, name='atualizar_tabela_seguros_em_lote_ajax'),
     
     # URL para Totalizador por Estado
     path('totalizador-por-estado/', relatorio_views.totalizador_por_estado, name='totalizador_por_estado'),

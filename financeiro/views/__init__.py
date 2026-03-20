@@ -20,6 +20,7 @@ from .acerto_diario import (
     listar_acertos_diarios,
     acerto_diario_carregamento,
     salvar_acerto_diario,
+    excluir_acerto_diario,
     adicionar_carregamento_cliente_ajax,
     remover_carregamento_cliente_ajax,
     adicionar_distribuicao_funcionario_ajax,
@@ -54,6 +55,14 @@ from .despesas import (
     editar_despesa,
     excluir_despesa,
 )
+from .caixa_unico import (
+    caixa_do_dia,
+    a_receber,
+    receber_cobranca,
+    receber_descarga_deposito,
+    a_pagar,
+    pagar_funcionario,
+)
 
 __all__ = [
     'criar_receita_empresa',
@@ -69,6 +78,7 @@ __all__ = [
     'listar_acertos_diarios',
     'acerto_diario_carregamento',
     'salvar_acerto_diario',
+    'excluir_acerto_diario',
     'adicionar_carregamento_cliente_ajax',
     'remover_carregamento_cliente_ajax',
     'adicionar_distribuicao_funcionario_ajax',
@@ -96,4 +106,10 @@ __all__ = [
     'criar_despesa',
     'editar_despesa',
     'excluir_despesa',
+    'caixa_do_dia',
+    'a_receber',
+    'receber_cobranca',
+    'receber_descarga_deposito',
+    'a_pagar',
+    'pagar_funcionario',
 ]

@@ -13,6 +13,7 @@ from .tabela_seguro_views import (
     listar_tabela_seguros,
     editar_tabela_seguro,
     atualizar_tabela_seguro_ajax,
+    atualizar_tabela_seguros_em_lote_ajax,
 )
 from .cobranca_carregamento_views import (
     criar_cobranca_carregamento,
@@ -43,6 +44,7 @@ __all__ = [
     'listar_tabela_seguros',
     'editar_tabela_seguro',
     'atualizar_tabela_seguro_ajax',
+    'atualizar_tabela_seguros_em_lote_ajax',
     'criar_cobranca_carregamento',
     'visualizar_cobranca_carregamento',
     'editar_cobranca_carregamento',

@@ -33,7 +33,7 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form method="GET">
+                    <form method="GET" id="form-filtros-cobranca">
                         <div class="row">
                             <div class="col-md-3 mb-3">
                                 <label class="form-label">
@@ -79,7 +79,8 @@
                                 <a href="{% url 'notas:cobranca_carregamento' %}" class="btn btn-secondary">
                                     <i class="fas fa-times"></i> Limpar Filtros
                                 </a>
-                                <a href="{% url 'notas:gerar_relatorio_consolidado_cobranca' %}{% if request.GET.cliente %}?cliente={{ request.GET.cliente }}{% endif %}" 
+                                <a href="{% url 'notas:gerar_relatorio_consolidado_cobranca' %}" 
+                                   id="btn-gerar-relatorio-consolidado"
                                    class="btn btn-danger" 
                                    target="_blank">
                                     <i class="fas fa-file-pdf"></i> Gerar Relatório Consolidado
@@ -180,4 +181,30 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const formFiltros = document.getElementById('form-filtros-cobranca');
+    const btnRelatorio = document.getElementById('btn-gerar-relatorio-consolidado');
+    if (!formFiltros || !btnRelatorio) return;
+
+    btnRelatorio.addEventListener('click', function(e) {
+        e.preventDefault();
+        const baseUrl = this.getAttribute('href');
+        const formData = new FormData(formFiltros);
+        const params = new URLSearchParams();
+
+        for (const [key, value] of formData.entries()) {
+            if (value && String(value).trim() !== '') {
+                params.append(key, value);
+            }
+        }
+
+        const finalUrl = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+        window.open(finalUrl, '_blank');
+    });
+});
+</script>
 {% endblock %}

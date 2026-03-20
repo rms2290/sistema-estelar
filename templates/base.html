@@ -231,14 +231,18 @@
                             <span>Fluxo de Caixa</span>
                         </div>
                         <ul class="nav-submenu">
-                            <li><a href="{% url 'financeiro:acerto_diario_carregamento' %}">
-                                <i class="fas fa-calendar-day"></i> Acerto Diário
-                            </a></li>
-                            <li><a href="{% url 'notas:cobranca_carregamento' %}">
-                                <i class="fas fa-truck-loading"></i> Cobrança de Carregamento
-                            </a></li>
                             <li><a href="{% url 'financeiro:gerenciar_movimento_caixa' %}">
                                 <i class="fas fa-cash-register"></i> Movimento de Caixa
+                            </a></li>
+                            <li><a href="{% url 'financeiro:a_receber' %}">
+                                <i class="fas fa-hand-holding-usd"></i> A Receber
+                            </a></li>
+                            <li><a href="{% url 'financeiro:a_pagar' %}">
+                                <i class="fas fa-user-clock"></i> A Pagar
+                            </a></li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li><a href="{% url 'notas:cobranca_carregamento' %}">
+                                <i class="fas fa-truck-loading"></i> Cobrança de Carregamento
                             </a></li>
                             <li><hr class="dropdown-divider my-1"></li>
                             <li><a href="{% url 'financeiro:fechamento_caixa' %}">

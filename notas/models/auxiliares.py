@@ -110,6 +110,15 @@ class CobrancaCarregamento(UpperCaseMixin, models.Model):
     valor_cte_manifesto = models.DecimalField(
         max_digits=10, decimal_places=2, default=0.00, verbose_name="Valor CTE/Manifesto (R$)"
     )
+    valor_cte_terceiro = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        blank=True,
+        null=True,
+        verbose_name="Valor CTE/Terceiro (R$)",
+        help_text="Por enquanto, armazenado no modelo para cálculo futuro do lucro."
+    )
     valor_distribuicao_trabalhadores = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -173,6 +182,13 @@ class CobrancaCarregamento(UpperCaseMixin, models.Model):
         if v_dist is None:
             return Decimal('0.00')
         return max(Decimal('0.00'), v_cobrado - v_dist)
+
+    @property
+    def lucro_cte(self):
+        """Lucro do CTE: valor cobrado (manifesto) - valor pago ao terceiro."""
+        v_manifesto = self.valor_cte_manifesto or Decimal('0.00')
+        v_terceiro = self.valor_cte_terceiro or Decimal('0.00')
+        return v_manifesto - v_terceiro
 
     def baixar(self):
         self.status = 'Baixado'

@@ -21,7 +21,10 @@ from financeiro.models import (
     CarregamentoCliente,
     DistribuicaoFuncionario,
     FuncionarioFluxoCaixa,
+    MovimentoCaixa,
 )
+
+from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
@@ -466,3 +469,35 @@ def adicionar_cobranca_ao_acerto_ajax(request):
     except Exception as e:
         logger.exception('Erro ao adicionar cobrança ao acerto')
         return json_error(f'Erro: {str(e)}')
+
+
+@login_required
+@admin_required
+def excluir_acerto_diario(request):
+    """
+    Exclui um acerto diário:
+    - remove MovimentoCaixa associado (FK do MovimentoCaixa para acerto usa SET_NULL)
+    - deleta o próprio AcertoDiarioCarregamento (CASCADE remove CarregamentoCliente/DistribuicaoFuncionario)
+    """
+    if request.method != 'POST':
+        return json_error('Método não permitido', status=405)
+
+    acerto_id = request.POST.get('acerto_id', '').strip()
+    if not acerto_id:
+        return json_error('acerto_id é obrigatório')
+
+    acerto = get_object_or_404(AcertoDiarioCarregamento, pk=acerto_id)
+
+    try:
+        with transaction.atomic():
+            acerto_data = acerto.data
+            MovimentoCaixa.objects.filter(acerto_diario=acerto).delete()
+            acerto.delete()
+
+            # Recalcula os acumulados da semana para refletir a exclusão.
+            from financeiro.services import AcertoDiarioService
+            AcertoDiarioService._recalcular_acumulado_funcionarios_semana(acerto_data)
+        return json_success(message='Acerto excluído com sucesso!')
+    except Exception as e:
+        logger.exception('Erro ao excluir acerto diário: %s', e)
+        return json_error(f'Erro ao excluir acerto: {str(e)}')

@@ -2,6 +2,8 @@
 Modelos do app Financeiro (fluxo de caixa, receitas, movimentos bancários, etc.)
 Depende de: notas (Usuario, Cliente, CobrancaCarregamento)
 """
+import re
+
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
@@ -777,6 +779,10 @@ class MovimentoCaixa(UpperCaseMixin, models.Model):
         if not self.descricao:
             return (self.descricao or '', None)
         d = self.descricao.strip()
+        # Remover marcador interno da baixa de "descarga (Depósito)".
+        # Ex.: "Recebimento de Descarga: ... [DESCARGA_DEPOSITO:5]"
+        d = re.sub(r'\s*\[DESCARGA_DEPOSITO:\s*\d+\]\s*', ' ', d, flags=re.IGNORECASE)
+        d = re.sub(r'\s+', ' ', d).strip()
         if d.upper().startswith('CARREGAMENTO:'):
             parte = d.split(':', 1)[1].strip() if ':' in d else d
             return (parte, 'CARREGAMENTO')

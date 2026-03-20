@@ -650,28 +650,32 @@ def minhas_cobrancas_carregamento(request):
 @login_required
 @user_passes_test(is_cliente)
 def gerar_relatorio_cobranca_carregamento_pdf_cliente(request, cobranca_id):
-    """View para clientes gerarem PDF de suas cobranças de carregamento"""
-    from ..utils.relatorios import gerar_relatorio_pdf_cobranca_carregamento, gerar_resposta_pdf
-    
+    """View para clientes visualizarem o relatório de suas cobranças de carregamento."""
     cobranca = get_object_or_404(CobrancaCarregamento, pk=cobranca_id)
-    
+
     # Verificar se o usuário tem cliente vinculado
     if not hasattr(request.user, 'cliente') or not request.user.cliente:
         messages.error(request, 'Você não possui um cliente vinculado.')
         return redirect('notas:dashboard_cliente')
-    
+
     # Verificar se a cobrança pertence ao cliente do usuário
     if request.user.cliente != cobranca.cliente:
         messages.error(request, 'Você não tem permissão para acessar esta cobrança.')
         return redirect('notas:minhas_cobrancas_carregamento')
-    
-    try:
-        pdf_content = gerar_relatorio_pdf_cobranca_carregamento(cobranca)
-        nome_cliente = cobranca.cliente.razao_social.replace(' ', '_').replace('/', '_').replace('\\', '_')
-        nome_cliente = ''.join(c for c in nome_cliente if c.isalnum() or c in ('_', '-'))
-        nome_arquivo = f"cobranca_carregamento_{cobranca.id}_{nome_cliente}.pdf"
-        return gerar_resposta_pdf(pdf_content, nome_arquivo, inline=True)
-    except Exception as e:
-        messages.error(request, f'Erro ao gerar PDF: {str(e)}')
-        return redirect('notas:minhas_cobrancas_carregamento')
+
+    romaneios = cobranca.romaneios.all().order_by('codigo')
+    data_ref = cobranca.criado_em.date() if cobranca.criado_em else None
+    data_ref_fmt = data_ref.strftime('%d/%m/%Y') if data_ref else '-'
+
+    context = {
+        'titulo_relatorio': 'RELATÓRIO DE COBRANÇA DE CARREGAMENTO',
+        'cobranca': cobranca,
+        'romaneios': romaneios,
+        'data_inicio': data_ref_fmt,
+        'data_fim': data_ref_fmt,
+        'data_geracao': datetime.now().strftime('%d/%m/%Y às %H:%M'),
+    }
+    response = render(request, 'notas/relatorio_cobranca_carregamento_pdf.html', context)
+    response['Content-Disposition'] = 'inline'
+    return response
 

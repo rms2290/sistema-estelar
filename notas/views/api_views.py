@@ -155,7 +155,13 @@ def filtrar_veiculos_por_composicao(request):
 def carregar_romaneios_cliente(request, cliente_id):
     """Carrega romaneios de um cliente via AJAX"""
     cliente = get_object_or_404(Cliente, pk=cliente_id)
-    romaneios = RomaneioViagem.objects.filter(cliente=cliente).order_by('-data_emissao')[:10]
+    # Em criação de cobrança, listar apenas romaneios ainda não vinculados
+    # para evitar cobranças duplicadas.
+    romaneios = (
+        RomaneioViagem.objects
+        .filter(cliente=cliente, cobrancas_vinculadas__isnull=True)
+        .order_by('-data_emissao')[:10]
+    )
     
     romaneios_data = [{
         'id': romaneio.id,

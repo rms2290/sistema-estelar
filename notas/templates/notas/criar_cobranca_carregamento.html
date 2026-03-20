@@ -187,13 +187,18 @@
                                     <i class="fas fa-file-alt"></i> Valor CTE/Manifesto (R$)
                                 </label>
                                 <input type="number" name="valor_cte_manifesto" step="0.01" min="0" 
-                                       class="form-control form-control-lg" placeholder="0.00 (opcional)" value="">
+                                       class="form-control form-control-lg" placeholder="0.00 (opcional)" value="" id="valor_cte_manifesto" oninput="atualizarLucroCte()">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">
-                                    <i class="fas fa-calendar"></i> Data de Vencimento
+                                    <i class="fas fa-hand-holding-usd"></i> Valor CTE/Terceiro (R$)
                                 </label>
-                                <input type="date" name="data_vencimento" class="form-control form-control-lg">
+                                <input type="number" name="valor_cte_terceiro" id="valor_cte_terceiro" step="0.01"
+                                       class="form-control form-control-lg" placeholder="0.00 (opcional)" value="" oninput="atualizarLucroCte()">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label"><i class="fas fa-chart-line"></i> Lucro CTE (R$)</label>
+                                <div class="form-control form-control-lg bg-light" id="lucro_cte_exibicao" readonly>R$ 0,00</div>
                             </div>
                         </div>
                         <div class="row">
@@ -278,6 +283,14 @@ function atualizarMargem() {
     if (el) el.textContent = 'R$ ' + margem.toFixed(2).replace('.', ',');
 }
 
+function atualizarLucroCte() {
+    const vManifesto = parseFloat(document.getElementById('valor_cte_manifesto').value) || 0;
+    const vTerceiro = parseFloat(document.getElementById('valor_cte_terceiro').value) || 0;
+    const lucro = vManifesto - vTerceiro;
+    const el = document.getElementById('lucro_cte_exibicao');
+    if (el) el.textContent = 'R$ ' + lucro.toFixed(2).replace('.', ',');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const selectCliente = document.getElementById('select-cliente');
     const btnCarregar = document.getElementById('btn-carregar-romaneios');
@@ -301,6 +314,9 @@ document.addEventListener('DOMContentLoaded', function() {
     {% if cliente_selecionado_id %}
     carregarRomaneios('{{ cliente_selecionado_id }}');
     {% endif %}
+
+    atualizarMargem();
+    atualizarLucroCte();
     
     function carregarRomaneios(clienteId) {
         loadingRomaneios.style.display = 'block';
