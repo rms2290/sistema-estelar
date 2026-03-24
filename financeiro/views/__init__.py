@@ -48,7 +48,7 @@ from .periodo_caixa import (
     obter_periodo_movimento_caixa_ajax,
     excluir_periodo_movimento_caixa_ajax,
 )
-from .fechamento_caixa import fechamento_caixa
+from .fechamento_caixa import fechamento_caixa, fechamento_receita_entrada
 from .despesas import (
     listar_despesas,
     criar_despesa,
@@ -59,9 +59,12 @@ from .caixa_unico import (
     caixa_do_dia,
     a_receber,
     receber_cobranca,
+    receber_cobranca_cte_avulsa,
     receber_descarga_deposito,
     a_pagar,
     pagar_funcionario,
+    pagar_cte_terceiro,
+    pagar_cte_terceiro_avulso,
 )
 
 __all__ = [
@@ -102,6 +105,7 @@ __all__ = [
     'obter_periodo_movimento_caixa_ajax',
     'excluir_periodo_movimento_caixa_ajax',
     'fechamento_caixa',
+    'fechamento_receita_entrada',
     'listar_despesas',
     'criar_despesa',
     'editar_despesa',
@@ -109,7 +113,10 @@ __all__ = [
     'caixa_do_dia',
     'a_receber',
     'receber_cobranca',
+    'receber_cobranca_cte_avulsa',
     'receber_descarga_deposito',
     'a_pagar',
     'pagar_funcionario',
+    'pagar_cte_terceiro',
+    'pagar_cte_terceiro_avulso',
 ]

@@ -19,11 +19,18 @@
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Tipo de Receita *</label>
-                        <select name="tipo_receita" class="form-select" required>
+                        <select name="tipo_receita" id="tipoReceitaSelect" class="form-select" required>
                             {% for value, label in tipos_receita %}
-                            <option value="{{ value }}" {% if receita.tipo_receita == value %}selected{% endif %}>{{ label }}</option>
+                            <option value="{{ value }}" {% if receita.tipo_receita|upper == value|upper %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
                         </select>
+                    </div>
+                    <div class="col-md-6 mb-3" id="grupoRotuloPersonalizado">
+                        <label class="form-label">Nome do campo (fechamento)</label>
+                        <input type="text" name="rotulo_personalizado" class="form-control" maxlength="120"
+                            value="{{ receita.rotulo_personalizado|default:'' }}"
+                            placeholder="Exibido no fechamento quando o tipo é &quot;Outro&quot;">
+                        <small class="text-muted">Usado nos lançamentos &quot;campo novo&quot; do fechamento de caixa.</small>
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Valor (R$) *</label>
@@ -60,5 +67,18 @@
         </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var sel = document.getElementById('tipoReceitaSelect');
+    var grp = document.getElementById('grupoRotuloPersonalizado');
+    if (!sel || !grp) return;
+    function sync() {
+        var v = (sel.value || '').toLowerCase();
+        grp.style.display = (v === 'outro') ? '' : 'none';
+    }
+    sel.addEventListener('change', sync);
+    sync();
+});
+</script>
 {% endblock %}
 

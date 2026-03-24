@@ -6,7 +6,7 @@ Views do MVP de Caixa Único (diário):
 """
 
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -14,7 +14,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from notas.decorators import admin_required
-from notas.models import CobrancaCarregamento, Cliente
+from notas.models import CobrancaCarregamento, CobrancaCTEAvulsa, Cliente
 
 from financeiro.models import AcumuladoFuncionario, CarregamentoCliente, MovimentoCaixa, PeriodoMovimentoCaixa
 from financeiro.services import MovimentoCaixaService, PeriodoCaixaService
@@ -125,6 +125,32 @@ def a_receber(request):
     - Cobranças de carregamento (clientes)
     - Descargas lançadas no acerto diário com tipo de pagamento Depósito
     """
+    if request.method == 'POST' and request.POST.get('acao') == 'criar_cobranca_cte_avulsa':
+        nome = (request.POST.get('nome') or '').strip()
+        valor_cte_manifesto_raw = (request.POST.get('valor_cte_manifesto') or '').strip()
+        valor_cte_terceiro_raw = (request.POST.get('valor_cte_terceiro') or '').strip()
+        if not nome:
+            messages.error(request, 'Nome é obrigatório para criar cobrança CTE avulsa.')
+            return redirect('financeiro:a_receber')
+        try:
+            valor_cte_manifesto = Decimal(valor_cte_manifesto_raw or '0')
+            valor_cte_terceiro = Decimal(valor_cte_terceiro_raw or '0')
+        except (InvalidOperation, ValueError):
+            messages.error(request, 'Valores de CTE inválidos.')
+            return redirect('financeiro:a_receber')
+        if valor_cte_manifesto <= 0:
+            messages.error(request, 'Valor CTE/Manifesto deve ser maior que zero.')
+            return redirect('financeiro:a_receber')
+
+        CobrancaCTEAvulsa.objects.create(
+            nome=nome,
+            valor_cte_manifesto=valor_cte_manifesto,
+            valor_cte_terceiro=max(Decimal('0.00'), valor_cte_terceiro),
+            observacoes='Criada em A Receber (CTE Avulso).',
+        )
+        messages.success(request, 'Cobrança CTE avulsa criada com sucesso.')
+        return redirect('financeiro:a_receber')
+
     status = request.GET.get('status') or 'Pendente'
     cliente_id = request.GET.get('cliente') or ''
     data_inicio = request.GET.get('data_inicio') or ''
@@ -150,6 +176,22 @@ def a_receber(request):
 
     qs = qs.order_by('-criado_em')
     cobrancas_lista = list(qs)
+    avulsas_qs = CobrancaCTEAvulsa.objects.all().order_by('-criado_em')
+    if status in ('Pendente', 'Baixado'):
+        avulsas_qs = avulsas_qs.filter(status=status)
+    if data_inicio:
+        try:
+            di = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            avulsas_qs = avulsas_qs.filter(criado_em__date__gte=di)
+        except Exception:
+            pass
+    if data_fim:
+        try:
+            df = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            avulsas_qs = avulsas_qs.filter(criado_em__date__lte=df)
+        except Exception:
+            pass
+    avulsas_lista = list(avulsas_qs)
 
     # Descargas por depósito entram como "a receber" (não transitam no caixa em espécie).
     descargas_deposito = CarregamentoCliente.objects.filter(
@@ -173,17 +215,38 @@ def a_receber(request):
 
     recebiveis = []
     for c in cobrancas_lista:
+        cob_obs = (c.observacoes or '').upper()
+        origem_cob = (
+            'Saída de caixa (cliente)'
+            if '[SAIDA_CAIXA_CLIENTE:' in cob_obs
+            else 'Cobrança de Carregamento'
+        )
         recebiveis.append(
             {
                 'tipo': 'cobranca_cliente',
                 'id': c.id,
-                'origem': 'Cobrança de Carregamento',
+                'origem': origem_cob,
                 'referencia': f'Cobrança #{c.id}',
                 'nome': c.cliente.razao_social,
                 'valor': c.valor_total or Decimal('0.00'),
                 'status': c.status,
                 'data': c.criado_em.date() if c.criado_em else None,
                 'cobranca': c,
+            }
+        )
+
+    for a in avulsas_lista:
+        recebiveis.append(
+            {
+                'tipo': 'cobranca_cte_avulsa',
+                'id': a.id,
+                'origem': 'Cobrança CTE Avulsa',
+                'referencia': f'CTE Avulsa #{a.id}',
+                'nome': a.nome,
+                'valor': a.valor_cte_manifesto or Decimal('0.00'),
+                'status': a.status,
+                'data': a.criado_em.date() if a.criado_em else None,
+                'cobranca_cte_avulsa': a,
             }
         )
 
@@ -246,7 +309,11 @@ def a_receber(request):
 @admin_required
 def receber_cobranca(request, cobranca_id: int):
     """
-    Recebe (baixa) uma cobrança pendente e registra entrada no caixa do dia (período aberto).
+    Recebe (baixa) uma cobrança pendente sem lançar no movimento de caixa.
+
+    Regra de negócio:
+    - Cobrança de carregamento quitada em "A Receber" deve apenas atualizar status;
+    - Não deve gerar entrada no caixa.
     """
     cobranca = get_object_or_404(CobrancaCarregamento.objects.select_related('cliente'), pk=cobranca_id)
     if request.method != 'POST':
@@ -255,30 +322,23 @@ def receber_cobranca(request, cobranca_id: int):
         messages.info(request, 'Cobrança já está baixada.')
         return redirect('financeiro:a_receber')
 
-    periodo_ativo = PeriodoCaixaService.obter_periodo_aberto()
-    if not periodo_ativo:
-        messages.warning(request, 'Inicie um período no Movimento de Caixa antes de receber cobranças.')
-        return redirect('financeiro:gerenciar_movimento_caixa')
-
-    valor = cobranca.valor_total or Decimal('0.00')
-    descricao = f"Recebimento Cobrança #{cobranca.id} - {cobranca.cliente.razao_social}"
-    movimento, erro = MovimentoCaixaService.criar_movimento(
-        data=timezone.now().date().isoformat(),
-        tipo='Entrada',
-        valor=valor,
-        descricao=descricao,
-        categoria='RecebimentoCarregamento',
-        funcionario_id=None,
-        cliente_id=cobranca.cliente_id,
-        acerto_diario_id=None,
-        usuario=request.user,
-    )
-    if erro:
-        messages.error(request, erro)
-        return redirect('financeiro:a_receber')
-
     cobranca.baixar()
-    messages.success(request, f'Cobrança #{cobranca.id} recebida e entrada registrada no caixa.')
+    messages.success(request, f'Cobrança #{cobranca.id} baixada com sucesso.')
+    return redirect('financeiro:a_receber')
+
+
+@login_required
+@admin_required
+def receber_cobranca_cte_avulsa(request, cobranca_id: int):
+    """Recebe (baixa) uma cobrança CTE avulsa sem lançar no movimento de caixa."""
+    cobranca = get_object_or_404(CobrancaCTEAvulsa, pk=cobranca_id)
+    if request.method != 'POST':
+        return redirect('financeiro:a_receber')
+    if cobranca.status != 'Pendente':
+        messages.info(request, 'Cobrança CTE avulsa já está baixada.')
+        return redirect('financeiro:a_receber')
+    cobranca.baixar()
+    messages.success(request, f'Cobrança CTE avulsa #{cobranca.id} baixada com sucesso.')
     return redirect('financeiro:a_receber')
 
 
@@ -346,7 +406,9 @@ def receber_descarga_deposito(request, carregamento_id: int):
 @admin_required
 def a_pagar(request):
     """
-    Lista acumulados pendentes por funcionário (contas a pagar).
+    Lista contas a pagar:
+    - Acumulados pendentes por funcionário
+    - Pagamentos pendentes de CTE/Terceiro (cobranças baixadas)
     """
     pendentes = (
         AcumuladoFuncionario.objects.filter(status='Pendente')
@@ -355,12 +417,60 @@ def a_pagar(request):
     )
     # Mostrar apenas os que têm valor > 0
     pendentes = [a for a in pendentes if (a.valor_acumulado or Decimal('0.00')) > 0]
-    total = sum((a.valor_acumulado or Decimal('0.00')) for a in pendentes)
+    cte_terceiro_pendentes = (
+        CobrancaCarregamento.objects.filter(
+            status_cte_terceiro__iexact='Pendente',
+            valor_cte_terceiro__gt=0,
+        )
+        .select_related('cliente')
+        .order_by('-data_baixa', '-criado_em')
+    )
+    cte_terceiro_avulso_pendentes = (
+        CobrancaCTEAvulsa.objects.filter(
+            status_cte_terceiro__iexact='Pendente',
+            valor_cte_terceiro__gt=0,
+        )
+        .order_by('-data_pagamento_cte_terceiro', '-criado_em')
+    )
+
+    total_funcionarios = sum((a.valor_acumulado or Decimal('0.00')) for a in pendentes)
+    total_cte_terceiro = (
+        sum((c.valor_cte_terceiro or Decimal('0.00')) for c in cte_terceiro_pendentes)
+        + sum((c.valor_cte_terceiro or Decimal('0.00')) for c in cte_terceiro_avulso_pendentes)
+    )
+    total = total_funcionarios + total_cte_terceiro
+
+    cte_terceiro_itens = []
+    for c in cte_terceiro_pendentes:
+        cte_terceiro_itens.append({
+            'id': c.id,
+            'nome': c.cliente.razao_social,
+            'data': c.data_baixa,
+            'valor': c.valor_cte_terceiro,
+            'status': c.get_status_cte_terceiro_display(),
+            'tipo': 'carregamento',
+        })
+    for c in cte_terceiro_avulso_pendentes:
+        cte_terceiro_itens.append({
+            'id': c.id,
+            'nome': c.nome,
+            'data': c.criado_em.date() if c.criado_em else None,
+            'valor': c.valor_cte_terceiro,
+            'status': c.get_status_cte_terceiro_display(),
+            'tipo': 'avulso',
+        })
+    cte_terceiro_itens.sort(key=lambda x: (x['data'] or timezone.now().date(), x['id']), reverse=True)
 
     return render(
         request,
         'financeiro/caixa_unico/a_pagar.html',
-        {'acumulados': pendentes, 'total_pendente': total},
+        {
+            'acumulados': pendentes,
+            'cobrancas_cte_terceiro': cte_terceiro_itens,
+            'total_funcionarios': total_funcionarios,
+            'total_cte_terceiro': total_cte_terceiro,
+            'total_pendente': total,
+        },
     )
 
 
@@ -404,5 +514,54 @@ def pagar_funcionario(request, acumulado_id: int):
 
     acumulado.marcar_depositado(data_deposito=timezone.now().date())
     messages.success(request, 'Pagamento registrado e acumulado baixado.')
+    return redirect('financeiro:a_pagar')
+
+
+@login_required
+@admin_required
+def pagar_cte_terceiro(request, cobranca_id: int):
+    """
+    Marca pagamento de CTE/Terceiro sem registrar movimento no caixa.
+    """
+    if request.method != 'POST':
+        return redirect('financeiro:a_pagar')
+
+    cobranca = get_object_or_404(
+        CobrancaCarregamento.objects.select_related('cliente'),
+        pk=cobranca_id,
+    )
+    valor = cobranca.valor_cte_terceiro or Decimal('0.00')
+
+    if valor <= 0:
+        messages.info(request, 'Esta cobrança não possui valor pendente de CTE/Terceiro.')
+        return redirect('financeiro:a_pagar')
+
+    if cobranca.status_cte_terceiro == 'Pago':
+        messages.info(request, 'CTE/Terceiro já está pago para esta cobrança.')
+        return redirect('financeiro:a_pagar')
+
+    cobranca.marcar_pago_cte_terceiro()
+    messages.success(request, 'Pagamento CTE/Terceiro baixado com sucesso.')
+    return redirect('financeiro:a_pagar')
+
+
+@login_required
+@admin_required
+def pagar_cte_terceiro_avulso(request, cobranca_id: int):
+    """Marca pagamento de CTE/Terceiro de cobrança avulsa."""
+    if request.method != 'POST':
+        return redirect('financeiro:a_pagar')
+
+    cobranca = get_object_or_404(CobrancaCTEAvulsa, pk=cobranca_id)
+    valor = cobranca.valor_cte_terceiro or Decimal('0.00')
+    if valor <= 0:
+        messages.info(request, 'Esta cobrança avulsa não possui valor pendente de CTE/Terceiro.')
+        return redirect('financeiro:a_pagar')
+    if cobranca.status_cte_terceiro == 'Pago':
+        messages.info(request, 'CTE/Terceiro já está pago para esta cobrança avulsa.')
+        return redirect('financeiro:a_pagar')
+
+    cobranca.marcar_pago_cte_terceiro()
+    messages.success(request, 'Pagamento CTE/Terceiro (avulso) baixado com sucesso.')
     return redirect('financeiro:a_pagar')
 

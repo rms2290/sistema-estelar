@@ -23,6 +23,21 @@
                 {% endfor %}
             {% endif %}
 
+            <!-- Erros do formulário -->
+            {% if form.errors %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Erros no formulário:</h5>
+                    <ul class="mb-0">
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endif %}
+
             <form method="POST" id="form-cobranca">
                 {% csrf_token %}
                 <input type="hidden" name="cliente" value="{{ cobranca.cliente.id }}">
@@ -94,38 +109,11 @@
                                 <label class="form-label">
                                     <i class="fas fa-user-tag"></i> Tipo de Cliente <span class="text-danger">*</span>
                                 </label>
-                                <select name="tipo_cliente" id="tipo_cliente" class="form-select form-select-lg" required onchange="toggleTipoCliente()">
-                                    <option value="Mensalista" {% if cobranca.tipo_cliente == 'Mensalista' %}selected{% endif %}>Mensalista</option>
-                                    <option value="Por_Cubagem" {% if cobranca.tipo_cliente == 'Por_Cubagem' %}selected{% endif %}>Por Cubagem</option>
+                                <select name="tipo_cliente" id="tipo_cliente" class="form-select form-select-lg" required>
+                                    <option value="Mensalista" {% if form.tipo_cliente.value == 'Mensalista' %}selected{% endif %}>Mensalista</option>
+                                    <option value="Por_Cubagem" {% if form.tipo_cliente.value == 'Por_Cubagem' %}selected{% endif %}>Por Cubagem</option>
                                 </select>
-                                <small class="text-muted">Selecione se o cliente é mensalista ou cobrado por cubagem</small>
-                            </div>
-                        </div>
-                        <div class="row" id="campos_cubagem" style="display: {% if cobranca.tipo_cliente == 'Por_Cubagem' %}block{% else %}none{% endif %};">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">
-                                    <i class="fas fa-cube"></i> Cubagem (m³) <span class="text-danger">*</span>
-                                </label>
-                                <input type="number" name="cubagem" id="cubagem" step="0.01" min="0" 
-                                       class="form-control form-control-lg" placeholder="0.00" 
-                                       value="{% if cobranca.cubagem %}{{ cobranca.cubagem }}{% else %}0.00{% endif %}" 
-                                       oninput="calcularValorArmazenamento()">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">
-                                    <i class="fas fa-dollar-sign"></i> Valor da Cubagem (R$/m³) <span class="text-danger">*</span>
-                                </label>
-                                <input type="number" name="valor_cubagem" id="valor_cubagem" step="0.01" min="0" 
-                                       class="form-control form-control-lg" placeholder="0.00" 
-                                       value="{% if cobranca.valor_cubagem %}{{ cobranca.valor_cubagem }}{% else %}0.00{% endif %}" 
-                                       oninput="calcularValorArmazenamento()">
-                            </div>
-                            <div class="col-md-12 mb-3">
-                                <div class="alert alert-info">
-                                    <i class="fas fa-calculator"></i> 
-                                    <strong>Valor de Armazenamento Calculado:</strong> 
-                                    <span id="valor_armazenamento_calculado">R$ {% if cobranca.tipo_cliente == 'Por_Cubagem' %}{{ cobranca.valor_armazenamento|floatformat:2 }}{% else %}0,00{% endif %}</span>
-                                </div>
+                                <small class="text-muted">Para ambos os tipos, o total considera somente carregamento e CTE/Manifesto.</small>
                             </div>
                         </div>
                         <div class="row">
@@ -135,7 +123,7 @@
                                 </label>
                                 <input type="number" name="valor_carregamento" id="valor_carregamento" step="0.01" min="0" 
                                        class="form-control form-control-lg" required 
-                                       value="{% localize off %}{{ cobranca.valor_carregamento|default:0|floatformat:2 }}{% endlocalize %}" oninput="atualizarMargem()">
+                                       value="{% localize off %}{{ form.valor_carregamento.value|default:0|floatformat:2 }}{% endlocalize %}" oninput="atualizarMargem()">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">
@@ -143,7 +131,7 @@
                                 </label>
                                 <input type="number" name="valor_distribuicao_trabalhadores" id="valor_distribuicao_trabalhadores" step="0.01" min="0" 
                                        class="form-control form-control-lg" placeholder="0.00 (opcional)"
-                                       value="{% if cobranca.valor_distribuicao_trabalhadores %}{{ cobranca.valor_distribuicao_trabalhadores }}{% endif %}" oninput="atualizarMargem()">
+                                       value="{% if form.valor_distribuicao_trabalhadores.value %}{{ form.valor_distribuicao_trabalhadores.value }}{% endif %}" oninput="atualizarMargem()">
                                 <small class="text-muted">Valor que entra no acerto diário para os trabalhadores. A diferença é a margem Estelar.</small>
                             </div>
                             <div class="col-md-4 mb-3">
@@ -159,7 +147,7 @@
                                 <input type="number" name="valor_cte_manifesto" id="valor_cte_manifesto" step="0.01" min="0" 
                                        class="form-control form-control-lg" 
                                        placeholder="0.00 (opcional)"
-                                       value="{% localize off %}{{ cobranca.valor_cte_manifesto|default:0|floatformat:2 }}{% endlocalize %}" oninput="atualizarLucroCte()">
+                                       value="{% localize off %}{{ form.valor_cte_manifesto.value|default:0|floatformat:2 }}{% endlocalize %}" oninput="atualizarLucroCte()">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">
@@ -168,7 +156,7 @@
                                 <input type="number" name="valor_cte_terceiro" id="valor_cte_terceiro" step="0.01"
                                        class="form-control form-control-lg"
                                        placeholder="0.00 (opcional)"
-                                       value="{% localize off %}{{ cobranca.valor_cte_terceiro|default:0|floatformat:2 }}{% endlocalize %}" oninput="atualizarLucroCte()">
+                                       value="{% localize off %}{{ form.valor_cte_terceiro.value|default:0|floatformat:2 }}{% endlocalize %}" oninput="atualizarLucroCte()">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label"><i class="fas fa-chart-line"></i> Lucro CTE (R$)</label>
@@ -180,7 +168,7 @@
                                 <label class="form-label">
                                     <i class="fas fa-comment"></i> Observações
                                 </label>
-                                <textarea name="observacoes" class="form-control" rows="3">{{ cobranca.observacoes|default:'' }}</textarea>
+                                <textarea name="observacoes" class="form-control" rows="3">{{ form.observacoes.value|default:'' }}</textarea>
                             </div>
                         </div>
                     </div>
@@ -208,53 +196,6 @@
 </div>
 
 <script>
-// Função para toggle campos de cubagem (escopo global)
-function toggleTipoCliente() {
-    const tipoCliente = document.getElementById('tipo_cliente').value;
-    const camposCubagem = document.getElementById('campos_cubagem');
-    const cubagemInput = document.getElementById('cubagem');
-    const valorCubagemInput = document.getElementById('valor_cubagem');
-    
-    if (tipoCliente === 'Por_Cubagem') {
-        if (camposCubagem) camposCubagem.style.display = 'block';
-        if (cubagemInput) cubagemInput.required = true;
-        if (valorCubagemInput) valorCubagemInput.required = true;
-    } else {
-        if (camposCubagem) camposCubagem.style.display = 'none';
-        if (cubagemInput) {
-            cubagemInput.required = false;
-            cubagemInput.value = '0.00';
-        }
-        if (valorCubagemInput) {
-            valorCubagemInput.required = false;
-            valorCubagemInput.value = '0.00';
-        }
-        calcularValorArmazenamento();
-    }
-}
-
-// Função para calcular valor de armazenamento (escopo global)
-function calcularValorArmazenamento() {
-    const cubagemInput = document.getElementById('cubagem');
-    const valorCubagemInput = document.getElementById('valor_cubagem');
-    const valorArmazenamentoCalculado = document.getElementById('valor_armazenamento_calculado');
-    
-    if (!cubagemInput || !valorCubagemInput || !valorArmazenamentoCalculado) {
-        return;
-    }
-    
-    const cubagem = parseFloat(cubagemInput.value) || 0;
-    const valorCubagem = parseFloat(valorCubagemInput.value) || 0;
-    const valorArmazenamento = cubagem * valorCubagem;
-    
-    const valorFormatado = valorArmazenamento.toLocaleString('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    });
-    
-    valorArmazenamentoCalculado.textContent = valorFormatado;
-}
-
 function atualizarMargem() {
     const vCliente = parseFloat(document.getElementById('valor_carregamento').value) || 0;
     const vDist = parseFloat(document.getElementById('valor_distribuicao_trabalhadores').value) || 0;
@@ -282,12 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
             checkboxes.forEach(cb => cb.checked = this.checked);
         });
     }
-    
-    // Inicializar cálculo se for Por_Cubagem
-    {% if cobranca.tipo_cliente == 'Por_Cubagem' %}
-    calcularValorArmazenamento();
-    {% endif %}
-    
+
     // Validação do formulário
     document.getElementById('form-cobranca').addEventListener('submit', function(e) {
         const romaneiosSelecionados = document.querySelectorAll('input[name="romaneios"]:checked');
@@ -295,25 +231,6 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             alert('Por favor, selecione pelo menos um romaneio.');
             return false;
-        }
-        
-        // Validar campos de cubagem se tipo for Por_Cubagem
-        const tipoCliente = document.getElementById('tipo_cliente').value;
-        if (tipoCliente === 'Por_Cubagem') {
-            const cubagem = parseFloat(document.getElementById('cubagem').value) || 0;
-            const valorCubagem = parseFloat(document.getElementById('valor_cubagem').value) || 0;
-            
-            if (cubagem <= 0) {
-                e.preventDefault();
-                alert('Por favor, informe a cubagem (deve ser maior que zero).');
-                return false;
-            }
-            
-            if (valorCubagem <= 0) {
-                e.preventDefault();
-                alert('Por favor, informe o valor da cubagem (deve ser maior que zero).');
-                return false;
-            }
         }
     });
 });

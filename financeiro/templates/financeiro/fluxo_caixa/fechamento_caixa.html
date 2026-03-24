@@ -1,201 +1,785 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load l10n format_filters %}
 
 {% block title %}Fechamento de Caixa - Sistema Estelar{% endblock %}
 
+{% block extra_css %}
+<style>
+    .fechamento-caixa-page .form-label {
+        color: #e5e7eb;
+    }
+
+    .fechamento-caixa-page .form-control.bg-light {
+        background-color: #f8f9fa !important;
+        color: #111827 !important;
+        border-color: #ced4da;
+    }
+
+    .fechamento-caixa-page .form-control.bg-light * {
+        color: #111827 !important;
+    }
+
+    .fechamento-caixa-page .table-a-pagar {
+        table-layout: fixed;
+        width: 100%;
+    }
+
+    .fechamento-caixa-page .card.border-success,
+    .fechamento-caixa-page .card.border-primary,
+    .fechamento-caixa-page .card.border-danger,
+    .fechamento-caixa-page .card.border-dark {
+        border-width: 3px !important;
+    }
+
+    /*
+     * Modal de entrada no fechamento: painel escuro contínuo (referência enviada)
+     * — cabeçalho levemente mais claro; inputs NÃO brancos, mesmo tema do fundo.
+     */
+    #modalFechamentoCriarEntrada .modal-content {
+        background-color: #4b4e53 !important;
+        color: #fff !important;
+        border: 1px solid rgba(0, 0, 0, 0.35) !important;
+        border-radius: 0.5rem !important;
+        overflow: hidden;
+        color-scheme: dark;
+    }
+    #modalFechamentoCriarEntrada .modal-header {
+        background-color: #5c5f64 !important;
+        color: #fff !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+    }
+    #modalFechamentoCriarEntrada .modal-body {
+        background-color: #4b4e53 !important;
+        color: #fff !important;
+        color-scheme: dark;
+    }
+    #modalFechamentoCriarEntrada .modal-footer {
+        background-color: #4b4e53 !important;
+        color: #fff !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+    }
+    #modalFechamentoCriarEntrada .modal-title {
+        color: #fff !important;
+        font-weight: 600;
+    }
+    #modalFechamentoCriarEntrada .modal-body .form-label,
+    #modalFechamentoCriarEntrada .modal-body label.form-label {
+        color: #fff !important;
+        font-weight: 600;
+    }
+    #modalFechamentoCriarEntrada .modal-body .form-text,
+    #modalFechamentoCriarEntrada .modal-body .text-muted {
+        color: rgba(255, 255, 255, 0.72) !important;
+    }
+    #modalFechamentoCriarEntrada .modal-header .btn-close {
+        filter: invert(1) grayscale(100%) brightness(1.15);
+    }
+
+    #modalFechamentoCriarEntrada #fechamentoEntradaData,
+    #modalFechamentoCriarEntrada #fechamentoEntradaCampoDestino,
+    #modalFechamentoCriarEntrada #fechamentoEntradaValorVis,
+    #modalFechamentoCriarEntrada #fechamentoEntradaNomeCampoVis,
+    #modalFechamentoCriarEntrada #formFechamentoCriarEntrada textarea[name="descricao"] {
+        background-color: #3a3d42 !important;
+        color: #f3f4f6 !important;
+        border: 1px solid rgba(255, 255, 255, 0.14) !important;
+        border-radius: 0.375rem !important;
+        text-align: left;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+    #modalFechamentoCriarEntrada #fechamentoEntradaCampoDestino {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23e5e7eb' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 0.65rem center !important;
+        background-size: 12px 10px !important;
+    }
+    #modalFechamentoCriarEntrada #fechamentoEntradaData::-webkit-calendar-picker-indicator {
+        filter: invert(1) opacity(0.75);
+        cursor: pointer;
+    }
+    #modalFechamentoCriarEntrada #fechamentoEntradaData:focus,
+    #modalFechamentoCriarEntrada #fechamentoEntradaCampoDestino:focus,
+    #modalFechamentoCriarEntrada #fechamentoEntradaValorVis:focus,
+    #modalFechamentoCriarEntrada #fechamentoEntradaNomeCampoVis:focus,
+    #modalFechamentoCriarEntrada #formFechamentoCriarEntrada textarea[name="descricao"]:focus {
+        background-color: #42454a !important;
+        color: #fff !important;
+        border-color: rgba(255, 255, 255, 0.35) !important;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15), 0 0 0 0.2rem rgba(255, 255, 255, 0.12);
+        outline: none;
+    }
+    #modalFechamentoCriarEntrada #formFechamentoCriarEntrada textarea[name="descricao"]::placeholder {
+        color: rgba(255, 255, 255, 0.42);
+        opacity: 1;
+    }
+    #modalFechamentoCriarEntrada #fechamentoEntradaValorVis::placeholder,
+    #modalFechamentoCriarEntrada #fechamentoEntradaNomeCampoVis::placeholder {
+        color: rgba(255, 255, 255, 0.42);
+    }
+    #modalFechamentoCriarEntrada #fechamentoEntradaCampoDestino option,
+    #modalFechamentoCriarEntrada #fechamentoEntradaCampoDestino optgroup {
+        background-color: #3a3d42;
+        color: #f3f4f6;
+    }
+
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h4 class="card-title mb-0">
-                <i class="fas fa-lock"></i> Fechamento de Caixa
-            </h4>
-            <a href="{% url 'financeiro:pesquisar_periodo_movimento_caixa' %}?status=Fechado" class="btn btn-primary">
-                <i class="fas fa-search"></i> Inserir período
+<div class="container-fluid mt-4 fechamento-caixa-page">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0"><i class="fas fa-lock"></i> Fechamento de Caixa</h3>
+        <div class="d-flex gap-2">
+            <a href="{% url 'financeiro:gerenciar_movimento_caixa' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-cash-register"></i> Movimento de Caixa
+            </a>
+            <a href="{% url 'financeiro:caixa_do_dia' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-wallet"></i> Caixa do Dia
             </a>
         </div>
-        <div class="card-body">
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
+    </div>
 
-            {% if periodo_exibido %}
-            {% if periodo_fechado_selecionado %}
-            <p class="mb-2">
-                <a href="{% url 'financeiro:pesquisar_periodo_movimento_caixa' %}?status=Fechado" class="btn btn-outline-secondary btn-sm">
-                    <i class="fas fa-arrow-left"></i> Escolher outro período
-                </a>
-            </p>
-            {% endif %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-calendar-alt"></i> {% if periodo_fechado_selecionado %}Fechamento do período{% else %}Período em aberto{% endif %}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <p class="mb-2">
-                        <strong>Data início:</strong> {{ periodo_exibido.data_inicio|date:"d/m/Y" }}
-                        {% if periodo_exibido.data_fim %}
-                            — <strong>Data fim:</strong> {{ periodo_exibido.data_fim|date:"d/m/Y" }}
-                        {% else %}
-                            <span class="badge bg-success ms-2">Aberto</span>
-                        {% endif %}
-                        {% if periodo_fechado_selecionado %}
-                            <span class="badge bg-secondary ms-2">Fechado</span>
-                        {% endif %}
-                    </p>
-                    <p class="mb-0"><strong>Valor inicial caixa:</strong> R$ {{ valor_inicial_caixa|floatformat:2 }}</p>
-                </div>
-            </div>
-
-            <div class="row mb-4">
-                <div class="col-md-3">
-                    <div class="card border-primary">
-                        <div class="card-body">
-                            <h6 class="text-muted">Total entradas</h6>
-                            <p class="mb-0 fs-5">R$ {{ total_entradas|floatformat:2 }}</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card border-danger">
-                        <div class="card-body">
-                            <h6 class="text-muted">Total saídas</h6>
-                            <p class="mb-0 fs-5">R$ {{ total_saidas|floatformat:2 }}</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card border-success">
-                        <div class="card-body">
-                            <h6 class="text-muted">Saldo atual</h6>
-                            <p class="mb-0 fs-5">R$ {{ saldo_atual|floatformat:2 }}</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card border-secondary">
-                        <div class="card-body">
-                            <h6 class="text-muted">Movimentos</h6>
-                            <p class="mb-0 fs-5">{{ total_movimentos }}</p>
-                        </div>
+    {% if not periodo_ativo %}
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            Não há período aberto para fechamento. Inicie um período no Movimento de Caixa.
+        </div>
+    {% else %}
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <div class="card border-success">
+                    <div class="card-body">
+                        <small class="text-muted d-block">Saldo</small>
+                        <strong class="fs-5">{{ saldo_consolidado|format_brazilian_currency }}</strong>
                     </div>
                 </div>
             </div>
-
-            {% if funcionarios_acumulados %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Acumulado por funcionário</h5>
+            <div class="col-md-3">
+                <div class="card border-primary">
+                    <div class="card-body">
+                        <small class="text-muted d-block">Total a Receber</small>
+                        <strong class="fs-5">{{ total_a_receber|format_brazilian_currency }}</strong>
+                    </div>
                 </div>
-                <div class="card-body">
+            </div>
+            <div class="col-md-3">
+                <div class="card border-danger">
+                    <div class="card-body">
+                        <small class="text-muted d-block">Total a Pagar</small>
+                        <strong class="fs-5">{{ total_a_pagar|format_brazilian_currency }}</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-dark">
+                    <div class="card-body">
+                        <small class="text-muted d-block">Saldo Projetado</small>
+                        <strong class="fs-5">{{ saldo_projetado|format_brazilian_currency }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0">1) Saldo</h5></div>
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Período aberto</label>
+                        <div class="form-control bg-light">
+                            {{ periodo_ativo.data_inicio|date:"d/m/Y" }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Saldo Final do Movimento</label>
+                        <div class="form-control bg-light">
+                            {{ saldo_movimento|format_brazilian_currency }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Estelar</label>
+                        <div class="form-control bg-light" id="total-estelar-display" data-base="{{ total_estelar }}">
+                            {{ total_estelar|format_brazilian_currency }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">CTE/Manifesto</label>
+                        <div class="form-control bg-light" id="total-cte-display" data-base="{{ total_cte }}">
+                            {{ total_cte|format_brazilian_currency }}
+                        </div>
+                    </div>
+                </div>
+
+                {% if receitas_personalizadas_agrupadas %}
+                <div class="row g-3 align-items-end mt-2">
+                    {% for item in receitas_personalizadas_agrupadas %}
+                    <div class="col-md-3">
+                        <label class="form-label">{{ item.rotulo }}</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light flex-grow-1 justify-content-start text-start fechamento-campo-personalizado-valor">
+                                {{ item.total|format_brazilian_currency }}
+                            </span>
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary btn-editar-campo-personalizado"
+                                title="Editar ou excluir"
+                                data-rotulo="{{ item.rotulo }}"
+                                data-ids="{{ item.ids|join:',' }}"
+                                data-data="{% if item.data_ref %}{{ item.data_ref|date:'Y-m-d' }}{% else %}{{ periodo_ativo.data_inicio|date:'Y-m-d' }}{% endif %}"
+                                data-total="{{ item.total|unlocalize }}"
+                            >
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="row g-3 align-items-end mt-1">
+                    <div class="col-md-4">
+                        <label for="saldo_banco_informado" class="form-label">Saldo do Banco (informado)</label>
+                        <input
+                            id="saldo_banco_informado"
+                            name="saldo_banco_informado"
+                            type="text"
+                            inputmode="decimal"
+                            class="form-control"
+                            value="{{ saldo_banco_informado|default:'' }}"
+                            placeholder="0,00"
+                        >
+                    </div>
+                    <div class="col-md-4">
+                        <label for="estelar_saldo_anterior" class="form-label">Estelar - Saldo anterior</label>
+                        <input
+                            id="estelar_saldo_anterior"
+                            name="estelar_saldo_anterior"
+                            type="text"
+                            inputmode="decimal"
+                            class="form-control"
+                            value="{{ estelar_saldo_anterior|default:'' }}"
+                            placeholder="0,00"
+                        >
+                    </div>
+                    <div class="col-md-4">
+                        <label for="cte_manifesto_saldo_anterios" class="form-label">CTE/Manifesto - Saldo anterios</label>
+                        <input
+                            id="cte_manifesto_saldo_anterios"
+                            name="cte_manifesto_saldo_anterios"
+                            type="text"
+                            inputmode="decimal"
+                            class="form-control"
+                            value="{{ cte_manifesto_saldo_anterios|default:'' }}"
+                            placeholder="0,00"
+                        >
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <button type="button" class="btn btn-success" id="btnFechamentoCriarEntrada">
+                        <i class="fas fa-arrow-down"></i> Nova Entrada
+                    </button>
+                </div>
+
+                <div class="modal fade" id="modalFechamentoCriarEntrada" tabindex="-1" aria-labelledby="modalFechamentoCriarEntradaLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="modalFechamentoCriarEntradaLabel">
+                                    <i class="fas fa-arrow-down"></i> Nova Entrada de Dinheiro
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                            </div>
+                            <form id="formFechamentoCriarEntrada" data-default-entrada-data="{{ periodo_ativo.data_inicio|date:'Y-m-d' }}">
+                                {% csrf_token %}
+                                <input type="hidden" name="operacao" id="fechamentoEntradaOperacao" value="salvar">
+                                <input type="hidden" name="receita_ids" id="fechamentoEntradaReceitaIds" value="">
+                                <input type="hidden" name="modo" id="fechamentoEntradaModo" value="campos_existentes">
+                                <input type="hidden" name="valor_estelar" id="fechamentoEntradaHVe" value="">
+                                <input type="hidden" name="valor_cte" id="fechamentoEntradaHVc" value="">
+                                <input type="hidden" name="valor_personalizado" id="fechamentoEntradaHVp" value="">
+                                <input type="hidden" name="nome_campo" id="fechamentoEntradaHNome" value="">
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label" for="fechamentoEntradaData">Data *</label>
+                                        <input type="date" name="data" class="form-control" id="fechamentoEntradaData" required
+                                            value="{{ periodo_ativo.data_inicio|date:'Y-m-d' }}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="fechamentoEntradaCampoDestino">Campo *</label>
+                                        <select class="form-select" id="fechamentoEntradaCampoDestino" autocomplete="off" required>
+                                            <option value="">Selecione...</option>
+                                            <optgroup label="Principais">
+                                                <option value="estelar">Estelar</option>
+                                                <option value="cte">CTE / Manifesto</option>
+                                            </optgroup>
+                                            {% if receitas_personalizadas_agrupadas %}
+                                            <optgroup label="Campos personalizados">
+                                                {% for item in receitas_personalizadas_agrupadas %}
+                                                <option value="outro_{{ forloop.counter0 }}" data-rotulo="{{ item.rotulo }}">{{ item.rotulo }}</option>
+                                                {% endfor %}
+                                            </optgroup>
+                                            {% endif %}
+                                            <option value="outro_novo">Novo campo personalizado…</option>
+                                        </select>
+                                        <small class="form-text">Selecione em qual campo do fechamento esta entrada será somada.</small>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="fechamentoEntradaValorVis">Valor (R$) *</label>
+                                        <input type="text" class="form-control" id="fechamentoEntradaValorVis" inputmode="decimal" placeholder="0,00" autocomplete="off" required>
+                                    </div>
+                                    <div class="mb-3 d-none" id="fechamentoEntradaWrapNome">
+                                        <label class="form-label" for="fechamentoEntradaNomeCampoVis">Nome do campo *</label>
+                                        <input type="text" class="form-control" id="fechamentoEntradaNomeCampoVis" maxlength="120" placeholder="Ex.: Bônus, Chapas" autocomplete="off">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="fechamentoEntradaDescricao">Descrição</label>
+                                        <textarea name="descricao" class="form-control" id="fechamentoEntradaDescricao" rows="3" maxlength="500" placeholder="Descreva a entrada de receita no fechamento (opcional)..."></textarea>
+                                    </div>
+                                    <p class="form-text mb-0">
+                                        Período aberto: {{ periodo_ativo.data_inicio|date:"d/m/Y" }}{% if periodo_ativo.data_fim %} a {{ periodo_ativo.data_fim|date:"d/m/Y" }}{% else %} em diante{% endif %}.
+                                    </p>
+                                </div>
+                                <div class="modal-footer flex-wrap gap-2">
+                                    <button type="button" class="btn btn-outline-danger d-none me-auto" id="btnFechamentoEntradaExcluir">
+                                        <i class="fas fa-trash-alt"></i> Excluir lançamento
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                    <button type="submit" class="btn btn-success" id="btnFechamentoEntradaSalvar">
+                                        <i class="fas fa-save"></i> Salvar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">2) A Pagar</h5>
+                <strong>{{ total_a_pagar|format_brazilian_currency }}</strong>
+            </div>
+            <div class="card-body">
+                {% if acumulados_pendentes %}
+                    <h6 class="mb-2">Funcionários</h6>
                     <div class="table-responsive">
-                        <table class="table table-sm">
+                        <table class="table table-sm table-striped table-a-pagar">
+                            <colgroup>
+                                <col style="width:50%">
+                                <col style="width:30%">
+                                <col style="width:20%">
+                            </colgroup>
                             <thead>
                                 <tr>
                                     <th>Funcionário</th>
-                                    <th class="text-end">Valor acumulado</th>
+                                    <th>Semana</th>
+                                    <th class="text-end">Valor</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for item in funcionarios_acumulados %}
-                                <tr>
-                                    <td>{{ item.funcionario.nome }}</td>
-                                    <td class="text-end">R$ {{ item.valor_acumulado|floatformat:2 }}</td>
-                                </tr>
+                                {% for item in acumulados_pendentes %}
+                                    <tr>
+                                        <td>{{ item.funcionario.nome }}</td>
+                                        <td>{{ item.semana_inicio|date:"d/m/Y" }} - {{ item.semana_fim|date:"d/m/Y" }}</td>
+                                        <td class="text-end">{{ item.valor_acumulado|format_brazilian_currency }}</td>
+                                    </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
-                    <p class="mb-0"><strong>Total acumulado funcionários:</strong> R$ {{ total_acumulado_funcionarios|floatformat:2 }}</p>
-                </div>
-            </div>
-            {% endif %}
+                {% else %}
+                    <div class="alert alert-light border mb-0">Nenhuma despesa pendente de funcionários.</div>
+                {% endif %}
 
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Estelar</h5>
-                </div>
-                <div class="card-body">
-                    <p class="mb-1"><strong>Entradas Estelar:</strong> R$ {{ total_estelar_entradas|floatformat:2 }}</p>
-                    <p class="mb-1"><strong>Saídas Estelar:</strong> R$ {{ total_estelar_saidas|floatformat:2 }}</p>
-                    <p class="mb-0"><strong>Valor acumulado Estelar:</strong> R$ {{ valor_acumulado_estelar|floatformat:2 }}</p>
-                </div>
-            </div>
+                <hr>
 
-            {% if clientes_cobrancas_pendentes %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Cobranças de carregamento pendentes</h5>
-                </div>
-                <div class="card-body">
+                {% if cte_terceiro_pendentes %}
+                    <h6 class="mb-2">CTE/Terceiro</h6>
                     <div class="table-responsive">
-                        <table class="table table-sm">
+                        <table class="table table-sm table-striped table-a-pagar">
+                            <colgroup>
+                                <col style="width:50%">
+                                <col style="width:30%">
+                                <col style="width:20%">
+                            </colgroup>
                             <thead>
                                 <tr>
                                     <th>Cliente</th>
-                                    <th class="text-end">Quantidade</th>
-                                    <th class="text-end">Valor total</th>
+                                    <th>Data</th>
+                                    <th class="text-end">Valor</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for item in clientes_cobrancas_pendentes %}
-                                <tr>
-                                    <td>{{ item.cliente.razao_social }}</td>
-                                    <td class="text-end">{{ item.quantidade_cobrancas }}</td>
-                                    <td class="text-end">R$ {{ item.valor_total|floatformat:2 }}</td>
-                                </tr>
+                                {% for c in cte_terceiro_pendentes %}
+                                    <tr>
+                                        <td>{% if c.cliente %}{{ c.cliente.razao_social }}{% else %}{{ c.nome }}{% endif %}</td>
+                                        <td>{% if c.criado_em %}{{ c.criado_em|date:"d/m/Y" }}{% elif c.data_baixa %}{{ c.data_baixa|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+                                        <td class="text-end">{{ c.valor_cte_terceiro|format_brazilian_currency }}</td>
+                                    </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
-                    <p class="mb-0"><strong>Total cobranças pendentes:</strong> R$ {{ total_cobrancas_pendentes|floatformat:2 }}</p>
-                </div>
+                {% else %}
+                    <div class="alert alert-light border mb-0">Nenhuma despesa pendente de CTE/Terceiro.</div>
+                {% endif %}
             </div>
-            {% endif %}
+        </div>
 
-            {% else %}
-            <div class="alert alert-secondary alert-text-left">
-                <span class="d-inline"><i class="fas fa-info-circle"></i> Não há período em aberto. Clique em <strong>Inserir período</strong> para buscar um período fechado e abrir o fechamento de caixa.</span>
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">3) A Receber</h5>
+                <strong>{{ total_a_receber|format_brazilian_currency }}</strong>
             </div>
-            {% endif %}
-
-            {% if periodos_fechados %}
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Últimos períodos fechados</h5>
-                </div>
-                <div class="card-body">
+            <div class="card-body">
+                {% if cobrancas_pendentes %}
                     <div class="table-responsive">
-                        <table class="table table-sm">
+                        <table class="table table-sm table-striped table-a-pagar">
+                            <colgroup>
+                                <col style="width:50%">
+                                <col style="width:30%">
+                                <col style="width:20%">
+                            </colgroup>
                             <thead>
                                 <tr>
-                                    <th>Data início</th>
-                                    <th>Data fim</th>
-                                    <th>Status</th>
+                                    <th>Cliente</th>
+                                    <th>Data</th>
+                                    <th class="text-end">Valor</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for p in periodos_fechados %}
-                                <tr>
-                                    <td>{{ p.data_inicio|date:"d/m/Y" }}</td>
-                                    <td>{{ p.data_fim|date:"d/m/Y" }}</td>
-                                    <td><span class="badge bg-secondary">Fechado</span></td>
-                                </tr>
+                                {% for cobranca in cobrancas_pendentes %}
+                                    <tr>
+                                        <td>{{ cobranca.cliente.razao_social }}</td>
+                                        <td>{{ cobranca.criado_em|date:"d/m/Y" }}</td>
+                                        <td class="text-end">{{ cobranca.valor_total|format_brazilian_currency }}</td>
+                                    </tr>
+                                {% endfor %}
+                                {% for cobranca in cobrancas_cte_avulsa_pendentes %}
+                                    <tr>
+                                        <td>{{ cobranca.nome }}</td>
+                                        <td>{{ cobranca.criado_em|date:"d/m/Y" }}</td>
+                                        <td class="text-end">{{ cobranca.valor_cte_manifesto|format_brazilian_currency }}</td>
+                                    </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
-                </div>
+                {% else %}
+                    <div class="alert alert-light border mb-0">Não há cobranças pendentes.</div>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
-    </div>
+    {% endif %}
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const estelarInput = document.getElementById('estelar_saldo_anterior');
+    const cteInput = document.getElementById('cte_manifesto_saldo_anterios');
+    const estelarDisplay = document.getElementById('total-estelar-display');
+    const cteDisplay = document.getElementById('total-cte-display');
+
+    function parseDecimal(value) {
+        if (value === null || value === undefined) return 0;
+        const normalized = String(value)
+            .replace(/\s/g, '')
+            .replace('R$', '')
+            .replace(/\./g, '')
+            .replace(',', '.');
+        const parsed = parseFloat(normalized);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function formatCurrency(value) {
+        return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    if (estelarInput && cteInput && estelarDisplay && cteDisplay) {
+        function atualizarTotaisComSaldoAnterior() {
+            const baseEstelar = parseDecimal(estelarDisplay.dataset.base);
+            const baseCte = parseDecimal(cteDisplay.dataset.base);
+            const saldoAnteriorEstelar = parseDecimal(estelarInput.value);
+            const saldoAnteriorCte = parseDecimal(cteInput.value);
+
+            estelarDisplay.textContent = formatCurrency(baseEstelar + saldoAnteriorEstelar);
+            cteDisplay.textContent = formatCurrency(baseCte + saldoAnteriorCte);
+        }
+
+        function formatarInputMoeda(input) {
+            const valor = parseDecimal(input.value);
+            input.value = valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        const camposMoeda = [
+            document.getElementById('saldo_banco_informado'),
+            estelarInput,
+            cteInput,
+        ].filter(Boolean);
+
+        camposMoeda.forEach((campo) => {
+            campo.addEventListener('blur', function() {
+                formatarInputMoeda(campo);
+                atualizarTotaisComSaldoAnterior();
+            });
+        });
+
+        estelarInput.addEventListener('input', atualizarTotaisComSaldoAnterior);
+        cteInput.addEventListener('input', atualizarTotaisComSaldoAnterior);
+        atualizarTotaisComSaldoAnterior();
+    }
+
+    const btnEntrada = document.getElementById('btnFechamentoCriarEntrada');
+    const modalEl = document.getElementById('modalFechamentoCriarEntrada');
+    const formEntrada = document.getElementById('formFechamentoCriarEntrada');
+    if (btnEntrada && modalEl && formEntrada && typeof bootstrap !== 'undefined') {
+        const modal = new bootstrap.Modal(modalEl);
+        const modalTitleEl = document.getElementById('modalFechamentoCriarEntradaLabel');
+        const inpOperacao = document.getElementById('fechamentoEntradaOperacao');
+        const inpReceitaIds = document.getElementById('fechamentoEntradaReceitaIds');
+        const btnExcluir = document.getElementById('btnFechamentoEntradaExcluir');
+        const inpData = document.getElementById('fechamentoEntradaData');
+        const selDestino = document.getElementById('fechamentoEntradaCampoDestino');
+        const inpValorVis = document.getElementById('fechamentoEntradaValorVis');
+        const wrapNome = document.getElementById('fechamentoEntradaWrapNome');
+        const inpNomeVis = document.getElementById('fechamentoEntradaNomeCampoVis');
+        const inpModo = document.getElementById('fechamentoEntradaModo');
+        const hVe = document.getElementById('fechamentoEntradaHVe');
+        const hVc = document.getElementById('fechamentoEntradaHVc');
+        const hVp = document.getElementById('fechamentoEntradaHVp');
+        const hNome = document.getElementById('fechamentoEntradaHNome');
+        const inpDescricao = document.getElementById('fechamentoEntradaDescricao');
+
+        function decimalStrToBrInput(s) {
+            const n = parseFloat(String(s).replace(',', '.'));
+            if (!Number.isFinite(n)) return '';
+            return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function atualizarWrapNomeDestino() {
+            if (!selDestino || !wrapNome || !inpNomeVis) return;
+            const editando = !!(inpReceitaIds && inpReceitaIds.value && inpReceitaIds.value.trim());
+            if (editando) {
+                wrapNome.classList.remove('d-none');
+                inpNomeVis.required = true;
+                return;
+            }
+            if (selDestino.value === 'outro_novo') {
+                wrapNome.classList.remove('d-none');
+                if (!selDestino.disabled) inpNomeVis.value = '';
+                inpNomeVis.required = true;
+            } else {
+                wrapNome.classList.add('d-none');
+                if (!selDestino.disabled) inpNomeVis.value = '';
+                inpNomeVis.required = false;
+            }
+        }
+
+        function limparHiddensPayload() {
+            if (hVe) hVe.value = '';
+            if (hVc) hVc.value = '';
+            if (hVp) hVp.value = '';
+            if (hNome) hNome.value = '';
+            if (inpModo) inpModo.value = 'campos_existentes';
+        }
+
+        function aplicarFechamentoEntradaPayload() {
+            limparHiddensPayload();
+            const ids = (inpReceitaIds && inpReceitaIds.value) ? inpReceitaIds.value.trim() : '';
+            const vRaw = inpValorVis ? inpValorVis.value : '';
+            const nomeTxt = inpNomeVis ? inpNomeVis.value.trim() : '';
+
+            if (ids) {
+                if (!inpModo || !hVp || !hNome) return;
+                inpModo.value = 'novo_campo';
+                hVp.value = vRaw;
+                let nom = nomeTxt;
+                if (!nom && selDestino && selDestino.selectedOptions[0]) {
+                    nom = (selDestino.selectedOptions[0].getAttribute('data-rotulo') || '').trim();
+                }
+                hNome.value = nom;
+                return;
+            }
+
+            if (!selDestino || !inpModo) return;
+            const val = selDestino.value;
+            const opt = selDestino.selectedOptions[0];
+
+            if (val === 'estelar') {
+                inpModo.value = 'campos_existentes';
+                if (hVe) hVe.value = vRaw;
+            } else if (val === 'cte') {
+                inpModo.value = 'campos_existentes';
+                if (hVc) hVc.value = vRaw;
+            } else if (val === 'outro_novo') {
+                inpModo.value = 'novo_campo';
+                if (hVp) hVp.value = vRaw;
+                if (hNome) hNome.value = nomeTxt;
+            } else if (val.indexOf('outro_') === 0) {
+                inpModo.value = 'novo_campo';
+                if (hVp) hVp.value = vRaw;
+                const rot = opt ? (opt.getAttribute('data-rotulo') || '').trim() : '';
+                if (hNome) hNome.value = rot;
+            }
+        }
+
+        function prepararModalNovaEntrada() {
+            if (modalTitleEl) {
+                modalTitleEl.innerHTML = '<i class="fas fa-arrow-down"></i> Nova Entrada de Dinheiro';
+            }
+            if (inpOperacao) inpOperacao.value = 'salvar';
+            if (inpReceitaIds) inpReceitaIds.value = '';
+            if (btnExcluir) btnExcluir.classList.add('d-none');
+            if (selDestino) {
+                selDestino.disabled = false;
+                selDestino.value = 'estelar';
+            }
+            if (inpValorVis) inpValorVis.value = '';
+            if (inpNomeVis) inpNomeVis.value = '';
+            if (inpDescricao) inpDescricao.value = '';
+            const defData = formEntrada.getAttribute('data-default-entrada-data');
+            if (inpData && defData) inpData.value = defData;
+            limparHiddensPayload();
+            atualizarWrapNomeDestino();
+        }
+
+        function prepararModalEditarCampoPersonalizado(btn) {
+            if (!btn || !btn.dataset) return;
+            const rotulo = btn.dataset.rotulo || '';
+            const ids = btn.dataset.ids || '';
+            const dataIso = btn.dataset.data || '';
+            const total = btn.dataset.total || '0';
+            if (!ids) return;
+            if (modalTitleEl) {
+                modalTitleEl.innerHTML = '<i class="fas fa-edit"></i> Editar lançamento';
+            }
+            if (inpOperacao) inpOperacao.value = 'salvar';
+            if (inpReceitaIds) inpReceitaIds.value = ids;
+            if (btnExcluir) btnExcluir.classList.remove('d-none');
+            if (selDestino) {
+                let found = false;
+                for (let i = 0; i < selDestino.options.length; i++) {
+                    const o = selDestino.options[i];
+                    const dr = (o.getAttribute('data-rotulo') || '').trim();
+                    if (dr === rotulo.trim()) {
+                        selDestino.selectedIndex = i;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    selDestino.value = 'outro_novo';
+                }
+                selDestino.disabled = true;
+            }
+            if (inpNomeVis) inpNomeVis.value = rotulo;
+            if (inpValorVis) inpValorVis.value = decimalStrToBrInput(total);
+            if (inpData && dataIso) inpData.value = dataIso;
+            if (inpDescricao) inpDescricao.value = '';
+            limparHiddensPayload();
+            atualizarWrapNomeDestino();
+            modal.show();
+        }
+
+        if (selDestino) {
+            selDestino.addEventListener('change', atualizarWrapNomeDestino);
+        }
+
+        btnEntrada.addEventListener('click', function() {
+            prepararModalNovaEntrada();
+            modal.show();
+        });
+
+        document.querySelectorAll('.fechamento-caixa-page .btn-editar-campo-personalizado').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                prepararModalEditarCampoPersonalizado(btn);
+            });
+        });
+
+        modalEl.addEventListener('hidden.bs.modal', function() {
+            prepararModalNovaEntrada();
+        });
+
+        if (inpValorVis) {
+            inpValorVis.addEventListener('blur', function() {
+                const n = parseDecimal(inpValorVis.value);
+                inpValorVis.value = n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            });
+        }
+
+        if (btnExcluir) {
+            btnExcluir.addEventListener('click', function() {
+                const ids = (inpReceitaIds && inpReceitaIds.value) ? inpReceitaIds.value.trim() : '';
+                if (!ids) {
+                    alert('Nenhum registro selecionado.');
+                    return;
+                }
+                if (!window.confirm('Excluir este lançamento do fechamento? Esta ação não pode ser desfeita.')) {
+                    return;
+                }
+                const csrfInput = formEntrada.querySelector('[name=csrfmiddlewaretoken]');
+                const fd = new FormData();
+                if (csrfInput) fd.append('csrfmiddlewaretoken', csrfInput.value);
+                fd.append('operacao', 'excluir');
+                fd.append('receita_ids', ids);
+                btnExcluir.disabled = true;
+                fetch('{% url "financeiro:fechamento_receita_entrada" %}', {
+                    method: 'POST',
+                    body: fd,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                })
+                    .then(function(res) { return res.json(); })
+                    .then(function(data) {
+                        if (data.ok) {
+                            bootstrap.Modal.getInstance(modalEl).hide();
+                            window.location.reload();
+                        } else {
+                            alert(data.error || 'Não foi possível excluir.');
+                        }
+                    })
+                    .catch(function() {
+                        alert('Erro de rede ao excluir.');
+                    })
+                    .finally(function() {
+                        btnExcluir.disabled = false;
+                    });
+            });
+        }
+
+        formEntrada.addEventListener('submit', function(ev) {
+            ev.preventDefault();
+            if (inpOperacao) inpOperacao.value = 'salvar';
+            aplicarFechamentoEntradaPayload();
+            const selWasDisabled = selDestino && selDestino.disabled;
+            if (selDestino) selDestino.disabled = false;
+            const fd = new FormData(formEntrada);
+            if (selDestino) selDestino.disabled = !!selWasDisabled;
+            const btnSalvar = document.getElementById('btnFechamentoEntradaSalvar');
+            if (btnSalvar) btnSalvar.disabled = true;
+
+            fetch('{% url "financeiro:fechamento_receita_entrada" %}', {
+                method: 'POST',
+                body: fd,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            })
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data.ok) {
+                        bootstrap.Modal.getInstance(modalEl).hide();
+                        window.location.reload();
+                    } else {
+                        alert(data.error || 'Não foi possível salvar.');
+                    }
+                })
+                .catch(function() {
+                    alert('Erro de rede ao salvar.');
+                })
+                .finally(function() {
+                    if (btnSalvar) btnSalvar.disabled = false;
+                });
+        });
+    }
+});
+</script>
 {% endblock %}

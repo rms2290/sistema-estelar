@@ -31,7 +31,20 @@
                                 <label for="{{ form.cliente.id_for_label }}" class="form-label">
                                     <i class="fas fa-user"></i> {{ form.cliente.label }}:
                                 </label>
-                                {{ form.cliente }}
+                                <div class="input-group">
+                                    {{ form.cliente }}
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-secondary"
+                                        id="btnPesquisarCliente"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalPesquisarCliente"
+                                        title="Pesquisar cliente"
+                                        aria-label="Pesquisar cliente"
+                                    >
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
                                 {% if form.cliente.errors %}<div class="text-danger">{{ form.cliente.errors }}</div>{% endif %}
                             </div>
                             <div class="col-md-4 mb-3">
@@ -153,6 +166,77 @@
                 <a href="{% url 'notas:listar_romaneios' %}" class="btn btn-secondary">Cancelar</a>
             </form>
         </div>
+
+        {# Modal: Pesquisa de cliente #}
+        <div class="modal fade" id="modalPesquisarCliente" tabindex="-1" aria-labelledby="modalPesquisarClienteLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalPesquisarClienteLabel">
+                            <i class="fas fa-search"></i> Pesquisar Cliente
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-8">
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="filtroClienteModal"
+                                    placeholder="Pesquisar por razão social, nome fantasia ou CNPJ..."
+                                    autocomplete="off"
+                                >
+                            </div>
+                            <div class="col-md-4 text-md-end d-flex justify-content-md-end">
+                                <button type="button" class="btn btn-outline-secondary" id="btnLimparFiltroCliente">
+                                    <i class="fas fa-eraser"></i> Limpar
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle" id="tabelaClientesModal">
+                                <thead>
+                                    <tr>
+                                        <th>Razão Social</th>
+                                        <th>Nome Fantasia</th>
+                                        <th>CNPJ</th>
+                                        <th class="text-end">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for cliente in form.fields.cliente.queryset %}
+                                        <tr data-search="{{ cliente.razao_social|default:''|lower }} {{ cliente.nome_fantasia|default:''|lower }} {{ cliente.cnpj|default:''|lower }}">
+                                            <td>{{ cliente.razao_social }}</td>
+                                            <td>{{ cliente.nome_fantasia|default:'-' }}</td>
+                                            <td>{{ cliente.cnpj|default:'-' }}</td>
+                                            <td class="text-end">
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-sm btn-primary btn-selecionar-cliente"
+                                                    data-cliente-id="{{ cliente.id }}"
+                                                    data-cliente-nome="{{ cliente.razao_social }}"
+                                                >
+                                                    <i class="fas fa-check"></i> Selecionar
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-3">Nenhum cliente ativo encontrado.</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <small class="text-muted me-auto">Dica: clique em "Selecionar" para preencher o campo Cliente.</small>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -169,6 +253,10 @@
             const reboque2Select = document.getElementById('id_reboque_2');
             const btnAdicionarReboque2Container = document.getElementById('btn-adicionar-reboque-2-container');
             const btnAdicionarReboque2 = document.getElementById('btn-adicionar-reboque-2');
+            const modalPesquisarCliente = document.getElementById('modalPesquisarCliente');
+            const filtroClienteModal = document.getElementById('filtroClienteModal');
+            const btnLimparFiltroCliente = document.getElementById('btnLimparFiltroCliente');
+            const linhasClienteModal = Array.from(document.querySelectorAll('#tabelaClientesModal tbody tr[data-search]'));
 
             // allLoadedNotesData é global (definido em base.html)
             // updateTotals, loadNotasFiscais são globais (definidos em base.html)
@@ -333,6 +421,52 @@
                     if (pesoTotalSpan) pesoTotalSpan.textContent = '0,00 kg';
                     if (valorTotalSpan) valorTotalSpan.textContent = 'R$ 0,00';
                 }
+            }
+
+            // Pesquisa e seleção de cliente no modal
+            function aplicarFiltroClientes() {
+                const termo = (filtroClienteModal?.value || '').trim().toLowerCase();
+                linhasClienteModal.forEach((linha) => {
+                    const textoBusca = (linha.dataset.search || '').toLowerCase();
+                    linha.style.display = (!termo || textoBusca.includes(termo)) ? '' : 'none';
+                });
+            }
+
+            if (filtroClienteModal) {
+                filtroClienteModal.addEventListener('input', aplicarFiltroClientes);
+            }
+
+            if (btnLimparFiltroCliente && filtroClienteModal) {
+                btnLimparFiltroCliente.addEventListener('click', function() {
+                    filtroClienteModal.value = '';
+                    aplicarFiltroClientes();
+                    filtroClienteModal.focus();
+                });
+            }
+
+            document.querySelectorAll('.btn-selecionar-cliente').forEach((btn) => {
+                btn.addEventListener('click', function() {
+                    if (clienteSelect) {
+                        clienteSelect.value = this.dataset.clienteId || '';
+                        clienteSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+
+                    if (modalPesquisarCliente) {
+                        const instanciaModal = bootstrap.Modal.getInstance(modalPesquisarCliente);
+                        if (instanciaModal) instanciaModal.hide();
+                    }
+                });
+            });
+
+            if (modalPesquisarCliente && filtroClienteModal) {
+                modalPesquisarCliente.addEventListener('shown.bs.modal', function() {
+                    filtroClienteModal.focus();
+                    aplicarFiltroClientes();
+                });
+                modalPesquisarCliente.addEventListener('hidden.bs.modal', function() {
+                    filtroClienteModal.value = '';
+                    aplicarFiltroClientes();
+                });
             }
         });
     </script>

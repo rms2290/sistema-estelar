@@ -114,7 +114,7 @@
                     {% if cobranca.observacoes %}
                     <div class="row mb-2">
                         <div class="col-md-4"><strong>Observações:</strong></div>
-                        <div class="col-md-8">{{ cobranca.observacoes }}</div>
+                        <div class="col-md-8">{{ cobranca.observacoes_para_exibicao|default:"—" }}</div>
                     </div>
                     {% endif %}
                 </div>

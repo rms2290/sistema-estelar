@@ -4,6 +4,7 @@ Serviço de período de caixa: abrir, fechar, editar, excluir e obter totais.
 from decimal import Decimal
 
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 from financeiro.models import MovimentoCaixa, PeriodoMovimentoCaixa
 
@@ -63,17 +64,22 @@ class PeriodoCaixaService:
     @classmethod
     def editar_periodo(cls, periodo, data_inicio, valor_inicial_caixa, observacoes):
         """
-        Edita período (apenas se não tiver movimentos).
+        Edita período.
 
         Returns:
             tuple: (periodo, None) em sucesso ou (None, mensagem_erro) em falha.
         """
-        if periodo.movimentos.exists():
-            return None, 'Não é possível editar um período que já possui movimentos cadastrados.'
         if not data_inicio:
             return None, 'Data de início é obrigatória.'
-        periodo.data_inicio = data_inicio
-        periodo.valor_inicial_caixa = Decimal(str(valor_inicial_caixa)) if valor_inicial_caixa is not None else Decimal('0.00')
+        # Garante tipo date para evitar erros de strftime na camada de view.
+        data_inicio_obj = parse_date(data_inicio) if isinstance(data_inicio, str) else data_inicio
+        if not data_inicio_obj:
+            return None, 'Data de início inválida.'
+
+        periodo.data_inicio = data_inicio_obj
+        periodo.valor_inicial_caixa = (
+            Decimal(str(valor_inicial_caixa)) if valor_inicial_caixa is not None else Decimal('0.00')
+        )
         periodo.observacoes = observacoes or None
         periodo.save()
         return periodo, None

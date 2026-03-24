@@ -17,6 +17,9 @@
       <a class="btn btn-outline-secondary" href="{% url 'notas:cobranca_carregamento' %}">
         <i class="fas fa-truck-loading"></i> Cobrança (Admin)
       </a>
+      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalCriarCteAvulso">
+        <i class="fas fa-file-invoice-dollar"></i> Criar Cobrança CTE
+      </button>
     </div>
   </div>
 
@@ -108,6 +111,15 @@
                     </form>
                   {% endif %}
 
+                  {% if item.tipo == 'cobranca_cte_avulsa' and item.status == 'Pendente' %}
+                    <form method="POST" action="{% url 'financeiro:receber_cobranca_cte_avulsa' item.id %}" style="display:inline">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-success" title="Receber (Baixar cobrança CTE avulsa)">
+                        <i class="fas fa-check"></i> Receber
+                      </button>
+                    </form>
+                  {% endif %}
+
                   {% if item.tipo == 'descarga_deposito' and item.status == 'Pendente' %}
                     <form method="POST" action="{% url 'financeiro:receber_descarga_deposito' item.id %}" style="display:inline">
                       {% csrf_token %}
@@ -138,5 +150,62 @@
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="modalCriarCteAvulso" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-file-invoice-dollar"></i> Criar Cobrança CTE Avulsa</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="criar_cobranca_cte_avulsa">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Nome *</label>
+            <input type="text" name="nome" class="form-control" required placeholder="Ex.: Serviço CTE terceiro">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Valor CTE/Manifesto (R$) *</label>
+            <input type="number" name="valor_cte_manifesto" id="valorCteManifestoAvulso" class="form-control" step="0.01" min="0.01" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Valor CTE/Terceiro (R$)</label>
+            <input type="number" name="valor_cte_terceiro" id="valorCteTerceiroAvulso" class="form-control" step="0.01" min="0" value="0.00">
+          </div>
+          <div class="mb-0">
+            <label class="form-label">Lucro CTE (R$)</label>
+            <div class="form-control bg-light" id="lucroCteAvulsoExibicao">R$ 0,00</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const manifesto = document.getElementById('valorCteManifestoAvulso');
+  const terceiro = document.getElementById('valorCteTerceiroAvulso');
+  const lucro = document.getElementById('lucroCteAvulsoExibicao');
+  if (!manifesto || !terceiro || !lucro) return;
+
+  function atualizarLucro() {
+    const v1 = parseFloat(manifesto.value) || 0;
+    const v2 = parseFloat(terceiro.value) || 0;
+    const valor = v1 - v2;
+    lucro.textContent = valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  manifesto.addEventListener('input', atualizarLucro);
+  terceiro.addEventListener('input', atualizarLucro);
+  atualizarLucro();
+});
+</script>
 {% endblock %}
 

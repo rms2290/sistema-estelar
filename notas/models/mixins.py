@@ -31,7 +31,9 @@ class UpperCaseMixin:
                         'email', 'password', 'username', 'cpf', 'cnpj',
                         'cnh', 'chassi', 'renavam', 'placa', 'cep',
                         'telefone', 'rntrc', 'numero_consulta', 'tipo_usuario',
-                        'status', 'rg', 'tipo', 'categoria', 'tipo_pagamento', 'tipo_cliente'
+                        'status', 'rg', 'tipo', 'categoria', 'tipo_pagamento', 'tipo_cliente',
+                        'tipo_receita',
+                        'rotulo_personalizado',
                     ]
                     if field.name not in exclude_fields:
                         setattr(self, field.name, value.upper())

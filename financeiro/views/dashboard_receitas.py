@@ -159,6 +159,11 @@ def editar_receita_empresa(request, pk):
         receita.descricao = request.POST.get('descricao', '')
         receita.cliente_id = request.POST.get('cliente', '') or None
         receita.cobranca_carregamento_id = request.POST.get('cobranca_carregamento', '') or None
+        tipo_norm = (receita.tipo_receita or '').strip()
+        if tipo_norm.lower() == 'outro':
+            receita.rotulo_personalizado = (request.POST.get('rotulo_personalizado') or '').strip()[:120] or None
+        else:
+            receita.rotulo_personalizado = None
         receita.save()
         messages.success(request, 'Receita atualizada com sucesso!')
         return redirect('financeiro:gerenciar_movimento_caixa')

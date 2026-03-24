@@ -1,7 +1,9 @@
 """
 Modelos auxiliares: histórico de consulta, auditoria, cobrança, fechamento de frete.
 """
+import re
 from decimal import Decimal
+from django.apps import apps
 from django.db import models
 from django.db.models import Sum
 from django.utils import timezone
@@ -92,6 +94,10 @@ class CobrancaCarregamento(UpperCaseMixin, models.Model):
         ('Mensalista', 'Mensalista'),
         ('Por_Cubagem', 'Por Cubagem'),
     ]
+    STATUS_CTE_TERCEIRO_CHOICES = [
+        ('Pendente', 'Pendente'),
+        ('Pago', 'Pago'),
+    ]
 
     cliente = models.ForeignKey(
         Cliente,
@@ -142,6 +148,17 @@ class CobrancaCarregamento(UpperCaseMixin, models.Model):
     )
     data_vencimento = models.DateField(blank=True, null=True, verbose_name="Data de Vencimento")
     data_baixa = models.DateField(blank=True, null=True, verbose_name="Data de Baixa")
+    status_cte_terceiro = models.CharField(
+        max_length=10,
+        choices=STATUS_CTE_TERCEIRO_CHOICES,
+        default='Pendente',
+        verbose_name="Status CTE/Terceiro"
+    )
+    data_pagamento_cte_terceiro = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name="Data de Pagamento CTE/Terceiro"
+    )
     observacoes = models.TextField(blank=True, null=True, verbose_name="Observações")
     criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Data de Criação")
     atualizado_em = models.DateTimeField(auto_now=True, verbose_name="Data de Atualização")
@@ -160,6 +177,39 @@ class CobrancaCarregamento(UpperCaseMixin, models.Model):
         return f"Cobrança #{self.id} - {self.cliente.razao_social} - {self.get_status_display()}"
 
     @property
+    def observacoes_para_exibicao(self):
+        """Texto de observações sem metadados internos da saída de caixa (apenas a descrição)."""
+        obs = (self.observacoes or '').strip()
+        if not obs:
+            return ''
+
+        m_id = re.search(r'\[SAIDA_CAIXA_CLIENTE:(\d+)\]', obs, flags=re.IGNORECASE)
+        if m_id:
+            MovimentoCaixa = apps.get_model('financeiro', 'MovimentoCaixa')
+            mov = MovimentoCaixa.objects.filter(pk=int(m_id.group(1))).first()
+            if mov:
+                texto_mov = (mov.descricao or '').strip()
+                if texto_mov:
+                    return texto_mov
+
+        rest = re.sub(
+            r'^\[SAIDA_CAIXA_CLIENTE:\d+\]\s*',
+            '',
+            obs,
+            flags=re.IGNORECASE,
+        ).strip()
+        if not rest:
+            return ''
+        legado = re.match(
+            r'^.*?#\d+\s*[—\-]\s*\d{4}-\d{2}-\d{2}\s*:\s*(.+)$',
+            rest,
+            flags=re.DOTALL,
+        )
+        if legado:
+            return legado.group(1).strip()
+        return rest
+
+    @property
     def valor_armazenamento(self):
         tipo = str(self.tipo_cliente).upper() if self.tipo_cliente else ''
         if tipo == 'POR_CUBAGEM' and self.cubagem and self.valor_cubagem:
@@ -168,11 +218,9 @@ class CobrancaCarregamento(UpperCaseMixin, models.Model):
 
     @property
     def valor_total(self):
-        total = (self.valor_carregamento or 0) + (self.valor_cte_manifesto or 0)
-        tipo = str(self.tipo_cliente).upper() if self.tipo_cliente else ''
-        if tipo == 'POR_CUBAGEM':
-            total += self.valor_armazenamento
-        return total
+        # Regra atual: total considera apenas carregamento + CTE/Manifesto.
+        # Para cliente "Por_Cubagem", valores de armazenamento não entram no total.
+        return (self.valor_carregamento or 0) + (self.valor_cte_manifesto or 0)
 
     @property
     def margem_carregamento(self):
@@ -194,6 +242,74 @@ class CobrancaCarregamento(UpperCaseMixin, models.Model):
         self.status = 'Baixado'
         self.data_baixa = timezone.now().date()
         self.save()
+
+    def marcar_pago_cte_terceiro(self):
+        self.status_cte_terceiro = 'Pago'
+        self.data_pagamento_cte_terceiro = timezone.now().date()
+        self.save(update_fields=['status_cte_terceiro', 'data_pagamento_cte_terceiro', 'atualizado_em'])
+
+
+class CobrancaCTEAvulsa(UpperCaseMixin, models.Model):
+    """Cobrança avulsa de CTE/Manifesto sem vínculo com cliente/carregamento."""
+
+    STATUS_CHOICES = [
+        ('Pendente', 'Pendente'),
+        ('Baixado', 'Baixado'),
+    ]
+    STATUS_CTE_TERCEIRO_CHOICES = [
+        ('Pendente', 'Pendente'),
+        ('Pago', 'Pago'),
+    ]
+
+    nome = models.CharField(max_length=255, verbose_name="Nome")
+    valor_cte_manifesto = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0.00, verbose_name="Valor CTE/Manifesto (R$)"
+    )
+    valor_cte_terceiro = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0.00, verbose_name="Valor CTE/Terceiro (R$)"
+    )
+    status = models.CharField(
+        max_length=10, choices=STATUS_CHOICES, default='Pendente', verbose_name="Status (A Receber)"
+    )
+    data_baixa = models.DateField(blank=True, null=True, verbose_name="Data de Baixa")
+    status_cte_terceiro = models.CharField(
+        max_length=10,
+        choices=STATUS_CTE_TERCEIRO_CHOICES,
+        default='Pendente',
+        verbose_name="Status CTE/Terceiro",
+    )
+    data_pagamento_cte_terceiro = models.DateField(
+        blank=True, null=True, verbose_name="Data de Pagamento CTE/Terceiro"
+    )
+    observacoes = models.TextField(blank=True, null=True, verbose_name="Observações")
+    criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Data de Criação")
+    atualizado_em = models.DateTimeField(auto_now=True, verbose_name="Data de Atualização")
+
+    class Meta:
+        verbose_name = "Cobrança CTE Avulsa"
+        verbose_name_plural = "Cobranças CTE Avulsas"
+        ordering = ['-criado_em']
+        indexes = [
+            models.Index(fields=['status']),
+            models.Index(fields=['status_cte_terceiro']),
+            models.Index(fields=['-criado_em']),
+        ]
+
+    @property
+    def lucro_cte(self):
+        v_manifesto = self.valor_cte_manifesto or Decimal('0.00')
+        v_terceiro = self.valor_cte_terceiro or Decimal('0.00')
+        return v_manifesto - v_terceiro
+
+    def baixar(self):
+        self.status = 'Baixado'
+        self.data_baixa = timezone.now().date()
+        self.save(update_fields=['status', 'data_baixa', 'atualizado_em'])
+
+    def marcar_pago_cte_terceiro(self):
+        self.status_cte_terceiro = 'Pago'
+        self.data_pagamento_cte_terceiro = timezone.now().date()
+        self.save(update_fields=['status_cte_terceiro', 'data_pagamento_cte_terceiro', 'atualizado_em'])
 
 
 class FechamentoFrete(UpperCaseMixin, models.Model):

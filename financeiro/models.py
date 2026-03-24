@@ -260,6 +260,13 @@ class ReceitaEmpresa(UpperCaseMixin, models.Model):
     data = models.DateField(verbose_name="Data")
     tipo_receita = models.CharField(max_length=20, choices=TIPO_RECEITA_CHOICES, verbose_name="Tipo de Receita")
     valor = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Valor (R$)")
+    rotulo_personalizado = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True,
+        verbose_name="Nome do campo (fechamento)",
+        help_text='Usado quando o tipo é "Outro": rótulo exibido no fechamento de caixa.',
+    )
     descricao = models.TextField(blank=True, null=True, verbose_name="Descrição")
     cobranca_carregamento = models.ForeignKey(
         'notas.CobrancaCarregamento',

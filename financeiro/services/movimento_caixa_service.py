@@ -4,7 +4,10 @@ Serviço de movimento de caixa: CRUD e atualização de acumulado do funcionári
 import logging
 from decimal import Decimal
 
+from django.db import transaction
+
 from financeiro.models import AcumuladoFuncionario, MovimentoCaixa, PeriodoMovimentoCaixa
+from notas.models import CobrancaCarregamento
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +17,9 @@ class MovimentoCaixaService:
 
     CATEGORIAS_ENTRADA = [c[0] for c in MovimentoCaixa.CATEGORIA_ENTRADA_CHOICES]
     CATEGORIAS_SAIDA = [c[0] for c in MovimentoCaixa.CATEGORIA_SAIDA_CHOICES]
+
+    # Marcador em CobrancaCarregamento.observacoes para saída com destino cliente.
+    MARCADOR_SAIDA_CAIXA_CLIENTE = '[SAIDA_CAIXA_CLIENTE:{id}]'
 
     MSG_SEM_PERIODO = (
         'É necessário iniciar um período antes de criar movimentos. Clique em "Iniciar Período".'
@@ -75,6 +81,53 @@ class MovimentoCaixaService:
         return True, None
 
     @classmethod
+    def _marcador_saida_caixa_cliente(cls, movimento_id):
+        return cls.MARCADOR_SAIDA_CAIXA_CLIENTE.format(id=movimento_id)
+
+    @classmethod
+    def _sincronizar_recebivel_saida_cliente(cls, movimento):
+        """
+        Saída com cliente gera/atualiza uma CobrancaCarregamento pendente (A Receber).
+        Se o movimento deixar de ser saída ou perder o cliente, remove a pendente vinculada.
+        """
+        marker = cls._marcador_saida_caixa_cliente(movimento.pk)
+        qs = CobrancaCarregamento.objects.filter(observacoes__contains=marker)
+
+        if movimento.tipo == 'Saida' and movimento.cliente_id:
+            tail = (movimento.descricao or '').strip()[:500]
+            base_obs = f'{marker} {tail}'.strip()
+            cob = qs.first()
+            if cob:
+                if cob.status != 'Pendente':
+                    logger.warning(
+                        'Cobrança vinculada ao movimento %s não está pendente; não atualizando.',
+                        movimento.pk,
+                    )
+                    return
+                cob.cliente_id = movimento.cliente_id
+                cob.valor_carregamento = movimento.valor
+                cob.observacoes = base_obs
+                cob.save()
+            else:
+                CobrancaCarregamento.objects.create(
+                    cliente_id=movimento.cliente_id,
+                    valor_carregamento=movimento.valor,
+                    valor_cte_manifesto=Decimal('0.00'),
+                    status='Pendente',
+                    observacoes=base_obs,
+                )
+        else:
+            qs.filter(status='Pendente').delete()
+
+    @classmethod
+    def _remover_cobrancas_pendentes_saida_cliente(cls, movimento):
+        marker = cls._marcador_saida_caixa_cliente(movimento.pk)
+        CobrancaCarregamento.objects.filter(
+            observacoes__contains=marker,
+            status='Pendente',
+        ).delete()
+
+    @classmethod
     def criar_movimento(
         cls,
         data,
@@ -104,18 +157,20 @@ class MovimentoCaixaService:
         if not ok:
             return None, err
 
-        movimento = MovimentoCaixa.objects.create(
-            data=data,
-            tipo=tipo,
-            valor=valor,
-            descricao=descricao or '',
-            categoria=categoria or None,
-            funcionario_id=funcionario_id,
-            cliente_id=cliente_id,
-            acerto_diario_id=acerto_diario_id,
-            periodo=periodo_ativo,
-            usuario_criacao=usuario,
-        )
+        with transaction.atomic():
+            movimento = MovimentoCaixa.objects.create(
+                data=data,
+                tipo=tipo,
+                valor=valor,
+                descricao=descricao or '',
+                categoria=categoria or None,
+                funcionario_id=funcionario_id,
+                cliente_id=cliente_id,
+                acerto_diario_id=acerto_diario_id,
+                periodo=periodo_ativo,
+                usuario_criacao=usuario,
+            )
+            cls._sincronizar_recebivel_saida_cliente(movimento)
 
         if tipo == 'AcertoFuncionario' and funcionario_id:
             try:
@@ -164,6 +219,10 @@ class MovimentoCaixaService:
         movimento.funcionario_id = funcionario_id
         movimento.cliente_id = cliente_id
         movimento.save()
+        try:
+            cls._sincronizar_recebivel_saida_cliente(movimento)
+        except Exception as e:
+            logger.exception('Erro ao sincronizar conta a receber da saída com cliente: %s', e)
         return movimento, None
 
     @classmethod
@@ -182,6 +241,10 @@ class MovimentoCaixaService:
                 )
             except Exception as e:
                 logger.warning('Erro ao reverter acumulado ao excluir movimento: %s', e)
+        try:
+            cls._remover_cobrancas_pendentes_saida_cliente(movimento)
+        except Exception as e:
+            logger.exception('Erro ao remover conta a receber vinculada ao movimento: %s', e)
         movimento.delete()
         return True, None
 

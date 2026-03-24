@@ -48,11 +48,14 @@ class SetorBancarioAdmin(admin.ModelAdmin):
 class ReceitaEmpresaAdmin(admin.ModelAdmin):
     list_display = ['data', 'tipo_receita', 'valor', 'cliente', 'usuario_criacao', 'criado_em']
     list_filter = ['tipo_receita', 'data', 'cliente']
-    search_fields = ['descricao', 'cliente__razao_social', 'tipo_receita']
+    search_fields = ['descricao', 'rotulo_personalizado', 'cliente__razao_social', 'tipo_receita']
     date_hierarchy = 'data'
     readonly_fields = ['criado_em', 'atualizado_em', 'usuario_criacao']
     fieldsets = (
-        ('Informações da Receita', {'fields': ('data', 'tipo_receita', 'valor', 'descricao')}),
+        (
+            'Informações da Receita',
+            {'fields': ('data', 'tipo_receita', 'valor', 'rotulo_personalizado', 'descricao')},
+        ),
         ('Relacionamentos', {'fields': ('cliente', 'cobranca_carregamento')}),
         ('Controle', {'fields': ('usuario_criacao', 'criado_em', 'atualizado_em'), 'classes': ('collapse',)}),
     )

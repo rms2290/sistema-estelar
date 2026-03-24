@@ -40,11 +40,11 @@
         <div class="card-header bg-success text-white">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-calendar-check"></i> Período Ativo: {{ periodo_ativo.data_inicio|date:"d/m/Y" }}</h5>
-                <div class="btn-group">
-                    {% if periodo_ativo.movimentos_count == 0 %}
+                <div class="d-flex flex-wrap gap-2">
                     <button type="button" class="btn btn-sm btn-warning" id="btnEditarPeriodo" data-periodo-id="{{ periodo_ativo.pk }}" title="Editar Período">
                         <i class="fas fa-edit"></i> Editar
                     </button>
+                    {% if periodo_ativo.movimentos_count == 0 %}
                     <button type="button" class="btn btn-sm btn-danger" id="btnExcluirPeriodo" data-periodo-id="{{ periodo_ativo.pk }}" title="Excluir Período">
                         <i class="fas fa-trash"></i> Excluir
                     </button>
@@ -403,8 +403,8 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Descrição *</label>
-                        <textarea name="descricao" id="descricaoSaida" class="form-control" rows="3" required placeholder="Descreva a saída de dinheiro..."></textarea>
+                        <label class="form-label">Descrição</label>
+                        <textarea name="descricao" id="descricaoSaida" class="form-control" rows="3" placeholder="Descreva a saída de dinheiro (opcional)..."></textarea>
                     </div>
                 </form>
             </div>
@@ -643,15 +643,20 @@ document.getElementById('btnSalvarEntrada').addEventListener('click', function()
 // Salvar Nova Saída
 document.getElementById('btnSalvarSaida').addEventListener('click', function() {
     const form = document.getElementById('formNovaSaida');
+    if (!form.reportValidity()) return;
+
     const destino = document.getElementById('destinoSaida').value;
     const formData = new FormData(form);
+    const descricao = String(formData.get('descricao') || '').trim();
     
-    // Se for para Estelar, garantir que não há funcionário ou cliente associado e adicionar "Estelar" na descrição
+    // Se for para Estelar, garantir que não há funcionário ou cliente associado
+    // e padronizar a descrição apenas quando houver texto.
     if (destino === 'estelar') {
         formData.delete('funcionario_id'); // Remover funcionário se houver
         formData.delete('cliente_id'); // Remover cliente se houver
-        const descricao = formData.get('descricao');
-        if (!descricao.toLowerCase().includes('estelar')) {
+        if (!descricao) {
+            formData.set('descricao', 'Estelar');
+        } else if (!descricao.toLowerCase().includes('estelar')) {
             formData.set('descricao', 'Estelar ' + descricao);
         }
     } else if (destino === 'funcionario') {
@@ -824,12 +829,15 @@ if (btnEditarPeriodo) {
                     document.getElementById('editarDataInicio').value = data.data.data_inicio;
                     document.getElementById('editarValorInicial').value = data.data.valor_inicial_caixa;
                     document.getElementById('editarObservacoes').value = data.data.observacoes || '';
-                    
-                    // Desabilitar edição se tiver movimentos
-                    if (data.data.tem_movimentos) {
-                        alert('Não é possível editar um período que já possui movimentos cadastrados.');
-                        return;
-                    }
+
+                    const inputDataInicio = document.getElementById('editarDataInicio');
+                    const inputValorInicial = document.getElementById('editarValorInicial');
+                    const textoAjudaData = inputDataInicio.parentElement.querySelector('small');
+                    const textoAjudaValor = inputValorInicial.parentElement.querySelector('small');
+                    inputDataInicio.readOnly = false;
+                    inputValorInicial.readOnly = false;
+                    if (textoAjudaData) textoAjudaData.textContent = 'O período será nomeado automaticamente pela data de início';
+                    if (textoAjudaValor) textoAjudaValor.textContent = 'Valor disponível em caixa no início do período';
                     
                     // Abrir modal
                     const modal = new bootstrap.Modal(document.getElementById('modalEditarPeriodo'));
@@ -866,7 +874,7 @@ if (btnExcluirPeriodo) {
         .then(data => {
             if (data.success) {
                 alert(data.message);
-                location.reload();
+                window.location.href = `{% url 'financeiro:gerenciar_movimento_caixa' %}`;
             } else {
                 alert('Erro: ' + data.message);
             }
@@ -879,36 +887,53 @@ if (btnExcluirPeriodo) {
 }
 
 // Salvar edição de período
-const formEditarPeriodo = document.getElementById('formEditarPeriodo');
-if (formEditarPeriodo) {
-    formEditarPeriodo.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const periodoId = document.getElementById('editarPeriodoId').value;
-        const formData = new FormData(this);
-        
-        fetch(`{% url 'financeiro:editar_periodo_movimento_caixa_ajax' 0 %}`.replace('0', periodoId), {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                location.reload();
-            } else {
-                alert('Erro: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            alert('Erro ao salvar período');
+document.addEventListener('DOMContentLoaded', function() {
+    const formEditarPeriodo = document.getElementById('formEditarPeriodo');
+    const btnSalvarPeriodo = document.getElementById('btnSalvarPeriodo');
+
+    if (formEditarPeriodo) {
+        // Evita fallback para GET caso algum listener falhe.
+        formEditarPeriodo.addEventListener('submit', function(e) {
+            e.preventDefault();
         });
-    });
-}
+    }
+
+    if (btnSalvarPeriodo) {
+        btnSalvarPeriodo.addEventListener('click', function() {
+            if (!formEditarPeriodo || !formEditarPeriodo.reportValidity()) return;
+
+            const periodoId = document.getElementById('editarPeriodoId').value;
+            const formData = new FormData(formEditarPeriodo);
+            const valorBruto = String(formData.get('valor_inicial_caixa') || '').trim();
+            let valorNormalizado = valorBruto.replace(/\s+/g, '').replace('R$', '').replace('r$', '');
+            if (valorNormalizado.includes(',')) {
+                valorNormalizado = valorNormalizado.replace(/\./g, '').replace(',', '.');
+            }
+            formData.set('valor_inicial_caixa', valorNormalizado || '0.00');
+
+            fetch(`{% url 'financeiro:editar_periodo_movimento_caixa_ajax' 0 %}`.replace('0', periodoId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    window.location.href = `{% url 'financeiro:gerenciar_movimento_caixa' %}?periodo_id=${periodoId}`;
+                } else {
+                    alert('Erro: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao salvar período');
+            });
+        });
+    }
+});
 
 // Fechar período
 const btnFecharPeriodo = document.getElementById('btnFecharPeriodo');
@@ -1002,9 +1027,9 @@ if (btnFecharPeriodo) {
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Valor Inicial em Caixa (R$) *</label>
-                        <input type="number" id="editarValorInicial" name="valor_inicial_caixa" class="form-control" 
-                               step="0.01" min="0" required>
-                        <small class="form-text text-muted">Valor disponível em caixa no início do período</small>
+                        <input type="text" id="editarValorInicial" name="valor_inicial_caixa" class="form-control"
+                               inputmode="decimal" required placeholder="Ex.: 1000,00 ou 1.000,00">
+                        <small class="form-text text-muted">Aceita formato brasileiro (ex.: 1.000,00).</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Observações</label>
@@ -1014,7 +1039,7 @@ if (btnFecharPeriodo) {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-warning">
+                    <button type="button" class="btn btn-warning" id="btnSalvarPeriodo">
                         <i class="fas fa-save"></i> Salvar Alterações
                     </button>
                 </div>

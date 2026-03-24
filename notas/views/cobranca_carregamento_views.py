@@ -105,7 +105,15 @@ def editar_cobranca_carregamento(request, cobranca_id):
             messages.success(request, f'Cobrança #{cobranca.id} atualizada com sucesso!')
             return redirect('notas:cobranca_carregamento')
         else:
-            messages.error(request, 'Erro ao atualizar cobrança. Verifique os campos.')
+            error_messages = []
+            for field, errors in form.errors.items():
+                field_name = form.fields[field].label if field in form.fields else field
+                for error in errors:
+                    error_messages.append(f"{field_name}: {error}")
+            if error_messages:
+                messages.error(request, 'Erro ao atualizar cobrança: ' + ' | '.join(error_messages))
+            else:
+                messages.error(request, 'Erro ao atualizar cobrança. Verifique os campos.')
     else:
         form = CobrancaCarregamentoForm(instance=cobranca)
     
@@ -117,8 +125,8 @@ def editar_cobranca_carregamento(request, cobranca_id):
         .distinct()
         .order_by('-data_emissao')
     )
-    # IDs dos romaneios selecionados: no POST use o que veio do formulário; no GET use os já vinculados
-    if request.method == 'POST' and request.POST.getlist('romaneios'):
+    # IDs dos romaneios selecionados: em POST, sempre preserva exatamente o que veio.
+    if request.method == 'POST':
         romaneios_selecionados = [int(x) for x in request.POST.getlist('romaneios') if x.isdigit()]
     else:
         romaneios_selecionados = list(cobranca.romaneios.values_list('id', flat=True))

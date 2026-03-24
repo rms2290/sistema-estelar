@@ -12,12 +12,55 @@ from django.shortcuts import get_object_or_404, redirect, render
 from sistema_estelar.api_utils import json_success, json_error
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 from notas.decorators import admin_required
 from financeiro.models import MovimentoCaixa, PeriodoMovimentoCaixa
 from financeiro.services import PeriodoCaixaService
 
 logger = logging.getLogger(__name__)
+
+
+def _format_data_periodo(data):
+    """Formata data de período aceitando date ou string ISO."""
+    if hasattr(data, 'strftime'):
+        return data.strftime('%d/%m/%Y')
+    if isinstance(data, str):
+        data_obj = parse_date(data)
+        if data_obj:
+            return data_obj.strftime('%d/%m/%Y')
+    return str(data)
+
+
+def _parse_decimal_br(valor_str):
+    """
+    Converte string monetária em Decimal aceitando formato brasileiro.
+    Exemplos aceitos: "1000", "1000.50", "1.000,50", "1000,50".
+    """
+    if valor_str is None:
+        return Decimal('0.00')
+    texto = str(valor_str).strip()
+    if not texto:
+        return Decimal('0.00')
+    texto = texto.replace(' ', '').replace('R$', '').replace('r$', '')
+
+    # Casos com vírgula decimal (pt-BR): "1.234,56" / "1000,50"
+    if ',' in texto:
+        texto = texto.replace('.', '').replace(',', '.')
+        return Decimal(texto)
+
+    # Casos apenas com ponto:
+    # - "1000.50" (decimal com ponto) -> mantém
+    # - "1.000" / "12.345.678" (milhar pt-BR) -> remove separadores
+    if '.' in texto:
+        partes = texto.split('.')
+        if all(parte.isdigit() for parte in partes):
+            # Se último grupo tem 3 dígitos e os grupos intermediários também,
+            # tratamos como separador de milhar.
+            if len(partes[-1]) == 3 and all(len(parte) == 3 for parte in partes[1:]):
+                texto = ''.join(partes)
+
+    return Decimal(texto)
 
 
 @login_required
@@ -27,7 +70,7 @@ def iniciar_periodo_movimento_caixa(request):
     if request.method == 'POST':
         try:
             data_inicio = request.POST.get('data_inicio', '')
-            valor_inicial = Decimal(request.POST.get('valor_inicial_caixa', '0.00'))
+            valor_inicial = _parse_decimal_br(request.POST.get('valor_inicial_caixa', '0.00'))
             observacoes = request.POST.get('observacoes', '').strip()
             periodo, erro = PeriodoCaixaService.iniciar_periodo(
                 data_inicio=data_inicio,
@@ -41,7 +84,7 @@ def iniciar_periodo_movimento_caixa(request):
                 else:
                     messages.warning(request, erro)
                 return redirect('financeiro:gerenciar_movimento_caixa')
-            periodo_nome = periodo.data_inicio.strftime('%d/%m/%Y')
+            periodo_nome = _format_data_periodo(periodo.data_inicio)
             logger.info('Período de caixa iniciado: periodo_id=%s data=%s usuario=%s', periodo.pk, periodo_nome, request.user.username)
             messages.success(request, f'Período de {periodo_nome} iniciado com sucesso!')
             return redirect(f"{reverse('financeiro:gerenciar_movimento_caixa')}?periodo_id={periodo.pk}")
@@ -65,7 +108,7 @@ def fechar_periodo_movimento_caixa_ajax(request, pk):
         ok, erro = PeriodoCaixaService.fechar_periodo(periodo)
         if erro:
             return json_error(erro)
-        periodo_nome = periodo.data_inicio.strftime('%d/%m/%Y')
+        periodo_nome = _format_data_periodo(periodo.data_inicio)
         logger.info('Período de caixa fechado: periodo_id=%s data=%s usuario=%s', periodo.pk, periodo_nome, request.user.username)
         return json_success(message=f'Período de {periodo_nome} fechado com sucesso!')
     except Exception as e:
@@ -82,14 +125,14 @@ def editar_periodo_movimento_caixa_ajax(request, pk):
     try:
         periodo = get_object_or_404(PeriodoMovimentoCaixa, pk=pk)
         data_inicio = request.POST.get('data_inicio', '')
-        valor_inicial = Decimal(request.POST.get('valor_inicial_caixa', '0.00'))
+        valor_inicial = _parse_decimal_br(request.POST.get('valor_inicial_caixa', '0.00'))
         observacoes = request.POST.get('observacoes', '').strip()
         periodo, erro = PeriodoCaixaService.editar_periodo(
             periodo, data_inicio, valor_inicial, observacoes
         )
         if erro:
             return json_error(erro)
-        periodo_nome = periodo.data_inicio.strftime('%d/%m/%Y')
+        periodo_nome = _format_data_periodo(periodo.data_inicio)
         return json_success(message=f'Período de {periodo_nome} atualizado com sucesso!')
     except Exception as e:
         logger.error(f'Erro ao editar período: {str(e)}', exc_info=True)
@@ -123,7 +166,7 @@ def excluir_periodo_movimento_caixa_ajax(request, pk):
         return json_error('Método não permitido', status=405)
     try:
         periodo = get_object_or_404(PeriodoMovimentoCaixa, pk=pk)
-        periodo_nome = periodo.data_inicio.strftime('%d/%m/%Y')
+        periodo_nome = _format_data_periodo(periodo.data_inicio)
         movimentos_count, erro = PeriodoCaixaService.excluir_periodo(periodo)
         if erro:
             return json_error(erro)
