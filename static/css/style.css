@@ -34,7 +34,7 @@ html {
     /* Tema Claro Suave - mesmo cinza do menu lateral nas seções */
     --light-bg-color: #f5f7fa;        /* Azul muito claro suave */
     --light-sidebar-bg: #f8f9fa;      /* Cinza muito claro */
-    --light-header-bg: #e9ecef;       /* Cinza claro */
+    --light-header-bg: #2e86c1;       /* Azul barra superior – alinhado ao tom solicitado (tema claro) */
     --light-text-color: #495057;      /* Cinza escuro */
     --light-secondary-text-color: #6c757d; /* Cinza médio */
     --light-border-color: #dee2e6;    /* Cinza médio */
@@ -2214,19 +2214,21 @@ td .badge.bg-inativo,
 
 
 
-/* Ajustes para o tema claro */
-[data-theme="light"] #theme-toggle,
-[data-theme="light"] .theme-toggle-btn,
-[data-theme="light"] .menu-toggle-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: var(--border-color);
+/* Tema claro: botões menu/tema na barra (sobre fundo azul #2e86c1) */
+[data-theme="light"] .top-bar #theme-toggle,
+[data-theme="light"] .top-bar .theme-toggle-btn,
+[data-theme="light"] .top-bar .menu-toggle-btn {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.55);
+    color: #fff;
 }
 
-[data-theme="light"] #theme-toggle:hover,
-[data-theme="light"] .theme-toggle-btn:hover,
-[data-theme="light"] .menu-toggle-btn:hover {
-    background: rgba(0, 123, 255, 0.1);
-    border-color: var(--primary-color);
+[data-theme="light"] .top-bar #theme-toggle:hover,
+[data-theme="light"] .top-bar .theme-toggle-btn:hover,
+[data-theme="light"] .top-bar .menu-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.22);
+    border-color: #fff;
+    color: #fff;
 }
 
 /* Responsividade para o novo layout */
@@ -2300,18 +2302,41 @@ td .badge.bg-inativo,
 }
 
 /* Melhorias específicas para o tema claro */
-[data-theme="light"] .top-bar {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
 [data-theme="light"] .sidebar {
     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
     background-color: #f8f9fa !important;
 }
 
 [data-theme="light"] .top-bar {
-    background-color: #e9ecef !important;
-    color: #495057 !important;
+    box-shadow: 0 2px 8px rgba(15, 80, 130, 0.35);
+    background-color: var(--light-header-bg) !important;
+    color: #ffffff !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .top-bar .logo {
+    color: #ffffff !important;
+}
+
+[data-theme="light"] .top-bar .logo:hover {
+    color: rgba(255, 255, 255, 0.88) !important;
+}
+
+[data-theme="light"] .top-bar .user-info {
+    color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Botões outline na barra (Login, dropdown usuário): contraste no azul médio */
+[data-theme="light"] .top-bar .btn-outline-light {
+    color: #fff !important;
+    border-color: rgba(255, 255, 255, 0.6) !important;
+    background-color: transparent !important;
+}
+
+[data-theme="light"] .top-bar .btn-outline-light:hover {
+    color: #2e86c1 !important;
+    background-color: #fff !important;
+    border-color: #fff !important;
 }
 
 [data-theme="light"] .card {
@@ -2587,6 +2612,9 @@ body.login-page .main-wrapper {
     display: flex !important;
     flex-direction: column !important;
     flex: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background-color: var(--bg-color) !important;
 }
 
 body.login-page .main-content {
@@ -2596,7 +2624,14 @@ body.login-page .main-content {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    flex: 1 !important;
+    flex: 1 1 auto !important;
+    /* Sem sidebar no login: remover limite de 220px (width/max-width herdados) */
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    box-sizing: border-box !important;
+    background-color: var(--bg-color) !important;
 }
 
 /* Centralizar perfeitamente o painel de login */
@@ -2605,12 +2640,14 @@ body.login-page .container-fluid {
     justify-content: center !important;
     align-items: center !important;
     height: 100vh !important;
-    width: 100vw !important;
+    width: 100% !important;
+    max-width: 100% !important;
     padding: 20px !important;
     margin: 0 !important;
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
+    right: 0 !important;
     box-sizing: border-box !important;
 }
 

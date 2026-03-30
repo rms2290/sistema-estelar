@@ -394,6 +394,22 @@
     background-color: rgba(40, 167, 69, 0.2) !important;
 }
 
+/* Tema dark: azul mais claro para melhorar leitura dos galpões sem mercadorias */
+[data-theme="dark"] .galpao-card.border-primary {
+    border-color: #6ea8fe !important;
+    background-color: rgba(110, 168, 254, 0.12) !important;
+}
+
+[data-theme="dark"] .galpao-card.border-primary .card-title,
+[data-theme="dark"] .galpao-card.border-primary h4 {
+    color: #8fc2ff !important;
+}
+
+[data-theme="dark"] .galpao-card.border-primary:hover {
+    background-color: rgba(110, 168, 254, 0.2) !important;
+    box-shadow: 0 0.5rem 1rem rgba(110, 168, 254, 0.25);
+}
+
 @keyframes pulse-success {
     0% {
         box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4);
