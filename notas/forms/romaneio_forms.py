@@ -5,6 +5,7 @@ from django import forms
 from django.db.models import Q
 from datetime import datetime
 from ..models import RomaneioViagem, Cliente, Motorista, Veiculo, NotaFiscal
+from ..utils.nota_ordering import ordenar_queryset_notas_por_numero
 from .base import UpperCaseCharField
 
 
@@ -92,11 +93,13 @@ class RomaneioViagemForm(forms.ModelForm):
                 self.fields['data_romaneio'].initial = data_emissao.strftime('%Y-%m-%d')
 
             if self.instance.cliente:
-                self.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
-                    cliente=self.instance.cliente
-                ).filter(
-                    Q(romaneios_vinculados=self.instance) | Q(status='Depósito')
-                ).order_by('nota')
+                self.fields['notas_fiscais'].queryset = ordenar_queryset_notas_por_numero(
+                    NotaFiscal.objects.filter(
+                        cliente=self.instance.cliente
+                    ).filter(
+                        Q(romaneios_vinculados=self.instance) | Q(status='Depósito')
+                    )
+                )
                 self.fields['notas_fiscais'].initial = self.instance.notas_fiscais.all()
         
         # Configurar queryset das notas fiscais baseado no cliente dos dados
@@ -105,9 +108,11 @@ class RomaneioViagemForm(forms.ModelForm):
                 cliente_id = self.data.get('cliente')
                 if cliente_id:
                     cliente_obj = Cliente.objects.get(pk=cliente_id)
-                    self.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
-                        cliente=cliente_obj, status='Depósito' 
-                    ).order_by('nota')
+                    self.fields['notas_fiscais'].queryset = ordenar_queryset_notas_por_numero(
+                        NotaFiscal.objects.filter(
+                            cliente=cliente_obj, status='Depósito'
+                        )
+                    )
             except (Cliente.DoesNotExist, ValueError):
                 pass
         

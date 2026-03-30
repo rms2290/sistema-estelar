@@ -12,6 +12,7 @@ from django.db.models import Q
 
 from ..models import NotaFiscal, Cliente, RomaneioViagem, Veiculo, OcorrenciaNotaFiscal, FotoOcorrencia
 from ..decorators import admin_required
+from ..utils.nota_ordering import ordenar_instancias_notas_fiscais
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +23,12 @@ def load_notas_fiscais(request):
     cliente_id = request.GET.get('cliente_id')
     
     if cliente_id:
-        notas = NotaFiscal.objects.filter(
-            cliente_id=cliente_id,
-            status='Depósito'
-        ).order_by('nota')
+        notas = ordenar_instancias_notas_fiscais(
+            NotaFiscal.objects.filter(
+                cliente_id=cliente_id,
+                status='Depósito'
+            )
+        )
         
         notas_data = [{
             'id': nota.id,
@@ -63,7 +66,7 @@ def load_notas_fiscais_edicao(request):
         else:
             notas = notas.filter(status='Depósito')
         
-        notas = notas.order_by('nota')
+        notas = ordenar_instancias_notas_fiscais(notas)
         
         # Formato esperado pelo JavaScript: array direto com campos completos
         notas_data = []
@@ -89,10 +92,12 @@ def load_notas_fiscais_edicao(request):
 @login_required
 def load_notas_fiscais_para_romaneio(request, cliente_id):
     """Carrega notas fiscais disponíveis para um romaneio"""
-    notas = NotaFiscal.objects.filter(
-        cliente_id=cliente_id,
-        status='Depósito'
-    ).order_by('nota')
+    notas = ordenar_instancias_notas_fiscais(
+        NotaFiscal.objects.filter(
+            cliente_id=cliente_id,
+            status='Depósito'
+        )
+    )
     
     notas_data = []
     for nota in notas:

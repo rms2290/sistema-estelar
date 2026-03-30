@@ -238,13 +238,18 @@
 
             function toggleSecaoMedidasBau() {
                 if (!secaoMedidas || !tipoSelect) return;
-                var isCavalo = tipoSelect.value === 'Cavalo';
+                var tipo = tipoSelect.value;
+                var isCavalo = tipo === 'Cavalo';
+                var isReboque = tipo === 'Reboque';
                 secaoMedidas.style.display = isCavalo ? 'none' : 'block';
-                // Remove obrigatoriedade dos campos ao ocultar (evita validação em campos vazios)
-                ['id_largura', 'id_altura', 'id_comprimento', 'id_cubagem', 'id_capacidade_maxima_kg'].forEach(function(id) {
+                /* Cavalo: sem medidas. Reboque: medidas/cubagem opcionais (documento nem sempre traz). Demais: medidas obrigatórias. Cubagem nunca required (campo readonly/calculado). */
+                var obrigarMedidas = !isCavalo && !isReboque;
+                ['id_largura', 'id_altura', 'id_comprimento', 'id_capacidade_maxima_kg'].forEach(function(id) {
                     var el = document.getElementById(id);
-                    if (el) el.required = !isCavalo;
+                    if (el) el.required = obrigarMedidas;
                 });
+                var cub = document.getElementById('id_cubagem');
+                if (cub) cub.required = false;
             }
 
             if (tipoSelect) tipoSelect.addEventListener('change', toggleSecaoMedidasBau);

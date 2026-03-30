@@ -31,6 +31,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Limita a 11 dígitos
         numeros = numeros.substring(0, 11);
         
+        // Sem dígitos: campo totalmente vazio (evita exibir só "(")
+        if (numeros.length === 0) {
+            return '';
+        }
+        
         // Aplica a máscara baseada no número de dígitos
         if (numeros.length <= 2) {
             return '(' + numeros;

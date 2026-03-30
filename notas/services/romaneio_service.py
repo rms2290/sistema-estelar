@@ -25,6 +25,7 @@ from typing import Tuple, Optional, List, Dict, Any
 from django.db import IntegrityError, transaction
 from django.contrib import messages
 from ..models import RomaneioViagem, NotaFiscal
+from ..utils.nota_ordering import ordenar_queryset_notas_por_numero
 
 
 # ============================================================================
@@ -359,10 +360,12 @@ class RomaneioService:
         
         try:
             cliente = Cliente.objects.get(pk=cliente_id)
-            return NotaFiscal.objects.filter(
-                cliente=cliente,
-                status='Depósito'
-            ).order_by('nota')
+            return ordenar_queryset_notas_por_numero(
+                NotaFiscal.objects.filter(
+                    cliente=cliente,
+                    status='Depósito'
+                )
+            )
         except Cliente.DoesNotExist:
             return NotaFiscal.objects.none()
 

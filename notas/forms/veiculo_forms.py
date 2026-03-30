@@ -49,40 +49,15 @@ class VeiculoForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
     
-    # Lista de marcas comuns de veículos
-    MARCAS_CHOICES = [
-        ('', '---'),
-        ('FORD', 'FORD'),
-        ('CHEVROLET', 'CHEVROLET'),
-        ('VOLKSWAGEN', 'VOLKSWAGEN'),
-        ('FIAT', 'FIAT'),
-        ('MERCEDES-BENZ', 'MERCEDES-BENZ'),
-        ('SCANIA', 'SCANIA'),
-        ('VOLVO', 'VOLVO'),
-        ('IVECO', 'IVECO'),
-        ('MAN', 'MAN'),
-        ('DAF', 'DAF'),
-        ('RENAULT', 'RENAULT'),
-        ('PEUGEOT', 'PEUGEOT'),
-        ('CITROEN', 'CITROEN'),
-        ('HYUNDAI', 'HYUNDAI'),
-        ('TOYOTA', 'TOYOTA'),
-        ('NISSAN', 'NISSAN'),
-        ('HONDA', 'HONDA'),
-        ('MITSUBISHI', 'MITSUBISHI'),
-        ('MAZDA', 'MAZDA'),
-        ('SUBARU', 'SUBARU'),
-        ('AUDI', 'AUDI'),
-        ('BMW', 'BMW'),
-        ('OUTROS', 'OUTROS'),
-    ]
-    
-    # Sobrescreve o campo 'marca' para usar dropdown
-    marca = forms.ChoiceField(
+    # Marca: texto livre (CRLV/documento), especialmente para reboques com marcas fora das listas fixas
+    marca = UpperCaseCharField(
         label='Marca',
-        choices=MARCAS_CHOICES,
         required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
+        max_length=100,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Conforme consta no documento',
+        }),
     )
     
     # Campo 'modelo' mantido como texto livre

@@ -15,6 +15,7 @@ from ..forms import RomaneioViagemForm, RomaneioSearchForm
 from ..decorators import rate_limit_critical
 from .base import get_next_romaneio_codigo, get_next_romaneio_generico_codigo, is_cliente
 from ..services import RomaneioService, NotaFiscalService
+from ..utils.nota_ordering import ordenar_instancias_notas_fiscais, ordenar_queryset_notas_por_numero
 
 # Configurar logger
 logger = logging.getLogger(__name__)
@@ -173,11 +174,13 @@ def editar_romaneio(request, pk):
         if cliente_id:
             try:
                 cliente_obj = Cliente.objects.get(pk=cliente_id)
-                form.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
-                    cliente=cliente_obj
-                ).filter(
-                    Q(romaneios_vinculados=romaneio) | Q(status='Depósito')
-                ).order_by('nota')
+                form.fields['notas_fiscais'].queryset = ordenar_queryset_notas_por_numero(
+                    NotaFiscal.objects.filter(
+                        cliente=cliente_obj
+                    ).filter(
+                        Q(romaneios_vinculados=romaneio) | Q(status='Depósito')
+                    )
+                )
             except Cliente.DoesNotExist:
                 form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
         else:
@@ -205,11 +208,13 @@ def editar_romaneio(request, pk):
             if cliente_id:
                 try:
                     cliente_obj = Cliente.objects.get(pk=cliente_id)
-                    form.fields['notas_fiscais'].queryset = NotaFiscal.objects.filter(
-                        cliente=cliente_obj
-                    ).filter(
-                        Q(romaneios_vinculados=romaneio) | Q(status='Depósito')
-                    ).order_by('nota')
+                    form.fields['notas_fiscais'].queryset = ordenar_queryset_notas_por_numero(
+                        NotaFiscal.objects.filter(
+                            cliente=cliente_obj
+                        ).filter(
+                            Q(romaneios_vinculados=romaneio) | Q(status='Depósito')
+                        )
+                    )
                 except Cliente.DoesNotExist:
                     form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
             else:
@@ -303,11 +308,11 @@ def detalhes_romaneio(request, pk):
             messages.error(request, 'Você não tem permissão para acessar este romaneio.')
             return redirect('notas:meus_romaneios')
     
-    # Notas já foram carregadas via prefetch_related
-    notas_romaneadas = romaneio.notas_fiscais.all().order_by('nota')
+    # Notas já foram carregadas via prefetch_related; ordenar por número da nota
+    notas_romaneadas = ordenar_instancias_notas_fiscais(romaneio.notas_fiscais.all())
     
     # Garantir que os totais estejam calculados
-    if notas_romaneadas.exists():
+    if notas_romaneadas:
         romaneio.calcular_totais()
 
     context = {
@@ -389,7 +394,7 @@ def imprimir_romaneio_novo(request, pk):
     )
     
     try:
-        notas_romaneadas = romaneio.notas_fiscais.all().order_by('nota')
+        notas_romaneadas = ordenar_instancias_notas_fiscais(romaneio.notas_fiscais.all())
         
         # Usar serviço para calcular totais
         totais = RomaneioService.calcular_totais_romaneio(romaneio)
@@ -470,7 +475,7 @@ def gerar_romaneio_pdf(request, pk):
         pk=pk
     )
     
-    notas_romaneadas = romaneio.notas_fiscais.all().order_by('nota')
+    notas_romaneadas = ordenar_instancias_notas_fiscais(romaneio.notas_fiscais.all())
     
     # Usar serviço para calcular totais
     from ..services.romaneio_service import RomaneioService

@@ -6,12 +6,12 @@
 
 {% block extra_css %}
 <style>
-/* Dashboard Funcionário Styles */
+/* Dashboard Funcionário – cores alinhadas ao tema (igual dashboard admin) */
 .dashboard-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 2rem;
-    background: #f8f9fa;
+    background: var(--bg-color);
     min-height: 100vh;
 }
 
@@ -19,20 +19,20 @@
     text-align: center;
     margin-bottom: 2rem;
     padding: 2rem;
-    background: #f8f9fa;
-    color: #2c3e50;
+    background: transparent;
+    color: var(--text-color);
 }
 
 .dashboard-header h1 {
     font-size: 2.5rem;
     margin-bottom: 0.5rem;
-    color: #2c3e50;
+    color: var(--text-color);
     font-weight: 600;
 }
 
 .dashboard-header .lead {
     font-size: 1.2rem;
-    color: #7f8c8d;
+    color: var(--secondary-text-color);
     font-weight: 400;
     margin: 0;
 }
@@ -48,8 +48,9 @@
 }
 
 .widget {
-    background: white;
+    background: var(--card-bg);
     border-radius: 15px;
+    border: 1px solid var(--border-color);
     box-shadow: 0 5px 20px rgba(0,0,0,0.08);
     overflow: hidden;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -61,16 +62,21 @@
 }
 
 .widget-header {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    background: var(--card-header-bg);
     padding: 1.5rem;
-    border-bottom: 1px solid #dee2e6;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .widget-header h3 {
     margin: 0;
-    color: #495057;
+    color: var(--text-color);
     font-size: 1.3rem;
     font-weight: 600;
+}
+
+.widget-header i {
+    color: var(--primary-color);
+    margin-right: 0.5rem;
 }
 
 .widget-content {
@@ -143,22 +149,22 @@
 .activity-tabs {
     display: flex;
     margin-bottom: 1rem;
-    border-bottom: 1px solid #e1e8ed;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .tab-btn {
     background: none;
     border: none;
     padding: 0.75rem 1rem;
-    color: #7f8c8d;
+    color: var(--secondary-text-color);
     cursor: pointer;
     transition: color 0.3s ease;
     border-bottom: 2px solid transparent;
 }
 
 .tab-btn.active {
-    color: #3498db;
-    border-bottom-color: #3498db;
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
 }
 
 .tab-content {
@@ -178,7 +184,7 @@
     display: flex;
     align-items: center;
     padding: 1rem 0;
-    border-bottom: 1px solid #f1f3f4;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .activity-item:last-child {
@@ -204,19 +210,20 @@
 
 .activity-title {
     font-weight: 600;
-    color: #2c3e50;
+    color: var(--text-color);
     margin-bottom: 0.25rem;
 }
 
 .activity-subtitle {
     font-size: 0.9rem;
-    color: #6c757d;
+    color: var(--secondary-text-color);
     margin-bottom: 0.25rem;
 }
 
 .activity-date {
     font-size: 0.8rem;
-    color: #adb5bd;
+    color: var(--secondary-text-color);
+    opacity: 0.85;
 }
 
 .activity-value {
@@ -263,7 +270,7 @@
 
 .no-data {
     text-align: center;
-    color: #6c757d;
+    color: var(--secondary-text-color);
     font-style: italic;
     padding: 2rem;
 }
