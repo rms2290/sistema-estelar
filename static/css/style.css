@@ -100,6 +100,13 @@ html {
     border-width: 1.5px !important;
 }
 
+/* Uniformizar bordas no tema claro (inputs + botões acoplados) */
+[data-theme="light"] .input-group .btn,
+[data-theme="light"] .btn-outline-secondary {
+    border-color: #495057 !important;
+    border-width: 1.5px !important;
+}
+
 [data-theme="light"] .form-control:focus,
 [data-theme="light"] .form-select:focus {
     border-color: #007bff !important;
@@ -119,6 +126,20 @@ html {
 [data-theme="light"] .card {
     border-color: #495057 !important;
     border-width: 1.5px !important;
+}
+
+/* Destacar áreas que parecem "campos" no tema claro */
+[data-theme="light"] .notes-checkbox-container {
+    border-color: #495057 !important;
+    border-width: 1.5px !important;
+    background-color: #ffffff !important;
+}
+
+[data-theme="light"] .form-control-plaintext {
+    border-color: #495057 !important;
+    border-width: 1.5px !important;
+    background-color: #ffffff !important;
+    color: #212529 !important;
 }
 
 [data-theme="light"] .btn {

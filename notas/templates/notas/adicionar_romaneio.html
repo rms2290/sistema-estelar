@@ -184,6 +184,7 @@
                                     type="text"
                                     class="form-control"
                                     id="filtroClienteModal"
+                                    data-no-format="true"
                                     placeholder="Pesquisar por razão social, nome fantasia ou CNPJ..."
                                     autocomplete="off"
                                 >
@@ -424,16 +425,56 @@
             }
 
             // Pesquisa e seleção de cliente no modal
+            function normalizarTextoBusca(valor) {
+                return (valor || '')
+                    .toString()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toLowerCase()
+                    .replace(/[^\w\s]/g, '')
+                    .trim();
+            }
+
+            function obterTextoBuscaLinha(linha) {
+                const textoDataset = linha.dataset.search || '';
+                const textoCols = Array.from(linha.querySelectorAll('td'))
+                    .slice(0, 3)
+                    .map((col) => col.textContent || '')
+                    .join(' ');
+                return normalizarTextoBusca(`${textoDataset} ${textoCols}`);
+            }
+
             function aplicarFiltroClientes() {
-                const termo = (filtroClienteModal?.value || '').trim().toLowerCase();
+                const termo = normalizarTextoBusca(filtroClienteModal?.value || '');
+                let encontrouResultado = false;
+
                 linhasClienteModal.forEach((linha) => {
-                    const textoBusca = (linha.dataset.search || '').toLowerCase();
-                    linha.style.display = (!termo || textoBusca.includes(termo)) ? '' : 'none';
+                    const textoBusca = obterTextoBuscaLinha(linha);
+                    const deveMostrar = !termo || textoBusca.includes(termo);
+                    linha.style.display = deveMostrar ? '' : 'none';
+                    if (deveMostrar) encontrouResultado = true;
                 });
+
+                const tbody = document.querySelector('#tabelaClientesModal tbody');
+                let linhaSemResultado = document.getElementById('linhaSemResultadoCliente');
+                if (tbody) {
+                    if (!encontrouResultado && termo) {
+                        if (!linhaSemResultado) {
+                            linhaSemResultado = document.createElement('tr');
+                            linhaSemResultado.id = 'linhaSemResultadoCliente';
+                            linhaSemResultado.innerHTML = '<td colspan="4" class="text-center text-muted py-3">Nenhum cliente encontrado para a pesquisa digitada.</td>';
+                            tbody.appendChild(linhaSemResultado);
+                        }
+                    } else if (linhaSemResultado) {
+                        linhaSemResultado.remove();
+                    }
+                }
             }
 
             if (filtroClienteModal) {
                 filtroClienteModal.addEventListener('input', aplicarFiltroClientes);
+                filtroClienteModal.addEventListener('keyup', aplicarFiltroClientes);
+                filtroClienteModal.addEventListener('change', aplicarFiltroClientes);
             }
 
             if (btnLimparFiltroCliente && filtroClienteModal) {

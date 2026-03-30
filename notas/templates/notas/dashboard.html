@@ -110,92 +110,97 @@
             </div>
         </div>
 
-        <!-- Segunda Linha: Atividades Recentes, Entregas Agendadas e Top Clientes -->
-        <!-- Widget de Atividade Recente -->
-        <div class="widget widget-activity">
+        <!-- Widget: Fluxo de Caixa -->
+        <div class="widget widget-cashflow-shortcuts">
             <div class="widget-header">
-                <h3><i class="fas fa-clock"></i> Atividade Recente</h3>
+                <h3><i class="fas fa-wallet"></i> Fluxo de Caixa</h3>
             </div>
             <div class="widget-content">
-                <div class="activity-tabs">
-                    <button class="tab-btn active" onclick="showTab('notas')">Notas Fiscais</button>
-                    <button class="tab-btn" onclick="showTab('romaneios')">Romaneios</button>
-                </div>
-                
-                <div id="notas-tab" class="tab-content active">
-                    {% if notas_recentes %}
-                        <div class="activity-list">
-                            {% for nota in notas_recentes %}
-                            <div class="activity-item">
-                                <div class="activity-icon">
-                                    <i class="fas fa-file-invoice"></i>
-                                </div>
-                                <div class="activity-info">
-                                    <span class="activity-title">Nota {{ nota.nota }}</span>
-                                    <span class="activity-subtitle">{{ nota.cliente.razao_social }}</span>
-                                    <span class="activity-date">{{ nota.data|date:"d/m/Y" }}</span>
-                                </div>
-                                <div class="activity-value">
-                                    {{ nota.valor|format_brazilian_currency }}
-                                </div>
-                            </div>
-                            {% endfor %}
+                <div class="shortcut-grid">
+                    <a href="{% url 'financeiro:movimento_caixa' %}" class="report-item btn-success">
+                        <div class="report-icon">
+                            <i class="fas fa-cash-register"></i>
                         </div>
-                    {% else %}
-                        <p class="no-data">Nenhuma nota fiscal recente</p>
-                    {% endif %}
-                </div>
-                
-                <div id="romaneios-tab" class="tab-content">
-                    {% if romaneios_recentes %}
-                        <div class="activity-list">
-                            {% for romaneio in romaneios_recentes %}
-                            <div class="activity-item">
-                                <div class="activity-icon">
-                                    <i class="fas fa-clipboard-list"></i>
-                                </div>
-                                <div class="activity-info">
-                                    <span class="activity-title">Romaneio {{ romaneio.codigo }}</span>
-                                    <span class="activity-subtitle">{{ romaneio.cliente.razao_social }}</span>
-                                    <span class="activity-date">{{ romaneio.data_emissao|date:"d/m/Y H:i" }}</span>
-                                </div>
-                                <div class="activity-status">
-                                    <span class="badge badge-{{ romaneio.status|lower }}">{{ romaneio.status }}</span>
-                                </div>
-                            </div>
-                            {% endfor %}
+                        <div class="report-info">
+                            <span class="report-label">Movimento de Caixa</span>
+                            <span class="report-desc">Controle dos movimentos</span>
                         </div>
-                    {% else %}
-                        <p class="no-data">Nenhum romaneio recente</p>
-                    {% endif %}
+                    </a>
+                    <a href="{% url 'financeiro:a_receber' %}" class="report-item btn-primary">
+                        <div class="report-icon">
+                            <i class="fas fa-hand-holding-usd"></i>
+                        </div>
+                        <div class="report-info">
+                            <span class="report-label">A Receber</span>
+                            <span class="report-desc">Lançamentos a receber</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'financeiro:a_pagar' %}" class="report-item btn-danger">
+                        <div class="report-icon">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </div>
+                        <div class="report-info">
+                            <span class="report-label">A Pagar</span>
+                            <span class="report-desc">Lançamentos a pagar</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'notas:cobranca_carregamento' %}" class="report-item btn-warning">
+                        <div class="report-icon">
+                            <i class="fas fa-truck-loading"></i>
+                        </div>
+                        <div class="report-info">
+                            <span class="report-label">Cobrança de Carregamento</span>
+                            <span class="report-desc">Relatório de cobrança</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'financeiro:acerto_diario_carregamento' %}" class="report-item btn-info">
+                        <div class="report-icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="report-info">
+                            <span class="report-label">Acerto Diário</span>
+                            <span class="report-desc">Acompanhamento diário</span>
+                        </div>
+                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- Widget de Top Clientes -->
-        <div class="widget widget-top-clients">
+        <!-- Widget: Depósito -->
+        <div class="widget widget-deposit-shortcuts">
             <div class="widget-header">
-                <h3><i class="fas fa-trophy"></i> Top Clientes (Depósito)</h3>
+                <h3><i class="fas fa-warehouse"></i> Depósito</h3>
             </div>
             <div class="widget-content">
-                {% if top_clientes_deposito %}
-                    <div class="top-clients-list">
-                        {% for cliente in top_clientes_deposito %}
-                        <div class="client-item">
-                            <div class="client-rank">{{ forloop.counter }}º</div>
-                            <div class="client-info">
-                                <span class="client-name">{{ cliente.razao_social }}</span>
-                                <span class="client-cnpj">{{ cliente.cnpj|format_cnpj }}</span>
-                            </div>
-                            <div class="client-value">
-                                {{ cliente.valor_deposito|format_brazilian_currency }}
-                            </div>
+                <div class="shortcut-grid">
+                    <a href="{% url 'notas:pesquisar_mercadorias_deposito' %}" class="report-item btn-success">
+                        <div class="report-icon">
+                            <i class="fas fa-search"></i>
                         </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p class="no-data">Nenhum cliente com valor em depósito</p>
-                {% endif %}
+                        <div class="report-info">
+                            <span class="report-label">Pesquisar Mercadorias</span>
+                            <span class="report-desc">Consulta de mercadorias</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'notas:procurar_mercadorias_deposito' %}" class="report-item btn-primary">
+                        <div class="report-icon">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div class="report-info">
+                            <span class="report-label">Buscar Localização</span>
+                            <span class="report-desc">Localizar no depósito</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'notas:simular_carregamento' %}" class="report-item btn-info">
+                        <div class="report-icon">
+                            <i class="fas fa-truck"></i>
+                        </div>
+                        <div class="report-info">
+                            <span class="report-label">Simular Carregamento</span>
+                            <span class="report-desc">Simulação de carregamento</span>
+                        </div>
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -463,6 +468,20 @@
     grid-column: 4 / 7;
 }
 
+.widget-cashflow-shortcuts {
+    grid-column: 1 / 4;
+}
+
+.widget-deposit-shortcuts {
+    grid-column: 4 / 7;
+}
+
+.shortcut-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+
 .reports-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -534,170 +553,8 @@
     white-space: nowrap;
 }
 
-/* Activity Widget */
-.widget-activity {
-    grid-column: 1 / 3;
-}
-
-.activity-tabs {
-    display: flex;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.tab-btn {
-    background: none;
-    border: none;
-    padding: 0.75rem 1rem;
-    color: var(--secondary-text-color);
-    cursor: pointer;
-    transition: color 0.3s ease;
-    border-bottom: 2px solid transparent;
-}
-
-.tab-btn.active {
-    color: var(--primary-color);
-    border-bottom-color: var(--primary-color);
-}
-
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-.activity-list {
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-.activity-item {
-    display: flex;
-    align-items: center;
-    padding: 1rem;
-    margin-bottom: 0.5rem;
-    background: var(--card-header-bg);
-    border-radius: 8px;
-    transition: background 0.3s ease;
-}
-
-.activity-item:hover {
-    filter: brightness(0.95);
-}
-
-.activity-icon {
-    margin-right: 1rem;
-    font-size: 1.2rem;
-    color: var(--primary-color);
-}
-
-.activity-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.activity-title {
-    color: var(--text-color);
-    font-weight: 600;
-    font-size: 0.9rem;
-}
-
-.activity-subtitle {
-    color: var(--secondary-text-color);
-    font-size: 0.8rem;
-    margin-top: 0.25rem;
-}
-
-.activity-date {
-    color: var(--secondary-text-color);
-    font-size: 0.75rem;
-    margin-top: 0.25rem;
-}
-
-.activity-value {
-    color: #27ae60;
-    font-weight: 600;
-    font-size: 0.9rem;
-}
-
-.activity-status .badge {
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-
-.badge-emitido { background: #3498db; color: white; }
-.badge-enviado { background: #27ae60; color: white; }
-.badge-cancelado { background: #e74c3c; color: white; }
-
-/* Top Clients Widget */
-.widget-top-clients {
-    grid-column: 5 / 7;
-}
-
 .widget-deliveries {
     grid-column: 3 / 5;
-}
-
-.top-clients-list {
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-.client-item {
-    display: flex;
-    align-items: center;
-    padding: 1rem;
-    margin-bottom: 0.5rem;
-    background: var(--card-header-bg);
-    border-radius: 8px;
-    transition: background 0.3s ease;
-}
-
-.client-item:hover {
-    filter: brightness(0.95);
-}
-
-.client-rank {
-    width: 30px;
-    height: 30px;
-    background: #f39c12;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 0.8rem;
-    margin-right: 1rem;
-}
-
-.client-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.client-name {
-    color: var(--text-color);
-    font-weight: 600;
-    font-size: 0.9rem;
-}
-
-.client-cnpj {
-    color: var(--secondary-text-color);
-    font-size: 0.8rem;
-    margin-top: 0.25rem;
-}
-
-.client-value {
-    color: #27ae60;
-    font-weight: 600;
-    font-size: 0.9rem;
 }
 
 /* No Data Message */
@@ -716,9 +573,9 @@
     
     .widget-quick-access,
     .widget-reports,
-    .widget-activity,
-    .widget-deliveries,
-    .widget-top-clients {
+    .widget-cashflow-shortcuts,
+    .widget-deposit-shortcuts,
+    .widget-deliveries {
         grid-column: 1 / -1;
     }
 }
@@ -734,9 +591,9 @@
     
     .widget-quick-access,
     .widget-reports,
-    .widget-activity,
-    .widget-deliveries,
-    .widget-top-clients {
+    .widget-cashflow-shortcuts,
+    .widget-deposit-shortcuts,
+    .widget-deliveries {
         grid-column: 1 / -1;
     }
     
@@ -749,6 +606,10 @@
     }
     
     .reports-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .shortcut-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -766,22 +627,6 @@
 </style>
 
 <script>
-function showTab(tabName) {
-    // Hide all tab contents
-    const tabContents = document.querySelectorAll('.tab-content');
-    tabContents.forEach(content => content.classList.remove('active'));
-    
-    // Remove active class from all tab buttons
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    tabButtons.forEach(button => button.classList.remove('active'));
-    
-    // Show selected tab content
-    document.getElementById(tabName + '-tab').classList.add('active');
-    
-    // Add active class to clicked button
-    event.target.classList.add('active');
-}
-
 // Função para mostrar notificações
 function showNotification(message, type) {
     // Criar elemento de notificação

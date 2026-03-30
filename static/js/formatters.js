@@ -139,6 +139,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Função para detectar o tipo de campo baseado no nome, id, placeholder ou data-format
     function detectarTipoCampo(campo) {
+        // Permite desativar a formatação automática em campos de busca livre
+        if (campo.hasAttribute && campo.hasAttribute('data-no-format')) {
+            return null;
+        }
+
         // Verificar primeiro o atributo data-format (prioridade)
         if (campo.hasAttribute && campo.hasAttribute('data-format')) {
             const dataFormat = campo.getAttribute('data-format');
