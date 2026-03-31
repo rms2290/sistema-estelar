@@ -561,12 +561,14 @@ def minhas_notas_fiscais(request):
     notas_fiscais = notas_fiscais.select_related('cliente').order_by('data')
     
     # Calcular totais
+    total_quantidade = sum(nota.quantidade for nota in notas_fiscais if nota.quantidade)
     total_peso = sum(nota.peso for nota in notas_fiscais if nota.peso)
     total_valor = sum(nota.valor for nota in notas_fiscais if nota.valor)
     
     return render(request, 'notas/auth/minhas_notas.html', {
         'notas_fiscais': notas_fiscais,
         'status_filter': status_filter,
+        'total_quantidade': total_quantidade,
         'total_peso': total_peso,
         'total_valor': total_valor
     })
@@ -589,7 +591,6 @@ def imprimir_nota_fiscal(request, pk):
 
 
 @login_required
-@user_passes_test(is_cliente)
 def imprimir_relatorio_deposito(request):
     """Imprime relatório de depósito do cliente"""
     if request.user.tipo_usuario == 'cliente' and request.user.cliente:
@@ -602,11 +603,13 @@ def imprimir_relatorio_deposito(request):
             status='Depósito'
         ).select_related('cliente').order_by('data')
 
+    total_quantidade = sum(nota.quantidade for nota in notas_fiscais if nota.quantidade)
     total_peso = sum(nota.peso for nota in notas_fiscais)
     total_valor = sum(nota.valor for nota in notas_fiscais)
 
     return render(request, 'notas/auth/imprimir_relatorio_deposito.html', {
         'notas_fiscais': notas_fiscais,
+        'total_quantidade': total_quantidade,
         'total_peso': total_peso,
         'total_valor': total_valor,
         'cliente': request.user.cliente if request.user.cliente else None
