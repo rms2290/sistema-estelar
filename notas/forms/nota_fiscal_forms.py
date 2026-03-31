@@ -14,7 +14,13 @@ class NotaFiscalForm(forms.ModelForm):
         label='Número da Nota',
         required=True,
         max_length=50,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número da Nota Fiscal'})
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Número da Nota Fiscal',
+            'inputmode': 'numeric',
+            'pattern': r'\d+',
+            'title': 'Informe apenas números',
+        })
     )
     
     cliente = forms.ModelChoiceField(
@@ -26,7 +32,10 @@ class NotaFiscalForm(forms.ModelForm):
     
     data = forms.DateField(
         label='Data',
-        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'tabindex': '-1'}),
+        widget=forms.DateInput(
+            format='%Y-%m-%d',
+            attrs={'class': 'form-control', 'type': 'date', 'tabindex': '-1'}
+        ),
         required=True,
         input_formats=['%Y-%m-%d', '%d/%m/%Y', '%d/%m/%y']
     )
@@ -63,6 +72,9 @@ class NotaFiscalForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Campo date HTML5 exige valor no formato YYYY-MM-DD para exibir na edição.
+        if self.instance and self.instance.pk and self.instance.data and not self.data:
+            self.fields['data'].initial = self.instance.data.strftime('%Y-%m-%d')
         if self.instance.pk is None and not self.initial.get('data'):
             data_atual = datetime.now().date()
             self.fields['data'].initial = data_atual.strftime('%Y-%m-%d')
@@ -72,6 +84,12 @@ class NotaFiscalForm(forms.ModelForm):
         if peso is not None:
             return int(peso)
         return peso
+
+    def clean_nota(self):
+        nota = (self.cleaned_data.get('nota') or '').strip()
+        if not nota.isdigit():
+            raise ValidationError('Número da Nota deve conter apenas números.')
+        return nota
     
     def clean(self):
         cleaned_data = super().clean()

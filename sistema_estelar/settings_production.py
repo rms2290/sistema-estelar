@@ -185,5 +185,5 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # OTIMIZAÇÃO: Configurações de sessão
 SESSION_COOKIE_AGE = 1800  # 30 minutos (reduzido de 1 hora)
-SESSION_SAVE_EVERY_REQUEST = False
+SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
