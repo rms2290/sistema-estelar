@@ -45,6 +45,20 @@
     display: inline-block;
     width: 65px;
 }
+.secao-observacoes {
+    margin-top: 8px;
+}
+.secao-observacoes .titulo {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+.secao-observacoes .conteudo {
+    border: 1px solid #000;
+    padding: 6px 8px;
+    font-size: 10px;
+    line-height: 1.35;
+    white-space: pre-line;
+}
 {% endblock %}
 
 {% block conteudo %}
@@ -96,5 +110,12 @@
             </tr>
         </tfoot>
     </table>
+
+    {% if cobranca.observacoes_para_exibicao %}
+    <div class="secao-observacoes">
+        <div class="titulo">OBSERVACOES</div>
+        <div class="conteudo">{{ cobranca.observacoes_para_exibicao }}</div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

@@ -185,12 +185,10 @@
                 if (!secaoMedidas || !tipoSelect) return;
                 var tipo = tipoSelect.value;
                 var isCavalo = tipo === 'Cavalo';
-                var isReboque = tipo === 'Reboque';
                 secaoMedidas.style.display = isCavalo ? 'none' : 'block';
-                var obrigarMedidas = !isCavalo && !isReboque;
                 ['id_largura', 'id_altura', 'id_comprimento', 'id_capacidade_maxima_kg'].forEach(function(id) {
                     var el = document.getElementById(id);
-                    if (el) el.required = obrigarMedidas;
+                    if (el) el.required = false;
                 });
                 var cub = document.getElementById('id_cubagem');
                 if (cub) cub.required = false;
