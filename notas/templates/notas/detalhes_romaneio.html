@@ -5,12 +5,34 @@
 
 {% block extra_css %}
 <style>
-/* Coluna de valor: largura mínima + uma linha (card com overflow:hidden comprimia a célula) */
-.romaneio-notas-tabela th:nth-child(6),
-.romaneio-notas-tabela td:nth-child(6) {
-    min-width: 12rem;
-    white-space: nowrap;
+/* Organizar larguras para priorizar Fornecedor/Mercadoria e reduzir espaço entre Valor/Data */
+.romaneio-notas-tabela {
+    table-layout: fixed;
+    width: 100%;
+}
+.romaneio-notas-tabela th,
+.romaneio-notas-tabela td {
     vertical-align: middle;
+}
+.romaneio-notas-tabela th:nth-child(1),
+.romaneio-notas-tabela td:nth-child(1) { width: 8%; }
+.romaneio-notas-tabela th:nth-child(2),
+.romaneio-notas-tabela td:nth-child(2) { width: 26%; }
+.romaneio-notas-tabela th:nth-child(3),
+.romaneio-notas-tabela td:nth-child(3) { width: 24%; }
+.romaneio-notas-tabela th:nth-child(4),
+.romaneio-notas-tabela td:nth-child(4) { width: 7%; text-align: center; }
+.romaneio-notas-tabela th:nth-child(5),
+.romaneio-notas-tabela td:nth-child(5) { width: 10%; white-space: nowrap; }
+.romaneio-notas-tabela th:nth-child(6),
+.romaneio-notas-tabela td:nth-child(6) { width: 13%; white-space: nowrap; }
+.romaneio-notas-tabela th:nth-child(7),
+.romaneio-notas-tabela td:nth-child(7) { width: 12%; white-space: nowrap; }
+.romaneio-notas-tabela td:nth-child(2),
+.romaneio-notas-tabela td:nth-child(3) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .romaneio-notas-tabela tfoot td.text-nowrap-total {
     white-space: nowrap;
@@ -19,6 +41,21 @@
 }
 .romaneio-notas-tabela tfoot td.text-nowrap-total--valor {
     min-width: 13rem;
+}
+.romaneio-notas-tabela tfoot td.total-col-qtd {
+    text-align: center;
+}
+.romaneio-notas-tabela tfoot td.total-col-valor {
+    text-align: left;
+}
+/* Melhor contraste do totalizador no tema dark */
+[data-theme="dark"] .romaneio-notas-tabela tfoot tr.table-info {
+    background-color: #2d3441 !important;
+}
+[data-theme="dark"] .romaneio-notas-tabela tfoot tr.table-info td,
+[data-theme="dark"] .romaneio-notas-tabela tfoot tr.table-info strong {
+    color: #f4f7ff !important;
+    font-weight: 700;
 }
 </style>
 {% endblock %}
@@ -65,8 +102,8 @@
                     <th>Fornecedor</th>
                     <th>Mercadoria</th>
                     <th>Qtd</th>
-                    <th>Peso (kg)</th>
-                    <th>Valor (R$)</th>
+                    <th>Peso</th>
+                    <th>Valor</th>
                     <th>Data Emissão</th>
                 </tr>
             </thead>
@@ -86,9 +123,9 @@
             <tfoot>
                 <tr class="table-info" style="background-color: #e0e0e0 !important; font-weight: bold;">
                     <td colspan="3"><strong>TOTAL</strong></td>
-                    <td class="text-nowrap-total"><strong>{{ romaneio.quantidade_total|format_brazilian_quantity }}</strong></td>
+                    <td class="text-nowrap-total total-col-qtd"><strong>{{ romaneio.quantidade_total|format_brazilian_quantity }}</strong></td>
                     <td class="text-nowrap-total"><strong>{{ romaneio.peso_total|format_brazilian_weight }}</strong></td>
-                    <td class="text-nowrap-total text-nowrap-total--valor"><strong>{{ romaneio.valor_total|format_brazilian_currency }}</strong></td>
+                    <td class="text-nowrap-total text-nowrap-total--valor total-col-valor"><strong>{{ romaneio.valor_total|format_brazilian_currency }}</strong></td>
                     <td></td>
                 </tr>
             </tfoot>

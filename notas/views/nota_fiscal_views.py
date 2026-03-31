@@ -592,16 +592,47 @@ def imprimir_nota_fiscal(request, pk):
 
 @login_required
 def imprimir_relatorio_deposito(request):
-    """Imprime relatório de depósito do cliente"""
-    if request.user.tipo_usuario == 'cliente' and request.user.cliente:
-        notas_fiscais = NotaFiscal.objects.filter(
-            cliente=request.user.cliente,
-            status='Depósito'
-        ).select_related('cliente').order_by('data')
+    """Imprime relatório de notas em depósito (ou filtradas quando informado via querystring)."""
+    nota = request.GET.get('nota')
+    cliente_id = request.GET.get('cliente')
+    data = request.GET.get('data')
+    local = request.GET.get('local')
+    status = request.GET.get('status')
+
+    filtros_informados = any([nota, cliente_id, data, local, status])
+
+    if filtros_informados:
+        # Mesmo comportamento da tela "Pesquisar Notas Fiscais", com restrição por cliente quando aplicável.
+        if request.user.is_cliente and request.user.cliente:
+            notas_fiscais = NotaFiscal.objects.filter(cliente=request.user.cliente).select_related('cliente')
+        else:
+            notas_fiscais = NotaFiscal.objects.select_related('cliente')
+
+        if nota:
+            notas_fiscais = notas_fiscais.filter(nota__icontains=nota)
+        if cliente_id:
+            notas_fiscais = notas_fiscais.filter(cliente_id=cliente_id)
+        if data:
+            data_obj = parse_date_iso(data)
+            if data_obj:
+                notas_fiscais = notas_fiscais.filter(data=data_obj)
+        if local:
+            notas_fiscais = notas_fiscais.filter(local=local)
+        if status:
+            notas_fiscais = notas_fiscais.filter(status=status)
+
+        notas_fiscais = notas_fiscais.order_by('nota')
     else:
-        notas_fiscais = NotaFiscal.objects.filter(
-            status='Depósito'
-        ).select_related('cliente').order_by('data')
+        # Comportamento original do relatório de depósito quando aberto sem filtros.
+        if request.user.tipo_usuario == 'cliente' and request.user.cliente:
+            notas_fiscais = NotaFiscal.objects.filter(
+                cliente=request.user.cliente,
+                status='Depósito'
+            ).select_related('cliente').order_by('data')
+        else:
+            notas_fiscais = NotaFiscal.objects.filter(
+                status='Depósito'
+            ).select_related('cliente').order_by('data')
 
     total_quantidade = sum(nota.quantidade for nota in notas_fiscais if nota.quantidade)
     total_peso = sum(nota.peso for nota in notas_fiscais)
