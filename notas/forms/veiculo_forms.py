@@ -69,7 +69,7 @@ class VeiculoForm(forms.ModelForm):
     )
     
     # Lista de anos de fabricação
-    ANOS_CHOICES = [('', '---')] + [(str(ano), str(ano)) for ano in range(2029, 1999, -1)]
+    ANOS_CHOICES = [('', '---')] + [(str(ano), str(ano)) for ano in range(2050, 1979, -1)]
     
     # Sobrescreve o campo 'ano_fabricacao' para usar dropdown
     ano_fabricacao = forms.ChoiceField(

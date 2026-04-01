@@ -1,0 +1,222 @@
+{# Modais: motorista, veículo principal e reboques (romaneio; mesmo padrão do cliente na nota fiscal) #}
+<div class="modal fade" id="modalPesquisarMotorista" tabindex="-1" aria-labelledby="modalPesquisarMotoristaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalPesquisarMotoristaLabel">
+                    <i class="fas fa-search"></i> Pesquisar Motorista
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-3">
+                    <div class="col-md-8">
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="filtroMotoristaModal"
+                            data-no-format="true"
+                            placeholder="Pesquisar por nome, CPF, CNH, RG ou telefone..."
+                            autocomplete="off"
+                        >
+                    </div>
+                    <div class="col-md-4 text-md-end d-flex justify-content-md-end">
+                        <button type="button" class="btn btn-outline-secondary" id="btnLimparFiltroMotorista">
+                            <i class="fas fa-eraser"></i> Limpar
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle" id="tabelaMotoristasModal">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>CPF</th>
+                                <th>CNH</th>
+                                <th class="text-end">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in form.fields.motorista.queryset %}
+                                <tr data-search="{{ m.nome|default:''|lower }} {{ m.cpf|default:''|lower }} {{ m.cnh|default:''|lower }} {{ m.rg|default:''|lower }} {{ m.telefone|default:''|lower }}">
+                                    <td>{{ m.nome }}</td>
+                                    <td>{{ m.cpf|default:'-' }}</td>
+                                    <td>{{ m.cnh|default:'-' }}</td>
+                                    <td class="text-end">
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-primary btn-selecionar-motorista"
+                                            data-motorista-id="{{ m.id }}"
+                                        >
+                                            <i class="fas fa-check"></i> Selecionar
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">Nenhum motorista cadastrado.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <small class="text-muted me-auto">Dica: clique em &quot;Selecionar&quot; para preencher o campo Motorista.</small>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalPesquisarVeiculoPrincipal" tabindex="-1" aria-labelledby="modalPesquisarVeiculoPrincipalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalPesquisarVeiculoPrincipalLabel">
+                    <i class="fas fa-search"></i> Pesquisar Veículo Principal
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-3">
+                    <div class="col-md-8">
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="filtroVeiculoPrincipalModal"
+                            data-no-format="true"
+                            placeholder="Pesquisar por placa, tipo, marca, modelo, chassi ou renavam..."
+                            autocomplete="off"
+                        >
+                    </div>
+                    <div class="col-md-4 text-md-end d-flex justify-content-md-end">
+                        <button type="button" class="btn btn-outline-secondary" id="btnLimparFiltroVeiculoPrincipal">
+                            <i class="fas fa-eraser"></i> Limpar
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle" id="tabelaVeiculosPrincipalModal">
+                        <thead>
+                            <tr>
+                                <th>Placa</th>
+                                <th>Tipo</th>
+                                <th>Marca / Modelo</th>
+                                <th class="text-end">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for v in form.fields.veiculo_principal.queryset %}
+                                <tr data-search="{{ v.placa|default:''|lower }} {{ v.tipo_unidade|default:''|lower }} {{ v.marca|default:''|lower }} {{ v.modelo|default:''|lower }} {{ v.chassi|default:''|lower }} {{ v.renavam|default:''|lower }}">
+                                    <td>{{ v.placa }}</td>
+                                    <td>{{ v.get_tipo_unidade_display }}</td>
+                                    <td>
+                                        {% if v.marca or v.modelo %}
+                                            {{ v.marca|default:'' }} {{ v.modelo|default:'' }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-primary btn-selecionar-veiculo-principal"
+                                            data-veiculo-id="{{ v.id }}"
+                                        >
+                                            <i class="fas fa-check"></i> Selecionar
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">Nenhum veículo disponível para romaneio.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <small class="text-muted me-auto">Dica: clique em &quot;Selecionar&quot; para preencher o campo Veículo Principal.</small>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalPesquisarReboque" tabindex="-1" aria-labelledby="modalPesquisarReboqueLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalPesquisarReboqueLabel">
+                    <i class="fas fa-search"></i> Pesquisar Reboque
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-3">
+                    <div class="col-md-8">
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="filtroReboqueModal"
+                            data-no-format="true"
+                            placeholder="Pesquisar por placa, marca, modelo, chassi ou renavam..."
+                            autocomplete="off"
+                        >
+                    </div>
+                    <div class="col-md-4 text-md-end d-flex justify-content-md-end">
+                        <button type="button" class="btn btn-outline-secondary" id="btnLimparFiltroReboque">
+                            <i class="fas fa-eraser"></i> Limpar
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle" id="tabelaReboquesModal">
+                        <thead>
+                            <tr>
+                                <th>Placa</th>
+                                <th>Tipo</th>
+                                <th>Marca / Modelo</th>
+                                <th class="text-end">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in form.fields.reboque_1.queryset %}
+                                <tr data-search="{{ r.placa|default:''|lower }} {{ r.tipo_unidade|default:''|lower }} {{ r.marca|default:''|lower }} {{ r.modelo|default:''|lower }} {{ r.chassi|default:''|lower }} {{ r.renavam|default:''|lower }}">
+                                    <td>{{ r.placa }}</td>
+                                    <td>{{ r.get_tipo_unidade_display }}</td>
+                                    <td>
+                                        {% if r.marca or r.modelo %}
+                                            {{ r.marca|default:'' }} {{ r.modelo|default:'' }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-primary btn-selecionar-reboque"
+                                            data-veiculo-id="{{ r.id }}"
+                                        >
+                                            <i class="fas fa-check"></i> Selecionar
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">Nenhum reboque cadastrado.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <small class="text-muted me-auto">Dica: abra pela lupa ao lado de Reboque 1 ou Reboque 2; &quot;Selecionar&quot; preenche o campo correspondente.</small>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>

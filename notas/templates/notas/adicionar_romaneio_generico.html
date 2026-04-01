@@ -99,14 +99,38 @@
                                 <label for="{{ form.motorista.id_for_label }}" class="form-label">
                                     <i class="fas fa-user"></i> {{ form.motorista.label }}:
                                 </label>
-                                {{ form.motorista }}
+                                <div class="input-group">
+                                    {{ form.motorista }}
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-secondary"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalPesquisarMotorista"
+                                        title="Pesquisar motorista"
+                                        aria-label="Pesquisar motorista"
+                                    >
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
                                 {% if form.motorista.errors %}<div class="text-danger">{{ form.motorista.errors }}</div>{% endif %}
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="{{ form.veiculo_principal.id_for_label }}" class="form-label">
                                     <i class="fas fa-truck"></i> {{ form.veiculo_principal.label }}:
                                 </label>
-                                {{ form.veiculo_principal }}
+                                <div class="input-group">
+                                    {{ form.veiculo_principal }}
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-secondary"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalPesquisarVeiculoPrincipal"
+                                        title="Pesquisar veículo principal"
+                                        aria-label="Pesquisar veículo principal"
+                                    >
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
                                 {% if form.veiculo_principal.errors %}<div class="text-danger">{{ form.veiculo_principal.errors }}</div>{% endif %}
                             </div>
                         </div>
@@ -115,14 +139,40 @@
                                 <label for="{{ form.reboque_1.id_for_label }}" class="form-label">
                                     <i class="fas fa-truck-moving"></i> {{ form.reboque_1.label }}:
                                 </label>
-                                {{ form.reboque_1 }}
+                                <div class="input-group">
+                                    {{ form.reboque_1 }}
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-secondary"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalPesquisarReboque"
+                                        data-reboque-select-id="{{ form.reboque_1.id_for_label }}"
+                                        title="Pesquisar reboque"
+                                        aria-label="Pesquisar reboque"
+                                    >
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
                                 {% if form.reboque_1.errors %}<div class="text-danger">{{ form.reboque_1.errors }}</div>{% endif %}
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="{{ form.reboque_2.id_for_label }}" class="form-label">
                                     <i class="fas fa-truck-moving"></i> {{ form.reboque_2.label }}:
                                 </label>
-                                {{ form.reboque_2 }}
+                                <div class="input-group">
+                                    {{ form.reboque_2 }}
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-secondary"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalPesquisarReboque"
+                                        data-reboque-select-id="{{ form.reboque_2.id_for_label }}"
+                                        title="Pesquisar reboque"
+                                        aria-label="Pesquisar reboque"
+                                    >
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
                                 {% if form.reboque_2.errors %}<div class="text-danger">{{ form.reboque_2.errors }}</div>{% endif %}
                             </div>
                         </div>
@@ -138,12 +188,239 @@
     </div>
 </div>
 
+        {% include 'notas/partials/modais_pesquisa_motorista_veiculo_romaneio.html' %}
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const clienteSelect = document.getElementById('id_cliente');
+            const motoristaSelect = document.getElementById('id_motorista');
+            const veiculoPrincipalSelect = document.getElementById('id_veiculo_principal');
             const notasFiscaisDiv = document.getElementById('notas-fiscais-container');
             const pesoTotalSpan = document.getElementById('total-peso');
             const valorTotalSpan = document.getElementById('total-valor');
+
+            function normalizarTextoBusca(valor) {
+                return (valor || '')
+                    .toString()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toLowerCase()
+                    .replace(/[^\w\s]/g, '')
+                    .trim();
+            }
+
+            function obterTextoBuscaLinha(linha) {
+                const textoDataset = linha.dataset.search || '';
+                const textoCols = Array.from(linha.querySelectorAll('td'))
+                    .slice(0, 3)
+                    .map((col) => col.textContent || '')
+                    .join(' ');
+                return normalizarTextoBusca(textoDataset + ' ' + textoCols);
+            }
+
+            const modalPesquisarMotorista = document.getElementById('modalPesquisarMotorista');
+            const filtroMotoristaModal = document.getElementById('filtroMotoristaModal');
+            const btnLimparFiltroMotorista = document.getElementById('btnLimparFiltroMotorista');
+            const linhasMotoristaModal = Array.from(document.querySelectorAll('#tabelaMotoristasModal tbody tr[data-search]'));
+
+            function aplicarFiltroMotoristas() {
+                const termo = normalizarTextoBusca(filtroMotoristaModal?.value || '');
+                let encontrouResultado = false;
+                linhasMotoristaModal.forEach((linha) => {
+                    const textoBusca = obterTextoBuscaLinha(linha);
+                    const deveMostrar = !termo || textoBusca.includes(termo);
+                    linha.style.display = deveMostrar ? '' : 'none';
+                    if (deveMostrar) encontrouResultado = true;
+                });
+                const tbodyMot = document.querySelector('#tabelaMotoristasModal tbody');
+                let linhaSemMot = document.getElementById('linhaSemResultadoMotorista');
+                if (tbodyMot) {
+                    if (!encontrouResultado && termo) {
+                        if (!linhaSemMot) {
+                            linhaSemMot = document.createElement('tr');
+                            linhaSemMot.id = 'linhaSemResultadoMotorista';
+                            linhaSemMot.innerHTML = '<td colspan="4" class="text-center text-muted py-3">Nenhum motorista encontrado para a pesquisa digitada.</td>';
+                            tbodyMot.appendChild(linhaSemMot);
+                        }
+                    } else if (linhaSemMot) {
+                        linhaSemMot.remove();
+                    }
+                }
+            }
+
+            if (filtroMotoristaModal) {
+                filtroMotoristaModal.addEventListener('input', aplicarFiltroMotoristas);
+                filtroMotoristaModal.addEventListener('keyup', aplicarFiltroMotoristas);
+                filtroMotoristaModal.addEventListener('change', aplicarFiltroMotoristas);
+            }
+            if (btnLimparFiltroMotorista && filtroMotoristaModal) {
+                btnLimparFiltroMotorista.addEventListener('click', function() {
+                    filtroMotoristaModal.value = '';
+                    aplicarFiltroMotoristas();
+                    filtroMotoristaModal.focus();
+                });
+            }
+            document.querySelectorAll('.btn-selecionar-motorista').forEach((btn) => {
+                btn.addEventListener('click', function() {
+                    if (motoristaSelect) motoristaSelect.value = this.dataset.motoristaId || '';
+                    if (modalPesquisarMotorista) {
+                        const inst = bootstrap.Modal.getInstance(modalPesquisarMotorista);
+                        if (inst) inst.hide();
+                    }
+                });
+            });
+            if (modalPesquisarMotorista && filtroMotoristaModal) {
+                modalPesquisarMotorista.addEventListener('shown.bs.modal', function() {
+                    filtroMotoristaModal.focus();
+                    aplicarFiltroMotoristas();
+                });
+                modalPesquisarMotorista.addEventListener('hidden.bs.modal', function() {
+                    filtroMotoristaModal.value = '';
+                    aplicarFiltroMotoristas();
+                });
+            }
+
+            const modalPesquisarVeiculoPrincipal = document.getElementById('modalPesquisarVeiculoPrincipal');
+            const filtroVeiculoPrincipalModal = document.getElementById('filtroVeiculoPrincipalModal');
+            const btnLimparFiltroVeiculoPrincipal = document.getElementById('btnLimparFiltroVeiculoPrincipal');
+            const linhasVeiculoPrincipalModal = Array.from(document.querySelectorAll('#tabelaVeiculosPrincipalModal tbody tr[data-search]'));
+
+            function aplicarFiltroVeiculosPrincipal() {
+                const termo = normalizarTextoBusca(filtroVeiculoPrincipalModal?.value || '');
+                let encontrouResultado = false;
+                linhasVeiculoPrincipalModal.forEach((linha) => {
+                    const textoBusca = obterTextoBuscaLinha(linha);
+                    const deveMostrar = !termo || textoBusca.includes(termo);
+                    linha.style.display = deveMostrar ? '' : 'none';
+                    if (deveMostrar) encontrouResultado = true;
+                });
+                const tbodyVeic = document.querySelector('#tabelaVeiculosPrincipalModal tbody');
+                let linhaSemVeic = document.getElementById('linhaSemResultadoVeiculoPrincipal');
+                if (tbodyVeic) {
+                    if (!encontrouResultado && termo) {
+                        if (!linhaSemVeic) {
+                            linhaSemVeic = document.createElement('tr');
+                            linhaSemVeic.id = 'linhaSemResultadoVeiculoPrincipal';
+                            linhaSemVeic.innerHTML = '<td colspan="4" class="text-center text-muted py-3">Nenhum veículo encontrado para a pesquisa digitada.</td>';
+                            tbodyVeic.appendChild(linhaSemVeic);
+                        }
+                    } else if (linhaSemVeic) {
+                        linhaSemVeic.remove();
+                    }
+                }
+            }
+
+            if (filtroVeiculoPrincipalModal) {
+                filtroVeiculoPrincipalModal.addEventListener('input', aplicarFiltroVeiculosPrincipal);
+                filtroVeiculoPrincipalModal.addEventListener('keyup', aplicarFiltroVeiculosPrincipal);
+                filtroVeiculoPrincipalModal.addEventListener('change', aplicarFiltroVeiculosPrincipal);
+            }
+            if (btnLimparFiltroVeiculoPrincipal && filtroVeiculoPrincipalModal) {
+                btnLimparFiltroVeiculoPrincipal.addEventListener('click', function() {
+                    filtroVeiculoPrincipalModal.value = '';
+                    aplicarFiltroVeiculosPrincipal();
+                    filtroVeiculoPrincipalModal.focus();
+                });
+            }
+            document.querySelectorAll('.btn-selecionar-veiculo-principal').forEach((btn) => {
+                btn.addEventListener('click', function() {
+                    if (veiculoPrincipalSelect) {
+                        veiculoPrincipalSelect.value = this.dataset.veiculoId || '';
+                        veiculoPrincipalSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    if (modalPesquisarVeiculoPrincipal) {
+                        const inst = bootstrap.Modal.getInstance(modalPesquisarVeiculoPrincipal);
+                        if (inst) inst.hide();
+                    }
+                });
+            });
+            if (modalPesquisarVeiculoPrincipal && filtroVeiculoPrincipalModal) {
+                modalPesquisarVeiculoPrincipal.addEventListener('shown.bs.modal', function() {
+                    filtroVeiculoPrincipalModal.focus();
+                    aplicarFiltroVeiculosPrincipal();
+                });
+                modalPesquisarVeiculoPrincipal.addEventListener('hidden.bs.modal', function() {
+                    filtroVeiculoPrincipalModal.value = '';
+                    aplicarFiltroVeiculosPrincipal();
+                });
+            }
+
+            let reboqueSelectAlvo = null;
+            const modalPesquisarReboque = document.getElementById('modalPesquisarReboque');
+            const filtroReboqueModal = document.getElementById('filtroReboqueModal');
+            const btnLimparFiltroReboque = document.getElementById('btnLimparFiltroReboque');
+            const linhasReboqueModal = Array.from(document.querySelectorAll('#tabelaReboquesModal tbody tr[data-search]'));
+
+            if (modalPesquisarReboque) {
+                modalPesquisarReboque.addEventListener('show.bs.modal', function(event) {
+                    const btn = event.relatedTarget;
+                    const sid = btn && btn.dataset ? (btn.dataset.reboqueSelectId || '') : '';
+                    reboqueSelectAlvo = sid ? document.getElementById(sid) : null;
+                });
+                modalPesquisarReboque.addEventListener('hidden.bs.modal', function() {
+                    reboqueSelectAlvo = null;
+                });
+            }
+
+            function aplicarFiltroReboques() {
+                const termo = normalizarTextoBusca(filtroReboqueModal?.value || '');
+                let encontrouResultado = false;
+                linhasReboqueModal.forEach((linha) => {
+                    const textoBusca = obterTextoBuscaLinha(linha);
+                    const deveMostrar = !termo || textoBusca.includes(termo);
+                    linha.style.display = deveMostrar ? '' : 'none';
+                    if (deveMostrar) encontrouResultado = true;
+                });
+                const tbodyReb = document.querySelector('#tabelaReboquesModal tbody');
+                let linhaSemReb = document.getElementById('linhaSemResultadoReboque');
+                if (tbodyReb) {
+                    if (!encontrouResultado && termo) {
+                        if (!linhaSemReb) {
+                            linhaSemReb = document.createElement('tr');
+                            linhaSemReb.id = 'linhaSemResultadoReboque';
+                            linhaSemReb.innerHTML = '<td colspan="4" class="text-center text-muted py-3">Nenhum reboque encontrado para a pesquisa digitada.</td>';
+                            tbodyReb.appendChild(linhaSemReb);
+                        }
+                    } else if (linhaSemReb) {
+                        linhaSemReb.remove();
+                    }
+                }
+            }
+
+            if (filtroReboqueModal) {
+                filtroReboqueModal.addEventListener('input', aplicarFiltroReboques);
+                filtroReboqueModal.addEventListener('keyup', aplicarFiltroReboques);
+                filtroReboqueModal.addEventListener('change', aplicarFiltroReboques);
+            }
+            if (btnLimparFiltroReboque && filtroReboqueModal) {
+                btnLimparFiltroReboque.addEventListener('click', function() {
+                    filtroReboqueModal.value = '';
+                    aplicarFiltroReboques();
+                    filtroReboqueModal.focus();
+                });
+            }
+            document.querySelectorAll('.btn-selecionar-reboque').forEach((btn) => {
+                btn.addEventListener('click', function() {
+                    if (reboqueSelectAlvo) {
+                        reboqueSelectAlvo.value = this.dataset.veiculoId || '';
+                        reboqueSelectAlvo.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    if (modalPesquisarReboque) {
+                        const inst = bootstrap.Modal.getInstance(modalPesquisarReboque);
+                        if (inst) inst.hide();
+                    }
+                });
+            });
+            if (modalPesquisarReboque && filtroReboqueModal) {
+                modalPesquisarReboque.addEventListener('shown.bs.modal', function() {
+                    filtroReboqueModal.focus();
+                    aplicarFiltroReboques();
+                });
+                modalPesquisarReboque.addEventListener('hidden.bs.modal', function() {
+                    filtroReboqueModal.value = '';
+                    aplicarFiltroReboques();
+                });
+            }
 
             // allLoadedNotesData é global (definido em base.html)
             // updateTotals, loadNotasFiscais são globais (definidos em base.html)

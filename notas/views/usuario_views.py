@@ -31,7 +31,15 @@ def cadastrar_usuario(request):
 def listar_usuarios(request):
     """Lista todos os usuários"""
     usuarios = Usuario.objects.select_related('cliente').order_by('username')
-    return render(request, 'notas/auth/listar_usuarios.html', {'usuarios': usuarios})
+    usuarios_admin = usuarios.filter(tipo_usuario='admin')
+    usuarios_funcionario = usuarios.filter(tipo_usuario='funcionario')
+    usuarios_cliente = usuarios.filter(tipo_usuario='cliente')
+    return render(request, 'notas/auth/listar_usuarios.html', {
+        'usuarios': usuarios,
+        'usuarios_admin': usuarios_admin,
+        'usuarios_funcionario': usuarios_funcionario,
+        'usuarios_cliente': usuarios_cliente,
+    })
 
 
 @admin_required

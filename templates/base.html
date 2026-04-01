@@ -531,6 +531,32 @@
         });
 
         // NOVO: Função para calcular e atualizar os totais - AGORA RECEBE ELEMENTOS COMO ARGUMENTOS
+        function parseNumeroFlexivel(texto) {
+            const raw = (texto || '').toString().trim();
+            if (!raw) return NaN;
+            // Remove símbolos e mantém apenas dígitos, separadores e sinal
+            let limpo = raw.replace(/[^\d,.\-]/g, '');
+            if (!limpo) return NaN;
+
+            const hasComma = limpo.includes(',');
+            const hasDot = limpo.includes('.');
+
+            // Formato brasileiro (1.234,56) -> 1234.56
+            if (hasComma && hasDot) {
+                limpo = limpo.replace(/\./g, '').replace(',', '.');
+                return parseFloat(limpo);
+            }
+
+            // Formato com vírgula decimal (123,45) -> 123.45
+            if (hasComma) {
+                limpo = limpo.replace(',', '.');
+                return parseFloat(limpo);
+            }
+
+            // Formato numérico simples (1234.56)
+            return parseFloat(limpo);
+        }
+
         function calcularEAtualizarTotais(notasContainer, totalPesoElement, totalValorElement) {
             const notas = notasContainer.querySelectorAll('.form-check-input:checked');
             let totalPeso = 0;
@@ -543,8 +569,7 @@
                     const valorElement = notaRow.querySelector('.note-col-valor');
                     if (valorElement) {
                         const valorText = valorElement.textContent;
-                        // Extrair números dos textos (remover "R$" e converter formato brasileiro)
-                        const valor = parseFloat(valorText.replace('R$ ', '').replace(/\./g, '').replace(',', '.'));
+                        const valor = parseNumeroFlexivel(valorText);
                         if (!isNaN(valor)) {
                             totalValor += valor;
                         }
@@ -553,8 +578,7 @@
                     const pesoElement = notaRow.querySelector('.note-col-peso');
                     if (pesoElement) {
                         const pesoText = pesoElement.textContent;
-                        // Extrair números dos textos (remover "kg" e converter formato brasileiro)
-                        const peso = parseFloat(pesoText.replace(' kg', '').replace(/\./g, '').replace(',', '.'));
+                        const peso = parseNumeroFlexivel(pesoText);
                         if (!isNaN(peso)) {
                             totalPeso += peso;
                         }
@@ -712,9 +736,9 @@
                                     <div class="note-col-nf text-truncate" title="Número: ${nota.nota_numero}"><strong>${nota.nota_numero}</strong></div>
                                     <div class="note-col-fornecedor text-truncate" title="Forn: ${nota.fornecedor}">${nota.fornecedor}</div>
                                     <div class="note-col-mercadoria text-truncate" title="Merc: ${nota.mercadoria}">${nota.mercadoria}</div>
-                                    <div class="note-col-qtd text-truncate" title="Qtd: ${nota.quantidade}">${nota.quantidade}</div>
-                                    <div class="note-col-peso text-truncate" title="Peso: ${nota.peso}">${nota.peso}</div>
-                                    <div class="note-col-valor text-truncate" title="Valor: ${nota.valor}">${nota.valor}</div>
+                                    <div class="note-col-qtd text-truncate" title="Qtd: ${nota.quantidade}">${formatarValorBrasileiro(nota.quantidade)}</div>
+                                    <div class="note-col-peso text-truncate" title="Peso: ${nota.peso} kg">${formatarPesoBrasileiro(nota.peso)}</div>
+                                    <div class="note-col-valor text-truncate" title="Valor: R$ ${nota.valor}">${formatarValorBrasileiro(nota.valor, 'moeda')}</div>
                                     <div class="note-col-data text-truncate" title="Data: ${nota.data_emissao}">${nota.data_emissao}</div>
                                 </div>
                             </label>
