@@ -187,3 +187,9 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 SESSION_COOKIE_AGE = 1800  # 30 minutos (reduzido de 1 hora)
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# CSRF com HTTPS (obrigatório para POST/login atrás de Nginx + domínio público)
+CSRF_TRUSTED_ORIGINS = [
+    'https://agenciaestelar.online',
+    'https://www.agenciaestelar.online',
+]

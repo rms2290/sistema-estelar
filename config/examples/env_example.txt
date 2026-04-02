@@ -26,5 +26,5 @@ DEBUG=False
 ALLOWED_HOSTS=seu-dominio.com.br,www.seu-dominio.com.br
 
 # Configurações de HTTPS
-# Defina como True quando HTTPS estiver configurado no servidor
-USE_HTTPS=False
+# True quando Nginx (ou proxy) termina SSL — cookies seguros e redirect HTTPS no Django
+USE_HTTPS=True
