@@ -70,10 +70,39 @@
                     </div>
                 </div>
 
+                <!-- Origem da Cobrança -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-layer-group"></i> 2. Origem da Cobrança</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-random"></i> Tipo de Origem <span class="text-danger">*</span>
+                                </label>
+                                <select name="origem_cobranca" id="origem_cobranca" class="form-select form-select-lg" required>
+                                    <option value="ROMANEIO" {% if form.origem_cobranca.value == 'ROMANEIO' or not form.origem_cobranca.value %}selected{% endif %}>Com Romaneio</option>
+                                    <option value="AVULSA_CLIENTE" {% if form.origem_cobranca.value == 'AVULSA_CLIENTE' %}selected{% endif %}>Despesa Avulsa para Cliente</option>
+                                </select>
+                                <small class="text-muted">Escolha "Despesa Avulsa" para cobranças extras sem vínculo com romaneio.</small>
+                            </div>
+                            <div class="col-md-6 mb-3" id="bloco_descricao_avulsa" style="display: none;">
+                                <label class="form-label">
+                                    <i class="fas fa-file-signature"></i> Descrição da Despesa Avulsa <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" name="descricao_avulsa" id="descricao_avulsa" class="form-control form-control-lg"
+                                       maxlength="255" placeholder="Ex: Taxa extra de operação"
+                                       value="{{ form.descricao_avulsa.value|default:'' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Seleção de Romaneios -->
                 <div class="card mb-4" id="card-romaneios" style="display: none;">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-truck"></i> 2. Selecionar Romaneios</h5>
+                        <h5 class="mb-0"><i class="fas fa-truck"></i> 3. Selecionar Romaneios</h5>
                         <small class="text-muted">Selecione um ou mais romaneios emitidos para esta cobrança</small>
                     </div>
                     <div class="card-body">
@@ -122,7 +151,7 @@
                 <!-- Valores da Cobrança -->
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-dollar-sign"></i> 3. Definir Valores</h5>
+                        <h5 class="mb-0"><i class="fas fa-dollar-sign"></i> 4. Definir Valores</h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
@@ -223,6 +252,9 @@ function atualizarLucroCte() {
 
 document.addEventListener('DOMContentLoaded', function() {
     const selectCliente = document.getElementById('select-cliente');
+    const selectOrigem = document.getElementById('origem_cobranca');
+    const blocoDescricaoAvulsa = document.getElementById('bloco_descricao_avulsa');
+    const inputDescricaoAvulsa = document.getElementById('descricao_avulsa');
     const btnCarregar = document.getElementById('btn-carregar-romaneios');
     const cardRomaneios = document.getElementById('card-romaneios');
     const loadingRomaneios = document.getElementById('loading-romaneios');
@@ -236,7 +268,10 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Por favor, selecione um cliente primeiro.');
             return;
         }
-        
+        if (selectOrigem.value === 'AVULSA_CLIENTE') {
+            alert('Para cobrança avulsa não é necessário carregar romaneios.');
+            return;
+        }
         carregarRomaneios(clienteId);
     });
     
@@ -247,6 +282,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     atualizarMargem();
     atualizarLucroCte();
+
+    function atualizarBlocosOrigem() {
+        const origem = selectOrigem.value;
+        const isAvulsa = origem === 'AVULSA_CLIENTE';
+
+        blocoDescricaoAvulsa.style.display = isAvulsa ? 'block' : 'none';
+        inputDescricaoAvulsa.required = isAvulsa;
+
+        if (isAvulsa) {
+            cardRomaneios.style.display = 'none';
+        } else if (selectCliente.value) {
+            cardRomaneios.style.display = 'block';
+        }
+    }
+
+    selectOrigem.addEventListener('change', atualizarBlocosOrigem);
+    atualizarBlocosOrigem();
     
     function carregarRomaneios(clienteId) {
         loadingRomaneios.style.display = 'block';
@@ -339,6 +391,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Validação do formulário
     document.getElementById('form-cobranca').addEventListener('submit', function(e) {
+        const origem = selectOrigem.value;
+        if (origem === 'AVULSA_CLIENTE') {
+            if (!inputDescricaoAvulsa.value.trim()) {
+                e.preventDefault();
+                alert('Informe a descrição da despesa avulsa.');
+                return false;
+            }
+            return true;
+        }
+
         const romaneiosSelecionados = document.querySelectorAll('input[name="romaneios"]:checked');
         if (romaneiosSelecionados.length === 0) {
             e.preventDefault();

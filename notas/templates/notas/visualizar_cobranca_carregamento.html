@@ -19,6 +19,14 @@
                 </div>
                 <div class="card-body">
                     <p class="mb-0"><strong>{{ cobranca.cliente.razao_social }}</strong></p>
+                    <small class="text-muted">
+                        Origem: {{ cobranca.get_origem_cobranca_display }}
+                    </small>
+                    {% if cobranca.origem_cobranca == 'AVULSA_CLIENTE' and cobranca.descricao_avulsa %}
+                    <div class="mt-2">
+                        <strong>Descrição avulsa:</strong> {{ cobranca.descricao_avulsa }}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 

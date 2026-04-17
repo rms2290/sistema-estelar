@@ -96,13 +96,19 @@
             {% for item in itens %}
             <tr>
                 {% if mostrar_colunas_restritas %}
-                <td class="cliente">{{ item.cliente.razao_social }}</td>
+                <td class="cliente">
+                    {{ item.cliente.razao_social }}
+                    {% if item.origem_cobranca == 'AVULSA_CLIENTE' %}(AVULSA){% endif %}
+                </td>
                 <td class="text-center">{{ item.status }}</td>
                 <td class="valor">{{ item.valor_carregamento|format_brazilian_currency }}</td>
                 <td class="valor">{{ item.valor_cte_manifesto|format_brazilian_currency }}</td>
                 <td class="valor">{{ item.valor_total|format_brazilian_currency }}</td>
                 {% else %}
-                <td class="cliente">{{ item.cliente.razao_social }}</td>
+                <td class="cliente">
+                    {{ item.cliente.razao_social }}
+                    {% if item.origem_cobranca == 'AVULSA_CLIENTE' %}(AVULSA){% endif %}
+                </td>
                 <td class="text-center">{{ item.status }}</td>
                 <td class="valor">{{ item.valor_carregamento|format_brazilian_currency }}</td>
                 <td class="valor">{{ item.valor_distribuicao_trabalhadores|default:0|format_brazilian_currency }}</td>
@@ -147,9 +153,12 @@
     <div class="detalhes-observacoes">
         <div class="titulo">OBSERVACOES POR COBRANCA</div>
         {% for item in itens %}
-            {% if item.observacoes_para_exibicao %}
+            {% if item.observacoes_para_exibicao or item.descricao_avulsa %}
             <div class="item">
                 <strong>{{ item.cliente.razao_social }}</strong> - COBRANCA #{{ item.id }}<br>
+                {% if item.origem_cobranca == 'AVULSA_CLIENTE' %}
+                <div><strong>Despesa avulsa:</strong> {{ item.descricao_avulsa|default:"-" }}</div>
+                {% endif %}
                 <div class="obs">{{ item.observacoes_para_exibicao }}</div>
             </div>
             {% endif %}

@@ -204,8 +204,32 @@
             </div>
         </div>
 
+        <!-- Widget: Mapa de Clientes por Estado -->
+        <div class="widget widget-clientes-estado-map">
+            <div class="widget-header">
+                <h3><i class="fas fa-map-marked-alt"></i> Clientes por Estado (Brasil)</h3>
+            </div>
+            <div class="widget-content">
+                {% if clientes_por_estado %}
+                    <div id="mapa-clientes-estado"></div>
+                    <div class="estado-legend-list">
+                        {% for item in clientes_por_estado %}
+                            <div class="estado-legend-item">
+                                <span class="estado-uf">{{ item.uf }}</span>
+                                <span class="estado-total">{{ item.total }} cliente{{ item.total|pluralize }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="no-data">Nenhum cliente com estado informado para montar o mapa.</p>
+                {% endif %}
+            </div>
+        </div>
+
     </div>
 </div>
+
+{{ clientes_por_estado|json_script:"clientes-por-estado-data" }}
 
 <style>
 /* Dashboard Container – cores por tema (variáveis CSS) */
@@ -476,6 +500,42 @@
     grid-column: 4 / 7;
 }
 
+.widget-clientes-estado-map {
+    grid-column: 1 / 7;
+}
+
+#mapa-clientes-estado {
+    width: 100%;
+    min-height: 420px;
+}
+
+.estado-legend-list {
+    margin-top: 1rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.5rem;
+}
+
+.estado-legend-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--card-header-bg);
+}
+
+.estado-uf {
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.estado-total {
+    color: var(--secondary-text-color);
+    font-size: 0.9rem;
+}
+
 .shortcut-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -685,5 +745,70 @@ function showNotification(message, type) {
         }, 300);
     }, 3000);
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const dataScript = document.getElementById('clientes-por-estado-data');
+    const mapContainer = document.getElementById('mapa-clientes-estado');
+
+    if (!dataScript || !mapContainer) {
+        return;
+    }
+
+    let clientesPorEstado = [];
+    try {
+        clientesPorEstado = JSON.parse(dataScript.textContent || '[]');
+    } catch (error) {
+        console.error('Erro ao parsear dados de clientes por estado:', error);
+        return;
+    }
+
+    if (!clientesPorEstado.length) {
+        return;
+    }
+
+    const googleData = [
+        ['Estado', 'Clientes']
+    ];
+
+    clientesPorEstado.forEach((item) => {
+        if (item.uf && item.uf.length === 2) {
+            googleData.push([`BR-${item.uf}`, Number(item.total) || 0]);
+        }
+    });
+
+    if (googleData.length <= 1) {
+        return;
+    }
+
+    const drawMap = () => {
+        const dataTable = google.visualization.arrayToDataTable(googleData);
+        const options = {
+            region: 'BR',
+            resolution: 'provinces',
+            displayMode: 'regions',
+            colorAxis: { colors: ['#dbeafe', '#1d4ed8'] },
+            datalessRegionColor: '#f3f4f6',
+            legend: { textStyle: { color: '#6b7280' } },
+            backgroundColor: 'transparent',
+            keepAspectRatio: true
+        };
+
+        const chart = new google.visualization.GeoChart(mapContainer);
+        chart.draw(dataTable, options);
+    };
+
+    if (window.google && google.charts) {
+        google.charts.load('current', { packages: ['geochart'] });
+        google.charts.setOnLoadCallback(drawMap);
+    } else {
+        const script = document.createElement('script');
+        script.src = 'https://www.gstatic.com/charts/loader.js';
+        script.onload = () => {
+            google.charts.load('current', { packages: ['geochart'] });
+            google.charts.setOnLoadCallback(drawMap);
+        };
+        document.head.appendChild(script);
+    }
+});
 </script>
 {% endblock %} 

@@ -53,6 +53,8 @@ class CobrancaCarregamentoForm(forms.ModelForm):
         model = CobrancaCarregamento
         fields = [
             'cliente',
+            'origem_cobranca',
+            'descricao_avulsa',
             'romaneios',
             'tipo_cliente',
             'cubagem',
@@ -67,6 +69,14 @@ class CobrancaCarregamentoForm(forms.ModelForm):
             'cliente': forms.Select(attrs={
                 'class': 'form-select form-select-lg',
                 'required': True
+            }),
+            'origem_cobranca': forms.Select(attrs={
+                'class': 'form-select form-select-lg',
+                'required': True
+            }),
+            'descricao_avulsa': forms.TextInput(attrs={
+                'class': 'form-control form-control-lg',
+                'placeholder': 'Ex: Taxa extra de operação, diária adicional, reentrega...'
             }),
             'romaneios': forms.CheckboxSelectMultiple(attrs={
                 'class': 'form-check-input'
@@ -119,6 +129,8 @@ class CobrancaCarregamentoForm(forms.ModelForm):
         }
         labels = {
             'cliente': 'Cliente',
+            'origem_cobranca': 'Origem da Cobrança',
+            'descricao_avulsa': 'Descrição da despesa avulsa',
             'romaneios': 'Romaneios',
             'tipo_cliente': 'Tipo de Cliente',
             'cubagem': 'Cubagem (m³)',
@@ -138,6 +150,7 @@ class CobrancaCarregamentoForm(forms.ModelForm):
         # Tornar campo valor_cte_manifesto opcional
         self.fields['valor_cte_manifesto'].required = False
         self.fields['valor_cte_terceiro'].required = False
+        self.fields['descricao_avulsa'].required = False
         # Valor distribuição trabalhadores: opcional; ajuda para acerto diário
         self.fields['valor_distribuicao_trabalhadores'].required = False
         self.fields['valor_distribuicao_trabalhadores'].help_text = (
@@ -240,6 +253,8 @@ class CobrancaCarregamentoForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         cliente = cleaned_data.get('cliente')
+        origem_cobranca = cleaned_data.get('origem_cobranca') or 'ROMANEIO'
+        descricao_avulsa = (cleaned_data.get('descricao_avulsa') or '').strip()
         romaneios = cleaned_data.get('romaneios')
         valor_carregamento = cleaned_data.get('valor_carregamento') or Decimal('0.00')
         valor_dist = cleaned_data.get('valor_distribuicao_trabalhadores')
@@ -248,12 +263,20 @@ class CobrancaCarregamentoForm(forms.ModelForm):
                 {'valor_distribuicao_trabalhadores': 'O valor para distribuição não pode ser maior que o valor repassado ao cliente.'}
             )
         
-        # Validar que pelo menos um romaneio foi selecionado
-        if not romaneios or romaneios.count() == 0:
-            raise ValidationError('Selecione pelo menos um romaneio para esta cobrança.')
+        if origem_cobranca == 'ROMANEIO':
+            cleaned_data['descricao_avulsa'] = ''
+            # Validar que pelo menos um romaneio foi selecionado
+            if not romaneios or romaneios.count() == 0:
+                raise ValidationError('Selecione pelo menos um romaneio para esta cobrança.')
+        else:
+            # Cobrança avulsa: romaneios não são obrigatórios e descrição é obrigatória.
+            if not descricao_avulsa:
+                raise ValidationError({
+                    'descricao_avulsa': 'Informe a descrição da despesa avulsa para cobrança sem romaneio.'
+                })
         
         # Validar que todos os romaneios selecionados pertencem ao cliente escolhido
-        if cliente and romaneios:
+        if origem_cobranca == 'ROMANEIO' and cliente and romaneios:
             romaneios_invalidos = romaneios.exclude(cliente=cliente)
             if romaneios_invalidos.exists():
                 raise ValidationError(
@@ -262,7 +285,7 @@ class CobrancaCarregamentoForm(forms.ModelForm):
                 )
 
         # Impedir romaneio já vinculado a outra cobrança (evita duplicidade)
-        if romaneios:
+        if origem_cobranca == 'ROMANEIO' and romaneios:
             cobrancas_existentes = CobrancaCarregamento.objects.filter(romaneios__in=romaneios).distinct()
             if self.instance and self.instance.pk:
                 cobrancas_existentes = cobrancas_existentes.exclude(pk=self.instance.pk)
@@ -283,6 +306,12 @@ class CobrancaCarregamentoForm(forms.ModelForm):
                 })
         
         return cleaned_data
+
+    def save(self, commit=True):
+        cobranca = super().save(commit=commit)
+        if commit and cobranca.origem_cobranca == 'AVULSA_CLIENTE':
+            cobranca.romaneios.clear()
+        return cobranca
 
 
 class SetorBancarioForm(forms.ModelForm):

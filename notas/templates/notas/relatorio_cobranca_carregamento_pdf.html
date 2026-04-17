@@ -81,7 +81,13 @@
 {% block conteudo %}
 <div class="secao-estado">
     <div class="secao">
-        <div class="secao-titulo">Romaneios Vinculados</div>
+        <div class="secao-titulo">
+            {% if cobranca.origem_cobranca == 'AVULSA_CLIENTE' %}
+                Detalhes da Cobrança Avulsa
+            {% else %}
+                Romaneios Vinculados
+            {% endif %}
+        </div>
         <div class="bloco">
             <table class="tabela-romaneios">
                 <colgroup>
@@ -92,11 +98,24 @@
                 <thead>
                     <tr>
                         <th>Cliente</th>
-                        <th>Romaneio</th>
+                        <th>
+                            {% if cobranca.origem_cobranca == 'AVULSA_CLIENTE' %}
+                                Origem
+                            {% else %}
+                                Romaneio
+                            {% endif %}
+                        </th>
                         <th>Data</th>
                     </tr>
                 </thead>
                 <tbody>
+                    {% if cobranca.origem_cobranca == 'AVULSA_CLIENTE' %}
+                    <tr>
+                        <td>{{ cobranca.cliente.razao_social }}</td>
+                        <td class="text-center">{{ cobranca.descricao_avulsa|default:"Despesa avulsa" }}</td>
+                        <td class="text-center">{{ cobranca.criado_em|date:"d/m/Y" }}</td>
+                    </tr>
+                    {% else %}
                     {% for romaneio in romaneios %}
                     <tr>
                         <td>{{ romaneio.cliente.razao_social }}</td>
@@ -108,6 +127,7 @@
                         <td colspan="3" class="text-center">Nenhum romaneio vinculado.</td>
                     </tr>
                     {% endfor %}
+                    {% endif %}
                 </tbody>
             </table>
         </div>

@@ -4,6 +4,7 @@ Views de Dashboard
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Sum, Q
+from django.db.models.functions import Upper, Trim
 from datetime import datetime, date, timedelta
 
 from ..models import NotaFiscal, Cliente, Motorista, Veiculo, RomaneioViagem
@@ -60,6 +61,16 @@ def dashboard(request):
     top_clientes_deposito = Cliente.objects.annotate(
         valor_deposito=Sum('notas_fiscais__valor', filter=Q(notas_fiscais__status='Depósito'))
     ).filter(valor_deposito__gt=0).order_by('-valor_deposito')[:5]
+
+    # Quantidade de clientes por estado (UF) para o mapa do dashboard
+    clientes_por_estado = list(
+        Cliente.objects.exclude(estado__isnull=True)
+        .exclude(estado__exact='')
+        .annotate(uf=Upper(Trim('estado')))
+        .values('uf')
+        .annotate(total=Count('id'))
+        .order_by('-total', 'uf')
+    )
     
     hoje = date.today()
     now = datetime.now()
@@ -89,6 +100,7 @@ def dashboard(request):
         
         # Top clientes
         'top_clientes_deposito': top_clientes_deposito,
+        'clientes_por_estado': clientes_por_estado,
         
         'hoje': hoje,
         'now': now,

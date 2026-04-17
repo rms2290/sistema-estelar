@@ -86,6 +86,10 @@ class AuditoriaLog(models.Model):
 
 class CobrancaCarregamento(UpperCaseMixin, models.Model):
     """Cobranças de carregamento e CTE/Manifesto."""
+    ORIGEM_COBRANCA_CHOICES = [
+        ('ROMANEIO', 'Com Romaneio'),
+        ('AVULSA_CLIENTE', 'Despesa Avulsa para Cliente'),
+    ]
     STATUS_CHOICES = [
         ('Pendente', 'Pendente'),
         ('Baixado', 'Baixado'),
@@ -104,6 +108,18 @@ class CobrancaCarregamento(UpperCaseMixin, models.Model):
         on_delete=models.PROTECT,
         related_name='cobrancas_carregamento',
         verbose_name="Cliente"
+    )
+    origem_cobranca = models.CharField(
+        max_length=20,
+        choices=ORIGEM_COBRANCA_CHOICES,
+        default='ROMANEIO',
+        verbose_name='Origem da Cobrança'
+    )
+    descricao_avulsa = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name='Descrição da despesa avulsa'
     )
     romaneios = models.ManyToManyField(
         RomaneioViagem,
@@ -170,6 +186,7 @@ class CobrancaCarregamento(UpperCaseMixin, models.Model):
         indexes = [
             models.Index(fields=['cliente']),
             models.Index(fields=['status']),
+            models.Index(fields=['origem_cobranca']),
             models.Index(fields=['data_vencimento']),
         ]
 
