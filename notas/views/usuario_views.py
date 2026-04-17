@@ -14,15 +14,19 @@ from ..decorators import admin_required, rate_limit_critical
 def cadastrar_usuario(request):
     """View para cadastrar um novo usuário"""
     if request.method == 'POST':
-        form = CadastroUsuarioForm(request.POST)
+        form = CadastroUsuarioForm(request.POST, current_user=request.user)
         if form.is_valid():
+            if form.cleaned_data.get('tipo_usuario') == 'admin' and not request.user.is_superuser:
+                messages.error(request, 'Apenas superadministrador pode criar usuário do tipo Administrador.')
+                return render(request, 'notas/auth/cadastrar_usuario.html', {'form': form})
+
             user = form.save()
             messages.success(request, f'Usuário {user.username} cadastrado com sucesso!')
             return redirect('notas:listar_usuarios')
         else:
             messages.error(request, 'Houve um erro ao cadastrar o usuário. Verifique os campos.')
     else:
-        form = CadastroUsuarioForm()
+        form = CadastroUsuarioForm(current_user=request.user)
     
     return render(request, 'notas/auth/cadastrar_usuario.html', {'form': form})
 
@@ -48,8 +52,17 @@ def editar_usuario(request, pk):
     """View para editar um usuário existente"""
     usuario = get_object_or_404(Usuario, pk=pk)
     if request.method == 'POST':
-        form = CadastroUsuarioForm(request.POST, instance=usuario)
+        form = CadastroUsuarioForm(request.POST, instance=usuario, current_user=request.user)
         if form.is_valid():
+            # Bloqueia promoção para administrador por admins não-superusuários.
+            if (
+                form.cleaned_data.get('tipo_usuario') == 'admin'
+                and usuario.tipo_usuario != 'admin'
+                and not request.user.is_superuser
+            ):
+                messages.error(request, 'Apenas superadministrador pode promover usuário para Administrador.')
+                return render(request, 'notas/auth/editar_usuario.html', {'form': form, 'usuario': usuario})
+
             if form.cleaned_data.get('password1'):
                 usuario.set_password(form.cleaned_data['password1'])
             form.save()
@@ -58,7 +71,7 @@ def editar_usuario(request, pk):
         else:
             messages.error(request, 'Houve um erro ao atualizar o usuário. Verifique os campos.')
     else:
-        form = CadastroUsuarioForm(instance=usuario)
+        form = CadastroUsuarioForm(instance=usuario, current_user=request.user)
     
     return render(request, 'notas/auth/editar_usuario.html', {'form': form, 'usuario': usuario})
 
@@ -70,6 +83,10 @@ def toggle_status_usuario(request, pk):
     usuario = get_object_or_404(Usuario, pk=pk)
     
     if request.method == 'POST':
+        if usuario.tipo_usuario == 'admin' and not request.user.is_superuser:
+            messages.error(request, 'Apenas superadministrador pode alterar status de usuário Administrador.')
+            return redirect('notas:listar_usuarios')
+
         if usuario.is_active:
             usuario.is_active = False
             messages.success(request, f'Usuário {usuario.username} foi desativado com sucesso!')
@@ -91,6 +108,10 @@ def excluir_usuario(request, pk):
     
     if usuario == request.user:
         messages.error(request, 'Você não pode excluir seu próprio usuário.')
+        return redirect('notas:listar_usuarios')
+
+    if usuario.tipo_usuario == 'admin' and not request.user.is_superuser:
+        messages.error(request, 'Apenas superadministrador pode excluir usuário Administrador.')
         return redirect('notas:listar_usuarios')
     
     if request.method == 'POST':

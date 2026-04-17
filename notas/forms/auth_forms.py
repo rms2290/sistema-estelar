@@ -69,6 +69,23 @@ class CadastroUsuarioForm(forms.ModelForm):
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Sobrenome'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        current_user = kwargs.pop('current_user', None)
+        super().__init__(*args, **kwargs)
+
+        # Admin "criado" (não superusuário) não pode criar/promover para administrador.
+        if current_user and not current_user.is_superuser:
+            choices_sem_admin = [
+                choice for choice in Usuario.TIPO_USUARIO_CHOICES
+                if choice[0] != 'admin'
+            ]
+
+            # Em edição de um admin existente, mantemos a opção atual para não quebrar o form.
+            if self.instance and self.instance.pk and self.instance.tipo_usuario == 'admin':
+                self.fields['tipo_usuario'].choices = [Usuario.TIPO_USUARIO_CHOICES[0]] + choices_sem_admin
+            else:
+                self.fields['tipo_usuario'].choices = choices_sem_admin
     
     def clean(self):
         cleaned_data = super().clean()

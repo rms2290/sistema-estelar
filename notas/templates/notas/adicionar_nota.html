@@ -2,8 +2,41 @@
 
 {% block title %}Adicionar Nova Nota Fiscal{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Garante texto visivel no campo de pesquisa do modal (tema claro e escuro) */
+    #modalPesquisarCliente #filtroClienteModal,
+    #modalPesquisarCliente #filtroClienteModal:focus,
+    #modalPesquisarCliente #filtroClienteModal:active {
+        color: #212529 !important;
+        -webkit-text-fill-color: #212529 !important;
+        caret-color: #212529 !important;
+        background-color: #ffffff !important;
+        opacity: 1 !important;
+    }
+
+    #modalPesquisarCliente #filtroClienteModal::placeholder {
+        color: #6c757d !important;
+        opacity: 1 !important;
+    }
+
+    [data-theme="dark"] #modalPesquisarCliente #filtroClienteModal,
+    [data-theme="dark"] #modalPesquisarCliente #filtroClienteModal:focus,
+    [data-theme="dark"] #modalPesquisarCliente #filtroClienteModal:active {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        caret-color: #ffffff !important;
+        background-color: #3f444b !important;
+    }
+
+    [data-theme="dark"] #modalPesquisarCliente #filtroClienteModal::placeholder {
+        color: #d0d4d8 !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid mt-4">
     <h2><i class="fas fa-file-invoice"></i> Adicionar Nova Nota Fiscal</h2>
 
     <form method="post" id="notaFiscalForm">
@@ -137,6 +170,7 @@
                                 id="filtroClienteModal"
                                 placeholder="Pesquisar por razão social, nome fantasia ou CNPJ..."
                                 autocomplete="off"
+                                data-no-format="true"
                             >
                         </div>
                         <div class="col-md-4 text-md-end d-flex justify-content-md-end">
@@ -274,16 +308,44 @@
             const btnLimparFiltroCliente = document.getElementById('btnLimparFiltroCliente');
             const linhasClienteModal = Array.from(document.querySelectorAll('#tabelaClientesModal tbody tr[data-search]'));
 
+            function normalizarTextoBusca(valor) {
+                return (valor || '')
+                    .toString()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toLowerCase()
+                    .replace(/[^\w\s]/g, '')
+                    .trim();
+            }
+
+            function obterTextoBuscaLinha(linha) {
+                const textoDataset = linha.dataset.search || '';
+                const textoCols = Array.from(linha.querySelectorAll('td'))
+                    .slice(0, 3)
+                    .map((col) => col.textContent || '')
+                    .join(' ');
+                return normalizarTextoBusca(`${textoDataset} ${textoCols}`);
+            }
+
             function aplicarFiltroClientes() {
-                const termo = (filtroClienteModal?.value || '').trim().toLowerCase();
+                const termo = normalizarTextoBusca(filtroClienteModal?.value || '');
                 linhasClienteModal.forEach((linha) => {
-                    const textoBusca = (linha.dataset.search || '').toLowerCase();
+                    const textoBusca = obterTextoBuscaLinha(linha);
                     linha.style.display = (!termo || textoBusca.includes(termo)) ? '' : 'none';
                 });
             }
 
             if (filtroClienteModal) {
                 filtroClienteModal.addEventListener('input', aplicarFiltroClientes);
+                filtroClienteModal.addEventListener('keyup', aplicarFiltroClientes);
+                filtroClienteModal.addEventListener('change', aplicarFiltroClientes);
+                // Evita que atalhos/listeners globais da tela capturem teclas digitadas no filtro
+                filtroClienteModal.addEventListener('keydown', function(event) {
+                    event.stopPropagation();
+                });
+                filtroClienteModal.addEventListener('keyup', function(event) {
+                    event.stopPropagation();
+                });
             }
 
             if (btnLimparFiltroCliente && filtroClienteModal) {
@@ -310,7 +372,16 @@
 
             if (modalPesquisarCliente && filtroClienteModal) {
                 modalPesquisarCliente.addEventListener('shown.bs.modal', function() {
-                    filtroClienteModal.focus();
+                    // Garante que o campo do modal esteja realmente editável e focado
+                    filtroClienteModal.removeAttribute('readonly');
+                    filtroClienteModal.removeAttribute('disabled');
+                    requestAnimationFrame(function() {
+                        filtroClienteModal.focus();
+                        filtroClienteModal.select();
+                    });
+                    setTimeout(function() {
+                        filtroClienteModal.focus();
+                    }, 50);
                     aplicarFiltroClientes();
                 });
                 modalPesquisarCliente.addEventListener('hidden.bs.modal', function() {

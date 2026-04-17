@@ -557,8 +557,8 @@ def minhas_notas_fiscais(request):
     elif status_filter == 'enviada':
         notas_fiscais = notas_fiscais.filter(status='Enviada')
     
-    # Otimizar query com select_related para evitar N+1
-    notas_fiscais = notas_fiscais.select_related('cliente').order_by('data')
+    # Otimizar query com select_related para evitar N+1 e ordenar por numero da nota
+    notas_fiscais = notas_fiscais.select_related('cliente').order_by('nota')
     
     # Calcular totais
     total_quantidade = sum(nota.quantidade for nota in notas_fiscais if nota.quantidade)

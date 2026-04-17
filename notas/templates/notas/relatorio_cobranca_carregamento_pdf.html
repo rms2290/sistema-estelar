@@ -2,119 +2,166 @@
 {% load format_filters %}
 
 {% block extra_style %}
-/* Segue o mesmo padrão visual do consolidado, porém para 1 cobrança */
-.tabela-cobranca-individual {
-    table-layout: fixed;
-}
-.tabela-cobranca-individual thead th,
-.tabela-cobranca-individual tbody td,
-.tabela-cobranca-individual tfoot td {
-    padding: 3px 5px;
-    font-size: 10px;
-    line-height: 1.2;
-}
-.tabela-cobranca-individual .text-center {
-    text-align: center;
-}
-.tabela-cobranca-individual .total-geral td {
-    font-weight: bold;
-    background: #e8e8e8;
+.secao {
+    margin-top: 10px;
 }
 
-.tabela-romaneios {
-    table-layout: fixed;
-}
-.tabela-romaneios thead th,
-.tabela-romaneios tbody td {
-    padding: 3px 5px;
-    font-size: 10px;
-    line-height: 1.2;
-}
-.dados-romaneios {
+.secao-titulo {
     border: 1px solid #000;
-    padding: 6px 8px;
-    font-size: 10px;
-    line-height: 1.35;
-}
-.dados-romaneio-item + .dados-romaneio-item {
-    border-top: 1px solid #cfcfcf;
-    margin-top: 5px;
-    padding-top: 5px;
-}
-.dados-romaneio-linha strong {
-    display: inline-block;
-    width: 65px;
-}
-.secao-observacoes {
-    margin-top: 8px;
-}
-.secao-observacoes .titulo {
+    border-bottom: none;
+    background: #e8e8e8;
     font-weight: bold;
-    margin-bottom: 4px;
+    font-size: 11px;
+    padding: 4px 7px;
+    text-transform: uppercase;
 }
-.secao-observacoes .conteudo {
+
+.bloco {
     border: 1px solid #000;
-    padding: 6px 8px;
+}
+
+.tabela-romaneios,
+.tabela-cobranca-individual {
+    table-layout: fixed;
+    margin-top: 0;
+}
+
+.tabela-romaneios thead th,
+.tabela-cobranca-individual thead th {
+    text-align: center;
+    font-size: 9px;
+    padding: 4px 6px;
+}
+
+.tabela-romaneios tbody td,
+.tabela-cobranca-individual tbody td,
+.tabela-cobranca-individual tfoot td {
     font-size: 10px;
-    line-height: 1.35;
+    padding: 5px 6px;
+    line-height: 1.3;
+}
+
+.status-pill {
+    display: inline-block;
+    border: 1px solid #000;
+    border-radius: 10px;
+    padding: 1px 8px;
+    font-size: 9px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.status-pendente {
+    background: #fff5cc;
+}
+
+.status-baixado {
+    background: #dff3df;
+}
+
+.total-geral td {
+    background: #f0f0f0;
+    font-weight: bold;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.observacoes-conteudo {
+    border: 1px solid #000;
+    padding: 7px 8px;
+    font-size: 10px;
+    line-height: 1.4;
     white-space: pre-line;
+    min-height: 24px;
 }
 {% endblock %}
 
 {% block conteudo %}
 <div class="secao-estado">
-    <div class="dados-romaneios">
-        {% for romaneio in romaneios %}
-        <div class="dados-romaneio-item">
-            <div class="dados-romaneio-linha"><strong>CLIENTE</strong> {{ romaneio.cliente.razao_social }}</div>
-            <div class="dados-romaneio-linha"><strong>ROMANEIO</strong> {{ romaneio.codigo }}</div>
-            <div class="dados-romaneio-linha"><strong>DATA</strong> {{ romaneio.data_emissao|date:"d/m/Y" }}</div>
+    <div class="secao">
+        <div class="secao-titulo">Romaneios Vinculados</div>
+        <div class="bloco">
+            <table class="tabela-romaneios">
+                <colgroup>
+                    <col style="width: 52%;">
+                    <col style="width: 24%;">
+                    <col style="width: 24%;">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Romaneio</th>
+                        <th>Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for romaneio in romaneios %}
+                    <tr>
+                        <td>{{ romaneio.cliente.razao_social }}</td>
+                        <td class="text-center">{{ romaneio.codigo }}</td>
+                        <td class="text-center">{{ romaneio.data_emissao|date:"d/m/Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center">Nenhum romaneio vinculado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-        {% empty %}
-        <div class="dados-romaneio-item">
-            <div class="dados-romaneio-linha">Nenhum romaneio vinculado.</div>
-        </div>
-        {% endfor %}
     </div>
 
-    <table class="tabela-cobranca-individual" style="margin-top: 8px;">
-        <colgroup>
-            <col style="width: 48%;">
-            <col style="width: 12%;">
-            <col style="width: 13%;">
-            <col style="width: 13%;">
-            <col style="width: 14%;">
-        </colgroup>
-        <thead>
-            <tr>
-                <th>CLIENTE</th>
-                <th>STATUS</th>
-                <th>R$ CARREG.</th>
-                <th>R$ CTE/MANIF.</th>
-                <th>R$ TOTAL</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>{{ cobranca.cliente.razao_social }}</td>
-                <td class="text-center">{{ cobranca.status }}</td>
-                <td class="valor">{{ cobranca.valor_carregamento|format_brazilian_currency }}</td>
-                <td class="valor">{{ cobranca.valor_cte_manifesto|format_brazilian_currency }}</td>
-                <td class="valor">{{ cobranca.valor_total|format_brazilian_currency }}</td>
-            </tr>
-        </tbody>
-        <tfoot>
-            <tr class="total-geral">
-                <td colspan="4">TOTAL</td>
-                <td class="valor">{{ cobranca.valor_total|format_brazilian_currency }}</td>
-            </tr>
-        </tfoot>
-    </table>
+    <div class="secao">
+        <div class="secao-titulo">Resumo da Cobranca</div>
+        <div class="bloco">
+            <table class="tabela-cobranca-individual">
+                <colgroup>
+                    <col style="width: 48%;">
+                    <col style="width: 12%;">
+                    <col style="width: 13%;">
+                    <col style="width: 13%;">
+                    <col style="width: 14%;">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Status</th>
+                        <th>R$ Carreg.</th>
+                        <th>R$ CTE/Manif.</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ cobranca.cliente.razao_social }}</td>
+                        <td class="text-center">
+                            {% if cobranca.status == 'Pendente' %}
+                                <span class="status-pill status-pendente">Pendente</span>
+                            {% else %}
+                                <span class="status-pill status-baixado">Baixado</span>
+                            {% endif %}
+                        </td>
+                        <td class="valor">{{ cobranca.valor_carregamento|format_brazilian_currency }}</td>
+                        <td class="valor">{{ cobranca.valor_cte_manifesto|format_brazilian_currency }}</td>
+                        <td class="valor"><strong>{{ cobranca.valor_total|format_brazilian_currency }}</strong></td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr class="total-geral">
+                        <td colspan="4">TOTAL</td>
+                        <td class="valor">{{ cobranca.valor_total|format_brazilian_currency }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
 
     {% if cobranca.observacoes_para_exibicao %}
-    <div class="secao-observacoes">
-        <div class="titulo">OBSERVACOES</div>
-        <div class="conteudo">{{ cobranca.observacoes_para_exibicao }}</div>
+    <div class="secao">
+        <div class="secao-titulo">Observacoes</div>
+        <div class="observacoes-conteudo">{{ cobranca.observacoes_para_exibicao }}</div>
     </div>
     {% endif %}
 </div>

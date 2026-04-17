@@ -159,6 +159,11 @@ gunicorn.log
 *.bak
 *.backup
 dados_arquivados/backups/
+backups/
+local_backups/
+*.dump
+*.sql
+*.sql.gz
 
 # Temporary files
 *.tmp

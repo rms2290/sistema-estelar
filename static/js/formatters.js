@@ -149,6 +149,21 @@ document.addEventListener('DOMContentLoaded', function() {
             return null;
         }
 
+        // Nunca aplicar máscara automática em campos de pesquisa/filtro
+        // (ex.: busca de cliente em modais), mesmo que o placeholder tenha "CNPJ".
+        const nome = campo.name ? campo.name.toLowerCase() : '';
+        const id = campo.id ? campo.id.toLowerCase() : '';
+        const placeholder = campo.placeholder ? campo.placeholder.toLowerCase() : '';
+        const tipoInput = campo.type ? campo.type.toLowerCase() : '';
+
+        if (
+            tipoInput === 'search' ||
+            nome.includes('filtro') || nome.includes('busca') || nome.includes('pesquisa') || nome.includes('search') ||
+            id.includes('filtro') || id.includes('busca') || id.includes('pesquisa') || id.includes('search')
+        ) {
+            return null;
+        }
+
         // Verificar primeiro o atributo data-format (prioridade)
         if (campo.hasAttribute && campo.hasAttribute('data-format')) {
             const dataFormat = campo.getAttribute('data-format');
@@ -156,10 +171,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return dataFormat;
             }
         }
-        
-        const nome = campo.name ? campo.name.toLowerCase() : '';
-        const id = campo.id ? campo.id.toLowerCase() : '';
-        const placeholder = campo.placeholder ? campo.placeholder.toLowerCase() : '';
         
         // Verificar CNPJ
         if (nome.includes('cnpj') || id.includes('cnpj') || placeholder.includes('cnpj')) {
