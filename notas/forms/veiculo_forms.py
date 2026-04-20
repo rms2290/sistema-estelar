@@ -3,6 +3,8 @@ Formulários relacionados a Veículos
 """
 from django import forms
 import re
+from decimal import Decimal, ROUND_HALF_UP
+
 from ..models import Veiculo
 from .base import UpperCaseCharField, ESTADOS_CHOICES
 
@@ -275,8 +277,12 @@ class VeiculoForm(forms.ModelForm):
         if largura is not None and altura is not None and comprimento is not None:
             try:
                 cubagem_calculada = largura * altura * comprimento
+                # Multiplicação de Decimal pode exceder 2 casas decimais; modelo e campo exigem 2.
+                cubagem_calculada = cubagem_calculada.quantize(
+                    Decimal('0.01'), rounding=ROUND_HALF_UP
+                )
                 cleaned_data['cubagem'] = cubagem_calculada
-                
+
                 if cubagem_calculada <= 0:
                     self.add_error(None, "A cubagem calculada deve ser um valor positivo.")
             except TypeError:
