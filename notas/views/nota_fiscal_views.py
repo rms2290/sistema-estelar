@@ -9,7 +9,8 @@ from django.contrib import messages
 from sistema_estelar.api_utils import json_success, json_error
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import user_passes_test
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, IntegerField
+from django.db.models.functions import Cast
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
@@ -436,8 +437,10 @@ def pesquisar_mercadorias_deposito(request):
         if data_fim:
             queryset = queryset.filter(data__lte=data_fim)
         
-        # Ordenar pela NF em ordem crescente para facilitar conferência na relação
-        mercadorias = queryset.order_by('nota')
+        # Ordenar numericamente pela NF em ordem crescente (campo nota é CharField)
+        mercadorias = queryset.annotate(
+            nota_numero=Cast('nota', IntegerField())
+        ).order_by('nota_numero', 'nota')
         
         # Calcular totais
         if mercadorias.exists():
@@ -532,7 +535,9 @@ def imprimir_relatorio_mercadorias_deposito(request):
             if data_fim:
                 mercadorias = mercadorias.filter(data__lte=data_fim)
     
-    mercadorias = mercadorias.order_by('local', 'cliente__razao_social', 'mercadoria')
+    mercadorias = mercadorias.annotate(
+        nota_numero=Cast('nota', IntegerField())
+    ).order_by('nota_numero', 'nota')
     
     # Calcular totais
     total_peso = sum(m.peso for m in mercadorias if m.peso)
