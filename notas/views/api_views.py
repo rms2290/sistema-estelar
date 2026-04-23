@@ -60,7 +60,7 @@ def load_notas_fiscais_edicao(request):
                 romaneio = RomaneioViagem.objects.get(pk=romaneio_id)
                 notas = notas.filter(
                     Q(romaneios_vinculados=romaneio) | Q(status='Depósito')
-                )
+                ).distinct()
             except RomaneioViagem.DoesNotExist:
                 notas = notas.filter(status='Depósito')
         else:

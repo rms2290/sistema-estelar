@@ -98,7 +98,7 @@ class RomaneioViagemForm(forms.ModelForm):
                         cliente=self.instance.cliente
                     ).filter(
                         Q(romaneios_vinculados=self.instance) | Q(status='Depósito')
-                    )
+                    ).distinct()
                 )
                 self.fields['notas_fiscais'].initial = self.instance.notas_fiscais.all()
         
@@ -111,7 +111,7 @@ class RomaneioViagemForm(forms.ModelForm):
                     self.fields['notas_fiscais'].queryset = ordenar_queryset_notas_por_numero(
                         NotaFiscal.objects.filter(
                             cliente=cliente_obj, status='Depósito'
-                        )
+                        ).distinct()
                     )
             except (Cliente.DoesNotExist, ValueError):
                 pass

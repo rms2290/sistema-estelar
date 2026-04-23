@@ -179,7 +179,7 @@ def editar_romaneio(request, pk):
                         cliente=cliente_obj
                     ).filter(
                         Q(romaneios_vinculados=romaneio) | Q(status='Depósito')
-                    )
+                    ).distinct()
                 )
             except Cliente.DoesNotExist:
                 form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
@@ -213,7 +213,7 @@ def editar_romaneio(request, pk):
                             cliente=cliente_obj
                         ).filter(
                             Q(romaneios_vinculados=romaneio) | Q(status='Depósito')
-                        )
+                        ).distinct()
                     )
                 except Cliente.DoesNotExist:
                     form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
