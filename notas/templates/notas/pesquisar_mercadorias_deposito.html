@@ -97,7 +97,15 @@
                             
                             <!-- Resumo dos Totais -->
                             <div class="row mb-3">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6 class="card-title">Total de Quantidade</h6>
+                                            <p class="card-text h4">{{ total_quantidade|format_brazilian_quantity }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
                                     <div class="card bg-light">
                                         <div class="card-body">
                                             <h6 class="card-title">Total de Peso</h6>
@@ -105,7 +113,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="card bg-light">
                                         <div class="card-body">
                                             <h6 class="card-title">Total de Valor</h6>

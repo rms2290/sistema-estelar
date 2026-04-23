@@ -411,6 +411,7 @@ def pesquisar_mercadorias_deposito(request):
     search_form = MercadoriaDepositoSearchForm(request.GET)
     mercadorias = NotaFiscal.objects.none()
     search_performed = bool(request.GET)
+    total_quantidade = Decimal('0.00')
     total_peso = Decimal('0.00')
     total_valor = Decimal('0.00')
     
@@ -435,14 +436,17 @@ def pesquisar_mercadorias_deposito(request):
         if data_fim:
             queryset = queryset.filter(data__lte=data_fim)
         
-        mercadorias = queryset.order_by('data', 'nota')
+        # Ordenar pela NF em ordem crescente para facilitar conferência na relação
+        mercadorias = queryset.order_by('nota')
         
         # Calcular totais
         if mercadorias.exists():
             totais = mercadorias.aggregate(
+                total_quantidade=Sum('quantidade'),
                 total_peso=Sum('peso'),
                 total_valor=Sum('valor')
             )
+            total_quantidade = totais['total_quantidade'] or Decimal('0.00')
             total_peso = totais['total_peso'] or Decimal('0.00')
             total_valor = totais['total_valor'] or Decimal('0.00')
     
@@ -450,6 +454,7 @@ def pesquisar_mercadorias_deposito(request):
         'search_form': search_form,
         'mercadorias': mercadorias,
         'search_performed': search_performed,
+        'total_quantidade': total_quantidade,
         'total_peso': total_peso,
         'total_valor': total_valor,
     }
