@@ -180,13 +180,19 @@
 
             // Listener para o select do cliente
             if (clienteSelect) {
+                let ultimoClienteCarregado = '';
                 clienteSelect.addEventListener('change', function() {
+                    if (this.value === ultimoClienteCarregado) {
+                        return;
+                    }
                     // Ao mudar o cliente, chamamos loadNotasFiscaisEdicao passando os elementos
                     loadNotasFiscaisEdicao(this.value, {{ romaneio.pk }}, notasFiscaisDiv, pesoTotalSpan, valorTotalSpan, initialSelectedNotasFromDjango);
+                    ultimoClienteCarregado = this.value;
                 });
                 // Chamar na carga inicial se já houver um cliente selecionado
                 if (clienteSelect.value) {
                     loadNotasFiscaisEdicao(clienteSelect.value, {{ romaneio.pk }}, notasFiscaisDiv, pesoTotalSpan, valorTotalSpan, initialSelectedNotasFromDjango);
+                    ultimoClienteCarregado = clienteSelect.value;
                 } else {
                     // Inicializa os totais como zero se nenhum cliente selecionado
                     if (pesoTotalSpan) pesoTotalSpan.textContent = '0,00 kg';

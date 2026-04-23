@@ -122,7 +122,10 @@ class RomaneioViagemForm(forms.ModelForm):
                 if not isinstance(field.widget, (forms.Select, forms.DateInput)):
                     field.widget.attrs.update({'class': 'form-control'})
             if field_name == 'cliente':
-                 field.widget.attrs.update({'onchange': 'loadNotasFiscais(this.value);'})
+                if self.instance and self.instance.pk:
+                    field.widget.attrs.pop('onchange', None)
+                else:
+                    field.widget.attrs.update({'onchange': 'loadNotasFiscais(this.value);'})
 
     class Meta:
         model = RomaneioViagem
