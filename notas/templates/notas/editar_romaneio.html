@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load l10n %}
 
 {% block title %}Editar Romaneio{% endblock %}
 
@@ -43,7 +44,7 @@
         <div class="card card-body mb-4">
             <h3>Notas Fiscais Associadas</h3>
             <div class="mb-3">
-                <div id="notas_fiscais_checkboxes" class="notes-checkbox-container" data-romaneio-id="{{ romaneio.pk }}"> 
+                <div id="notas_fiscais_checkboxes" class="notes-checkbox-container" data-romaneio-id="{{ romaneio.pk|unlocalize }}"> 
                     <p class="text-info">Carregando notas...</p>
                 </div>
                 {% if form.notas_fiscais.errors %}
@@ -174,7 +175,7 @@
             // Obter as IDs das notas fiscais já selecionadas para este romaneio (passadas do contexto Django)
             const initialSelectedNotasFromDjango = [];
             {% for nota in romaneio.notas_fiscais.all %}
-                initialSelectedNotasFromDjango.push({{ nota.id }});
+                initialSelectedNotasFromDjango.push({{ nota.id|unlocalize }});
             {% endfor %}
             console.log("Notas selecionadas inicialmente (edição):", initialSelectedNotasFromDjango);
 
@@ -186,12 +187,12 @@
                         return;
                     }
                     // Ao mudar o cliente, chamamos loadNotasFiscaisEdicao passando os elementos
-                    loadNotasFiscaisEdicao(this.value, {{ romaneio.pk }}, notasFiscaisDiv, pesoTotalSpan, valorTotalSpan, initialSelectedNotasFromDjango);
+                    loadNotasFiscaisEdicao(this.value, {{ romaneio.pk|unlocalize }}, notasFiscaisDiv, pesoTotalSpan, valorTotalSpan, initialSelectedNotasFromDjango);
                     ultimoClienteCarregado = this.value;
                 });
                 // Chamar na carga inicial se já houver um cliente selecionado
                 if (clienteSelect.value) {
-                    loadNotasFiscaisEdicao(clienteSelect.value, {{ romaneio.pk }}, notasFiscaisDiv, pesoTotalSpan, valorTotalSpan, initialSelectedNotasFromDjango);
+                    loadNotasFiscaisEdicao(clienteSelect.value, {{ romaneio.pk|unlocalize }}, notasFiscaisDiv, pesoTotalSpan, valorTotalSpan, initialSelectedNotasFromDjango);
                     ultimoClienteCarregado = clienteSelect.value;
                 } else {
                     // Inicializa os totais como zero se nenhum cliente selecionado
