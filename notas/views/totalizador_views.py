@@ -304,6 +304,46 @@ def totalizador_por_cliente_pdf(request):
 
 @admin_required
 def totalizador_por_cliente_excel(request):
-    """Gera Excel do totalizador por cliente"""
-    messages.info(request, 'Exportação para Excel em desenvolvimento')
-    return redirect('notas:totalizador_por_cliente')
+    """Gera Excel do totalizador por cliente (mesmos filtros da tela)."""
+    data_inicial = request.GET.get('data_inicial', '')
+    data_final = request.GET.get('data_final', '')
+
+    if not data_inicial or not data_final:
+        messages.error(request, 'É necessário informar as datas inicial e final.')
+        return redirect('notas:totalizador_por_cliente')
+
+    out = _obter_dados_totalizador_cliente(data_inicial, data_final)
+    if out[0] is None:
+        messages.error(request, 'Formato de data inválido. Use YYYY-MM-DD.')
+        return redirect('notas:totalizador_por_cliente')
+
+    (
+        resultados,
+        totais_por_estado,
+        total_geral,
+        total_seguro_geral,
+        data_inicial_obj,
+        data_final_obj,
+        nomes_estados,
+    ) = out
+
+    try:
+        from ..utils.relatorios import gerar_relatorio_excel_totalizador_cliente, gerar_resposta_excel
+
+        excel_content = gerar_relatorio_excel_totalizador_cliente(
+            resultados,
+            totais_por_estado,
+            nomes_estados,
+            data_inicial_obj,
+            data_final_obj,
+            total_geral,
+            total_seguro_geral,
+        )
+        nome_arquivo = f"totalizador_por_cliente_{data_inicial}_{data_final}.xlsx"
+        return gerar_resposta_excel(excel_content, nome_arquivo)
+    except ImportError:
+        messages.error(
+            request,
+            'Biblioteca openpyxl não encontrada. Instale com: pip install openpyxl',
+        )
+        return redirect('notas:totalizador_por_cliente')

@@ -102,17 +102,26 @@ class RomaneioViagemForm(forms.ModelForm):
                 )
                 self.fields['notas_fiscais'].initial = self.instance.notas_fiscais.all()
         
-        # Configurar queryset das notas fiscais baseado no cliente dos dados
+        # Configurar queryset das notas fiscais baseado no cliente dos dados (POST)
         if self.data and 'cliente' in self.data:
             try:
                 cliente_id = self.data.get('cliente')
                 if cliente_id:
                     cliente_obj = Cliente.objects.get(pk=cliente_id)
-                    self.fields['notas_fiscais'].queryset = ordenar_queryset_notas_por_numero(
-                        NotaFiscal.objects.filter(
-                            cliente=cliente_obj, status='Depósito'
-                        ).distinct()
-                    )
+                    if self.instance and self.instance.pk:
+                        self.fields['notas_fiscais'].queryset = ordenar_queryset_notas_por_numero(
+                            NotaFiscal.objects.filter(
+                                cliente=cliente_obj
+                            ).filter(
+                                Q(romaneios_vinculados=self.instance) | Q(status='Depósito')
+                            ).distinct()
+                        )
+                    else:
+                        self.fields['notas_fiscais'].queryset = ordenar_queryset_notas_por_numero(
+                            NotaFiscal.objects.filter(
+                                cliente=cliente_obj, status='Depósito'
+                            ).distinct()
+                        )
             except (Cliente.DoesNotExist, ValueError):
                 pass
         

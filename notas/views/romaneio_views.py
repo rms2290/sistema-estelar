@@ -325,9 +325,18 @@ def detalhes_romaneio(request, pk):
 @login_required
 def listar_romaneios(request):
     """Lista todos os romaneios com filtros de busca"""
-    search_form = RomaneioSearchForm(request.GET)
+    # Sem querystring: já listar romaneios com status "Salvo" (fluxo mais comum).
+    # Use ?status= (vazio) no "Limpar filtros" para ver todos os status.
+    if not request.GET:
+        filter_get = request.GET.copy()
+        filter_get['status'] = 'Salvo'
+        search_form = RomaneioSearchForm(filter_get)
+        search_performed = True
+    else:
+        search_form = RomaneioSearchForm(request.GET)
+        search_performed = bool(request.GET)
+
     romaneios = RomaneioViagem.objects.none()
-    search_performed = bool(request.GET)
 
     if search_performed and search_form.is_valid():
         # Otimizar query com select_related para evitar N+1

@@ -37,10 +37,10 @@ if ($LASTEXITCODE -ne 0) {
         Write-Host "ERRO: Falha ao instalar django-ratelimit!" -ForegroundColor Red
         exit 1
     }
-    Write-Host "✓ django-ratelimit instalado" -ForegroundColor Green
+    Write-Host "[OK] django-ratelimit instalado" -ForegroundColor Green
 }
 
-Write-Host "✓ Ambiente verificado" -ForegroundColor Green
+Write-Host "[OK] Ambiente verificado" -ForegroundColor Green
 Write-Host "`nIniciando servidor em http://127.0.0.1:8000" -ForegroundColor Yellow
 Write-Host "Pressione Ctrl+C para parar o servidor`n" -ForegroundColor Gray
 

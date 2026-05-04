@@ -714,19 +714,17 @@
                 return;
             }
 
-            // Preservar selecao atual quando a lista ja estiver carregada no DOM.
-            // Isso evita reverter checks/deschecks do usuario em recargas involuntarias.
-            const checkboxesExistentes = notasContainer.querySelectorAll('.form-check-input');
+            // Unir IDs vindos do servidor (notas ja no romaneio) com o que esta marcado no DOM.
+            // So usar o DOM ignorava notas ainda nao pintadas na lista e desmarcava levas anteriores em recargas.
             const selectedSet = new Set();
-            if (checkboxesExistentes.length > 0) {
-                checkboxesExistentes.forEach((checkbox) => {
-                    if (checkbox.checked) {
-                        selectedSet.add(String(checkbox.value));
-                    }
-                });
-            } else if (Array.isArray(selectedNotasIds)) {
+            if (Array.isArray(selectedNotasIds)) {
                 selectedNotasIds.forEach((notaId) => selectedSet.add(String(notaId)));
             }
+            notasContainer.querySelectorAll('.form-check-input').forEach((checkbox) => {
+                if (checkbox.checked) {
+                    selectedSet.add(String(checkbox.value));
+                }
+            });
             
             try {
                 const url = `/notas/ajax/load-notas-edicao/?cliente_id=${clienteId}&romaneio_id=${romaneioId}`;

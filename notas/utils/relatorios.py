@@ -1,5 +1,5 @@
 """
-Utilitários para geração de relatórios em PDF e Excel (Totalizador por Estado).
+Utilitários para geração de relatórios em PDF e Excel (totalizadores por estado e por cliente).
 """
 import io
 from datetime import datetime
@@ -221,6 +221,166 @@ def gerar_relatorio_excel_totalizador_estado(resultados, data_inicial, data_fina
             cell.alignment = left_alignment if col == 1 else center_alignment
 
     for col, width in enumerate([25, 15, 18, 12, 18], 1):
+        ws.column_dimensions[get_column_letter(col)].width = width
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def gerar_relatorio_excel_totalizador_cliente(
+    resultados,
+    totais_por_estado,
+    nomes_estados,
+    data_inicial,
+    data_final,
+    total_geral,
+    total_seguro_geral,
+):
+    """
+    Gera relatório Excel para Totalizador por Cliente (agrupado por UF).
+    data_inicial e data_final devem ser objetos date.
+    """
+    from itertools import groupby
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Totalizador por Cliente"
+
+    title_font = Font(name="Arial", size=16, bold=True, color="FFFFFF")
+    header_font = Font(name="Arial", size=12, bold=True, color="FFFFFF")
+    section_font = Font(name="Arial", size=11, bold=True, color="FFFFFF")
+    data_font = Font(name="Arial", size=10)
+    total_row_font = Font(name="Arial", size=10, bold=True)
+    title_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    section_fill = PatternFill(start_color="5B9BD5", end_color="5B9BD5", fill_type="solid")
+    data_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+    center_alignment = Alignment(horizontal="center", vertical="center")
+    left_alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    right_alignment = Alignment(horizontal="right", vertical="center")
+    thin_border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
+
+    data_ini = data_inicial.strftime("%d/%m/%Y") if hasattr(data_inicial, "strftime") else str(data_inicial)
+    data_fim = data_final.strftime("%d/%m/%Y") if hasattr(data_final, "strftime") else str(data_final)
+
+    ws.merge_cells("A1:D1")
+    ws["A1"] = "RELATÓRIO - TOTALIZADOR POR CLIENTE"
+    ws["A1"].font = title_font
+    ws["A1"].fill = title_fill
+    ws["A1"].alignment = center_alignment
+
+    ws.merge_cells("A2:D2")
+    ws["A2"] = f"Período: {data_ini} a {data_fim}"
+    ws["A2"].font = data_font
+    ws["A2"].alignment = center_alignment
+
+    ws.merge_cells("A3:D3")
+    ws["A3"] = f"Relatório gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}"
+    ws["A3"].font = data_font
+    ws["A3"].alignment = center_alignment
+
+    ws["A5"] = "RESUMO EXECUTIVO"
+    ws["A5"].font = header_font
+    ws["A5"].fill = header_fill
+    ws["A5"].alignment = left_alignment
+    ws["A6"] = "Total de clientes (linhas):"
+    ws["B6"] = len(resultados)
+    ws["A7"] = "Valor total mercadoria:"
+    ws["B7"] = format_brazilian_currency(total_geral)
+    ws["A8"] = "Valor total seguro:"
+    ws["B8"] = format_brazilian_currency(total_seguro_geral)
+    for row in range(6, 9):
+        ws[f"A{row}"].font = data_font
+        ws[f"B{row}"].font = data_font
+        ws[f"B{row}"].alignment = right_alignment
+
+    def _rotulo_cliente(cliente):
+        cnpj_raw = getattr(cliente, "cnpj", None)
+        razao_raw = getattr(cliente, "razao_social", None)
+        cnpj = str(cnpj_raw).strip() if cnpj_raw is not None else ""
+        razao = str(razao_raw).strip() if razao_raw is not None else ""
+        if cnpj and razao:
+            return f"{cnpj} - {razao}"
+        return razao or cnpj or "—"
+
+    current_row = 10
+    nomes = nomes_estados or {}
+
+    for uf, grupo in groupby(resultados, key=lambda x: x["uf"]):
+        items = list(grupo)
+        nome_estado = nomes.get(uf, "") if isinstance(nomes, dict) else ""
+        titulo_secao = f"{uf} — {nome_estado}" if nome_estado else str(uf)
+
+        ws.merge_cells(f"A{current_row}:D{current_row}")
+        c = ws.cell(row=current_row, column=1, value=titulo_secao)
+        c.font = section_font
+        c.fill = section_fill
+        c.alignment = left_alignment
+        current_row += 1
+
+        headers = ["CLIENTE", "UF", "R$ MERCADORIA", "R$ SEGURO"]
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=current_row, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = center_alignment if col > 1 else left_alignment
+            cell.border = thin_border
+        current_row += 1
+
+        for item in items:
+            ws.cell(row=current_row, column=1, value=_rotulo_cliente(item["cliente"]))
+            ws.cell(row=current_row, column=2, value=item.get("uf") or "—")
+            ws.cell(row=current_row, column=3, value=format_brazilian_currency(item["valor_mercadoria"]))
+            ws.cell(row=current_row, column=4, value=format_brazilian_currency(item["valor_seguro"]))
+            for col in range(1, 5):
+                cell = ws.cell(row=current_row, column=col)
+                cell.font = data_font
+                cell.border = thin_border
+                cell.alignment = left_alignment if col == 1 else (center_alignment if col == 2 else right_alignment)
+                if current_row % 2 == 0:
+                    cell.fill = data_fill
+            current_row += 1
+
+        tot = totais_por_estado.get(uf) or {}
+        vm = tot.get("valor_mercadoria", Decimal("0.0"))
+        vs = tot.get("valor_seguro", Decimal("0.0"))
+        ws.merge_cells(f"A{current_row}:B{current_row}")
+        c_tot = ws.cell(row=current_row, column=1, value=f"Total {uf}")
+        c_tot.font = total_row_font
+        c_tot.alignment = left_alignment
+        ws.cell(row=current_row, column=3, value=format_brazilian_currency(vm))
+        ws.cell(row=current_row, column=4, value=format_brazilian_currency(vs))
+        for col in (3, 4):
+            cell = ws.cell(row=current_row, column=col)
+            cell.font = total_row_font
+            cell.border = thin_border
+            cell.alignment = right_alignment
+        current_row += 2
+
+    ws.merge_cells(f"A{current_row}:B{current_row}")
+    c_g = ws.cell(row=current_row, column=1, value="TOTAL GERAL")
+    c_g.font = total_row_font
+    c_g.alignment = left_alignment
+    ws.cell(row=current_row, column=3, value=format_brazilian_currency(total_geral))
+    ws.cell(row=current_row, column=4, value=format_brazilian_currency(total_seguro_geral))
+    for col in (3, 4):
+        cell = ws.cell(row=current_row, column=col)
+        cell.font = total_row_font
+        cell.border = thin_border
+        cell.alignment = right_alignment
+
+    for col, width in enumerate([48, 8, 18, 18], 1):
         ws.column_dimensions[get_column_letter(col)].width = width
 
     buffer = io.BytesIO()
