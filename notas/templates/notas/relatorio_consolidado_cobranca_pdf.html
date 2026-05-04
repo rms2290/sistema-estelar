@@ -53,99 +53,63 @@
 <div class="secao-estado">
     <table class="tabela-consolidado-cobranca">
         <colgroup>
-            {% if mostrar_colunas_restritas %}
-            <col style="width: 58%;">
+            <col style="width: 34%;">
+            <col style="width: 16%;">
             <col style="width: 12%;">
             <col style="width: 10%;">
-            <col style="width: 8%;">
-            <col style="width: 10%;">
-            {% else %}
-            <col style="width: 26%;">
             <col style="width: 10%;">
             <col style="width: 8%;">
-            <col style="width: 8%;">
             <col style="width: 10%;">
-            <col style="width: 10%;">
-            <col style="width: 8%;">
-            <col style="width: 8%;">
-            <col style="width: 9%;">
-            {% endif %}
         </colgroup>
         <thead>
             <tr>
-                {% if mostrar_colunas_restritas %}
                 <th>CLIENTE</th>
+                <th>ROMANEIO</th>
+                <th>DATA ROMANEIO</th>
                 <th>STATUS</th>
                 <th>R$ CARREG.</th>
                 <th>R$ CTE/MANIF.</th>
                 <th>R$ TOTAL</th>
-                {% else %}
-                <th>CLIENTE</th>
-                <th>STATUS</th>
-                <th>R$ CARREG.</th>
-                <th>R$ DIST. TRAB.</th>
-                <th>R$ MARGEM ESTELAR</th>
-                <th>R$ CTE/MANIF.</th>
-                <th>R$ CTE/TERC.</th>
-                <th>R$ LUCRO CTE</th>
-                <th>R$ TOTAL</th>
-                {% endif %}
             </tr>
         </thead>
         <tbody>
             {% for item in itens %}
             <tr>
-                {% if mostrar_colunas_restritas %}
                 <td class="cliente">
                     {{ item.cliente.razao_social }}
                     {% if item.origem_cobranca == 'AVULSA_CLIENTE' %}(AVULSA){% endif %}
+                </td>
+                <td class="text-center">
+                    {% for romaneio in item.romaneios.all %}
+                        {{ romaneio.codigo }}{% if not forloop.last %}, {% endif %}
+                    {% empty %}
+                        -
+                    {% endfor %}
+                </td>
+                <td class="text-center">
+                    {% for romaneio in item.romaneios.all %}
+                        {{ romaneio.data_emissao|date:"d/m/Y"|default:"-" }}{% if not forloop.last %}, {% endif %}
+                    {% empty %}
+                        -
+                    {% endfor %}
                 </td>
                 <td class="text-center">{{ item.status }}</td>
                 <td class="valor">{{ item.valor_carregamento|format_brazilian_currency }}</td>
                 <td class="valor">{{ item.valor_cte_manifesto|format_brazilian_currency }}</td>
                 <td class="valor">{{ item.valor_total|format_brazilian_currency }}</td>
-                {% else %}
-                <td class="cliente">
-                    {{ item.cliente.razao_social }}
-                    {% if item.origem_cobranca == 'AVULSA_CLIENTE' %}(AVULSA){% endif %}
-                </td>
-                <td class="text-center">{{ item.status }}</td>
-                <td class="valor">{{ item.valor_carregamento|format_brazilian_currency }}</td>
-                <td class="valor">{{ item.valor_distribuicao_trabalhadores|default:0|format_brazilian_currency }}</td>
-                <td class="valor">{{ item.margem_carregamento|format_brazilian_currency }}</td>
-                <td class="valor">{{ item.valor_cte_manifesto|format_brazilian_currency }}</td>
-                <td class="valor">{{ item.valor_cte_terceiro|format_brazilian_currency }}</td>
-                <td class="valor">{{ item.lucro_cte|format_brazilian_currency }}</td>
-                <td class="valor">{{ item.valor_total|format_brazilian_currency }}</td>
-                {% endif %}
             </tr>
             {% empty %}
             <tr>
-                {% if mostrar_colunas_restritas %}
-                <td colspan="5" class="text-center">Nenhuma cobrança encontrada para os filtros informados.</td>
-                {% else %}
-                <td colspan="9" class="text-center">Nenhuma cobrança encontrada para os filtros informados.</td>
-                {% endif %}
+                <td colspan="7" class="text-center">Nenhuma cobrança encontrada para os filtros informados.</td>
             </tr>
             {% endfor %}
         </tbody>
         <tfoot>
             <tr class="total-geral">
-                {% if mostrar_colunas_restritas %}
-                <td colspan="2">TOTAL GERAL</td>
+                <td colspan="4">TOTAL GERAL</td>
                 <td class="valor">{{ total_carregamento|format_brazilian_currency }}</td>
                 <td class="valor">{{ total_cte_manifesto|format_brazilian_currency }}</td>
                 <td class="valor">{{ total_geral|format_brazilian_currency }}</td>
-                {% else %}
-                <td colspan="2">TOTAL GERAL</td>
-                <td class="valor">{{ total_carregamento|format_brazilian_currency }}</td>
-                <td class="valor">{{ total_distribuicao|format_brazilian_currency }}</td>
-                <td class="valor">{{ total_margem_estelar|format_brazilian_currency }}</td>
-                <td class="valor">{{ total_cte_manifesto|format_brazilian_currency }}</td>
-                <td class="valor">{{ total_cte_terceiro|format_brazilian_currency }}</td>
-                <td class="valor">{{ total_lucro_cte|format_brazilian_currency }}</td>
-                <td class="valor">{{ total_geral|format_brazilian_currency }}</td>
-                {% endif %}
             </tr>
         </tfoot>
     </table>
