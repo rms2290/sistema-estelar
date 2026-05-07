@@ -31,7 +31,20 @@
                                 <label for="{{ form.cliente.id_for_label }}" class="form-label">
                                     <i class="fas fa-user"></i> {{ form.cliente.label }}:
                                 </label>
-                                {{ form.cliente }}
+                                <div class="input-group">
+                                    {{ form.cliente }}
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-secondary"
+                                        id="btnPesquisarCliente"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalPesquisarCliente"
+                                        title="Pesquisar cliente"
+                                        aria-label="Pesquisar cliente"
+                                    >
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
                                 {% if form.cliente.errors %}<div class="text-danger">{{ form.cliente.errors }}</div>{% endif %}
                             </div>
                             <div class="col-md-4 mb-3">
@@ -134,7 +147,7 @@
                                 {% if form.veiculo_principal.errors %}<div class="text-danger">{{ form.veiculo_principal.errors }}</div>{% endif %}
                             </div>
                         </div>
-                        <div class="row">
+                        <div class="row align-items-end" id="reboques-container" style="display: none;">
                             <div class="col-md-6 mb-3">
                                 <label for="{{ form.reboque_1.id_for_label }}" class="form-label">
                                     <i class="fas fa-truck-moving"></i> {{ form.reboque_1.label }}:
@@ -155,25 +168,39 @@
                                 </div>
                                 {% if form.reboque_1.errors %}<div class="text-danger">{{ form.reboque_1.errors }}</div>{% endif %}
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6 mb-3" id="reboque-2-container" style="display: none;">
                                 <label for="{{ form.reboque_2.id_for_label }}" class="form-label">
                                     <i class="fas fa-truck-moving"></i> {{ form.reboque_2.label }}:
                                 </label>
-                                <div class="input-group">
-                                    {{ form.reboque_2 }}
-                                    <button
-                                        type="button"
-                                        class="btn btn-outline-secondary"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#modalPesquisarReboque"
-                                        data-reboque-select-id="{{ form.reboque_2.id_for_label }}"
-                                        title="Pesquisar reboque"
-                                        aria-label="Pesquisar reboque"
-                                    >
-                                        <i class="fas fa-search"></i>
+                                <div class="d-flex gap-2 align-items-end">
+                                    <div class="flex-grow-1">
+                                        <div class="input-group">
+                                            {{ form.reboque_2 }}
+                                            <button
+                                                type="button"
+                                                class="btn btn-outline-secondary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#modalPesquisarReboque"
+                                                data-reboque-select-id="{{ form.reboque_2.id_for_label }}"
+                                                title="Pesquisar reboque"
+                                                aria-label="Pesquisar reboque"
+                                            >
+                                                <i class="fas fa-search"></i>
+                                            </button>
+                                        </div>
+                                        {% if form.reboque_2.errors %}<div class="text-danger">{{ form.reboque_2.errors }}</div>{% endif %}
+                                    </div>
+                                    <button type="button" id="btn-remover-reboque-2" class="btn btn-sm btn-outline-danger" title="Remover Reboque 2" style="height: 38px; flex-shrink: 0;">
+                                        <i class="fas fa-times"></i>
                                     </button>
                                 </div>
-                                {% if form.reboque_2.errors %}<div class="text-danger">{{ form.reboque_2.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="row" id="btn-adicionar-reboque-2-container" style="display: none;">
+                            <div class="col-md-6 mb-3">
+                                <button type="button" id="btn-adicionar-reboque-2" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-plus"></i> Adicionar Segundo Reboque
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -188,6 +215,78 @@
     </div>
 </div>
 
+        {# Modal: Pesquisa de cliente #}
+        <div class="modal fade" id="modalPesquisarCliente" tabindex="-1" aria-labelledby="modalPesquisarClienteLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalPesquisarClienteLabel">
+                            <i class="fas fa-search"></i> Pesquisar Cliente
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-8">
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="filtroClienteModal"
+                                    data-no-format="true"
+                                    placeholder="Pesquisar por razão social, nome fantasia ou CNPJ..."
+                                    autocomplete="off"
+                                >
+                            </div>
+                            <div class="col-md-4 text-md-end d-flex justify-content-md-end">
+                                <button type="button" class="btn btn-outline-secondary" id="btnLimparFiltroCliente">
+                                    <i class="fas fa-eraser"></i> Limpar
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle" id="tabelaClientesModal">
+                                <thead>
+                                    <tr>
+                                        <th>Razão Social</th>
+                                        <th>Nome Fantasia</th>
+                                        <th>CNPJ</th>
+                                        <th class="text-end">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for cliente in form.fields.cliente.queryset %}
+                                        <tr data-search="{{ cliente.razao_social|default:''|lower }} {{ cliente.nome_fantasia|default:''|lower }} {{ cliente.cnpj|default:''|lower }}">
+                                            <td>{{ cliente.razao_social }}</td>
+                                            <td>{{ cliente.nome_fantasia|default:'-' }}</td>
+                                            <td>{{ cliente.cnpj|default:'-' }}</td>
+                                            <td class="text-end">
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-sm btn-primary btn-selecionar-cliente"
+                                                    data-cliente-id="{{ cliente.id }}"
+                                                    data-cliente-nome="{{ cliente.razao_social }}"
+                                                >
+                                                    <i class="fas fa-check"></i> Selecionar
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-3">Nenhum cliente ativo encontrado.</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <small class="text-muted me-auto">Dica: clique em "Selecionar" para preencher o campo Cliente.</small>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {% include 'notas/partials/modais_pesquisa_motorista_veiculo_romaneio.html' %}
 
     <script>
@@ -198,6 +297,123 @@
             const notasFiscaisDiv = document.getElementById('notas-fiscais-container');
             const pesoTotalSpan = document.getElementById('total-peso');
             const valorTotalSpan = document.getElementById('total-valor');
+            const reboquesContainer = document.getElementById('reboques-container');
+            const reboque1Select = document.getElementById('id_reboque_1');
+            const reboque2Container = document.getElementById('reboque-2-container');
+            const reboque2Select = document.getElementById('id_reboque_2');
+            const btnAdicionarReboque2Container = document.getElementById('btn-adicionar-reboque-2-container');
+            const btnAdicionarReboque2 = document.getElementById('btn-adicionar-reboque-2');
+
+            // Reboques só são liberados se o veículo principal for do tipo Cavalo
+            function verificarTipoVeiculo() {
+                if (!veiculoPrincipalSelect || !veiculoPrincipalSelect.value) {
+                    if (reboquesContainer) reboquesContainer.style.display = 'none';
+                    if (reboque1Select) reboque1Select.disabled = true;
+                    if (reboque2Container) reboque2Container.style.display = 'none';
+                    if (reboque2Select) reboque2Select.disabled = true;
+                    if (btnAdicionarReboque2Container) btnAdicionarReboque2Container.style.display = 'none';
+                    return;
+                }
+
+                const veiculoId = veiculoPrincipalSelect.value;
+                const url = `/notas/api/veiculo/${veiculoId}/tipo/`;
+
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        const tipoVeiculo = (data.tipo_unidade || '').toLowerCase().trim();
+
+                        if (tipoVeiculo === 'cavalo') {
+                            if (reboquesContainer) reboquesContainer.style.display = 'flex';
+                            if (reboque1Select) {
+                                reboque1Select.disabled = false;
+                                reboque1Select.required = false;
+                            }
+                            if (reboque1Select && reboque1Select.value) {
+                                if (btnAdicionarReboque2Container) btnAdicionarReboque2Container.style.display = 'block';
+                            } else {
+                                if (btnAdicionarReboque2Container) btnAdicionarReboque2Container.style.display = 'none';
+                                if (reboque2Container) reboque2Container.style.display = 'none';
+                                if (reboque2Select) {
+                                    reboque2Select.disabled = true;
+                                    reboque2Select.value = '';
+                                }
+                            }
+                        } else {
+                            if (reboquesContainer) reboquesContainer.style.display = 'none';
+                            if (reboque1Select) {
+                                reboque1Select.disabled = true;
+                                reboque1Select.value = '';
+                            }
+                            if (reboque2Container) reboque2Container.style.display = 'none';
+                            if (reboque2Select) {
+                                reboque2Select.disabled = true;
+                                reboque2Select.value = '';
+                            }
+                            if (btnAdicionarReboque2Container) btnAdicionarReboque2Container.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro ao buscar tipo do veículo:', error);
+                        if (reboquesContainer) reboquesContainer.style.display = 'none';
+                        if (reboque1Select) reboque1Select.disabled = true;
+                        if (reboque2Container) reboque2Container.style.display = 'none';
+                        if (reboque2Select) reboque2Select.disabled = true;
+                    });
+            }
+
+            if (reboque1Select) reboque1Select.disabled = true;
+            if (reboque2Select) reboque2Select.disabled = true;
+
+            if (veiculoPrincipalSelect) {
+                veiculoPrincipalSelect.addEventListener('change', verificarTipoVeiculo);
+                if (veiculoPrincipalSelect.value) {
+                    verificarTipoVeiculo();
+                }
+            }
+
+            if (reboque1Select) {
+                reboque1Select.addEventListener('change', function() {
+                    if (this.value) {
+                        if (btnAdicionarReboque2Container) btnAdicionarReboque2Container.style.display = 'block';
+                    } else {
+                        if (btnAdicionarReboque2Container) btnAdicionarReboque2Container.style.display = 'none';
+                        if (reboque2Container) reboque2Container.style.display = 'none';
+                        if (reboque2Select) {
+                            reboque2Select.disabled = true;
+                            reboque2Select.value = '';
+                        }
+                    }
+                });
+            }
+
+            if (btnAdicionarReboque2) {
+                btnAdicionarReboque2.addEventListener('click', function() {
+                    if (reboque2Container) reboque2Container.style.display = 'block';
+                    if (reboque2Select) {
+                        reboque2Select.disabled = false;
+                        reboque2Select.required = false;
+                    }
+                    if (btnAdicionarReboque2Container) btnAdicionarReboque2Container.style.display = 'none';
+                });
+            }
+
+            const btnRemoverReboque2 = document.getElementById('btn-remover-reboque-2');
+            if (btnRemoverReboque2) {
+                btnRemoverReboque2.addEventListener('click', function() {
+                    if (reboque2Select) {
+                        reboque2Select.value = '';
+                        reboque2Select.disabled = true;
+                    }
+                    if (reboque2Container) reboque2Container.style.display = 'none';
+                    if (btnAdicionarReboque2Container) btnAdicionarReboque2Container.style.display = 'block';
+                });
+            }
 
             function normalizarTextoBusca(valor) {
                 return (valor || '')
@@ -419,6 +635,72 @@
                 modalPesquisarReboque.addEventListener('hidden.bs.modal', function() {
                     filtroReboqueModal.value = '';
                     aplicarFiltroReboques();
+                });
+            }
+
+            // Pesquisa e seleção de cliente no modal
+            const modalPesquisarCliente = document.getElementById('modalPesquisarCliente');
+            const filtroClienteModal = document.getElementById('filtroClienteModal');
+            const btnLimparFiltroCliente = document.getElementById('btnLimparFiltroCliente');
+            const linhasClienteModal = Array.from(document.querySelectorAll('#tabelaClientesModal tbody tr[data-search]'));
+
+            function aplicarFiltroClientes() {
+                const termo = normalizarTextoBusca(filtroClienteModal?.value || '');
+                let encontrouResultado = false;
+                linhasClienteModal.forEach((linha) => {
+                    const textoBusca = obterTextoBuscaLinha(linha);
+                    const deveMostrar = !termo || textoBusca.includes(termo);
+                    linha.style.display = deveMostrar ? '' : 'none';
+                    if (deveMostrar) encontrouResultado = true;
+                });
+                const tbodyCli = document.querySelector('#tabelaClientesModal tbody');
+                let linhaSemCli = document.getElementById('linhaSemResultadoCliente');
+                if (tbodyCli) {
+                    if (!encontrouResultado && termo) {
+                        if (!linhaSemCli) {
+                            linhaSemCli = document.createElement('tr');
+                            linhaSemCli.id = 'linhaSemResultadoCliente';
+                            linhaSemCli.innerHTML = '<td colspan="4" class="text-center text-muted py-3">Nenhum cliente encontrado para a pesquisa digitada.</td>';
+                            tbodyCli.appendChild(linhaSemCli);
+                        }
+                    } else if (linhaSemCli) {
+                        linhaSemCli.remove();
+                    }
+                }
+            }
+
+            if (filtroClienteModal) {
+                filtroClienteModal.addEventListener('input', aplicarFiltroClientes);
+                filtroClienteModal.addEventListener('keyup', aplicarFiltroClientes);
+                filtroClienteModal.addEventListener('change', aplicarFiltroClientes);
+            }
+            if (btnLimparFiltroCliente && filtroClienteModal) {
+                btnLimparFiltroCliente.addEventListener('click', function() {
+                    filtroClienteModal.value = '';
+                    aplicarFiltroClientes();
+                    filtroClienteModal.focus();
+                });
+            }
+            document.querySelectorAll('.btn-selecionar-cliente').forEach((btn) => {
+                btn.addEventListener('click', function() {
+                    if (clienteSelect) {
+                        clienteSelect.value = this.dataset.clienteId || '';
+                        clienteSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    if (modalPesquisarCliente) {
+                        const inst = bootstrap.Modal.getInstance(modalPesquisarCliente);
+                        if (inst) inst.hide();
+                    }
+                });
+            });
+            if (modalPesquisarCliente && filtroClienteModal) {
+                modalPesquisarCliente.addEventListener('shown.bs.modal', function() {
+                    filtroClienteModal.focus();
+                    aplicarFiltroClientes();
+                });
+                modalPesquisarCliente.addEventListener('hidden.bs.modal', function() {
+                    filtroClienteModal.value = '';
+                    aplicarFiltroClientes();
                 });
             }
 

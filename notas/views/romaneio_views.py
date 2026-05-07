@@ -325,12 +325,14 @@ def detalhes_romaneio(request, pk):
 @login_required
 def listar_romaneios(request):
     """Lista todos os romaneios com filtros de busca"""
-    # Sem querystring: já listar romaneios com status "Salvo" (fluxo mais comum).
-    # Use ?status= (vazio) no "Limpar filtros" para ver todos os status.
-    if not request.GET:
-        filter_get = request.GET.copy()
-        filter_get['status'] = 'Salvo'
-        search_form = RomaneioSearchForm(filter_get)
+    # Sem querystring (carga inicial): mostra os 10 romaneios mais recentes
+    # de qualquer status. Ao aplicar filtros (inclusive "Limpar Filtros"
+    # com ?status= vazio), o limite é removido.
+    is_initial_load = not request.GET
+    LIMITE_INICIAL = 10
+
+    if is_initial_load:
+        search_form = RomaneioSearchForm()
         search_performed = True
     else:
         search_form = RomaneioSearchForm(request.GET)
@@ -338,7 +340,7 @@ def listar_romaneios(request):
 
     romaneios = RomaneioViagem.objects.none()
 
-    if search_performed and search_form.is_valid():
+    if search_performed:
         # Otimizar query com select_related para evitar N+1
         # Filtrar por cliente se usuário for cliente
         if request.user.is_cliente and request.user.cliente:
@@ -351,41 +353,48 @@ def listar_romaneios(request):
             queryset = RomaneioViagem.objects.select_related(
                 'cliente', 'motorista', 'veiculo_principal'
             ).prefetch_related('notas_fiscais')
-        codigo = search_form.cleaned_data.get('codigo')
-        tipo_romaneio = search_form.cleaned_data.get('tipo_romaneio')
-        cliente = search_form.cleaned_data.get('cliente')
-        motorista = search_form.cleaned_data.get('motorista')
-        veiculo_principal = search_form.cleaned_data.get('veiculo_principal')
-        status = search_form.cleaned_data.get('status')
-        data_inicio = search_form.cleaned_data.get('data_inicio')
-        data_fim = search_form.cleaned_data.get('data_fim')
-        
-        if codigo:
-            queryset = queryset.filter(codigo__icontains=codigo)
-        if tipo_romaneio:
-            if tipo_romaneio == 'normal':
-                queryset = queryset.filter(codigo__startswith='ROM-').exclude(codigo__startswith='ROM-100-')
-            elif tipo_romaneio == 'generico':
-                queryset = queryset.filter(codigo__startswith='ROM-100-')
-        if cliente:
-            queryset = queryset.filter(cliente=cliente)
-        if motorista:
-            queryset = queryset.filter(motorista=motorista)
-        if veiculo_principal:
-            queryset = queryset.filter(veiculo_principal=veiculo_principal)
-        if status:
-            queryset = queryset.filter(status=status)
-        if data_inicio:
-            queryset = queryset.filter(data_emissao__date__gte=data_inicio)
-        if data_fim:
-            queryset = queryset.filter(data_emissao__date__lte=data_fim)
-        
+
+        if not is_initial_load and search_form.is_valid():
+            codigo = search_form.cleaned_data.get('codigo')
+            tipo_romaneio = search_form.cleaned_data.get('tipo_romaneio')
+            cliente = search_form.cleaned_data.get('cliente')
+            motorista = search_form.cleaned_data.get('motorista')
+            veiculo_principal = search_form.cleaned_data.get('veiculo_principal')
+            status = search_form.cleaned_data.get('status')
+            data_inicio = search_form.cleaned_data.get('data_inicio')
+            data_fim = search_form.cleaned_data.get('data_fim')
+
+            if codigo:
+                queryset = queryset.filter(codigo__icontains=codigo)
+            if tipo_romaneio:
+                if tipo_romaneio == 'normal':
+                    queryset = queryset.filter(codigo__startswith='ROM-').exclude(codigo__startswith='ROM-100-')
+                elif tipo_romaneio == 'generico':
+                    queryset = queryset.filter(codigo__startswith='ROM-100-')
+            if cliente:
+                queryset = queryset.filter(cliente=cliente)
+            if motorista:
+                queryset = queryset.filter(motorista=motorista)
+            if veiculo_principal:
+                queryset = queryset.filter(veiculo_principal=veiculo_principal)
+            if status:
+                queryset = queryset.filter(status=status)
+            if data_inicio:
+                queryset = queryset.filter(data_emissao__date__gte=data_inicio)
+            if data_fim:
+                queryset = queryset.filter(data_emissao__date__lte=data_fim)
+
         romaneios = queryset.order_by('-data_emissao', '-codigo')
-    
+
+        if is_initial_load:
+            romaneios = romaneios[:LIMITE_INICIAL]
+
     context = {
         'romaneios': romaneios,
         'search_form': search_form,
         'search_performed': search_performed,
+        'is_initial_load': is_initial_load,
+        'limite_inicial': LIMITE_INICIAL,
     }
     return render(request, 'notas/listar_romaneios.html', context)
 

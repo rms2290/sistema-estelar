@@ -31,13 +31,37 @@
                         <label for="{{ search_form.cliente.id_for_label }}" class="form-label">
                             <i class="fas fa-building"></i> {{ search_form.cliente.label }}
                         </label>
-                        {{ search_form.cliente }}
+                        <div class="input-group">
+                            {{ search_form.cliente }}
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalPesquisarCliente"
+                                title="Pesquisar cliente"
+                                aria-label="Pesquisar cliente"
+                            >
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="col-md-3 mb-3">
                         <label for="{{ search_form.motorista.id_for_label }}" class="form-label">
                             <i class="fas fa-user"></i> {{ search_form.motorista.label }}
                         </label>
-                        {{ search_form.motorista }}
+                        <div class="input-group">
+                            {{ search_form.motorista }}
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalPesquisarMotorista"
+                                title="Pesquisar motorista"
+                                aria-label="Pesquisar motorista"
+                            >
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="row">
@@ -45,7 +69,19 @@
                         <label for="{{ search_form.veiculo_principal.id_for_label }}" class="form-label">
                             <i class="fas fa-truck"></i> {{ search_form.veiculo_principal.label }}
                         </label>
-                        {{ search_form.veiculo_principal }}
+                        <div class="input-group">
+                            {{ search_form.veiculo_principal }}
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalPesquisarVeiculoPrincipal"
+                                title="Pesquisar veículo principal"
+                                aria-label="Pesquisar veículo principal"
+                            >
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="col-md-3 mb-3">
                         <label for="{{ search_form.status.id_for_label }}" class="form-label">
@@ -91,6 +127,12 @@
 
     {# Exibição dos resultados #}
     {% if romaneios %}
+        {% if is_initial_load %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                Exibindo os <strong>{{ limite_inicial }}</strong> romaneios mais recentes (qualquer status). Use os filtros acima para refinar a pesquisa.
+            </div>
+        {% endif %}
         <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead>
@@ -143,4 +185,271 @@
         <a href="{% url 'notas:adicionar_romaneio' %}" class="btn btn-primary">Preparar Novo Romaneio</a>
         <a href="{% url 'notas:adicionar_romaneio_generico' %}" class="btn btn-success">Preparar Romaneio Genérico</a>
     </div>
+</div>
+
+{% include 'notas/partials/_modal_pesquisar_cliente.html' with clientes=search_form.fields.cliente.queryset %}
+{% include 'notas/partials/_script_modal_pesquisar_cliente.html' %}
+
+{# Modal: Pesquisa de Motorista #}
+<div class="modal fade" id="modalPesquisarMotorista" tabindex="-1" aria-labelledby="modalPesquisarMotoristaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalPesquisarMotoristaLabel">
+                    <i class="fas fa-search"></i> Pesquisar Motorista
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-3">
+                    <div class="col-md-8">
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="filtroMotoristaModal"
+                            data-no-format="true"
+                            placeholder="Pesquisar por nome, CPF, CNH, RG ou telefone..."
+                            autocomplete="off"
+                        >
+                    </div>
+                    <div class="col-md-4 text-md-end d-flex justify-content-md-end">
+                        <button type="button" class="btn btn-outline-secondary" id="btnLimparFiltroMotorista">
+                            <i class="fas fa-eraser"></i> Limpar
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle" id="tabelaMotoristasModal">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>CPF</th>
+                                <th>CNH</th>
+                                <th class="text-end">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in search_form.fields.motorista.queryset %}
+                                <tr data-search="{{ m.nome|default:''|lower }} {{ m.cpf|default:''|lower }} {{ m.cnh|default:''|lower }} {{ m.rg|default:''|lower }} {{ m.telefone|default:''|lower }}">
+                                    <td>{{ m.nome }}</td>
+                                    <td>{{ m.cpf|default:'-' }}</td>
+                                    <td>{{ m.cnh|default:'-' }}</td>
+                                    <td class="text-end">
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-primary btn-selecionar-motorista"
+                                            data-motorista-id="{{ m.id }}"
+                                        >
+                                            <i class="fas fa-check"></i> Selecionar
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">Nenhum motorista cadastrado.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <small class="text-muted me-auto">Dica: clique em "Selecionar" para preencher o campo Motorista.</small>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Modal: Pesquisa de Veículo Principal #}
+<div class="modal fade" id="modalPesquisarVeiculoPrincipal" tabindex="-1" aria-labelledby="modalPesquisarVeiculoPrincipalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalPesquisarVeiculoPrincipalLabel">
+                    <i class="fas fa-search"></i> Pesquisar Veículo Principal
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-3">
+                    <div class="col-md-8">
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="filtroVeiculoPrincipalModal"
+                            data-no-format="true"
+                            placeholder="Pesquisar por placa, tipo, marca, modelo, chassi ou renavam..."
+                            autocomplete="off"
+                        >
+                    </div>
+                    <div class="col-md-4 text-md-end d-flex justify-content-md-end">
+                        <button type="button" class="btn btn-outline-secondary" id="btnLimparFiltroVeiculoPrincipal">
+                            <i class="fas fa-eraser"></i> Limpar
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle" id="tabelaVeiculosPrincipalModal">
+                        <thead>
+                            <tr>
+                                <th>Placa</th>
+                                <th>Tipo</th>
+                                <th>Marca / Modelo</th>
+                                <th class="text-end">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for v in search_form.fields.veiculo_principal.queryset %}
+                                <tr data-search="{{ v.placa|default:''|lower }} {{ v.tipo_unidade|default:''|lower }} {{ v.marca|default:''|lower }} {{ v.modelo|default:''|lower }} {{ v.chassi|default:''|lower }} {{ v.renavam|default:''|lower }}">
+                                    <td>{{ v.placa }}</td>
+                                    <td>{{ v.get_tipo_unidade_display }}</td>
+                                    <td>
+                                        {% if v.marca or v.modelo %}
+                                            {{ v.marca|default:'' }} {{ v.modelo|default:'' }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-primary btn-selecionar-veiculo-principal"
+                                            data-veiculo-id="{{ v.id }}"
+                                        >
+                                            <i class="fas fa-check"></i> Selecionar
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">Nenhum veículo cadastrado.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <small class="text-muted me-auto">Dica: clique em "Selecionar" para preencher o campo Veículo Principal.</small>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function normalizarTextoBusca(valor) {
+        return (valor || '')
+            .toString()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^\w\s]/g, '')
+            .trim();
+    }
+
+    function obterTextoBuscaLinha(linha) {
+        const textoDataset = linha.dataset.search || '';
+        const textoCols = Array.from(linha.querySelectorAll('td'))
+            .slice(0, 3)
+            .map((col) => col.textContent || '')
+            .join(' ');
+        return normalizarTextoBusca(`${textoDataset} ${textoCols}`);
+    }
+
+    function configurarPesquisaModal({ modalId, inputId, btnLimparId, tabelaId, btnSelecionarClass, targetSelectId, dataAttr, semResultadoId, semResultadoMsg }) {
+        const modal = document.getElementById(modalId);
+        const input = document.getElementById(inputId);
+        const btnLimpar = document.getElementById(btnLimparId);
+        const linhas = Array.from(document.querySelectorAll(`#${tabelaId} tbody tr[data-search]`));
+        const targetSelect = document.getElementById(targetSelectId);
+
+        function aplicarFiltro() {
+            const termo = normalizarTextoBusca(input?.value || '');
+            let encontrou = false;
+            linhas.forEach((linha) => {
+                const texto = obterTextoBuscaLinha(linha);
+                const mostra = !termo || texto.includes(termo);
+                linha.style.display = mostra ? '' : 'none';
+                if (mostra) encontrou = true;
+            });
+            const tbody = document.querySelector(`#${tabelaId} tbody`);
+            let linhaSem = document.getElementById(semResultadoId);
+            if (tbody) {
+                if (!encontrou && termo) {
+                    if (!linhaSem) {
+                        linhaSem = document.createElement('tr');
+                        linhaSem.id = semResultadoId;
+                        linhaSem.innerHTML = `<td colspan="4" class="text-center text-muted py-3">${semResultadoMsg}</td>`;
+                        tbody.appendChild(linhaSem);
+                    }
+                } else if (linhaSem) {
+                    linhaSem.remove();
+                }
+            }
+        }
+
+        if (input) {
+            input.addEventListener('input', aplicarFiltro);
+            input.addEventListener('keyup', aplicarFiltro);
+            input.addEventListener('change', aplicarFiltro);
+        }
+        if (btnLimpar && input) {
+            btnLimpar.addEventListener('click', function() {
+                input.value = '';
+                aplicarFiltro();
+                input.focus();
+            });
+        }
+        document.querySelectorAll(`.${btnSelecionarClass}`).forEach((btn) => {
+            btn.addEventListener('click', function() {
+                if (targetSelect) {
+                    targetSelect.value = this.dataset[dataAttr] || '';
+                    targetSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (modal) {
+                    const inst = bootstrap.Modal.getInstance(modal);
+                    if (inst) inst.hide();
+                }
+            });
+        });
+        if (modal && input) {
+            modal.addEventListener('shown.bs.modal', function() {
+                input.focus();
+                aplicarFiltro();
+            });
+            modal.addEventListener('hidden.bs.modal', function() {
+                input.value = '';
+                aplicarFiltro();
+            });
+        }
+    }
+
+    configurarPesquisaModal({
+        modalId: 'modalPesquisarMotorista',
+        inputId: 'filtroMotoristaModal',
+        btnLimparId: 'btnLimparFiltroMotorista',
+        tabelaId: 'tabelaMotoristasModal',
+        btnSelecionarClass: 'btn-selecionar-motorista',
+        targetSelectId: 'id_motorista',
+        dataAttr: 'motoristaId',
+        semResultadoId: 'linhaSemResultadoMotorista',
+        semResultadoMsg: 'Nenhum motorista encontrado para a pesquisa digitada.'
+    });
+
+    configurarPesquisaModal({
+        modalId: 'modalPesquisarVeiculoPrincipal',
+        inputId: 'filtroVeiculoPrincipalModal',
+        btnLimparId: 'btnLimparFiltroVeiculoPrincipal',
+        tabelaId: 'tabelaVeiculosPrincipalModal',
+        btnSelecionarClass: 'btn-selecionar-veiculo-principal',
+        targetSelectId: 'id_veiculo_principal',
+        dataAttr: 'veiculoId',
+        semResultadoId: 'linhaSemResultadoVeiculoPrincipal',
+        semResultadoMsg: 'Nenhum veículo encontrado para a pesquisa digitada.'
+    });
+});
+</script>
 {% endblock %}

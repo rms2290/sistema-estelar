@@ -1,0 +1,96 @@
+{% comment %}
+Script auxiliar do modal de pesquisa de cliente.
+Pre-requisito: o HTML do _modal_pesquisar_cliente.html deve estar presente na pagina.
+Atua sobre: <select id="id_cliente"> da pagina, disparando 'change' ao selecionar
+um cliente para que listeners adicionais (ex.: carregar notas fiscais) sejam acionados.
+{% endcomment %}
+<script>
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        const modalEl = document.getElementById('modalPesquisarCliente');
+        if (!modalEl) return;
+
+        const clienteSelect = document.getElementById('id_cliente');
+        const filtroInput = document.getElementById('filtroClienteModal');
+        const btnLimpar = document.getElementById('btnLimparFiltroCliente');
+        const linhas = Array.from(document.querySelectorAll('#tabelaClientesModal tbody tr[data-search]'));
+
+        function normalizar(valor) {
+            return (valor || '')
+                .toString()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .replace(/[^\w\s]/g, '')
+                .trim();
+        }
+
+        function obterTextoLinha(linha) {
+            const dataset = linha.dataset.search || '';
+            const cols = Array.from(linha.querySelectorAll('td'))
+                .slice(0, 3)
+                .map((c) => c.textContent || '')
+                .join(' ');
+            return normalizar(dataset + ' ' + cols);
+        }
+
+        function aplicarFiltro() {
+            const termo = normalizar(filtroInput?.value || '');
+            let encontrou = false;
+            linhas.forEach((linha) => {
+                const texto = obterTextoLinha(linha);
+                const mostra = !termo || texto.includes(termo);
+                linha.style.display = mostra ? '' : 'none';
+                if (mostra) encontrou = true;
+            });
+            const tbody = document.querySelector('#tabelaClientesModal tbody');
+            let linhaSem = document.getElementById('linhaSemResultadoCliente');
+            if (tbody) {
+                if (!encontrou && termo) {
+                    if (!linhaSem) {
+                        linhaSem = document.createElement('tr');
+                        linhaSem.id = 'linhaSemResultadoCliente';
+                        linhaSem.innerHTML = '<td colspan="4" class="text-center text-muted py-3">Nenhum cliente encontrado para a pesquisa digitada.</td>';
+                        tbody.appendChild(linhaSem);
+                    }
+                } else if (linhaSem) {
+                    linhaSem.remove();
+                }
+            }
+        }
+
+        if (filtroInput) {
+            filtroInput.addEventListener('input', aplicarFiltro);
+            filtroInput.addEventListener('keyup', aplicarFiltro);
+            filtroInput.addEventListener('change', aplicarFiltro);
+        }
+        if (btnLimpar && filtroInput) {
+            btnLimpar.addEventListener('click', function() {
+                filtroInput.value = '';
+                aplicarFiltro();
+                filtroInput.focus();
+            });
+        }
+        document.querySelectorAll('.btn-selecionar-cliente').forEach((btn) => {
+            btn.addEventListener('click', function() {
+                if (clienteSelect) {
+                    clienteSelect.value = this.dataset.clienteId || '';
+                    clienteSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                const inst = bootstrap.Modal.getInstance(modalEl);
+                if (inst) inst.hide();
+            });
+        });
+        if (filtroInput) {
+            modalEl.addEventListener('shown.bs.modal', function() {
+                filtroInput.focus();
+                aplicarFiltro();
+            });
+            modalEl.addEventListener('hidden.bs.modal', function() {
+                filtroInput.value = '';
+                aplicarFiltro();
+            });
+        }
+    });
+})();
+</script>

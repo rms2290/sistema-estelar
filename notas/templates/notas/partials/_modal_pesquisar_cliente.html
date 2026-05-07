@@ -1,0 +1,77 @@
+{% comment %}
+Modal de pesquisa de cliente.
+Espera o contexto:
+  clientes - queryset/iteravel de objetos Cliente com .id, .razao_social, .nome_fantasia, .cnpj
+Uso tipico:
+  include do partial com `with clientes=form.fields.cliente.queryset`
+  ou com `with clientes=search_form.fields.cliente.queryset`
+{% endcomment %}
+<div class="modal fade" id="modalPesquisarCliente" tabindex="-1" aria-labelledby="modalPesquisarClienteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalPesquisarClienteLabel">
+                    <i class="fas fa-search"></i> Pesquisar Cliente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-3">
+                    <div class="col-md-8">
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="filtroClienteModal"
+                            data-no-format="true"
+                            placeholder="Pesquisar por razão social, nome fantasia ou CNPJ..."
+                            autocomplete="off"
+                        >
+                    </div>
+                    <div class="col-md-4 text-md-end d-flex justify-content-md-end">
+                        <button type="button" class="btn btn-outline-secondary" id="btnLimparFiltroCliente">
+                            <i class="fas fa-eraser"></i> Limpar
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle" id="tabelaClientesModal">
+                        <thead>
+                            <tr>
+                                <th>Razão Social</th>
+                                <th>Nome Fantasia</th>
+                                <th>CNPJ</th>
+                                <th class="text-end">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cliente in clientes %}
+                                <tr data-search="{{ cliente.razao_social|default:''|lower }} {{ cliente.nome_fantasia|default:''|lower }} {{ cliente.cnpj|default:''|lower }}">
+                                    <td>{{ cliente.razao_social }}</td>
+                                    <td>{{ cliente.nome_fantasia|default:'-' }}</td>
+                                    <td>{{ cliente.cnpj|default:'-' }}</td>
+                                    <td class="text-end">
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-primary btn-selecionar-cliente"
+                                            data-cliente-id="{{ cliente.id }}"
+                                        >
+                                            <i class="fas fa-check"></i> Selecionar
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">Nenhum cliente ativo encontrado.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <small class="text-muted me-auto">Dica: clique em "Selecionar" para preencher o campo Cliente.</small>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>

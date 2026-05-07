@@ -21,7 +21,19 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     {{ search_form.cliente.label_tag }}
-                                    {{ search_form.cliente }}
+                                    <div class="input-group">
+                                        {{ search_form.cliente }}
+                                        <button
+                                            type="button"
+                                            class="btn btn-outline-secondary"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalPesquisarCliente"
+                                            title="Pesquisar cliente"
+                                            aria-label="Pesquisar cliente"
+                                        >
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                    </div>
                                     {% if search_form.cliente.errors %}
                                         <div class="text-danger small">
                                             <i class="fas fa-exclamation-circle"></i>
@@ -183,4 +195,8 @@
                     {% endif %}
                 </div>
             </div>
+</div>
+
+{% include 'notas/partials/_modal_pesquisar_cliente.html' with clientes=search_form.fields.cliente.queryset %}
+{% include 'notas/partials/_script_modal_pesquisar_cliente.html' %}
 {% endblock %} 
