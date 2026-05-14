@@ -36,7 +36,7 @@
                         <a href="{% url 'notas:detalhes_nota_fiscal' nota.pk %}" class="btn btn-secondary">
                             <i class="fas fa-times"></i> Cancelar
                         </a>
-                        <button type="button" class="btn btn-danger" id="btnExcluirNota" data-pk="{{ nota.pk }}">
+                        <button type="button" class="btn btn-danger" id="btnExcluirNota">
                             <i class="fas fa-trash"></i> Sim, Excluir
                         </button>
                     </div>
@@ -67,6 +67,7 @@
 
 {% block extra_js %}
 <script>
+{% url 'notas:excluir_nota_fiscal' nota.pk as url_excluir_nota %}
 document.addEventListener('DOMContentLoaded', function() {
     const btnExcluir = document.getElementById('btnExcluirNota');
     const modal = new bootstrap.Modal(document.getElementById('modalAutenticacaoAdmin'));
@@ -76,8 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const mensagemErro = document.getElementById('mensagemErro');
     const formExcluir = document.getElementById('formExcluirNota');
     const isAdmin = {{ user.is_admin|yesno:"true,false" }};
-    const pk = btnExcluir ? btnExcluir.getAttribute('data-pk') : null;
-    const urlExcluir = pk ? `/notas/excluir/${pk}/` : '';
+    const urlExcluir = "{{ url_excluir_nota|escapejs }}";
 
     // Limpar erros ao abrir o modal
     document.getElementById('modalAutenticacaoAdmin').addEventListener('show.bs.modal', function() {

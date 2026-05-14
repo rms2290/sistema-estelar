@@ -159,7 +159,7 @@
             <a href="{% url 'notas:editar_nota_fiscal' nota.pk %}" class="btn btn-warning me-2">
                 <i class="fas fa-edit"></i> Editar Nota
             </a>
-            <button type="button" class="btn btn-danger me-2" id="btnExcluirNotaDetalhes" data-pk="{{ nota.pk }}">
+            <button type="button" class="btn btn-danger me-2" id="btnExcluirNotaDetalhes">
                 <i class="fas fa-trash"></i> Excluir Nota
             </button>
         {% endif %}
@@ -232,6 +232,7 @@
 
 {% block extra_js %}
 <script>
+{% url 'notas:excluir_nota_fiscal' nota.pk as url_excluir_nota %}
 document.addEventListener('DOMContentLoaded', function() {
     const btnExcluir = document.getElementById('btnExcluirNotaDetalhes');
     if (!btnExcluir) return;
@@ -243,8 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const mensagemErro = document.getElementById('mensagemErro');
     const formExcluir = document.getElementById('formExcluirNotaDetalhes');
     const isAdmin = {{ user.is_admin|yesno:"true,false" }};
-    const pk = btnExcluir.getAttribute('data-pk');
-    const urlExcluir = `/notas/excluir/${pk}/`;
+    const urlExcluir = "{{ url_excluir_nota|escapejs }}";
 
     // Limpar erros ao abrir o modal
     document.getElementById('modalAutenticacaoAdmin').addEventListener('show.bs.modal', function() {
