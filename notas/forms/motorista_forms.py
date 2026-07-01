@@ -54,9 +54,15 @@ class MotoristaForm(forms.ModelForm):
     
     codigo_seguranca = UpperCaseCharField(
         label='Código de Segurança CNH',
-        max_length=10,
+        max_length=12,
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'maxlength': '12',
+            'data-no-format': 'true',
+            'data-max-codigo-cnh': '12',
+            'autocomplete': 'off',
+        })
     )
     
     telefone = forms.CharField(
@@ -335,6 +341,12 @@ class MotoristaSearchForm(forms.Form):
         max_length=20,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'RG/RNE'})
     )
+
+    def clean_cpf(self):
+        cpf = self.cleaned_data.get('cpf')
+        if not cpf:
+            return cpf
+        return re.sub(r'[^0-9]', '', cpf)
 
 
 class HistoricoConsultaForm(forms.ModelForm):

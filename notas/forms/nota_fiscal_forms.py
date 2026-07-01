@@ -43,8 +43,12 @@ class NotaFiscalForm(forms.ModelForm):
     fornecedor = UpperCaseCharField(
         label='Fornecedor',
         required=True,
-        max_length=200,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome do Fornecedor'})
+        max_length=40,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Nome do Fornecedor',
+            'maxlength': '40',
+        })
     )
     
     mercadoria = UpperCaseCharField(

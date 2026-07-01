@@ -140,14 +140,13 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const clienteForm = document.getElementById('clienteForm');
-            const salvarEAdicionarBtn = document.querySelector('button[name="salvar_e_adicionar"]');
+            const salvarBtn = document.querySelector('button[name="salvar_e_sair"]');
 
-            if (clienteForm && salvarEAdicionarBtn) {
+            if (clienteForm && salvarBtn) {
                 clienteForm.addEventListener('keydown', function(event) {
-                    // Verifica se a tecla Enter foi pressionada e não é em um textarea
                     if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
-                        event.preventDefault(); // Impede o envio padrão do formulário (que seria o primeiro botão submit)
-                        salvarEAdicionarBtn.click(); // Simula o clique no botão "Salvar e Adicionar +"
+                        event.preventDefault();
+                        salvarBtn.click();
                     }
                 });
             }

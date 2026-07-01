@@ -9,8 +9,7 @@ from django.contrib import messages
 from sistema_estelar.api_utils import json_success, json_error
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import user_passes_test
-from django.db.models import Sum, Count, IntegerField
-from django.db.models.functions import Cast
+from django.db.models import Sum, Count
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
@@ -20,6 +19,7 @@ from ..models import NotaFiscal, CobrancaCarregamento, OcorrenciaNotaFiscal, Cli
 from ..forms import NotaFiscalForm, NotaFiscalSearchForm, MercadoriaDepositoSearchForm
 from ..decorators import rate_limit_critical
 from ..utils.date_utils import parse_date_iso
+from ..utils.nota_ordering import ordenar_queryset_notas_por_numero
 from .base import is_cliente
 
 # Configurar logger
@@ -289,7 +289,7 @@ def listar_notas_fiscais(request):
         if status:
             queryset = queryset.filter(status=status)
         
-        notas_fiscais = queryset.order_by('nota')
+        notas_fiscais = ordenar_queryset_notas_por_numero(queryset).select_related('cliente')
     
     context = {
         'notas_fiscais': notas_fiscais,
@@ -437,10 +437,8 @@ def pesquisar_mercadorias_deposito(request):
         if data_fim:
             queryset = queryset.filter(data__lte=data_fim)
         
-        # Ordenar numericamente pela NF em ordem crescente (campo nota é CharField)
-        mercadorias = queryset.annotate(
-            nota_numero=Cast('nota', IntegerField())
-        ).order_by('nota_numero', 'nota')
+        # Ordenar numericamente pelo número da NF (campo nota é CharField)
+        mercadorias = ordenar_queryset_notas_por_numero(queryset).select_related('cliente')
         
         # Calcular totais
         if mercadorias.exists():
@@ -535,9 +533,7 @@ def imprimir_relatorio_mercadorias_deposito(request):
             if data_fim:
                 mercadorias = mercadorias.filter(data__lte=data_fim)
     
-    mercadorias = mercadorias.annotate(
-        nota_numero=Cast('nota', IntegerField())
-    ).order_by('nota_numero', 'nota')
+    mercadorias = ordenar_queryset_notas_por_numero(mercadorias).select_related('cliente')
     
     # Calcular totais
     total_peso = sum(m.peso for m in mercadorias if m.peso)
@@ -567,8 +563,8 @@ def minhas_notas_fiscais(request):
     elif status_filter == 'enviada':
         notas_fiscais = notas_fiscais.filter(status='Enviada')
     
-    # Otimizar query com select_related para evitar N+1 e ordenar por numero da nota
-    notas_fiscais = notas_fiscais.select_related('cliente').order_by('nota')
+    # Ordenar numericamente pelo número da NF
+    notas_fiscais = ordenar_queryset_notas_por_numero(notas_fiscais).select_related('cliente')
     
     # Calcular totais
     total_quantidade = sum(nota.quantidade for nota in notas_fiscais if nota.quantidade)
@@ -631,18 +627,18 @@ def imprimir_relatorio_deposito(request):
         if status:
             notas_fiscais = notas_fiscais.filter(status=status)
 
-        notas_fiscais = notas_fiscais.order_by('nota')
+        notas_fiscais = ordenar_queryset_notas_por_numero(notas_fiscais).select_related('cliente')
     else:
-        # Comportamento original do relatório de depósito quando aberto sem filtros.
+        # Relatório geral de depósito: ordenar pelo número da NF (ordem numérica)
         if request.user.tipo_usuario == 'cliente' and request.user.cliente:
             notas_fiscais = NotaFiscal.objects.filter(
                 cliente=request.user.cliente,
                 status='Depósito'
-            ).select_related('cliente').order_by('data')
+            )
         else:
-            notas_fiscais = NotaFiscal.objects.filter(
-                status='Depósito'
-            ).select_related('cliente').order_by('data')
+            notas_fiscais = NotaFiscal.objects.filter(status='Depósito')
+
+        notas_fiscais = ordenar_queryset_notas_por_numero(notas_fiscais).select_related('cliente')
 
     total_quantidade = sum(nota.quantidade for nota in notas_fiscais if nota.quantidade)
     total_peso = sum(nota.peso for nota in notas_fiscais)

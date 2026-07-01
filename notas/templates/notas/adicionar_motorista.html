@@ -207,6 +207,14 @@
             const motoristaForm = document.querySelector('form');
             const salvarEAdicionarBtn = document.querySelector('button[name="salvar_e_adicionar"]');
 
+            const campoCodigoCnh = document.getElementById('{{ form.codigo_seguranca.id_for_label }}');
+            if (campoCodigoCnh) {
+                campoCodigoCnh.setAttribute('maxlength', '12');
+                campoCodigoCnh.addEventListener('input', function() {
+                    this.value = this.value.toUpperCase().slice(0, 12);
+                });
+            }
+
             if (motoristaForm && salvarEAdicionarBtn) {
                 motoristaForm.addEventListener('keydown', function(event) {
                     // Verifica se a tecla Enter foi pressionada e não é em um textarea

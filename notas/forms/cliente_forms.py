@@ -268,3 +268,9 @@ class ClienteSearchForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
 
+    def clean_cnpj(self):
+        cnpj = self.cleaned_data.get('cnpj')
+        if not cnpj:
+            return cnpj
+        return re.sub(r'[^0-9]', '', cnpj)
+

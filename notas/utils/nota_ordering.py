@@ -23,15 +23,19 @@ def chave_ordenacao_numero_nota(valor: str) -> tuple:
     return (1, 0, s.lower())
 
 
-def ordenar_instancias_notas_fiscais(notas: Iterable[Any]) -> List[Any]:
-    return sorted(notas, key=lambda nf: chave_ordenacao_numero_nota(nf.nota))
+def ordenar_instancias_notas_fiscais(notas: Iterable[Any], reverse: bool = False) -> List[Any]:
+    return sorted(
+        notas,
+        key=lambda nf: chave_ordenacao_numero_nota(nf.nota),
+        reverse=reverse,
+    )
 
 
-def ordenar_queryset_notas_por_numero(qs: QuerySet) -> QuerySet:
+def ordenar_queryset_notas_por_numero(qs: QuerySet, reverse: bool = False) -> QuerySet:
     lista = list(qs)
     if not lista:
         return qs
-    lista.sort(key=lambda nf: chave_ordenacao_numero_nota(nf.nota))
+    lista.sort(key=lambda nf: chave_ordenacao_numero_nota(nf.nota), reverse=reverse)
     ids = [nf.pk for nf in lista]
     preserved = Case(
         *[When(pk=pk, then=i) for i, pk in enumerate(ids)],

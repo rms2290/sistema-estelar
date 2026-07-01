@@ -34,7 +34,9 @@ def adicionar_veiculo(request):
                     }
                 )
                 messages.success(request, 'Unidade de Veículo cadastrada com sucesso!')
-                return redirect('notas:listar_veiculos')  # Redireciona para a pesquisa de unidades
+                if 'salvar_e_adicionar' in request.POST:
+                    return redirect('notas:adicionar_veiculo')
+                return redirect('notas:detalhes_veiculo', pk=veiculo.pk)
             except (IntegrityError, ValidationError) as e:
                 logger.error(
                     f'Erro ao criar veículo',

@@ -173,7 +173,8 @@ class TestClienteViews:
         }
         response = authenticated_client.post(reverse('notas:adicionar_cliente'), form_data)
         assert response.status_code == 302  # Redirecionamento
-        assert response.url == reverse('notas:listar_clientes')
+        cliente = Cliente.objects.get(razao_social='EMPRESA TESTE LTDA')
+        assert response.url == reverse('notas:detalhes_cliente', args=[cliente.pk])
         
         # Verificar que cliente foi criado
         assert Cliente.objects.filter(razao_social='EMPRESA TESTE LTDA').exists()
@@ -212,9 +213,7 @@ class TestClienteViews:
             form_data
         )
         assert response.status_code == 302
-        assert response.url == reverse('notas:listar_clientes')
-        
-        # Verificar que cliente foi atualizado
+        assert response.url == reverse('notas:detalhes_cliente', args=[cliente.pk])
         cliente.refresh_from_db()
         assert cliente.razao_social == "CLIENTE EDITADO LTDA"
     
@@ -514,7 +513,7 @@ class TestPermissoesViews:
 class TestRedirecionamentos:
     """Testes de redirecionamentos após ações"""
     
-    def test_adicionar_cliente_redireciona_para_lista(self, authenticated_client):
+    def test_adicionar_cliente_redireciona_para_detalhes(self, authenticated_client):
         """Testa redirecionamento após adicionar cliente"""
         form_data = {
             'razao_social': 'Cliente Teste',
@@ -522,9 +521,10 @@ class TestRedirecionamentos:
         }
         response = authenticated_client.post(reverse('notas:adicionar_cliente'), form_data)
         assert response.status_code == 302
-        assert response.url == reverse('notas:listar_clientes')
+        cliente = Cliente.objects.get(razao_social='CLIENTE TESTE')
+        assert response.url == reverse('notas:detalhes_cliente', args=[cliente.pk])
     
-    def test_editar_cliente_redireciona_para_lista(self, authenticated_client, cliente):
+    def test_editar_cliente_redireciona_para_detalhes(self, authenticated_client, cliente):
         """Testa redirecionamento após editar cliente"""
         form_data = {
             'razao_social': 'Cliente Editado',
@@ -535,7 +535,21 @@ class TestRedirecionamentos:
             form_data
         )
         assert response.status_code == 302
-        assert response.url == reverse('notas:listar_clientes')
+        assert response.url == reverse('notas:detalhes_cliente', args=[cliente.pk])
+    
+    def test_editar_motorista_redireciona_para_detalhes(self, authenticated_client):
+        """Testa redirecionamento após editar motorista"""
+        motorista = MotoristaFactory(cpf='12345678909', nome='JOAO TESTE')
+        form_data = {
+            'nome': 'Motorista Editado',
+            'cpf': '12345678909',
+        }
+        response = authenticated_client.post(
+            reverse('notas:editar_motorista', args=[motorista.pk]),
+            form_data
+        )
+        assert response.status_code == 302
+        assert response.url == reverse('notas:detalhes_motorista', args=[motorista.pk])
     
     def test_login_redireciona_para_dashboard(self):
         """Testa redirecionamento após login bem-sucedido"""

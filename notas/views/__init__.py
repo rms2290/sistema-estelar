@@ -49,6 +49,7 @@ from .motorista_views import (
     editar_motorista,
     excluir_motorista,
     detalhes_motorista,
+    imprimir_viagens_motorista,
     adicionar_historico_consulta,
     registrar_consulta_motorista,
 )
@@ -166,7 +167,7 @@ __all__ = [
     'imprimir_relatorio_clientes', 'imprimir_detalhes_cliente',
     # Motorista
     'listar_motoristas', 'adicionar_motorista', 'editar_motorista',
-    'excluir_motorista', 'detalhes_motorista', 'adicionar_historico_consulta',
+    'excluir_motorista', 'detalhes_motorista', 'imprimir_viagens_motorista', 'adicionar_historico_consulta',
     'registrar_consulta_motorista',
     # Veículo
     'listar_veiculos', 'adicionar_veiculo', 'editar_veiculo',

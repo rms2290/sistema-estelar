@@ -1,5 +1,6 @@
 from django.urls import path, include
 from django.shortcuts import redirect
+from django.views.generic import RedirectView
 from .views import (
     auth_views,
     dashboard_views,
@@ -47,6 +48,7 @@ urlpatterns = [
     path('motoristas/<int:pk>/adicionar-consulta/', motorista_views.adicionar_historico_consulta, name='adicionar_historico_consulta'),
     path('motoristas/<int:pk>/registrar-consulta/', motorista_views.registrar_consulta_motorista, name='registrar_consulta_motorista'),
     path('motoristas/<int:pk>/detalhes/', motorista_views.detalhes_motorista, name='detalhes_motorista'),
+    path('motoristas/<int:pk>/imprimir-viagens/', motorista_views.imprimir_viagens_motorista, name='imprimir_viagens_motorista'),
 
 # Novas URLs para Veículo
     path('veiculos/', veiculo_views.listar_veiculos, name='listar_veiculos'),
@@ -132,18 +134,54 @@ urlpatterns = [
     path('ajax/buscar-clientes-ativos/', api_fechamento_views.buscar_clientes_ativos, name='buscar_clientes_ativos'),
     path('ajax/buscar-romaneios-filtrados/', api_fechamento_views.buscar_romaneios_filtrados, name='buscar_romaneios_filtrados'),
     path('relatorios/cobranca-mensal/', relatorio_views.cobranca_mensal, name='cobranca_mensal'),
-    path('relatorios/cobranca-carregamento/', relatorio_views.cobranca_carregamento, name='cobranca_carregamento'),
+    # Listagem de Cobrança de Carregamento — redirect para Financeiro V2 (cutover).
+    # Mantém o `name` antigo para que templates que ainda usem {% url 'notas:cobranca_carregamento' %} continuem funcionando.
+    path(
+        'relatorios/cobranca-carregamento/',
+        RedirectView.as_view(pattern_name='financeiro_v2:cobranca_carregamento_lista', permanent=False, query_string=True),
+        name='cobranca_carregamento',
+    ),
     path('relatorios/dados-bancarios-setores/', admin_views.listar_setores_bancarios, name='listar_setores_bancarios'),
     path('relatorios/dados-bancarios-setores/<int:pk>/editar/', admin_views.editar_setor_bancario, name='editar_setor_bancario'),
-    
-    # URLs para nova estrutura de cobrança de carregamento
-    path('cobranca-carregamento/criar/', admin_views.criar_cobranca_carregamento, name='criar_cobranca_carregamento'),
-    path('cobranca-carregamento/<int:cobranca_id>/visualizar/', admin_views.visualizar_cobranca_carregamento, name='visualizar_cobranca_carregamento'),
-    path('cobranca-carregamento/<int:cobranca_id>/editar/', admin_views.editar_cobranca_carregamento, name='editar_cobranca_carregamento'),
-    path('cobranca-carregamento/<int:cobranca_id>/baixar/', admin_views.baixar_cobranca_carregamento, name='baixar_cobranca_carregamento'),
-    path('cobranca-carregamento/<int:cobranca_id>/excluir/', admin_views.excluir_cobranca_carregamento, name='excluir_cobranca_carregamento'),
-    path('cobranca-carregamento/<int:cobranca_id>/gerar-pdf/', admin_views.gerar_relatorio_cobranca_carregamento_pdf, name='gerar_relatorio_cobranca_carregamento_pdf'),
-    path('cobranca-carregamento/relatorio-consolidado/', admin_views.gerar_relatorio_consolidado_cobranca_pdf, name='gerar_relatorio_consolidado_cobranca'),
+
+    # Cutover - Cobrança de Carregamento: redirects para Financeiro V2.
+    # As views (admin_views.criar_cobranca_carregamento etc.) agora vivem em /financeiro-v2/cobranca-carregamento/...
+    # Mantemos os `name=` antigos para preservar bookmarks e referências de templates legados.
+    path(
+        'cobranca-carregamento/criar/',
+        RedirectView.as_view(pattern_name='financeiro_v2:criar_cobranca_carregamento', permanent=False, query_string=True),
+        name='criar_cobranca_carregamento',
+    ),
+    path(
+        'cobranca-carregamento/relatorio-consolidado/',
+        RedirectView.as_view(pattern_name='financeiro_v2:gerar_relatorio_consolidado_cobranca', permanent=False, query_string=True),
+        name='gerar_relatorio_consolidado_cobranca',
+    ),
+    path(
+        'cobranca-carregamento/<int:cobranca_id>/visualizar/',
+        RedirectView.as_view(pattern_name='financeiro_v2:visualizar_cobranca_carregamento', permanent=False, query_string=True),
+        name='visualizar_cobranca_carregamento',
+    ),
+    path(
+        'cobranca-carregamento/<int:cobranca_id>/editar/',
+        RedirectView.as_view(pattern_name='financeiro_v2:editar_cobranca_carregamento', permanent=False, query_string=True),
+        name='editar_cobranca_carregamento',
+    ),
+    path(
+        'cobranca-carregamento/<int:cobranca_id>/baixar/',
+        RedirectView.as_view(pattern_name='financeiro_v2:baixar_cobranca_carregamento', permanent=False, query_string=True),
+        name='baixar_cobranca_carregamento',
+    ),
+    path(
+        'cobranca-carregamento/<int:cobranca_id>/excluir/',
+        RedirectView.as_view(pattern_name='financeiro_v2:excluir_cobranca_carregamento', permanent=False, query_string=True),
+        name='excluir_cobranca_carregamento',
+    ),
+    path(
+        'cobranca-carregamento/<int:cobranca_id>/gerar-pdf/',
+        RedirectView.as_view(pattern_name='financeiro_v2:gerar_relatorio_cobranca_carregamento_pdf', permanent=False, query_string=True),
+        name='gerar_relatorio_cobranca_carregamento_pdf',
+    ),
     path('api/romaneios-cliente/<int:cliente_id>/', api_views.carregar_romaneios_cliente, name='carregar_romaneios_cliente'),
     path('api/notas/<int:nota_id>/ocorrencia/', api_views.salvar_ocorrencia_nota_fiscal, name='salvar_ocorrencia_nota_fiscal'),
     path('api/ocorrencia/<int:ocorrencia_id>/editar/', api_views.editar_ocorrencia_nota_fiscal, name='editar_ocorrencia_nota_fiscal'),

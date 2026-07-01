@@ -20,7 +20,7 @@ class Motorista(UpperCaseMixin, models.Model):
     cpf = models.CharField(max_length=14, unique=True, verbose_name="CPF")
     rg = models.CharField(max_length=20, blank=True, null=True, verbose_name="RG/RNE")
     cnh = models.CharField(max_length=11, unique=True, blank=True, null=True, verbose_name="CNH")
-    codigo_seguranca = models.CharField(max_length=10, blank=True, null=True, verbose_name="Código de Segurança CNH")
+    codigo_seguranca = models.CharField(max_length=12, blank=True, null=True, verbose_name="Código de Segurança CNH")
     vencimento_cnh = models.DateField(blank=True, null=True, verbose_name="Vencimento CNH")
     uf_emissao_cnh = models.CharField(max_length=2, blank=True, null=True, verbose_name="UF Emissão CNH")
     telefone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Telefone")

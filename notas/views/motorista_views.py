@@ -2,6 +2,7 @@
 Views relacionadas a Motoristas
 """
 import logging
+from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -36,7 +37,9 @@ def adicionar_motorista(request):
                     }
                 )
                 messages.success(request, 'Motorista adicionado com sucesso!')
-                return redirect('notas:listar_motoristas')
+                if 'salvar_e_adicionar' in request.POST:
+                    return redirect('notas:adicionar_motorista')
+                return redirect('notas:detalhes_motorista', pk=motorista.pk)
             except (IntegrityError, ValidationError) as e:
                 logger.error(
                     f'Erro ao criar motorista',
@@ -78,7 +81,7 @@ def editar_motorista(request, pk):
         if form.is_valid():
             form.save()
             messages.success(request, 'Motorista atualizado com sucesso!')
-            return redirect('notas:listar_motoristas')
+            return redirect('notas:detalhes_motorista', pk=motorista.pk)
         else:
             messages.error(request, 'Houve um erro ao atualizar o motorista. Verifique os campos.')
     else:
@@ -233,11 +236,41 @@ def detalhes_motorista(request, pk):
     """View para exibir detalhes de um motorista"""
     motorista = get_object_or_404(Motorista, pk=pk)
     historico_consultas = HistoricoConsulta.objects.filter(motorista=motorista).order_by('-data_consulta')[:5]
+
+    romaneios_qs = motorista.romaneios_motorista.select_related(
+        'cliente', 'veiculo_principal'
+    ).order_by('-data_emissao', '-codigo')
+    total_romaneios = romaneios_qs.count()
+    total_viagens = romaneios_qs.filter(status='Emitido').count()
+    ultimos_romaneios = romaneios_qs.filter(status='Emitido')[:5]
+
     context = {
         'motorista': motorista,
         'historico_consultas': historico_consultas,
+        'total_romaneios': total_romaneios,
+        'total_viagens': total_viagens,
+        'ultimos_romaneios': ultimos_romaneios,
     }
     return render(request, 'notas/detalhes_motorista.html', context)
+
+
+@login_required
+def imprimir_viagens_motorista(request, pk):
+    """Relatório imprimível com todas as viagens (romaneios emitidos) do motorista."""
+    motorista = get_object_or_404(Motorista, pk=pk)
+    romaneios = motorista.romaneios_motorista.filter(
+        status='Emitido'
+    ).select_related(
+        'cliente', 'veiculo_principal'
+    ).order_by('-data_emissao', '-codigo')
+
+    context = {
+        'motorista': motorista,
+        'romaneios': romaneios,
+        'total_viagens': romaneios.count(),
+        'data_emissao': datetime.now().strftime('%d/%m/%Y %H:%M'),
+    }
+    return render(request, 'notas/relatorios/imprimir_viagens_motorista.html', context)
 
 
 @login_required

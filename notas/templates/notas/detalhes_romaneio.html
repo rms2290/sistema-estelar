@@ -146,7 +146,7 @@
 
         {% if romaneio.status == 'Emitido' or user.is_cliente %}
             {# Botão Imprimir, aparece se o status for 'Emitido' ou se for cliente #}
-            <a href="{% url 'notas:imprimir_romaneio_novo' romaneio.pk %}" target="_blank" class="btn btn-primary">
+            <a href="{% url 'notas:imprimir_romaneio_novo' romaneio.pk %}" target="_blank" class="btn btn-success">
                 <i class="fas fa-print"></i> Imprimir Romaneio
             </a>
         {% endif %}

@@ -56,7 +56,8 @@ def adicionar_cliente(request):
         3. Se GET → Exibe formulário vazio
     
     Redirecionamento:
-        - Sucesso: /notas/clientes/ (listar clientes)
+        - Sucesso (Salvar): /notas/clientes/{pk}/detalhes/
+        - Sucesso (Salvar e Adicionar +): /notas/clientes/adicionar/
         - Erro: Permanece na página com mensagens de erro
     
     Template:
@@ -75,6 +76,7 @@ def adicionar_cliente(request):
         if form.is_valid():
             try:
                 cliente = form.save()
+                cliente.refresh_from_db()
                 logger.info(
                     f'Cliente {cliente.razao_social} criado com sucesso',
                     extra={
@@ -84,7 +86,9 @@ def adicionar_cliente(request):
                     }
                 )
                 messages.success(request, 'Cliente adicionado com sucesso!')
-                return redirect('notas:listar_clientes')
+                if 'salvar_e_adicionar' in request.POST:
+                    return redirect('notas:adicionar_cliente')
+                return redirect('notas:detalhes_cliente', pk=cliente.pk)
             except (IntegrityError, ValidationError) as e:
                 logger.error(
                     f'Erro ao criar cliente',
@@ -130,7 +134,7 @@ def editar_cliente(request, pk):
         4. Se GET → Exibe formulário preenchido
     
     Redirecionamento:
-        - Sucesso: /notas/clientes/ (listar clientes)
+        - Sucesso: /notas/clientes/{pk}/detalhes/
         - Erro: Permanece na página com mensagens de erro
     
     Template:
@@ -158,7 +162,7 @@ def editar_cliente(request, pk):
                     }
                 )
                 messages.success(request, 'Cliente atualizado com sucesso!')
-                return redirect('notas:listar_clientes')
+                return redirect('notas:detalhes_cliente', pk=cliente.pk)
             except (IntegrityError, ValidationError) as e:
                 logger.error(
                     f'Erro ao atualizar cliente {cliente.pk}',
