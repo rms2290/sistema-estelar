@@ -92,7 +92,12 @@
 
                     <!-- Resultados da Pesquisa -->
                     {% if search_performed %}
-                        {% if notas_fiscais %}
+                        {% if filtro_minimo_ausente %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Informe pelo menos um filtro para pesquisar notas fiscais.
+                            </div>
+                        {% elif notas_fiscais %}
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle"></i> 
                                 Encontradas <strong>{{ notas_fiscais.count }}</strong> nota(s) fiscal(is).

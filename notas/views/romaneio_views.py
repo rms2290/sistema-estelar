@@ -16,6 +16,8 @@ from ..decorators import rate_limit_critical
 from .base import get_next_romaneio_codigo, get_next_romaneio_generico_codigo, is_cliente
 from ..services import RomaneioService, NotaFiscalService
 from ..utils.nota_ordering import ordenar_instancias_notas_fiscais, ordenar_queryset_notas_por_numero
+from ..utils.search_utils import tem_filtro_preenchido
+from ..utils.romaneio_impressao import montar_item_impressao_romaneio
 
 # Configurar logger
 logger = logging.getLogger(__name__)
@@ -323,13 +325,47 @@ def detalhes_romaneio(request, pk):
 
 
 @login_required
+@rate_limit_critical
+def emitir_romaneio(request, pk):
+    """Emite um romaneio salvo diretamente a partir dos detalhes."""
+    romaneio = get_object_or_404(RomaneioViagem, pk=pk)
+
+    if request.user.is_cliente:
+        messages.error(request, 'Você não tem permissão para emitir romaneios.')
+        return redirect('notas:meus_romaneios')
+
+    if not (request.user.is_admin or request.user.is_funcionario):
+        messages.error(request, 'Você não tem permissão para emitir romaneios.')
+        return redirect('notas:detalhes_romaneio', pk=romaneio.pk)
+
+    if request.method != 'POST':
+        return redirect('notas:detalhes_romaneio', pk=romaneio.pk)
+
+    romaneio, sucesso, mensagem = RomaneioService.emitir_romaneio(romaneio)
+
+    if sucesso:
+        logger.info(
+            f'Romaneio {romaneio.codigo} emitido a partir dos detalhes',
+            extra={
+                'user': request.user.username,
+                'romaneio_id': romaneio.pk,
+                'romaneio_codigo': romaneio.codigo,
+            },
+        )
+        messages.success(request, mensagem)
+    else:
+        messages.error(request, mensagem)
+
+    return redirect('notas:detalhes_romaneio', pk=romaneio.pk)
+
+
+@login_required
 def listar_romaneios(request):
     """Lista todos os romaneios com filtros de busca"""
-    # Sem querystring (carga inicial): mostra os 10 romaneios mais recentes
-    # de qualquer status. Ao aplicar filtros (inclusive "Limpar Filtros"
-    # com ?status= vazio), o limite é removido.
+    # Sem querystring (carga inicial): mostra os 10 romaneios mais recentes.
     is_initial_load = not request.GET
     LIMITE_INICIAL = 10
+    filtro_minimo_ausente = False
 
     if is_initial_load:
         search_form = RomaneioSearchForm()
@@ -340,21 +376,28 @@ def listar_romaneios(request):
 
     romaneios = RomaneioViagem.objects.none()
 
-    if search_performed:
-        # Otimizar query com select_related para evitar N+1
-        # Filtrar por cliente se usuário for cliente
+    def _base_queryset():
         if request.user.is_cliente and request.user.cliente:
-            queryset = RomaneioViagem.objects.filter(
+            return RomaneioViagem.objects.filter(
                 notas_fiscais__cliente=request.user.cliente
             ).select_related(
                 'cliente', 'motorista', 'veiculo_principal'
             ).prefetch_related('notas_fiscais').distinct()
-        else:
-            queryset = RomaneioViagem.objects.select_related(
-                'cliente', 'motorista', 'veiculo_principal'
-            ).prefetch_related('notas_fiscais')
+        return RomaneioViagem.objects.select_related(
+            'cliente', 'motorista', 'veiculo_principal'
+        ).prefetch_related('notas_fiscais')
 
-        if not is_initial_load and search_form.is_valid():
+    if is_initial_load:
+        romaneios = _base_queryset().order_by('-data_emissao', '-codigo')[:LIMITE_INICIAL]
+    elif search_performed and search_form.is_valid():
+        campos_filtro = (
+            'codigo', 'tipo_romaneio', 'cliente', 'motorista',
+            'veiculo_principal', 'status', 'data_inicio', 'data_fim',
+        )
+        if not tem_filtro_preenchido(search_form.cleaned_data, campos_filtro):
+            filtro_minimo_ausente = True
+        else:
+            queryset = _base_queryset()
             codigo = search_form.cleaned_data.get('codigo')
             tipo_romaneio = search_form.cleaned_data.get('tipo_romaneio')
             cliente = search_form.cleaned_data.get('cliente')
@@ -384,10 +427,7 @@ def listar_romaneios(request):
             if data_fim:
                 queryset = queryset.filter(data_emissao__date__lte=data_fim)
 
-        romaneios = queryset.order_by('-data_emissao', '-codigo')
-
-        if is_initial_load:
-            romaneios = romaneios[:LIMITE_INICIAL]
+            romaneios = queryset.order_by('-data_emissao', '-codigo')
 
     context = {
         'romaneios': romaneios,
@@ -395,6 +435,7 @@ def listar_romaneios(request):
         'search_performed': search_performed,
         'is_initial_load': is_initial_load,
         'limite_inicial': LIMITE_INICIAL,
+        'filtro_minimo_ausente': filtro_minimo_ausente,
     }
     return render(request, 'notas/listar_romaneios.html', context)
 
@@ -403,60 +444,22 @@ def listar_romaneios(request):
 def imprimir_romaneio_novo(request, pk):
     """View para imprimir romaneio usando o novo template"""
     import time
-    # Otimizar query com select_related e prefetch_related
     romaneio = get_object_or_404(
         RomaneioViagem.objects.select_related(
             'cliente', 'motorista', 'veiculo_principal', 'reboque_1', 'reboque_2'
         ).prefetch_related('notas_fiscais'),
         pk=pk
     )
-    
+
     try:
-        notas_romaneadas = ordenar_instancias_notas_fiscais(romaneio.notas_fiscais.all())
-        
-        # Usar serviço para calcular totais
-        totais = RomaneioService.calcular_totais_romaneio(romaneio)
-        total_peso = totais['total_peso']
-        total_valor = totais['total_valor']
-        
-        # Paginação: 1ª página 17 notas (18 com TOTAL), 2ª em diante 24 notas por página
-        LINHAS_PRIMEIRA = 17
-        LINHAS_DEMAIS = 24
-        notas_list = list(notas_romaneadas)
-        if not notas_list:
-            paginas_notas = [[]]
-        else:
-            primeira = notas_list[:LINHAS_PRIMEIRA]
-            restante = notas_list[LINHAS_PRIMEIRA:]
-            demais = [
-                restante[i:i + LINHAS_DEMAIS]
-                for i in range(0, len(restante), LINHAS_DEMAIS)
-            ]
-            paginas_notas = [primeira] + demais
-            while len(paginas_notas[0]) < LINHAS_PRIMEIRA:
-                paginas_notas[0].append(None)
-            for pagina in paginas_notas[1:]:
-                while len(pagina) < LINHAS_DEMAIS:
-                    pagina.append(None)
-        
-        version = int(time.time())
-        context = {
-            'romaneio': romaneio,
-            'notas_romaneadas': notas_romaneadas,
-            'paginas_notas': paginas_notas,
-            'total_paginas': len(paginas_notas),
-            'total_peso': total_peso,
-            'total_valor': total_valor,
-            'version': version
-        }
-        
+        context = montar_item_impressao_romaneio(romaneio)
+        context['version'] = int(time.time())
         response = render(request, 'notas/visualizar_romaneio_para_impressao.html', context)
         response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         response['Pragma'] = 'no-cache'
         response['Expires'] = '0'
         return response
     except (RomaneioViagem.DoesNotExist, AttributeError) as e:
-        # Tratamento específico para erros conhecidos
         logger.error(
             f'Erro ao gerar impressão do romaneio {pk}',
             extra={

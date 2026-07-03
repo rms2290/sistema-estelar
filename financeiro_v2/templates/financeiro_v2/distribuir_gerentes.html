@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+
+{% block title %}Distribuir aos Gerentes - Financeiro V2{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 800px;">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h2><i class="fas fa-users-cog"></i> Distribuir aos Gerentes</h2>
+        <a href="{% url 'financeiro_v2:painel' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card mb-3 border-primary shadow-sm">
+        <div class="card-body py-2 d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-tags"></i> Saldo atual no bolso <strong>Documentação</strong></span>
+            <span class="fs-4 fw-bold {% if saldo_doc > 0 %}text-success{% else %}text-muted{% endif %}">R$ {{ saldo_doc|floatformat:2 }}</span>
+        </div>
+    </div>
+
+    <div class="alert alert-info alert-text-left">
+        <span>
+            <i class="fas fa-lightbulb"></i>
+            Cada gerente listado abaixo gera <strong>um lançamento de Saída</strong> no bolso Documentação.
+            O total não pode ultrapassar o saldo atual.
+        </span>
+    </div>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        <div class="card mb-3 shadow-sm">
+            <div class="card-header">
+                <i class="fas fa-cog"></i> Operação
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label">{{ form.data.label }}</label>
+                        {{ form.data }}
+                        {% if form.data.errors %}<div class="text-danger small">{{ form.data.errors|join:", " }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-7">
+                        <label class="form-label">{{ form.carteira.label }}</label>
+                        {{ form.carteira }}
+                        {% if form.carteira.errors %}<div class="text-danger small">{{ form.carteira.errors|join:", " }}</div>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3 shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-user-tie"></i> Gerentes</span>
+                <div class="d-flex gap-2">
+                    <button type="button" id="btn-50-50" class="btn btn-sm btn-outline-primary" title="Divide o saldo em partes iguais entre as linhas preenchidas">
+                        <i class="fas fa-balance-scale"></i> Dividir igual entre os preenchidos
+                    </button>
+                    <button type="button" id="btn-add-gerente" class="btn btn-sm btn-outline-success">
+                        <i class="fas fa-plus"></i> Adicionar gerente
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {{ formset.management_form }}
+                <div id="formset-gerentes">
+                    {% for sub in formset %}
+                    <div class="row g-2 align-items-center mb-2 linha-gerente">
+                        <div class="col-md-7">
+                            {{ sub.nome }}
+                            {% if sub.nome.errors %}<div class="text-danger small">{{ sub.nome.errors|join:", " }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">R$</span>
+                                {{ sub.valor }}
+                            </div>
+                            {% if sub.valor.errors %}<div class="text-danger small">{{ sub.valor.errors|join:", " }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-1 text-end">
+                            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-gerente" title="Remover">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3 shadow-sm border-primary">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-calculator"></i> Resumo
+            </div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr><td>Saldo atual do bolso Documentação</td><td class="text-end">R$ {{ saldo_doc|floatformat:2 }}</td></tr>
+                        <tr><td>Total a distribuir</td><td class="text-end fw-bold" id="resumo-total">R$ 0,00</td></tr>
+                        <tr class="table-secondary"><td>Saldo após distribuição</td><td class="text-end fw-bold" id="resumo-restante">R$ {{ saldo_doc|floatformat:2 }}</td></tr>
+                    </tbody>
+                </table>
+                <div id="resumo-aviso" class="text-danger small mt-2 d-none">
+                    <i class="fas fa-exclamation-triangle"></i> Total ultrapassa o saldo do bolso Documentação.
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between mb-4">
+            <a href="{% url 'financeiro_v2:painel' %}" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Confirmar Distribuição
+            </button>
+        </div>
+
+    </form>
+
+</div>
+
+<template id="template-linha-gerente">
+    <div class="row g-2 align-items-center mb-2 linha-gerente">
+        <div class="col-md-7">
+            <input type="text" name="gerentes-__INDEX__-nome" maxlength="100"
+                   class="form-control form-control-sm gerente-nome" placeholder="Nome do gerente">
+        </div>
+        <div class="col-md-4">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text">R$</span>
+                <input type="number" name="gerentes-__INDEX__-valor" step="0.01" min="0"
+                       class="form-control form-control-sm gerente-valor" placeholder="0,00">
+            </div>
+        </div>
+        <div class="col-md-1 text-end">
+            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-gerente" title="Remover">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+</template>
+
+<script>
+(function () {
+    const SALDO_DOC = parseFloat("{{ saldo_doc|stringformat:'.2f' }}") || 0;
+    const container = document.getElementById('formset-gerentes');
+    const totalForms = document.querySelector('input[name="gerentes-TOTAL_FORMS"]');
+    const btnAdd = document.getElementById('btn-add-gerente');
+    const btn5050 = document.getElementById('btn-50-50');
+    const template = document.getElementById('template-linha-gerente');
+    const resumoTotal = document.getElementById('resumo-total');
+    const resumoRestante = document.getElementById('resumo-restante');
+    const aviso = document.getElementById('resumo-aviso');
+
+    function fmt(v) { return 'R$ ' + v.toFixed(2).replace('.', ','); }
+
+    function recalcular() {
+        let total = 0;
+        document.querySelectorAll('.gerente-valor').forEach(function (i) {
+            const v = parseFloat(i.value);
+            if (!isNaN(v)) total += v;
+        });
+        const restante = SALDO_DOC - total;
+        resumoTotal.textContent = fmt(total);
+        resumoRestante.textContent = fmt(restante);
+        if (restante < 0) {
+            aviso.classList.remove('d-none');
+            resumoRestante.classList.add('text-danger');
+        } else {
+            aviso.classList.add('d-none');
+            resumoRestante.classList.remove('text-danger');
+        }
+    }
+
+    function attachListeners() {
+        document.querySelectorAll('.gerente-valor, .gerente-nome').forEach(function (i) {
+            i.removeEventListener('input', recalcular);
+            i.addEventListener('input', recalcular);
+        });
+        document.querySelectorAll('.btn-remove-gerente').forEach(function (b) {
+            b.onclick = function () {
+                const linha = b.closest('.linha-gerente');
+                if (container.querySelectorAll('.linha-gerente').length > 1) {
+                    linha.remove();
+                } else {
+                    linha.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+                }
+                recalcular();
+            };
+        });
+    }
+
+    btnAdd.addEventListener('click', function () {
+        const idx = parseInt(totalForms.value, 10);
+        const html = template.innerHTML.replace(/__INDEX__/g, idx);
+        container.insertAdjacentHTML('beforeend', html);
+        totalForms.value = idx + 1;
+        attachListeners();
+    });
+
+    btn5050.addEventListener('click', function () {
+        const linhas = Array.from(document.querySelectorAll('.linha-gerente'));
+        const preenchidas = linhas.filter(function (l) {
+            return l.querySelector('.gerente-nome').value.trim() !== '';
+        });
+        if (preenchidas.length === 0) {
+            alert('Preencha o nome de pelo menos um gerente antes de dividir.');
+            return;
+        }
+        const fatia = Math.floor(SALDO_DOC * 100 / preenchidas.length) / 100;
+        let usado = 0;
+        preenchidas.forEach(function (l, i) {
+            const input = l.querySelector('.gerente-valor');
+            if (i < preenchidas.length - 1) {
+                input.value = fatia.toFixed(2);
+                usado += fatia;
+            } else {
+                input.value = (SALDO_DOC - usado).toFixed(2);
+            }
+        });
+        recalcular();
+    });
+
+    attachListeners();
+    recalcular();
+})();
+</script>
+{% endblock %}

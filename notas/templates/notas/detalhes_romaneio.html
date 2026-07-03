@@ -152,6 +152,15 @@
         {% endif %}
         
         {% if user.is_admin or user.is_funcionario %}
+            {% if romaneio.status == 'Salvo' %}
+                <form action="{% url 'notas:emitir_romaneio' romaneio.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Emitir este romaneio? As notas vinculadas passarão para o status Enviada.');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check-circle"></i> Emitir Romaneio
+                    </button>
+                </form>
+            {% endif %}
+
             <a href="{% url 'notas:editar_romaneio' romaneio.pk %}" class="btn btn-warning">
                 <i class="fas fa-edit"></i> Editar Romaneio
             </a>

@@ -765,6 +765,14 @@ body::-webkit-scrollbar {
     padding: 12px 15px; /* Reduzindo padding */
 }
 
+.card-footer {
+    background-color: var(--card-header-bg);
+    color: var(--text-color);
+    border-top: 1px solid var(--border-color);
+    padding: 12px 15px;
+    border-radius: 0 0 calc(8px - 1px) calc(8px - 1px);
+}
+
 /* Estilos de Formulário (ajustes para tema escuro) */
 .form-control, .form-select, .btn {
     background-color: var(--sidebar-bg);

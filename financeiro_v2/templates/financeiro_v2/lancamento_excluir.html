@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Excluir Lançamento - Financeiro V2{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 640px;">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h2><i class="fas fa-trash text-danger"></i> Excluir Lançamento</h2>
+        <a href="{% url 'financeiro_v2:caixa_do_dia' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="alert alert-warning alert-text-left">
+        <span>
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Atenção:</strong> ao excluir este lançamento, o saldo do bolso e da carteira
+            serão recalculados.
+            <br>
+            Se este lançamento foi gerado automaticamente por uma <strong>baixa de cobrança</strong>
+            ou <strong>pagamento</strong>, ao excluir aqui o status original da
+            cobrança/acumulado <strong>não</strong> volta a "Pendente" automaticamente — você precisará
+            ajustar manualmente pelo Django Admin.
+        </span>
+    </div>
+
+    <div class="card shadow-sm border-danger">
+        <div class="card-header bg-danger text-white">
+            <i class="fas fa-trash"></i> Confirma a exclusão?
+        </div>
+        <div class="card-body">
+            <table class="table table-sm mb-0">
+                <tbody>
+                    <tr><th style="width: 30%;">ID</th><td>#{{ lanc.id }}</td></tr>
+                    <tr><th>Data</th><td>{{ lanc.data|date:"d/m/Y" }}</td></tr>
+                    <tr>
+                        <th>Tipo</th>
+                        <td>
+                            {% if lanc.tipo == 'Entrada' %}
+                                <span class="badge bg-success">Entrada</span>
+                            {% else %}
+                                <span class="badge bg-danger">Saída</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr><th>Valor</th><td><strong>R$ {{ lanc.valor|floatformat:2 }}</strong></td></tr>
+                    <tr><th>Carteira</th><td>{{ lanc.carteira.nome }}</td></tr>
+                    <tr><th>Bolso</th><td>{{ lanc.bolso.nome }}</td></tr>
+                    <tr><th>Descrição</th><td>{{ lanc.descricao }}</td></tr>
+                    {% if lanc.categoria %}
+                    <tr><th>Categoria</th><td>{{ lanc.categoria }}</td></tr>
+                    {% endif %}
+                    {% if lanc.cliente %}
+                    <tr><th>Cliente</th><td>{{ lanc.cliente.razao_social }}</td></tr>
+                    {% endif %}
+                    {% if lanc.funcionario %}
+                    <tr><th>Funcionário</th><td>{{ lanc.funcionario.nome }}</td></tr>
+                    {% endif %}
+                    <tr><th>Criado por</th><td>{{ lanc.criado_por.username|default:"—" }}</td></tr>
+                    <tr><th>Criado em</th><td>{{ lanc.criado_em|date:"d/m/Y H:i" }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <div class="card-footer d-flex justify-content-between">
+                <a href="{% url 'financeiro_v2:caixa_do_dia' %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}"
+                   class="btn btn-outline-secondary">
+                    Cancelar
+                </a>
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Sim, excluir definitivamente
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

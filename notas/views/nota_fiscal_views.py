@@ -20,7 +20,12 @@ from ..forms import NotaFiscalForm, NotaFiscalSearchForm, MercadoriaDepositoSear
 from ..decorators import rate_limit_critical
 from ..utils.date_utils import parse_date_iso
 from ..utils.nota_ordering import ordenar_queryset_notas_por_numero
+from ..utils.search_utils import tem_filtro_preenchido
 from .base import is_cliente
+from .cobranca_carregamento_views import (
+    _montar_contexto_relatorio_cobranca,
+    _romaneios_para_relatorio_cobranca,
+)
 
 # Configurar logger
 logger = logging.getLogger(__name__)
@@ -264,37 +269,43 @@ def listar_notas_fiscais(request):
     search_form = NotaFiscalSearchForm(request.GET)
     notas_fiscais = NotaFiscal.objects.none()
     search_performed = bool(request.GET)
+    filtro_minimo_ausente = False
 
     if search_performed and search_form.is_valid():
-        # Otimizar query com select_related para evitar N+1
-        # Filtrar por cliente se usuário for cliente
-        if request.user.is_cliente and request.user.cliente:
-            queryset = NotaFiscal.objects.filter(cliente=request.user.cliente).select_related('cliente')
+        campos_filtro = ('nota', 'cliente', 'data', 'local', 'status')
+        if not tem_filtro_preenchido(search_form.cleaned_data, campos_filtro):
+            filtro_minimo_ausente = True
         else:
-            queryset = NotaFiscal.objects.select_related('cliente')
-        nota = search_form.cleaned_data.get('nota')
-        cliente = search_form.cleaned_data.get('cliente')
-        data = search_form.cleaned_data.get('data')
-        local = search_form.cleaned_data.get('local')
-        status = search_form.cleaned_data.get('status')
-        
-        if nota:
-            queryset = queryset.filter(nota__icontains=nota)
-        if cliente:
-            queryset = queryset.filter(cliente=cliente)
-        if data:
-            queryset = queryset.filter(data=data)
-        if local:
-            queryset = queryset.filter(local=local)
-        if status:
-            queryset = queryset.filter(status=status)
-        
-        notas_fiscais = ordenar_queryset_notas_por_numero(queryset).select_related('cliente')
-    
+            # Otimizar query com select_related para evitar N+1
+            # Filtrar por cliente se usuário for cliente
+            if request.user.is_cliente and request.user.cliente:
+                queryset = NotaFiscal.objects.filter(cliente=request.user.cliente).select_related('cliente')
+            else:
+                queryset = NotaFiscal.objects.select_related('cliente')
+            nota = search_form.cleaned_data.get('nota')
+            cliente = search_form.cleaned_data.get('cliente')
+            data = search_form.cleaned_data.get('data')
+            local = search_form.cleaned_data.get('local')
+            status = search_form.cleaned_data.get('status')
+
+            if nota:
+                queryset = queryset.filter(nota__icontains=nota)
+            if cliente:
+                queryset = queryset.filter(cliente=cliente)
+            if data:
+                queryset = queryset.filter(data=data)
+            if local:
+                queryset = queryset.filter(local=local)
+            if status:
+                queryset = queryset.filter(status=status)
+
+            notas_fiscais = ordenar_queryset_notas_por_numero(queryset).select_related('cliente')
+
     context = {
         'notas_fiscais': notas_fiscais,
         'search_form': search_form,
         'search_performed': search_performed,
+        'filtro_minimo_ausente': filtro_minimo_ausente,
     }
     return render(request, 'notas/listar_notas.html', context)
 
@@ -703,18 +714,9 @@ def gerar_relatorio_cobranca_carregamento_pdf_cliente(request, cobranca_id):
         messages.error(request, 'Você não tem permissão para acessar esta cobrança.')
         return redirect('notas:minhas_cobrancas_carregamento')
 
-    romaneios = cobranca.romaneios.all().order_by('codigo')
-    data_ref = cobranca.criado_em.date() if cobranca.criado_em else None
-    data_ref_fmt = data_ref.strftime('%d/%m/%Y') if data_ref else '-'
+    romaneios = _romaneios_para_relatorio_cobranca(cobranca.romaneios.all())
 
-    context = {
-        'titulo_relatorio': 'RELATÓRIO DE COBRANÇA DE CARREGAMENTO',
-        'cobranca': cobranca,
-        'romaneios': romaneios,
-        'data_inicio': data_ref_fmt,
-        'data_fim': data_ref_fmt,
-        'data_geracao': datetime.now().strftime('%d/%m/%Y às %H:%M'),
-    }
+    context = _montar_contexto_relatorio_cobranca(cobranca, romaneios)
     response = render(request, 'notas/relatorio_cobranca_carregamento_pdf.html', context)
     response['Content-Disposition'] = 'inline'
     return response

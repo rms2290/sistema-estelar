@@ -29,7 +29,7 @@ def criar_cobranca_carregamento(request):
         if form.is_valid():
             cobranca = form.save()
             messages.success(request, f'Cobrança #{cobranca.id} criada com sucesso!')
-            return redirect('notas:cobranca_carregamento')
+            return redirect('financeiro_v2:cobranca_carregamento_lista')
         else:
             error_messages = []
             for field, errors in form.errors.items():
@@ -103,7 +103,7 @@ def editar_cobranca_carregamento(request, cobranca_id):
         if form.is_valid():
             cobranca = form.save()
             messages.success(request, f'Cobrança #{cobranca.id} atualizada com sucesso!')
-            return redirect('notas:cobranca_carregamento')
+            return redirect('financeiro_v2:cobranca_carregamento_lista')
         else:
             error_messages = []
             for field, errors in form.errors.items():
@@ -179,7 +179,7 @@ def excluir_cobranca_carregamento(request, cobranca_id):
         cobranca_id_temp = cobranca.id
         cobranca.delete()
         messages.success(request, f'Cobrança #{cobranca_id_temp} excluída com sucesso!')
-        return redirect('notas:cobranca_carregamento')
+        return redirect('financeiro_v2:cobranca_carregamento_lista')
     
     context = {
         'cobranca': cobranca,
@@ -196,7 +196,7 @@ def baixar_cobranca_carregamento(request, cobranca_id):
     if request.method == 'POST':
         cobranca.baixar()
         messages.success(request, f'Cobrança #{cobranca.id} baixada com sucesso!')
-        return redirect('notas:cobranca_carregamento')
+        return redirect('financeiro_v2:cobranca_carregamento_lista')
     
     context = {
         'cobranca': cobranca,
@@ -204,26 +204,164 @@ def baixar_cobranca_carregamento(request, cobranca_id):
     return render(request, 'notas/confirmar_baixa_cobranca.html', context)
 
 
+def _romaneios_para_relatorio_cobranca(romaneios_qs):
+    return romaneios_qs.select_related(
+        'motorista', 'veiculo_principal', 'reboque_1', 'reboque_2'
+    ).order_by('codigo')
+
+
 @admin_required
 def gerar_relatorio_cobranca_carregamento_pdf(request, cobranca_id):
     """Exibe relatório individual de cobrança no layout padrão de impressão."""
     cobranca = get_object_or_404(CobrancaCarregamento, pk=cobranca_id)
-    romaneios = cobranca.romaneios.all().order_by('codigo')
+    romaneios = _romaneios_para_relatorio_cobranca(cobranca.romaneios.all())
 
     data_ref = cobranca.criado_em.date() if cobranca.criado_em else None
     data_ref_fmt = data_ref.strftime('%d/%m/%Y') if data_ref else '-'
 
-    context = {
+    context = _montar_contexto_relatorio_cobranca(cobranca, romaneios)
+    response = render(request, 'notas/relatorio_cobranca_carregamento_pdf.html', context)
+    response['Content-Disposition'] = 'inline'
+    return response
+
+
+def _montar_contexto_relatorio_cobranca(cobranca, romaneios, *, relatorio_previa=False):
+    data_ref = cobranca.criado_em.date() if getattr(cobranca, 'criado_em', None) else None
+    if not data_ref:
+        data_ref = datetime.now().date()
+    data_ref_fmt = data_ref.strftime('%d/%m/%Y')
+
+    return {
         'titulo_relatorio': 'RELATÓRIO DE COBRANÇA DE CARREGAMENTO',
         'cobranca': cobranca,
         'romaneios': romaneios,
+        'relatorio_previa': relatorio_previa,
         'data_inicio': data_ref_fmt,
         'data_fim': data_ref_fmt,
         'data_geracao': datetime.now().strftime('%d/%m/%Y às %H:%M'),
     }
-    response = render(request, 'notas/relatorio_cobranca_carregamento_pdf.html', context)
-    response['Content-Disposition'] = 'inline'
-    return response
+
+
+def _parse_decimal_positivo(valor, nome_campo):
+    if valor in (None, ''):
+        return Decimal('0.00'), None
+    try:
+        numero = Decimal(str(valor).replace(',', '.'))
+    except Exception:
+        return None, f'{nome_campo} inválido.'
+    if numero < 0:
+        return None, f'{nome_campo} não pode ser negativo.'
+    return numero, None
+
+
+@admin_required
+def relatorio_cobranca_cliente(request):
+    """Formulário simplificado para gerar relatório de cobrança sem salvar no banco."""
+    clientes = Cliente.objects.filter(status='Ativo').order_by('razao_social')
+    cliente_selecionado_id = request.POST.get('cliente') or request.GET.get('cliente')
+
+    if request.method == 'POST' and request.POST.get('acao') == 'gerar_relatorio':
+        cliente_id = request.POST.get('cliente')
+        romaneio_ids = [int(x) for x in request.POST.getlist('romaneios') if x.isdigit()]
+        observacoes = (request.POST.get('observacoes') or '').strip()
+
+        if not cliente_id:
+            messages.error(request, 'Selecione um cliente.')
+            return render(request, 'notas/relatorio_cobranca_cliente.html', {
+                'clientes': clientes,
+                'cliente_selecionado_id': cliente_selecionado_id,
+                'form_data': request.POST,
+                'romaneios_selecionados': romaneio_ids,
+            })
+
+        cliente = get_object_or_404(Cliente, pk=cliente_id)
+
+        if not romaneio_ids:
+            messages.error(request, 'Selecione pelo menos um romaneio.')
+            return render(request, 'notas/relatorio_cobranca_cliente.html', {
+                'clientes': clientes,
+                'cliente_selecionado_id': cliente_id,
+                'form_data': request.POST,
+                'romaneios_selecionados': romaneio_ids,
+            })
+
+        valor_carregamento, erro = _parse_decimal_positivo(
+            request.POST.get('valor_carregamento'),
+            'Valor de carregamento',
+        )
+        if erro:
+            messages.error(request, erro)
+            return render(request, 'notas/relatorio_cobranca_cliente.html', {
+                'clientes': clientes,
+                'cliente_selecionado_id': cliente_id,
+                'form_data': request.POST,
+                'romaneios_selecionados': romaneio_ids,
+            })
+
+        if valor_carregamento == Decimal('0.00') and not (request.POST.get('valor_carregamento') or '').strip():
+            messages.error(request, 'Informe o valor de carregamento.')
+            return render(request, 'notas/relatorio_cobranca_cliente.html', {
+                'clientes': clientes,
+                'cliente_selecionado_id': cliente_id,
+                'form_data': request.POST,
+                'romaneios_selecionados': romaneio_ids,
+            })
+
+        valor_cte_manifesto, erro = _parse_decimal_positivo(
+            request.POST.get('valor_cte_manifesto'),
+            'Valor CTE/Manifesto',
+        )
+        if erro:
+            messages.error(request, erro)
+            return render(request, 'notas/relatorio_cobranca_cliente.html', {
+                'clientes': clientes,
+                'cliente_selecionado_id': cliente_id,
+                'form_data': request.POST,
+                'romaneios_selecionados': romaneio_ids,
+            })
+
+        romaneios = list(
+            _romaneios_para_relatorio_cobranca(
+                RomaneioViagem.objects.filter(
+                    pk__in=romaneio_ids,
+                    cliente=cliente,
+                    status='Emitido',
+                )
+            )
+        )
+        if len(romaneios) != len(set(romaneio_ids)):
+            messages.error(request, 'Um ou mais romaneios selecionados são inválidos para este cliente.')
+            return render(request, 'notas/relatorio_cobranca_cliente.html', {
+                'clientes': clientes,
+                'cliente_selecionado_id': cliente_id,
+                'form_data': request.POST,
+                'romaneios_selecionados': romaneio_ids,
+            })
+
+        cobranca = CobrancaCarregamento(
+            cliente=cliente,
+            origem_cobranca='ROMANEIO',
+            valor_carregamento=valor_carregamento,
+            valor_cte_manifesto=valor_cte_manifesto,
+            observacoes=observacoes or None,
+            status='Pendente',
+        )
+
+        context = _montar_contexto_relatorio_cobranca(
+            cobranca,
+            romaneios,
+            relatorio_previa=True,
+        )
+        response = render(request, 'notas/relatorio_cobranca_carregamento_pdf.html', context)
+        response['Content-Disposition'] = 'inline'
+        response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        return response
+
+    return render(request, 'notas/relatorio_cobranca_cliente.html', {
+        'clientes': clientes,
+        'cliente_selecionado_id': cliente_selecionado_id,
+        'romaneios_selecionados': [],
+    })
 
 
 @admin_required

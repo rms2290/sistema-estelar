@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}A Receber - Financeiro V2{% endblock %}
+
+{% block extra_css %}
+<style>
+    .badge-idade { font-size: 0.75rem; min-width: 70px; }
+    .row-cobranca:hover { background: rgba(0,123,255,0.05); }
+    .grupo-card .card-header { padding: 0.6rem 1rem; }
+    .filtro-pill.active { font-weight: 700; outline: 2px solid currentColor; outline-offset: 2px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h2><i class="fas fa-hand-holding-usd"></i> A Receber <span class="badge bg-primary ms-1">V2</span></h2>
+        <a href="{% url 'financeiro_v2:painel' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Voltar ao Painel
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {# ============================ Resumo por antiguidade ============================ #}
+    <div class="row mb-3">
+        <div class="col-md-3 mb-2">
+            <a href="?cor=verde" class="text-decoration-none">
+                <div class="card border-success h-100 filtro-pill {% if filtro_cor == 'verde' %}active text-success{% endif %}">
+                    <div class="card-body py-2 text-center">
+                        <small class="text-success fw-bold">0–7 dias</small>
+                        <div class="fs-5 fw-bold">R$ {{ buckets.verde|floatformat:2 }}</div>
+                        <small class="text-muted">{{ contagem_buckets.verde }} cobr.</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 mb-2">
+            <a href="?cor=amarelo" class="text-decoration-none">
+                <div class="card border-warning h-100 filtro-pill {% if filtro_cor == 'amarelo' %}active text-warning{% endif %}">
+                    <div class="card-body py-2 text-center">
+                        <small class="text-warning fw-bold">8–15 dias</small>
+                        <div class="fs-5 fw-bold">R$ {{ buckets.amarelo|floatformat:2 }}</div>
+                        <small class="text-muted">{{ contagem_buckets.amarelo }} cobr.</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 mb-2">
+            <a href="?cor=laranja" class="text-decoration-none">
+                <div class="card h-100 filtro-pill {% if filtro_cor == 'laranja' %}active{% endif %}" style="border-color: #fd7e14; color: #fd7e14;">
+                    <div class="card-body py-2 text-center">
+                        <small class="fw-bold" style="color: #fd7e14;">16–30 dias</small>
+                        <div class="fs-5 fw-bold">R$ {{ buckets.laranja|floatformat:2 }}</div>
+                        <small class="text-muted">{{ contagem_buckets.laranja }} cobr.</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 mb-2">
+            <a href="?cor=vermelho" class="text-decoration-none">
+                <div class="card border-danger h-100 filtro-pill {% if filtro_cor == 'vermelho' %}active text-danger{% endif %}">
+                    <div class="card-body py-2 text-center">
+                        <small class="text-danger fw-bold">+ 30 dias</small>
+                        <div class="fs-5 fw-bold">R$ {{ buckets.vermelho|floatformat:2 }}</div>
+                        <small class="text-muted">{{ contagem_buckets.vermelho }} cobr.</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <div class="card mb-3 shadow-sm bg-info bg-opacity-10 border-info">
+        <div class="card-body py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span>
+                <i class="fas fa-receipt"></i>
+                <strong>{{ qtd_clientes }}</strong> cliente{{ qtd_clientes|pluralize }} +
+                <strong>{{ qtd_avulsas }}</strong> CTE avulsa{{ qtd_avulsas|pluralize }}
+                {% if filtro_cor %}
+                    <span class="badge bg-secondary ms-2">filtro: {{ filtro_cor }}</span>
+                    <a href="{% url 'financeiro_v2:a_receber_lista' %}" class="btn btn-link btn-sm py-0">Limpar</a>
+                {% endif %}
+            </span>
+            <span class="fs-5">Total: <strong>R$ {{ total_geral|floatformat:2 }}</strong></span>
+        </div>
+    </div>
+
+    {# ============================ Cobranças por cliente ============================ #}
+    {% for grupo in grupos %}
+    <div class="card mb-3 shadow-sm grupo-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-user"></i>
+                <strong>{{ grupo.cliente_nome }}</strong>
+                <small class="text-muted">— {{ grupo.itens|length }} cobrança{{ grupo.itens|length|pluralize }}</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-bold fs-6">R$ {{ grupo.total|floatformat:2 }}</span>
+                {% if grupo.cliente %}
+                <a href="{% url 'financeiro_v2:cliente_extrato' pk=grupo.cliente.pk %}"
+                   class="btn btn-sm btn-outline-info" title="Ver extrato do cliente">
+                    <i class="fas fa-history"></i> Extrato
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 100px;">Idade</th>
+                            <th>Cobrança</th>
+                            <th>Origem</th>
+                            <th class="text-end">Carregamento</th>
+                            <th class="text-end">CTE/Manif.</th>
+                            <th class="text-end">Total</th>
+                            <th style="width: 120px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in grupo.itens %}
+                        {% with c=item.obj %}
+                        <tr class="row-cobranca">
+                            <td>
+                                <span class="badge badge-idade
+                                    {% if item.cor == 'verde' %}bg-success
+                                    {% elif item.cor == 'amarelo' %}bg-warning text-dark
+                                    {% elif item.cor == 'laranja' %}text-white
+                                    {% else %}bg-danger
+                                    {% endif %}"
+                                    {% if item.cor == 'laranja' %}style="background-color: #fd7e14;"{% endif %}>
+                                    {{ item.idade }} dia{{ item.idade|pluralize }}
+                                </span>
+                            </td>
+                            <td>
+                                <strong>#{{ c.id }}</strong>
+                                <small class="text-muted">{{ c.criado_em|date:"d/m/Y" }}</small>
+                            </td>
+                            <td><small>{{ item.origem }}</small></td>
+                            <td class="text-end"><small>R$ {{ c.valor_carregamento|floatformat:2 }}</small></td>
+                            <td class="text-end"><small>R$ {{ c.valor_cte_manifesto|floatformat:2 }}</small></td>
+                            <td class="text-end fw-bold">R$ {{ item.valor|floatformat:2 }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'financeiro_v2:a_receber_baixar' tipo='carregamento' pk=c.pk %}"
+                                   class="btn btn-success btn-sm">
+                                    <i class="fas fa-check"></i> Baixar
+                                </a>
+                            </td>
+                        </tr>
+                        {% endwith %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+        {% if not avulsas %}
+            <div class="card">
+                <div class="card-body text-center text-muted py-4">
+                    <i class="fas fa-check-circle fa-2x mb-2 d-block text-success"></i>
+                    {% if filtro_cor %}
+                        Nenhuma cobrança nesta faixa de antiguidade.
+                    {% else %}
+                        Nenhuma cobrança pendente! Tudo em dia.
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+
+    {# ============================ Avulsas ============================ #}
+    {% if avulsas %}
+    <div class="card mb-3 shadow-sm grupo-card">
+        <div class="card-header bg-secondary bg-opacity-25">
+            <i class="fas fa-file-invoice"></i>
+            <strong>CTE Avulsas</strong>
+            <small class="text-muted">— {{ avulsas|length }} cobrança{{ avulsas|length|pluralize }}</small>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 100px;">Idade</th>
+                            <th>Cobrança</th>
+                            <th>Nome</th>
+                            <th class="text-end">Valor</th>
+                            <th style="width: 120px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in avulsas %}
+                        {% with c=item.obj %}
+                        <tr class="row-cobranca">
+                            <td>
+                                <span class="badge badge-idade
+                                    {% if item.cor == 'verde' %}bg-success
+                                    {% elif item.cor == 'amarelo' %}bg-warning text-dark
+                                    {% elif item.cor == 'laranja' %}text-white
+                                    {% else %}bg-danger
+                                    {% endif %}"
+                                    {% if item.cor == 'laranja' %}style="background-color: #fd7e14;"{% endif %}>
+                                    {{ item.idade }} dia{{ item.idade|pluralize }}
+                                </span>
+                            </td>
+                            <td>
+                                <strong>#{{ c.id }}</strong>
+                                <small class="text-muted">{{ c.criado_em|date:"d/m/Y" }}</small>
+                            </td>
+                            <td>{{ item.nome }}</td>
+                            <td class="text-end fw-bold">R$ {{ item.valor|floatformat:2 }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'financeiro_v2:a_receber_baixar' tipo='cte' pk=c.pk %}"
+                                   class="btn btn-success btn-sm">
+                                    <i class="fas fa-check"></i> Baixar
+                                </a>
+                            </td>
+                        </tr>
+                        {% endwith %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

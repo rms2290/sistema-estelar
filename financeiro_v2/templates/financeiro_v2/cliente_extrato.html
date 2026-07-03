@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}Extrato - {{ cliente.razao_social }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .timeline-item { border-left: 3px solid #dee2e6; padding-left: 1rem; padding-bottom: 1rem; margin-left: 0.5rem; position: relative; }
+    .timeline-item::before { content: ''; position: absolute; left: -7px; top: 6px; width: 11px; height: 11px; border-radius: 50%; background: white; border: 3px solid; }
+    .timeline-item.cobranca::before { border-color: #ffc107; }
+    .timeline-item.cobranca-baixada::before { border-color: #198754; background: #198754; }
+    .timeline-item.lancamento::before { border-color: #0dcaf0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h2><i class="fas fa-user"></i> Extrato — {{ cliente.razao_social }}</h2>
+        <a href="{% url 'financeiro_v2:a_receber_lista' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Voltar a A Receber
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {# ============================ Resumo ============================ #}
+    <div class="row mb-3">
+        <div class="col-md-6 mb-2">
+            <div class="card border-warning h-100">
+                <div class="card-header bg-warning bg-opacity-25">
+                    <i class="fas fa-hand-holding-usd"></i> Total a receber (cobranças pendentes)
+                </div>
+                <div class="card-body py-2">
+                    <div class="fs-3 fw-bold text-warning mb-1">R$ {{ total_pendente|floatformat:2 }}</div>
+                    <small class="text-muted">{{ qtd_pendentes }} cobrança{{ qtd_pendentes|pluralize }} em aberto</small>
+                    <table class="table table-sm mt-2 mb-0">
+                        <tbody>
+                            <tr><td>Carregamento</td><td class="text-end">R$ {{ pendente_carreg|floatformat:2 }}</td></tr>
+                            <tr><td>CTE/Manifesto</td><td class="text-end">R$ {{ pendente_cte|floatformat:2 }}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-2">
+            <div class="card border-success h-100">
+                <div class="card-header bg-success bg-opacity-25">
+                    <i class="fas fa-check-circle"></i> Total já pago (histórico)
+                </div>
+                <div class="card-body py-2">
+                    <div class="fs-3 fw-bold text-success mb-1">R$ {{ total_pago|floatformat:2 }}</div>
+                    <small class="text-muted">{{ qtd_cobrancas|add:'-'|add:qtd_pendentes }} cobranças baixadas</small>
+                    <table class="table table-sm mt-2 mb-0">
+                        <tbody>
+                            <tr><td>Carregamento</td><td class="text-end">R$ {{ pago_carreg|floatformat:2 }}</td></tr>
+                            <tr><td>CTE/Manifesto</td><td class="text-end">R$ {{ pago_cte|floatformat:2 }}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ============================ Linha do tempo ============================ #}
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <i class="fas fa-history"></i> Movimentações
+            <small class="text-muted">— ordem cronológica reversa</small>
+        </div>
+        <div class="card-body">
+            {% if eventos %}
+                {% for ev in eventos %}
+                <div class="timeline-item {% if ev.tipo == 'cobranca' and ev.status == 'Baixado' %}cobranca-baixada{% elif ev.tipo == 'cobranca' %}cobranca{% else %}lancamento{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                        <div>
+                            <strong><i class="fas {{ ev.icone }}"></i> {{ ev.titulo }}</strong>
+                            <span class="badge bg-{{ ev.cor }} text-{% if ev.cor == 'warning' %}dark{% else %}white{% endif %} ms-1">{{ ev.status }}</span>
+                            <div class="small text-muted">{{ ev.subtitulo }}</div>
+                            {% if ev.extra %}
+                                <div class="small text-muted"><i class="fas fa-info-circle"></i> {{ ev.extra }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="text-end">
+                            <div class="fs-5 fw-bold {% if ev.sentido == '+' %}text-warning{% else %}text-success{% endif %}">
+                                {{ ev.sentido }} R$ {{ ev.valor|floatformat:2 }}
+                            </div>
+                            <small class="text-muted">{{ ev.data|date:"d/m/Y" }}</small>
+                            {% if ev.tipo == 'cobranca' and ev.status == 'Pendente' %}
+                                <div class="mt-1">
+                                    <a href="{% url 'financeiro_v2:a_receber_baixar' tipo='carregamento' pk=ev.obj.pk %}"
+                                       class="btn btn-success btn-sm">
+                                        <i class="fas fa-check"></i> Baixar
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                    Nenhuma movimentação registrada para este cliente.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

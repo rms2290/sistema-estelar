@@ -64,7 +64,12 @@
 
                     <!-- Resultados da Pesquisa -->
                     {% if search_performed %}
-                        {% if clientes %}
+                        {% if filtro_minimo_ausente %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Informe pelo menos um filtro para pesquisar clientes.
+                            </div>
+                        {% elif clientes %}
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle"></i> 
                                 Encontrados <strong>{{ clientes.count }}</strong> cliente(s).

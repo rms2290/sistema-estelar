@@ -1,0 +1,120 @@
+{% load format_filters %}
+{% for pagina in paginas_notas %}
+<div class="romaneio-page{% if forloop.first %} romaneio-page-first{% endif %}">
+{% if forloop.first %}
+<div class="document-header">
+    <div class="empresa-header">
+        <span class="empresa-nome">AGÊNCIA DE CARGAS ESTELAR LTDA</span>
+        <span class="romaneio-codigo">{{ romaneio.codigo }}</span>
+    </div>
+    <div class="empresa-dados"><strong>CNPJ: 62.531.215/0001-96 | INSCRIÇÃO ESTADUAL: 108.208.056.112 | CCM: 1.097.620-5 | ENDEREÇO: RUA MAUÁ, 898 - LUZ</strong></div>
+    <div class="info-blocos">
+        <div class="info-cell">
+            {% if romaneio.cliente %}
+            <h3>DADOS DO CLIENTE</h3>
+            <p><strong>NOME:</strong> {{ romaneio.cliente.razao_social }}</p>
+            <p><strong>CNPJ:</strong> {{ romaneio.cliente.cnpj|format_cnpj|default:"N/A" }}</p>
+            <p><strong>ENDEREÇO:</strong> {% if romaneio.cliente.endereco %}{{ romaneio.cliente.endereco }}{% if romaneio.cliente.numero %}, {{ romaneio.cliente.numero }}{% endif %}{% if romaneio.cliente.bairro %} - {{ romaneio.cliente.bairro }}{% endif %}{% else %}N/A{% endif %}</p>
+            {% if romaneio.cliente.cidade %}<p><strong>CIDADE:</strong> {{ romaneio.cliente.cidade }}{% if romaneio.cliente.estado %} - {{ romaneio.cliente.estado }}{% endif %}</p>{% endif %}
+            {% else %}&nbsp;{% endif %}
+        </div>
+        <div class="info-cell">
+            {% if romaneio.motorista %}
+            <h3>DADOS DO MOTORISTA</h3>
+            <p><strong>NOME:</strong> {{ romaneio.motorista.nome }}</p>
+            <p><strong>CNH:</strong> {{ romaneio.motorista.cnh|default:"N/A" }}</p>
+            {% if romaneio.veiculo_principal %}<p><strong>VEÍCULO PRINCIPAL:</strong> {{ romaneio.veiculo_principal.placa }}</p>{% endif %}
+            {% if romaneio.reboque_1 %}<p><strong>REBOQUE 1:</strong> {{ romaneio.reboque_1.placa }}</p>{% endif %}
+            {% if romaneio.reboque_2 %}<p><strong>REBOQUE 2:</strong> {{ romaneio.reboque_2.placa }}</p>{% endif %}
+            {% else %}&nbsp;{% endif %}
+        </div>
+        <div class="info-cell">
+            <h3>DADOS DO ROMANEIO</h3>
+            <p><strong>DATA DE EMISSÃO:</strong> {{ romaneio.data_emissao|date:"d/m/Y" }}</p>
+            <p><strong>QUANTIDADE DE NOTAS:</strong> {{ notas_romaneadas|length }}</p>
+            <p><strong>PESO TOTAL:</strong> {{ total_peso|format_brazilian_weight }}</p>
+            <p><strong>VALOR TOTAL:</strong> {{ total_valor|format_brazilian_currency }}</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+<table class="romaneio-print-table">
+    <thead>
+        {% if not forloop.first %}
+        <tr class="thead-simple">
+            <th colspan="6">
+                <span class="empresa-nome">AGÊNCIA DE CARGAS ESTELAR LTDA</span>
+                <span class="romaneio-codigo">{{ romaneio.codigo }}</span>
+            </th>
+        </tr>
+        {% endif %}
+        <tr class="thead-report-title">
+            <th colspan="6">RESUMO DE NOTAS FISCAIS</th>
+        </tr>
+        <tr>
+            <th class="col-nota">NOTA</th>
+            <th class="col-fornecedor">FORNECEDOR</th>
+            <th class="col-mercadoria">MERCADORIA</th>
+            <th class="col-quantidade">QUANTIDADE</th>
+            <th class="col-peso">PESO</th>
+            <th class="col-valor">VALOR</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for nota in pagina %}
+        {% if nota %}
+        <tr class="tr-dados">
+            <td class="col-nota"><strong>{{ nota.nota }}</strong></td>
+            <td class="col-fornecedor">{{ nota.fornecedor }}</td>
+            <td class="col-mercadoria">{{ nota.mercadoria }}</td>
+            <td class="col-quantidade">{{ nota.quantidade|format_brazilian_quantity }}</td>
+            <td class="col-peso">{{ nota.peso|format_brazilian_weight }}</td>
+            <td class="col-valor">{{ nota.valor|format_brazilian_currency }}</td>
+        </tr>
+        {% else %}
+        <tr class="tr-dados tr-vazio">
+            <td class="col-nota" colspan="6">&nbsp;</td>
+        </tr>
+        {% endif %}
+        {% empty %}
+        <tr class="tr-dados">
+            <td colspan="6" style="text-align: center;">Nenhuma nota neste romaneio.</td>
+        </tr>
+        {% endfor %}
+        {% if forloop.last %}
+        <tr class="tr-total">
+            <td class="col-nota" colspan="3"><strong>TOTAL</strong></td>
+            <td class="col-quantidade"><strong>{{ notas_romaneadas|sum_field:'quantidade'|format_brazilian_quantity }}</strong></td>
+            <td class="col-peso"><strong>{{ notas_romaneadas|sum_field:'peso'|format_brazilian_weight }}</strong></td>
+            <td class="col-valor"><strong>{{ notas_romaneadas|sum_field:'valor'|format_brazilian_currency }}</strong></td>
+        </tr>
+        {% endif %}
+    </tbody>
+    <tfoot>
+        <tr class="tr-disclaimer">
+            <td colspan="6"><strong>NÃO NOS RESPONSABILIZAMOS POR PERDA OU AVARIA DE MERCADORIA SAÍDA DE NOSSO ARMAZÉM.</strong></td>
+        </tr>
+        <tr class="tr-signature">
+            <td colspan="6">
+                <table style="width: 100%; border: none;"><tr>
+                    <td style="width: 45%; border: none; vertical-align: top;">
+                        <div class="signature-line"></div>
+                        <div class="driver-details">
+                            <div><strong>MOTORISTA:</strong> {{ romaneio.motorista.nome|default:"_________________" }}</div>
+                            <div><strong>CPF:</strong> {{ romaneio.motorista.cpf|format_cpf|default:"_________________" }}</div>
+                            <div><strong>CNH:</strong> {{ romaneio.motorista.cnh|default:"_________________" }}</div>
+                        </div>
+                    </td>
+                    <td style="width: 55%; border: none; padding-left: 10px; vertical-align: top;">
+                        <div class="declaration-text">
+                            {% with decl="Declaro ter recebido em perfeitas condições os volumes desta ordem, cujo carregamento foi por mim presenciado, não cabendo nenhuma responsabilidade à agência por falta de volumes em viagem. Obrigando-me ainda, a fazer as entregas em seu destino exato." %}{{ decl|upper }}{% endwith %}
+                        </div>
+                        <div class="pagenum-footer">Página {{ forloop.counter }} de {{ paginas_notas|length }}</div>
+                    </td>
+                </tr></table>
+            </td>
+        </tr>
+    </tfoot>
+</table>
+</div>
+{% endfor %}

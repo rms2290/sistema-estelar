@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Lançar Xerox - Financeiro V2{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 520px;">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h2><i class="fas fa-print"></i> Lançar Xerox</h2>
+        <a href="{% url 'financeiro_v2:caixa_do_dia' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <i class="fas fa-print"></i> Entrada rápida no bolso <strong>Estelar</strong>
+        </div>
+        <div class="card-body">
+            {% include 'financeiro_v2/partials/_xerox_form_inner.html' %}
+
+            <div class="d-flex justify-content-end gap-2 mt-3">
+                <a href="{% url 'financeiro_v2:caixa_do_dia' %}" class="btn btn-outline-secondary">Cancelar</a>
+                <button type="submit" form="form-xerox" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Lançar Xerox
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

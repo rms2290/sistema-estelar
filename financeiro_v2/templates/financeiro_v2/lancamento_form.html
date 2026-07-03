@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo }} - Financeiro V2{% endblock %}
+
+{% block extra_css %}
+<style>
+    .fin-form-container {
+        max-width: 720px;
+        margin-left: auto;
+        margin-right: auto;
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+        transition: max-width 0.3s ease;
+    }
+    .sidebar.collapsed + .main-content .fin-form-container {
+        max-width: 1100px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fin-form-container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h2><i class="fas {{ icone|default:'fa-pen' }}"></i> {{ titulo }}</h2>
+        <a href="{% url 'financeiro_v2:caixa_do_dia' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if not editando %}
+    <div class="alert alert-light alert-text-left border small">
+        <span>
+            <i class="fas fa-lightbulb text-warning"></i>
+            Use este formulário para registrar <strong>ajustes manuais</strong> e movimentações
+            que não cabem nos atalhos. Para recebimentos de cobranças, prefira a tela
+            <a href="{% url 'financeiro_v2:a_receber_lista' %}" class="alert-link">A Receber</a>.
+        </span>
+    </div>
+    {% else %}
+    <div class="alert alert-warning alert-text-left small">
+        <span>
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Editando lançamento existente.</strong>
+            Se este lançamento foi criado automaticamente por uma baixa/pagamento, alterar valores
+            aqui pode deixar o V2 inconsistente com o status da cobrança ou acumulado original.
+        </span>
+    </div>
+    {% endif %}
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">{{ form.data.label }}</label>
+                        {{ form.data }}
+                        {% if form.data.errors %}<div class="text-danger small">{{ form.data.errors|join:", " }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">{{ form.tipo.label }}</label>
+                        {{ form.tipo }}
+                        {% if form.tipo.errors %}<div class="text-danger small">{{ form.tipo.errors|join:", " }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">{{ form.valor.label }}</label>
+                        {{ form.valor }}
+                        {% if form.valor.errors %}<div class="text-danger small">{{ form.valor.errors|join:", " }}</div>{% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">{{ form.carteira.label }}</label>
+                        {{ form.carteira }}
+                        {% if form.carteira.errors %}<div class="text-danger small">{{ form.carteira.errors|join:", " }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">{{ form.bolso.label }}</label>
+                        {{ form.bolso }}
+                        {% if form.bolso.errors %}<div class="text-danger small">{{ form.bolso.errors|join:", " }}</div>{% endif %}
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">{{ form.descricao.label }}</label>
+                        {{ form.descricao }}
+                        {% if form.descricao.errors %}<div class="text-danger small">{{ form.descricao.errors|join:", " }}</div>{% endif %}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">{{ form.categoria.label }} <small class="text-muted">(opcional)</small></label>
+                        {{ form.categoria }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">{{ form.cliente.label }} <small class="text-muted">(opcional)</small></label>
+                        {{ form.cliente }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">{{ form.funcionario.label }} <small class="text-muted">(opcional)</small></label>
+                        {{ form.funcionario }}
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-{% if editando %}between{% else %}end{% endif %} gap-2 mt-3 flex-wrap">
+                    {% if editando %}
+                        <a href="{% url 'financeiro_v2:excluir_lancamento' pk=lanc.pk %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}"
+                           class="btn btn-outline-danger">
+                            <i class="fas fa-trash"></i> Excluir
+                        </a>
+                    {% endif %}
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'financeiro_v2:caixa_do_dia' %}" class="btn btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Salvar Lançamento
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

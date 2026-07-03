@@ -12,6 +12,7 @@ from django.db import IntegrityError
 from ..models import Motorista, HistoricoConsulta
 from ..forms import MotoristaForm, HistoricoConsultaForm
 from ..decorators import rate_limit_critical
+from ..utils.search_utils import tem_filtro_preenchido
 
 # Configurar logger
 logger = logging.getLogger(__name__)
@@ -281,27 +282,32 @@ def listar_motoristas(request):
     search_form = MotoristaSearchForm(request.GET)
     motoristas = Motorista.objects.none()
     search_performed = bool(request.GET)
+    filtro_minimo_ausente = False
 
     if search_performed and search_form.is_valid():
-        # Query já otimizada (Motorista não tem ForeignKeys principais para select_related)
-        queryset = Motorista.objects.all()
-        nome = search_form.cleaned_data.get('nome')
-        cpf = search_form.cleaned_data.get('cpf')
-        rg = search_form.cleaned_data.get('rg')
+        campos_filtro = ('nome', 'cpf', 'rg')
+        if not tem_filtro_preenchido(search_form.cleaned_data, campos_filtro):
+            filtro_minimo_ausente = True
+        else:
+            queryset = Motorista.objects.all()
+            nome = search_form.cleaned_data.get('nome')
+            cpf = search_form.cleaned_data.get('cpf')
+            rg = search_form.cleaned_data.get('rg')
 
-        if nome:
-            queryset = queryset.filter(nome__icontains=nome)
-        if cpf:
-            queryset = queryset.filter(cpf__icontains=cpf)
-        if rg:
-            queryset = queryset.filter(rg__icontains=rg)
-        
-        motoristas = queryset.order_by('nome')
-    
+            if nome:
+                queryset = queryset.filter(nome__icontains=nome)
+            if cpf:
+                queryset = queryset.filter(cpf__icontains=cpf)
+            if rg:
+                queryset = queryset.filter(rg__icontains=rg)
+
+            motoristas = queryset.order_by('nome')
+
     context = {
         'motoristas': motoristas,
         'search_form': search_form,
         'search_performed': search_performed,
+        'filtro_minimo_ausente': filtro_minimo_ausente,
     }
     return render(request, 'notas/listar_motoristas.html', context)
 

@@ -10,9 +10,14 @@
             <h4 class="card-title mb-0">
                 <i class="fas fa-truck-loading"></i> Cobrança Carregamento
             </h4>
-            <a href="{% url 'notas:criar_cobranca_carregamento' %}" class="btn btn-success">
-                <i class="fas fa-plus"></i> Nova Cobrança
-            </a>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{% url 'financeiro_v2:relatorio_cobranca_cliente' %}" class="btn btn-primary">
+                    <i class="fas fa-file-invoice"></i> Relatório de Cobrança
+                </a>
+                <a href="{% url 'financeiro_v2:criar_cobranca_carregamento' %}" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Nova Cobrança
+                </a>
+            </div>
         </div>
         <div class="card-body">
             <!-- Mensagens -->
@@ -76,10 +81,10 @@
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-search"></i> Filtrar
                                 </button>
-                                <a href="{% url 'notas:cobranca_carregamento' %}" class="btn btn-secondary">
+                                <a href="{% url 'financeiro_v2:cobranca_carregamento_lista' %}" class="btn btn-secondary">
                                     <i class="fas fa-times"></i> Limpar Filtros
                                 </a>
-                                <a href="{% url 'notas:gerar_relatorio_consolidado_cobranca' %}" 
+                                <a href="{% url 'financeiro_v2:gerar_relatorio_consolidado_cobranca' %}" 
                                    id="btn-gerar-relatorio-consolidado"
                                    class="btn btn-danger" 
                                    target="_blank">
@@ -162,17 +167,17 @@
                             </td>
                             <td>{{ cobranca.criado_em|date:"d/m/Y" }}</td>
                             <td class="text-nowrap">
-                                <a href="{% url 'notas:gerar_relatorio_cobranca_carregamento_pdf' cobranca.id %}" 
+                                <a href="{% url 'financeiro_v2:gerar_relatorio_cobranca_carregamento_pdf' cobranca.id %}" 
                                    class="btn btn-sm btn-danger" title="Gerar PDF" target="_blank">
                                     <i class="fas fa-file-pdf"></i>
                                 </a>
                                 {% if cobranca.status == 'Pendente' %}
-                                <a href="{% url 'notas:baixar_cobranca_carregamento' cobranca.id %}" 
+                                <a href="{% url 'financeiro_v2:baixar_cobranca_carregamento' cobranca.id %}" 
                                    class="btn btn-sm btn-success" title="Baixar">
                                     <i class="fas fa-check"></i>
                                 </a>
                                 {% endif %}
-                                <a href="{% url 'notas:visualizar_cobranca_carregamento' cobranca.id %}" 
+                                <a href="{% url 'financeiro_v2:visualizar_cobranca_carregamento' cobranca.id %}" 
                                    class="btn btn-info btn-sm" title="Visualizar">
                                     <i class="fas fa-eye"></i>
                                 </a>
@@ -185,7 +190,7 @@
             {% elif status_filtro %}
             <div class="alert alert-info">
                 <i class="fas fa-info-circle"></i> Nenhuma cobrança encontrada para o status selecionado.
-                <a href="{% url 'notas:criar_cobranca_carregamento' %}" class="alert-link">Clique aqui para criar uma nova cobrança.</a>
+                <a href="{% url 'financeiro_v2:criar_cobranca_carregamento' %}" class="alert-link">Clique aqui para criar uma nova cobrança.</a>
             </div>
             {% else %}
             <div class="alert alert-secondary alert-text-left">

@@ -160,21 +160,32 @@ def filtrar_veiculos_por_composicao(request):
 def carregar_romaneios_cliente(request, cliente_id):
     """Carrega romaneios de um cliente via AJAX"""
     cliente = get_object_or_404(Cliente, pk=cliente_id)
-    # Em criação de cobrança, listar apenas romaneios ainda não vinculados
-    # para evitar cobranças duplicadas.
-    romaneios = (
+    para_relatorio = request.GET.get('para_relatorio') == '1'
+
+    queryset = (
         RomaneioViagem.objects
-        .filter(cliente=cliente, cobrancas_vinculadas__isnull=True)
-        .order_by('-data_emissao')[:10]
+        .filter(cliente=cliente)
+        .select_related('motorista', 'veiculo_principal', 'reboque_1', 'reboque_2')
+        .order_by('-data_emissao')
     )
-    
+
+    if para_relatorio:
+        # Relatório provisório ao cliente: romaneios emitidos (sem limite de cobrança).
+        romaneios = queryset.filter(status='Emitido')[:50]
+    else:
+        # Cobrança financeira: apenas romaneios ainda não vinculados.
+        romaneios = queryset.filter(cobrancas_vinculadas__isnull=True)[:10]
+
     romaneios_data = [{
         'id': romaneio.id,
         'codigo': romaneio.codigo,
-        'data_emissao': romaneio.data_emissao.strftime('%d/%m/%Y'),
+        'data_emissao': romaneio.data_emissao.strftime('%d/%m/%Y') if romaneio.data_emissao else '-',
+        'motorista': romaneio.motorista.nome if romaneio.motorista else '-',
+        'veiculo': romaneio.get_composicao_veicular(),
+        'status': romaneio.status,
         'valor_total': str(romaneio.valor_total),
     } for romaneio in romaneios]
-    
+
     return json_success(romaneios=romaneios_data)
 
 

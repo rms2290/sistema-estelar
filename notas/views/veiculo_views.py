@@ -11,6 +11,7 @@ from django.db import IntegrityError
 from ..models import Veiculo
 from ..forms import VeiculoForm, VeiculoSearchForm
 from ..decorators import rate_limit_critical
+from ..utils.search_utils import tem_filtro_preenchido
 
 # Configurar logger
 logger = logging.getLogger(__name__)
@@ -190,23 +191,35 @@ def listar_veiculos(request):
     search_form = VeiculoSearchForm(request.GET)
     veiculos = Veiculo.objects.none()
     search_performed = bool(request.GET)
+    filtro_minimo_ausente = False
 
     if search_performed and search_form.is_valid():
-        queryset = Veiculo.objects.all()
-        placa = search_form.cleaned_data.get('placa')
-        tipo_unidade = search_form.cleaned_data.get('tipo_unidade')
+        campos_filtro = ('placa', 'chassi', 'proprietario_nome', 'tipo_unidade')
+        if not tem_filtro_preenchido(search_form.cleaned_data, campos_filtro):
+            filtro_minimo_ausente = True
+        else:
+            queryset = Veiculo.objects.all()
+            placa = search_form.cleaned_data.get('placa')
+            chassi = search_form.cleaned_data.get('chassi')
+            proprietario_nome = search_form.cleaned_data.get('proprietario_nome')
+            tipo_unidade = search_form.cleaned_data.get('tipo_unidade')
 
-        if placa:
-            queryset = queryset.filter(placa__icontains=placa)
-        if tipo_unidade:
-            queryset = queryset.filter(tipo_unidade=tipo_unidade)
-        
-        veiculos = queryset.order_by('placa')
-    
+            if placa:
+                queryset = queryset.filter(placa__icontains=placa)
+            if chassi:
+                queryset = queryset.filter(chassi__icontains=chassi)
+            if proprietario_nome:
+                queryset = queryset.filter(proprietario_nome_razao_social__icontains=proprietario_nome)
+            if tipo_unidade:
+                queryset = queryset.filter(tipo_unidade=tipo_unidade)
+
+            veiculos = queryset.order_by('placa')
+
     context = {
         'veiculos': veiculos,
         'search_form': search_form,
         'search_performed': search_performed,
+        'filtro_minimo_ausente': filtro_minimo_ausente,
     }
     return render(request, 'notas/listar_veiculos.html', context)
 

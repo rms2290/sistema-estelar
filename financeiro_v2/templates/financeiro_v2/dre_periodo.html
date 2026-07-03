@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+
+{% block title %}DRE - Financeiro V2{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h2><i class="fas fa-balance-scale"></i> DRE Simplificado</h2>
+        <a href="{% url 'financeiro_v2:painel' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Voltar ao Painel
+        </a>
+    </div>
+
+    <div class="alert alert-light alert-text-left border small">
+        <span>
+            <strong>O que é?</strong> Resumo financeiro do período em duas visões:
+            <strong>Fluxo de Caixa</strong> mostra o que entrou e saiu de fato (todos os bolsos).
+            <strong>Resultado Operacional</strong> mostra o lucro real da empresa (margens
+            Estelar e Documentação após pagar terceiros, descontando despesas e distribuição aos gerentes).
+            Os valores que entram e saem do bolso Operacional referentes a chapas são apenas passagem
+            e não compõem o lucro da empresa.
+        </span>
+    </div>
+
+    {# ============================ Filtros ============================ #}
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header py-2">
+            <i class="fas fa-calendar-alt"></i> Período
+        </div>
+        <div class="card-body py-2">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label mb-1 small">{{ form.data_inicio.label }}</label>
+                    {{ form.data_inicio }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-1 small">{{ form.data_fim.label }}</label>
+                    {{ form.data_fim }}
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-sync-alt"></i> Atualizar
+                    </button>
+                </div>
+            </form>
+            <div class="mt-2 small text-muted">
+                Exibindo: <strong>{{ data_inicio|date:"d/m/Y" }}</strong> até
+                <strong>{{ data_fim|date:"d/m/Y" }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        {# ============================ Visão A: Fluxo ============================ #}
+        <div class="col-lg-6 mb-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-info text-white py-2">
+                    <i class="fas fa-exchange-alt"></i> Fluxo de Caixa do Período
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Bolso</th>
+                                <th class="text-end text-success">Entradas</th>
+                                <th class="text-end text-danger">Saídas</th>
+                                <th class="text-end">Saldo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in fluxo_lista %}
+                            <tr>
+                                <td>{{ b.nome }}</td>
+                                <td class="text-end text-success">R$ {{ b.entradas|floatformat:2 }}</td>
+                                <td class="text-end text-danger">R$ {{ b.saidas|floatformat:2 }}</td>
+                                <td class="text-end fw-bold {% if b.saldo >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                                    R$ {{ b.saldo|floatformat:2 }}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center text-muted py-3">Nenhum lançamento no período.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr class="fw-bold">
+                                <td>Totais</td>
+                                <td class="text-end text-success">R$ {{ total_entradas|floatformat:2 }}</td>
+                                <td class="text-end text-danger">R$ {{ total_saidas|floatformat:2 }}</td>
+                                <td class="text-end {% if fluxo_liquido >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                                    R$ {{ fluxo_liquido|floatformat:2 }}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <div class="card-footer small">
+                    <strong>Fluxo líquido:</strong>
+                    <span class="{% if fluxo_liquido >= 0 %}text-primary{% else %}text-danger{% endif %} fw-bold">
+                        R$ {{ fluxo_liquido|floatformat:2 }}
+                    </span>
+                    <em class="text-muted">(diferença entre entradas e saídas brutas)</em>
+                </div>
+            </div>
+        </div>
+
+        {# ============================ Visão B: Resultado Operacional ============================ #}
+        <div class="col-lg-6 mb-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-success text-white py-2">
+                    <i class="fas fa-coins"></i> Resultado Operacional da Empresa
+                </div>
+                <div class="card-body p-3">
+                    <h6 class="text-success mb-2">RECEITAS</h6>
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td>Margem Carregamento (bolso Estelar)</td>
+                                <td class="text-end text-success">R$ {{ margem_estelar|floatformat:2 }}</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    Margem Documentação após pagar terceiros
+                                    <small class="text-muted d-block">
+                                        Doc. recebido: R$ {{ doc_in|floatformat:2 }} −
+                                        Pago a terceiro: R$ {{ doc_pagamento_terceiro|floatformat:2 }}
+                                    </small>
+                                </td>
+                                <td class="text-end text-success align-top">R$ {{ margem_doc_apos_terceiro|floatformat:2 }}</td>
+                            </tr>
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr class="fw-bold">
+                                <td>(=) Receita Operacional</td>
+                                <td class="text-end text-success">R$ {{ receita_operacional|floatformat:2 }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <h6 class="text-danger mt-3 mb-2">DEDUÇÕES</h6>
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td>(−) Despesas Operacionais (saídas no Operacional, exceto pagamento de chapas)</td>
+                                <td class="text-end text-danger">R$ {{ despesas_op|floatformat:2 }}</td>
+                            </tr>
+                            <tr>
+                                <td>(−) Distribuição aos Gerentes (sai da Documentação)</td>
+                                <td class="text-end text-danger">R$ {{ doc_distrib_gerentes|floatformat:2 }}</td>
+                            </tr>
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr class="fw-bold">
+                                <td>(=) Total Deduções</td>
+                                <td class="text-end text-danger">R$ {{ deducoes|floatformat:2 }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <hr>
+                    <div class="d-flex justify-content-between align-items-center p-3 rounded
+                        {% if lucro_operacional >= 0 %}bg-success-subtle{% else %}bg-danger-subtle{% endif %}">
+                        <h5 class="mb-0">
+                            <i class="fas fa-trophy"></i>
+                            LUCRO OPERACIONAL
+                        </h5>
+                        <h3 class="mb-0 fw-bold {% if lucro_operacional >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            R$ {{ lucro_operacional|floatformat:2 }}
+                        </h3>
+                    </div>
+                </div>
+                <div class="card-footer small">
+                    <em class="text-muted">
+                        Lucro = receita das margens (Estelar + Documentação após terceiros)
+                        − despesas operacionais − distribuição aos gerentes.
+                    </em>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -31,6 +31,7 @@ from django.db import IntegrityError
 from ..models import Cliente
 from ..forms import ClienteForm, ClienteSearchForm
 from ..decorators import rate_limit_critical
+from ..utils.search_utils import tem_filtro_preenchido
 
 # Configurar logger
 logger = logging.getLogger(__name__)
@@ -495,27 +496,32 @@ def listar_clientes(request):
     search_form = ClienteSearchForm(request.GET)
     clientes = Cliente.objects.none()
     search_performed = bool(request.GET)
+    filtro_minimo_ausente = False
 
     if search_performed and search_form.is_valid():
-        # Query já otimizada (Cliente não tem ForeignKeys principais)
-        queryset = Cliente.objects.all()
-        razao_social = search_form.cleaned_data.get('razao_social')
-        cnpj = search_form.cleaned_data.get('cnpj')
-        status = search_form.cleaned_data.get('status')
+        campos_filtro = ('razao_social', 'cnpj', 'status')
+        if not tem_filtro_preenchido(search_form.cleaned_data, campos_filtro):
+            filtro_minimo_ausente = True
+        else:
+            queryset = Cliente.objects.all()
+            razao_social = search_form.cleaned_data.get('razao_social')
+            cnpj = search_form.cleaned_data.get('cnpj')
+            status = search_form.cleaned_data.get('status')
 
-        if razao_social:
-            queryset = queryset.filter(razao_social__icontains=razao_social)
-        if cnpj:
-            queryset = queryset.filter(cnpj__icontains=cnpj)
-        if status:
-            queryset = queryset.filter(status=status)
-        
-        clientes = queryset.order_by('razao_social')
-    
+            if razao_social:
+                queryset = queryset.filter(razao_social__icontains=razao_social)
+            if cnpj:
+                queryset = queryset.filter(cnpj__icontains=cnpj)
+            if status:
+                queryset = queryset.filter(status=status)
+
+            clientes = queryset.order_by('razao_social')
+
     context = {
         'clientes': clientes,
         'search_form': search_form,
         'search_performed': search_performed,
+        'filtro_minimo_ausente': filtro_minimo_ausente,
     }
     return render(request, 'notas/listar_clientes.html', context)
 

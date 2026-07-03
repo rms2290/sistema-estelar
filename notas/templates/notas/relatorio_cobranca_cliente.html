@@ -1,0 +1,278 @@
+{% extends 'base.html' %}
+
+{% block title %}Relatório de Cobrança{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="mb-0">
+                <i class="fas fa-file-invoice"></i> Relatório de Cobrança
+            </h4>
+            <a href="{% url 'financeiro_v2:cobranca_carregamento_lista' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-list"></i> Cobranças salvas
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                Gere um relatório para enviar ao cliente <strong>sem salvar cobrança</strong> no sistema.
+                O relatório será aberto em uma <strong>nova janela</strong>. Use Ctrl+P para salvar em PDF, se necessário.
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" id="form-relatorio-cobranca" target="_blank">
+                {% csrf_token %}
+                <input type="hidden" name="acao" value="gerar_relatorio">
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-building"></i> 1. Cliente</h5>
+                    </div>
+                    <div class="card-body">
+                        <select name="cliente" id="select-cliente" class="form-select form-select-lg" required>
+                            <option value="">Selecione um cliente...</option>
+                            {% for cliente in clientes %}
+                            <option value="{{ cliente.id }}"
+                                {% if cliente_selecionado_id == cliente.id|stringformat:"s" %}selected{% endif %}>
+                                {{ cliente.razao_social }}{% if cliente.cnpj %} ({{ cliente.cnpj }}){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="mt-3">
+                            <button type="button" id="btn-carregar-romaneios" class="btn btn-primary">
+                                <i class="fas fa-search"></i> Carregar Romaneios
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4" id="card-romaneios" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-truck"></i> 2. Romaneios</h5>
+                        <small class="text-muted">Marque os romaneios que entram neste relatório</small>
+                    </div>
+                    <div class="card-body">
+                        <div id="loading-romaneios" class="text-center" style="display: none;">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p class="mb-0 mt-2">Carregando romaneios...</p>
+                        </div>
+                        <div id="lista-romaneios"></div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-dollar-sign"></i> 3. Valores</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="valor_carregamento">
+                                    Valor de carregamento (R$) <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" name="valor_carregamento" id="valor_carregamento"
+                                       class="form-control form-control-lg" step="0.01" min="0" required
+                                       placeholder="0,00"
+                                       value="{{ form_data.valor_carregamento|default:'' }}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="valor_cte_manifesto">
+                                    Valor CTE/Manifesto (R$)
+                                </label>
+                                <input type="number" name="valor_cte_manifesto" id="valor_cte_manifesto"
+                                       class="form-control form-control-lg" step="0.01" min="0"
+                                       placeholder="0,00 (opcional)"
+                                       value="{{ form_data.valor_cte_manifesto|default:'' }}">
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label" for="observacoes">Observações</label>
+                                <textarea name="observacoes" id="observacoes" class="form-control" rows="3"
+                                          placeholder="Texto opcional que aparecerá no relatório">{{ form_data.observacoes|default:'' }}</textarea>
+                            </div>
+                        </div>
+                        <div class="alert alert-light border mb-0">
+                            <strong>Total no relatório:</strong>
+                            <span id="total-previa">R$ 0,00</span>
+                            <small class="text-muted d-block">Carregamento + CTE/Manifesto</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between flex-wrap gap-2">
+                    <a href="{% url 'financeiro_v2:cobranca_carregamento_lista' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </a>
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="fas fa-file-alt"></i> Gerar Relatório
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{ romaneios_selecionados|json_script:"romaneios-selecionados-json" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectCliente = document.getElementById('select-cliente');
+    const btnCarregar = document.getElementById('btn-carregar-romaneios');
+    const cardRomaneios = document.getElementById('card-romaneios');
+    const loadingRomaneios = document.getElementById('loading-romaneios');
+    const listaRomaneios = document.getElementById('lista-romaneios');
+    const valorCarregamento = document.getElementById('valor_carregamento');
+    const valorCte = document.getElementById('valor_cte_manifesto');
+    const totalPrevia = document.getElementById('total-previa');
+    const romaneiosMarcados = JSON.parse(
+        document.getElementById('romaneios-selecionados-json').textContent
+    );
+
+    function atualizarTotal() {
+        const total = (parseFloat(valorCarregamento.value) || 0) + (parseFloat(valorCte.value) || 0);
+        totalPrevia.textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+    }
+
+    function configurarSelecionarTodos() {
+        const selecionarTodos = document.getElementById('selecionar-todos');
+        if (!selecionarTodos) return;
+        selecionarTodos.addEventListener('change', function() {
+            document.querySelectorAll('.checkbox-romaneio').forEach((chk) => {
+                chk.checked = selecionarTodos.checked;
+            });
+        });
+    }
+
+    function carregarRomaneios(clienteId) {
+        if (!clienteId) {
+            alert('Selecione um cliente primeiro.');
+            return;
+        }
+
+        cardRomaneios.style.display = 'block';
+        loadingRomaneios.style.display = 'block';
+        listaRomaneios.innerHTML = '';
+
+        fetch(`/notas/api/romaneios-cliente/${clienteId}/?para_relatorio=1`)
+            .then((response) => response.json())
+            .then((data) => {
+                loadingRomaneios.style.display = 'none';
+
+                if (data.error) {
+                    listaRomaneios.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                    return;
+                }
+
+                if (!data.romaneios || data.romaneios.length === 0) {
+                    listaRomaneios.innerHTML = `
+                        <div class="alert alert-warning mb-0">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Nenhum romaneio emitido encontrado para este cliente.
+                        </div>`;
+                    return;
+                }
+
+                const selecionados = new Set(
+                    Array.isArray(romaneiosMarcados)
+                        ? romaneiosMarcados.map(String)
+                        : []
+                );
+
+                let html = `
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;">
+                                        <input type="checkbox" id="selecionar-todos" title="Selecionar todos">
+                                    </th>
+                                    <th>Código</th>
+                                    <th>Data</th>
+                                    <th>Motorista</th>
+                                    <th>Veículo</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                data.romaneios.forEach((romaneio) => {
+                    const checked = selecionados.has(String(romaneio.id)) ? 'checked' : '';
+                    html += `
+                        <tr>
+                            <td>
+                                <input type="checkbox" name="romaneios" value="${romaneio.id}"
+                                       class="checkbox-romaneio" ${checked}>
+                            </td>
+                            <td><strong>${romaneio.codigo}</strong></td>
+                            <td>${romaneio.data_emissao}</td>
+                            <td>${romaneio.motorista}</td>
+                            <td>${romaneio.veiculo}</td>
+                            <td>${romaneio.status}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                listaRomaneios.innerHTML = html;
+                configurarSelecionarTodos();
+            })
+            .catch((error) => {
+                loadingRomaneios.style.display = 'none';
+                listaRomaneios.innerHTML = `<div class="alert alert-danger">Erro ao carregar romaneios: ${error.message}</div>`;
+            });
+    }
+
+    btnCarregar.addEventListener('click', function() {
+        carregarRomaneios(selectCliente.value);
+    });
+
+    selectCliente.addEventListener('change', function() {
+        cardRomaneios.style.display = 'none';
+        listaRomaneios.innerHTML = '';
+    });
+
+    valorCarregamento.addEventListener('input', atualizarTotal);
+    valorCte.addEventListener('input', atualizarTotal);
+    atualizarTotal();
+
+    document.getElementById('form-relatorio-cobranca').addEventListener('submit', function(event) {
+        const form = event.currentTarget;
+        const selecionados = document.querySelectorAll('.checkbox-romaneio:checked').length;
+
+        if (!selectCliente.value) {
+            event.preventDefault();
+            alert('Selecione um cliente.');
+            form.removeAttribute('target');
+            return;
+        }
+
+        if (cardRomaneios.style.display === 'none' || selecionados === 0) {
+            event.preventDefault();
+            alert('Carregue e selecione pelo menos um romaneio.');
+            form.removeAttribute('target');
+            return;
+        }
+
+        form.setAttribute('target', '_blank');
+    });
+
+    {% if cliente_selecionado_id %}
+    carregarRomaneios('{{ cliente_selecionado_id }}');
+    {% endif %}
+});
+</script>
+{% endblock %}

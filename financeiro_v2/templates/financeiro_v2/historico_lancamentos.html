@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block title %}Histórico - Financeiro V2{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h2><i class="fas fa-history"></i> Histórico de Lançamentos</h2>
+        <a href="{% url 'financeiro_v2:painel' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Voltar ao Painel
+        </a>
+    </div>
+
+    {# ============================ Filtros ============================ #}
+    <div class="card mb-3 shadow-sm">
+        <div class="card-header py-2">
+            <i class="fas fa-filter"></i> Filtros
+        </div>
+        <div class="card-body py-2">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">{{ form.data_inicio.label }}</label>
+                    {{ form.data_inicio }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">{{ form.data_fim.label }}</label>
+                    {{ form.data_fim }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">{{ form.tipo.label }}</label>
+                    {{ form.tipo }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">{{ form.carteira.label }}</label>
+                    {{ form.carteira }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">{{ form.bolso.label }}</label>
+                    {{ form.bolso }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">{{ form.busca.label }}</label>
+                    {{ form.busca }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">{{ form.categoria.label }}</label>
+                    {{ form.categoria }}
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm w-50">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                    <a href="{% url 'financeiro_v2:historico_lancamentos' %}" class="btn btn-outline-secondary btn-sm w-50">
+                        Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {# ============================ Resumo ============================ #}
+    <div class="row mb-3">
+        <div class="col-md-3 mb-2">
+            <div class="card border-info h-100"><div class="card-body py-2">
+                <small class="text-muted">Total filtrado</small>
+                <div class="fs-5 fw-bold">{{ total_count }} lançamento{{ total_count|pluralize }}</div>
+            </div></div>
+        </div>
+        <div class="col-md-3 mb-2">
+            <div class="card border-success h-100"><div class="card-body py-2">
+                <small class="text-success">Entradas</small>
+                <div class="fs-5 fw-bold text-success">+ R$ {{ total_entradas|floatformat:2 }}</div>
+            </div></div>
+        </div>
+        <div class="col-md-3 mb-2">
+            <div class="card border-danger h-100"><div class="card-body py-2">
+                <small class="text-danger">Saídas</small>
+                <div class="fs-5 fw-bold text-danger">− R$ {{ total_saidas|floatformat:2 }}</div>
+            </div></div>
+        </div>
+        <div class="col-md-3 mb-2">
+            <div class="card border-primary h-100"><div class="card-body py-2">
+                <small class="text-primary">Saldo do filtro</small>
+                <div class="fs-5 fw-bold {% if saldo_periodo >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                    R$ {{ saldo_periodo|floatformat:2 }}
+                </div>
+            </div></div>
+        </div>
+    </div>
+
+    {# ============================ Quebra por bolso ============================ #}
+    {% if por_bolso %}
+    <div class="card mb-3 shadow-sm">
+        <div class="card-header py-2">
+            <i class="fas fa-tags"></i> Resumo por bolso
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Bolso</th>
+                            <th class="text-end">Entradas</th>
+                            <th class="text-end">Saídas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in por_bolso %}
+                        <tr>
+                            <td>{{ b.bolso__nome }}</td>
+                            <td class="text-end text-success">R$ {{ b.entradas|default:0|floatformat:2 }}</td>
+                            <td class="text-end text-danger">R$ {{ b.saidas|default:0|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ============================ Lista paginada ============================ #}
+    <div class="card shadow-sm">
+        <div class="card-header py-2">
+            <i class="fas fa-list"></i> Lançamentos
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Data</th>
+                            <th>Descrição</th>
+                            <th>Carteira</th>
+                            <th>Bolso</th>
+                            <th>Categoria</th>
+                            <th class="text-end">Valor</th>
+                            <th>Por</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for l in page_obj %}
+                        <tr>
+                            <td><small>{{ l.data|date:"d/m/Y" }}</small></td>
+                            <td>
+                                {{ l.descricao }}
+                                {% if l.cliente %}<small class="badge bg-info text-dark ms-1">{{ l.cliente.razao_social }}</small>{% endif %}
+                                {% if l.funcionario %}<small class="badge bg-warning text-dark ms-1">{{ l.funcionario.nome }}</small>{% endif %}
+                            </td>
+                            <td><small>{{ l.carteira.nome }}</small></td>
+                            <td><small>{{ l.bolso.nome }}</small></td>
+                            <td><small class="text-muted">{{ l.categoria|default:"—" }}</small></td>
+                            <td class="text-end fw-bold {% if l.tipo == 'Entrada' %}text-success{% else %}text-danger{% endif %}">
+                                {% if l.tipo == 'Entrada' %}+{% else %}−{% endif %} R$ {{ l.valor|floatformat:2 }}
+                            </td>
+                            <td><small class="text-muted">{{ l.criado_por.username|default:"—" }}</small></td>
+                            <td class="text-end">
+                                <a href="{% url 'financeiro_v2:editar_lancamento' pk=l.pk %}?next={{ request.get_full_path|urlencode }}"
+                                   class="btn btn-outline-primary btn-sm py-0" title="Editar">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                Nenhum lançamento encontrado.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <small class="text-muted">
+                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }} —
+                {{ page_obj.start_index }}-{{ page_obj.end_index }} de {{ total_count }}
+            </small>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1&{{ querystring_extra }}">«</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ querystring_extra }}">‹</a>
+                        </li>
+                    {% endif %}
+                    <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ querystring_extra }}">›</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&{{ querystring_extra }}">»</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

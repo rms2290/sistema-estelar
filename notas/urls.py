@@ -63,6 +63,7 @@ urlpatterns = [
     path('romaneios/generico/adicionar/', romaneio_views.adicionar_romaneio_generico, name='adicionar_romaneio_generico'),
     path('romaneios/editar/<int:pk>/', romaneio_views.editar_romaneio, name='editar_romaneio'),
     path('romaneios/excluir/<int:pk>/', romaneio_views.excluir_romaneio, name='excluir_romaneio'),
+    path('romaneios/<int:pk>/emitir/', romaneio_views.emitir_romaneio, name='emitir_romaneio'),
     path('romaneios/<int:pk>/detalhes/', romaneio_views.detalhes_romaneio, name='detalhes_romaneio'),
     path('romaneios/<int:pk>/imprimir-novo/', romaneio_views.imprimir_romaneio_novo, name='imprimir_romaneio_novo'),
     path('romaneios/<int:pk>/gerar-pdf/', romaneio_views.gerar_romaneio_pdf, name='gerar_romaneio_pdf'),

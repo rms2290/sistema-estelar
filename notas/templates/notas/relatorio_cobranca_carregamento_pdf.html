@@ -76,12 +76,13 @@
 <div class="secao-estado">
     <table class="tabela-consolidado-cobranca">
         <colgroup>
-            <col style="width: 34%;">
-            <col style="width: 16%;">
+            <col style="width: 22%;">
+            <col style="width: 10%;">
+            <col style="width: 10%;">
+            <col style="width: 18%;">
             <col style="width: 12%;">
-            <col style="width: 10%;">
-            <col style="width: 10%;">
-            <col style="width: 8%;">
+            <col style="width: 9%;">
+            <col style="width: 9%;">
             <col style="width: 10%;">
         </colgroup>
         <thead>
@@ -89,46 +90,75 @@
                 <th>CLIENTE</th>
                 <th>ROMANEIO</th>
                 <th>DATA ROMANEIO</th>
-                <th>STATUS</th>
+                <th>MOTORISTA</th>
+                <th>PLACA</th>
                 <th>R$ CARREG.</th>
                 <th>R$ CTE/MANIF.</th>
                 <th>R$ TOTAL</th>
             </tr>
         </thead>
         <tbody>
+            {% with qtd_romaneios=romaneios|length %}
+            {% for romaneio in romaneios %}
+            <tr>
+                {% if forloop.first %}
+                <td class="cliente" rowspan="{{ qtd_romaneios }}">
+                    {{ cobranca.cliente.razao_social }}
+                    {% if cobranca.origem_cobranca == 'AVULSA_CLIENTE' %}(AVULSA){% endif %}
+                </td>
+                {% endif %}
+                <td class="text-center"><strong>{{ romaneio.codigo }}</strong></td>
+                <td class="text-center">{{ romaneio.data_emissao|date:"d/m/Y"|default:"-" }}</td>
+                <td>{{ romaneio.motorista.nome|default:"-" }}</td>
+                <td class="text-center">
+                    {% if romaneio.veiculo_principal %}
+                        {{ romaneio.get_composicao_veicular }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                {% if forloop.first %}
+                <td class="valor" rowspan="{{ qtd_romaneios }}">{{ cobranca.valor_carregamento|format_brazilian_currency }}</td>
+                <td class="valor" rowspan="{{ qtd_romaneios }}">{{ cobranca.valor_cte_manifesto|format_brazilian_currency }}</td>
+                <td class="valor" rowspan="{{ qtd_romaneios }}">{{ cobranca.valor_total|format_brazilian_currency }}</td>
+                {% endif %}
+            </tr>
+            {% empty %}
             <tr>
                 <td class="cliente">
                     {{ cobranca.cliente.razao_social }}
                     {% if cobranca.origem_cobranca == 'AVULSA_CLIENTE' %}(AVULSA){% endif %}
                 </td>
-                <td class="text-center">
-                    {% for romaneio in romaneios %}
-                        {{ romaneio.codigo }}{% if not forloop.last %}, {% endif %}
-                    {% empty %}
-                        -
-                    {% endfor %}
-                </td>
-                <td class="text-center">
-                    {% for romaneio in romaneios %}
-                        {{ romaneio.data_emissao|date:"d/m/Y"|default:"-" }}{% if not forloop.last %}, {% endif %}
-                    {% empty %}
-                        -
-                    {% endfor %}
-                </td>
-                <td class="text-center">{{ cobranca.status }}</td>
+                <td class="text-center">-</td>
+                <td class="text-center">-</td>
+                <td>-</td>
+                <td class="text-center">-</td>
                 <td class="valor">{{ cobranca.valor_carregamento|format_brazilian_currency }}</td>
                 <td class="valor">{{ cobranca.valor_cte_manifesto|format_brazilian_currency }}</td>
                 <td class="valor">{{ cobranca.valor_total|format_brazilian_currency }}</td>
             </tr>
+            {% endfor %}
+            {% endwith %}
         </tbody>
         <tfoot>
             <tr class="total-geral">
-                <td colspan="6">TOTAL GERAL</td>
+                <td colspan="7">TOTAL GERAL</td>
                 <td class="valor">{{ cobranca.valor_total|format_brazilian_currency }}</td>
             </tr>
         </tfoot>
     </table>
 
+    {% with obs_texto=cobranca.observacoes_para_exibicao %}
+    {% if relatorio_previa %}
+        {% if obs_texto %}
+        <div class="detalhes-observacoes">
+            <div class="titulo">OBSERVACOES POR COBRANCA</div>
+            <div class="item">
+                <div class="obs">{{ obs_texto }}</div>
+            </div>
+        </div>
+        {% endif %}
+    {% elif obs_texto or cobranca.origem_cobranca == 'AVULSA_CLIENTE' and cobranca.descricao_avulsa %}
     <div class="detalhes-observacoes">
         <div class="titulo">OBSERVACOES POR COBRANCA</div>
         <div class="item">
@@ -136,9 +166,13 @@
             {% if cobranca.origem_cobranca == 'AVULSA_CLIENTE' %}
             <div><strong>Despesa avulsa:</strong> {{ cobranca.descricao_avulsa|default:"-" }}</div>
             {% endif %}
-            <div class="obs">{{ cobranca.observacoes_para_exibicao|default:"-" }}</div>
+            {% if obs_texto %}
+            <div class="obs">{{ obs_texto }}</div>
+            {% endif %}
         </div>
     </div>
+    {% endif %}
+    {% endwith %}
 
 </div>
 {% endblock %}

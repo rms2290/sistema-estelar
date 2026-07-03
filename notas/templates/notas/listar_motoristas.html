@@ -68,7 +68,12 @@
 
                     <!-- Resultados da Pesquisa -->
                     {% if search_performed %}
-                        {% if motoristas %}
+                        {% if filtro_minimo_ausente %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Informe pelo menos um filtro para pesquisar motoristas.
+                            </div>
+                        {% elif motoristas %}
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle"></i> 
                                 Encontrados <strong>{{ motoristas.count }}</strong> motorista(s).

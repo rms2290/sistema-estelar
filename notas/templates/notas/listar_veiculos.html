@@ -64,7 +64,6 @@
         </ul>
     {% endif %}
 
-    {# Exibição dos resultados #}
     {% if veiculos %}
         <div class="table-responsive">
             <table class="table table-striped table-hover">
@@ -101,7 +100,12 @@
             </table>
         </div>
     {% else %}
-        {% if search_performed %}
+        {% if filtro_minimo_ausente %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                Informe pelo menos um filtro para pesquisar veículos.
+            </div>
+        {% elif search_performed %}
             <div class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle"></i> Nenhum veículo encontrado com os filtros especificados.
             </div>

@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Caixa do Dia - Financeiro V2{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h2><i class="fas fa-cash-register"></i> Caixa do Dia <span class="badge bg-primary ms-1">V2</span></h2>
+        <a href="{% url 'financeiro_v2:painel' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Voltar ao Painel
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {# Filtros + atalhos #}
+    <div class="card mb-3 shadow-sm">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label mb-1"><i class="fas fa-calendar-day"></i> Data</label>
+                    <input type="date" name="data" value="{{ data_filtro|date:'Y-m-d' }}" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-1"><i class="fas fa-wallet"></i> Carteira</label>
+                    <select name="carteira" class="form-select form-select-sm">
+                        <option value="">Todas</option>
+                        {% for c in carteiras %}
+                            <option value="{{ c.pk }}" {% if carteira_obj and c.pk == carteira_obj.pk %}selected{% endif %}>{{ c.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <a href="{% url 'financeiro_v2:criar_lancamento' %}" class="btn btn-success btn-sm">
+                        <i class="fas fa-plus"></i> Lançamento
+                    </a>
+                    <a href="{% url 'financeiro_v2:criar_despesa' %}" class="btn btn-danger btn-sm">
+                        <i class="fas fa-receipt"></i> Despesa
+                    </a>
+                    <a href="{% url 'financeiro_v2:criar_xerox' %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-print"></i> Xerox
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {# Resumo #}
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <div class="card border-secondary h-100">
+                <div class="card-body py-2">
+                    <small class="text-muted">Saldo no início do dia</small>
+                    <div class="fs-5 fw-bold">R$ {{ saldo_inicial_do_dia|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success h-100">
+                <div class="card-body py-2">
+                    <small class="text-success">Entradas</small>
+                    <div class="fs-5 fw-bold text-success">+ R$ {{ total_entradas|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-danger h-100">
+                <div class="card-body py-2">
+                    <small class="text-danger">Saídas</small>
+                    <div class="fs-5 fw-bold text-danger">− R$ {{ total_saidas|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-primary h-100">
+                <div class="card-body py-2">
+                    <small class="text-primary">Saldo atual</small>
+                    <div class="fs-5 fw-bold {% if saldo_atual >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                        R$ {{ saldo_atual|floatformat:2 }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Tabela de lançamentos #}
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-list"></i> Lançamentos de
+                <strong>{{ data_filtro|date:"d/m/Y" }}</strong>
+                {% if carteira_obj %}<span class="text-muted">— {{ carteira_obj.nome }}</span>{% endif %}
+            </h5>
+            <small class="text-muted">{{ linhas|length }} lançamento{{ linhas|length|pluralize }}</small>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 90px;">Hora</th>
+                            <th>Descrição</th>
+                            <th>Carteira</th>
+                            <th>Bolso</th>
+                            <th class="text-end">Valor</th>
+                            <th class="text-end">Saldo</th>
+                            <th>Por</th>
+                            <th style="width: 90px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for linha in linhas %}
+                        {% with l=linha.lanc %}
+                        <tr>
+                            <td><small class="text-muted">{{ l.criado_em|date:"H:i" }}</small></td>
+                            <td>
+                                <div>{{ l.descricao }}</div>
+                                {% if l.categoria %}
+                                    <small class="text-muted"><i class="fas fa-tag"></i> {{ l.categoria }}</small>
+                                {% endif %}
+                                {% if l.cliente %}
+                                    <small class="badge bg-info text-dark ms-1">{{ l.cliente.razao_social }}</small>
+                                {% endif %}
+                                {% if l.funcionario %}
+                                    <small class="badge bg-warning text-dark ms-1">{{ l.funcionario.nome }}</small>
+                                {% endif %}
+                            </td>
+                            <td><small>{{ l.carteira.nome }}</small></td>
+                            <td><small>{{ l.bolso.nome }}</small></td>
+                            <td class="text-end fw-bold {% if l.tipo == 'Entrada' %}text-success{% else %}text-danger{% endif %}">
+                                {% if l.tipo == 'Entrada' %}+{% else %}−{% endif %} R$ {{ l.valor|floatformat:2 }}
+                            </td>
+                            <td class="text-end">R$ {{ linha.saldo|floatformat:2 }}</td>
+                            <td><small class="text-muted">{{ l.criado_por.username|default:"—" }}</small></td>
+                            <td class="text-end">
+                                <a href="{% url 'financeiro_v2:editar_lancamento' pk=l.pk %}?next={{ request.get_full_path|urlencode }}"
+                                   class="btn btn-outline-primary btn-sm py-0" title="Editar">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                                <a href="{% url 'financeiro_v2:excluir_lancamento' pk=l.pk %}?next={{ request.get_full_path|urlencode }}"
+                                   class="btn btn-outline-danger btn-sm py-0" title="Excluir">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endwith %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                Nenhum lançamento registrado para esta data.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

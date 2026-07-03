@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Acerto Diário V2 - Sistema Estelar{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h2><i class="fas fa-calculator"></i> Acerto Diário V2</h2>
+        <div class="d-flex gap-2">
+            <a href="{% url 'financeiro_v2:painel' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Voltar ao Painel
+            </a>
+            <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalAbrirAcerto">
+                <i class="fas fa-plus"></i> Abrir Acerto
+            </button>
+        </div>
+    </div>
+
+    <div class="alert alert-info py-2 mb-3">
+        <span class="alert-text-left">
+            <i class="fas fa-info-circle"></i>
+            O acerto diário registra o fechamento do dia: descargas, distribuições aos chapas e a margem da empresa (Valor Estelar).
+            Ao salvar, o sistema cria os lançamentos no Financeiro V2 (entrada das descargas + reclassificação Estelar) e
+            atualiza o acumulado dos chapas para a tela de <strong>A Pagar</strong>.
+        </span>
+    </div>
+
+    {# ============================ Filtros ============================ #}
+    <div class="card mb-3 shadow-sm">
+        <div class="card-header py-2">
+            <i class="fas fa-filter"></i> Filtros
+        </div>
+        <div class="card-body py-2">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label mb-1 small">{{ form.data_inicio.label }}</label>
+                    {{ form.data_inicio }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-1 small">{{ form.data_fim.label }}</label>
+                    {{ form.data_fim }}
+                </div>
+                <div class="col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-search"></i> Pesquisar
+                    </button>
+                    <a href="{% url 'financeiro_v2:acerto_diario_v2_lista' %}" class="btn btn-outline-secondary btn-sm">
+                        Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {# ============================ Lista ============================ #}
+    <div class="card shadow-sm">
+        <div class="card-header py-2 d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-list"></i> Acertos ({{ total_count }})</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Data</th>
+                            <th class="text-end">Carregamentos</th>
+                            <th class="text-end">Distribuído (chapas)</th>
+                            <th class="text-end">Estelar</th>
+                            <th class="text-end">Diferença</th>
+                            <th>V2</th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ac in page_obj %}
+                        {% with diff=ac.diferenca %}
+                        <tr>
+                            <td><strong>{{ ac.data|date:"d/m/Y" }}</strong></td>
+                            <td class="text-end">R$ {{ ac.total_carregamentos|floatformat:2 }}</td>
+                            <td class="text-end">R$ {{ ac.total_funcionarios|floatformat:2 }}</td>
+                            <td class="text-end">R$ {{ ac.valor_estelar|floatformat:2 }}</td>
+                            <td class="text-end">
+                                {% if diff == 0 %}
+                                <span class="badge bg-success">OK</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">R$ {{ diff|floatformat:2 }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if ac.lancamentos_v2.exists %}
+                                <span class="badge bg-info text-dark" title="Lançamentos V2 já gerados">
+                                    <i class="fas fa-check"></i> Aplicado
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary" title="Ainda não foi salvo no V2">
+                                    <i class="fas fa-clock"></i> Pendente
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'financeiro_v2:acerto_diario_v2_detalhe' pk=ac.pk %}" class="btn btn-outline-primary btn-sm py-0">
+                                    <i class="fas fa-pen"></i> Abrir
+                                </a>
+                            </td>
+                        </tr>
+                        {% endwith %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                Nenhum acerto encontrado. Clique em <strong>Abrir Acerto</strong> para começar.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <small class="text-muted">
+                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }} —
+                {{ page_obj.start_index }}-{{ page_obj.end_index }} de {{ total_count }}
+            </small>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page=1&{{ querystring_extra }}">«</a></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ querystring_extra }}">‹</a></li>
+                    {% endif %}
+                    <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+                    {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ querystring_extra }}">›</a></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&{{ querystring_extra }}">»</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# ============================ Modal Abrir Acerto ============================ #}
+<div class="modal fade" id="modalAbrirAcerto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="get" action="{% url 'financeiro_v2:acerto_diario_v2_abrir' %}" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-calendar-day"></i> Abrir Acerto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-2">
+                    Escolha a data do acerto. Se já existir, será aberto para edição.
+                </p>
+                <div class="mb-3">
+                    <label class="form-label">Data</label>
+                    <input type="date" name="data" class="form-control" value="{{ hoje|date:'Y-m-d' }}" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-arrow-right"></i> Abrir
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'notas',
     'financeiro',
+    'financeiro_v2',
     'crispy_forms',
     'crispy_bootstrap5',
     'django_filters',

@@ -1,0 +1,66 @@
+{% comment %}
+Conteudo do formulario de Xerox sem layout de pagina.
+Usado por:
+- xerox_form.html (pagina full, via {% include %})
+- modal de "+ Lancar > Xerox" no Painel V2 (via fetch AJAX)
+
+Renderiza apenas o <form>; o titulo, botoes e wrapper externo ficam por
+conta do contexto (pagina ou modal).
+{% endcomment %}
+<form method="post" novalidate id="form-xerox" data-fin-modal-form>
+    {% csrf_token %}
+
+    <div class="row g-3">
+        <div class="col-6">
+            <label class="form-label">{{ form.quantidade.label }}</label>
+            {{ form.quantidade }}
+            {% if form.quantidade.errors %}<div class="text-danger small">{{ form.quantidade.errors|join:", " }}</div>{% endif %}
+        </div>
+        <div class="col-6">
+            <label class="form-label">{{ form.valor_unitario.label }}</label>
+            <div class="input-group">
+                <span class="input-group-text">R$</span>
+                {{ form.valor_unitario }}
+            </div>
+            {% if form.valor_unitario.errors %}<div class="text-danger small">{{ form.valor_unitario.errors|join:", " }}</div>{% endif %}
+        </div>
+
+        <div class="col-12">
+            <label class="form-label">{{ form.carteira.label }}</label>
+            {{ form.carteira }}
+            {% if form.carteira.errors %}<div class="text-danger small">{{ form.carteira.errors|join:", " }}</div>{% endif %}
+        </div>
+    </div>
+
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger mt-3 mb-0">{{ form.non_field_errors|join:" / " }}</div>
+    {% endif %}
+
+    <div class="alert alert-info mt-3 mb-0 d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-calculator"></i> Total a lançar:</span>
+        <strong class="fs-5" id="xerox-total">R$ 0,00</strong>
+    </div>
+</form>
+
+<script>
+(function () {
+    const qtdInput = document.getElementById('id_quantidade');
+    const unitInput = document.getElementById('id_valor_unitario');
+    const totalLabel = document.getElementById('xerox-total');
+
+    function recalcular() {
+        const qtd = parseInt(qtdInput.value, 10) || 0;
+        const unit = parseFloat(unitInput.value) || 0;
+        const total = qtd * unit;
+        if (totalLabel) {
+            totalLabel.textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+        }
+    }
+
+    if (qtdInput && unitInput) {
+        qtdInput.addEventListener('input', recalcular);
+        unitInput.addEventListener('input', recalcular);
+        recalcular();
+    }
+})();
+</script>

@@ -23,6 +23,7 @@ Versão: 2.0
 """
 from typing import Tuple, Optional, List, Dict, Any
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.contrib import messages
 from ..models import RomaneioViagem, NotaFiscal
 from ..utils.nota_ordering import ordenar_queryset_notas_por_numero
@@ -229,6 +230,87 @@ class RomaneioService:
             
         except Exception as e:
             return None, False, f"Erro ao editar romaneio: {str(e)}"
+
+    @staticmethod
+    def _dados_formulario_de_romaneio(romaneio: RomaneioViagem) -> Dict[str, Any]:
+        """Monta os dados do formulário a partir do romaneio salvo."""
+        data_emissao = romaneio.data_emissao
+        if hasattr(data_emissao, 'date'):
+            data_emissao = data_emissao.date()
+
+        return {
+            'data_romaneio': data_emissao.strftime('%Y-%m-%d') if data_emissao else '',
+            'cliente': str(romaneio.cliente_id) if romaneio.cliente_id else '',
+            'motorista': str(romaneio.motorista_id) if romaneio.motorista_id else '',
+            'veiculo_principal': str(romaneio.veiculo_principal_id) if romaneio.veiculo_principal_id else '',
+            'reboque_1': str(romaneio.reboque_1_id) if romaneio.reboque_1_id else '',
+            'reboque_2': str(romaneio.reboque_2_id) if romaneio.reboque_2_id else '',
+            'notas_fiscais': [str(nota.pk) for nota in romaneio.notas_fiscais.all()],
+        }
+
+    @staticmethod
+    def _preparar_formulario_validacao_romaneio(romaneio: RomaneioViagem):
+        """Cria e configura o formulário com os dados atuais do romaneio."""
+        from ..forms import RomaneioViagemForm
+
+        form = RomaneioViagemForm(
+            data=RomaneioService._dados_formulario_de_romaneio(romaneio),
+            instance=romaneio,
+        )
+
+        if romaneio.cliente_id:
+            form.fields['notas_fiscais'].queryset = ordenar_queryset_notas_por_numero(
+                NotaFiscal.objects.filter(
+                    cliente_id=romaneio.cliente_id
+                ).filter(
+                    Q(romaneios_vinculados=romaneio) | Q(status='Depósito')
+                ).distinct()
+            )
+        else:
+            form.fields['notas_fiscais'].queryset = NotaFiscal.objects.none()
+
+        return form
+
+    @staticmethod
+    @transaction.atomic
+    def emitir_romaneio(romaneio: RomaneioViagem) -> Tuple[Optional[RomaneioViagem], bool, str]:
+        """
+        Emite um romaneio salvo sem passar pela tela de edição.
+
+        Reutiliza as validações do RomaneioViagemForm antes de alterar o status.
+        """
+        if romaneio.status != 'Salvo':
+            return romaneio, False, 'Apenas romaneios com status Salvo podem ser emitidos.'
+
+        form = RomaneioService._preparar_formulario_validacao_romaneio(romaneio)
+        if not form.is_valid():
+            erros = []
+            for campo, mensagens in form.errors.items():
+                label = campo
+                if campo in form.fields:
+                    label = form.fields[campo].label or campo
+                for msg in mensagens:
+                    erros.append(f'{label}: {msg}')
+            if form.non_field_errors():
+                erros.extend(str(e) for e in form.non_field_errors())
+            detalhe = ' '.join(erros[:2])
+            mensagem = (
+                'Não foi possível emitir o romaneio. '
+                'Corrija os dados em Editar Romaneio.'
+            )
+            if detalhe:
+                mensagem = f'{mensagem} {detalhe}'
+            return romaneio, False, mensagem
+
+        romaneio_emitido, sucesso, mensagem = RomaneioService.editar_romaneio(
+            romaneio=romaneio,
+            form_data=form,
+            emitir=True,
+            salvar=False,
+        )
+        if sucesso:
+            mensagem = f'Romaneio {romaneio_emitido.codigo} emitido com sucesso!'
+        return romaneio_emitido, sucesso, mensagem
     
     @staticmethod
     @transaction.atomic

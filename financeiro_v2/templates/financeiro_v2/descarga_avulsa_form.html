@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+
+{% block title %}Nova Descarga Avulsa - Financeiro V2{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 900px;">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h2><i class="fas fa-truck-loading"></i> Nova Descarga Avulsa</h2>
+        <a href="{% url 'financeiro_v2:painel' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="alert alert-info alert-text-left">
+        <span>
+            <i class="fas fa-lightbulb"></i>
+            Use isto para descargas que <strong>não passam por romaneio</strong> (serviço para
+            fornecedores). O valor cobrado entra no caixa, a parte das chapas vai para o bolso
+            Operacional e atualiza o acumulado de cada chapa, e a margem fica em Estelar.
+        </span>
+    </div>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        {# ============================ Cabeçalho ============================ #}
+        <div class="card mb-3 shadow-sm">
+            <div class="card-header">
+                <i class="fas fa-clipboard-list"></i> Cabeçalho da operação
+            </div>
+            <div class="card-body">
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">{{ form.data.label }}</label>
+                        {{ form.data }}
+                        {% if form.data.errors %}<div class="text-danger small">{{ form.data.errors|join:", " }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-9">
+                        <label class="form-label">{{ form.descricao.label }}</label>
+                        {{ form.descricao }}
+                        {% if form.descricao.errors %}<div class="text-danger small">{{ form.descricao.errors|join:", " }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-7">
+                        <label class="form-label">{{ form.carteira.label }}</label>
+                        {{ form.carteira }}
+                        {% if form.carteira.errors %}<div class="text-danger small">{{ form.carteira.errors|join:", " }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">{{ form.valor_cobrado.label }}</label>
+                        <div class="input-group">
+                            <span class="input-group-text">R$</span>
+                            <input type="number" name="valor_cobrado" id="id_valor_cobrado"
+                                   value="{{ form.valor_cobrado.value|default_if_none:'' }}"
+                                   step="0.01" min="0.01" class="form-control">
+                        </div>
+                        {% if form.valor_cobrado.errors %}<div class="text-danger small">{{ form.valor_cobrado.errors|join:", " }}</div>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ============================ Distribuição entre chapas ============================ #}
+        <div class="card mb-3 shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-people-carry"></i> Chapas que descarregaram</span>
+                <button type="button" id="btn-add-chapa" class="btn btn-sm btn-outline-success">
+                    <i class="fas fa-plus"></i> Adicionar chapa
+                </button>
+            </div>
+            <div class="card-body">
+                {{ formset.management_form }}
+                <div id="formset-chapas">
+                    {% for sub in formset %}
+                    <div class="row g-2 align-items-center mb-2 linha-chapa">
+                        <div class="col-md-7">
+                            {{ sub.chapa }}
+                            {% if sub.chapa.errors %}<div class="text-danger small">{{ sub.chapa.errors|join:", " }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">R$</span>
+                                {{ sub.valor }}
+                            </div>
+                            {% if sub.valor.errors %}<div class="text-danger small">{{ sub.valor.errors|join:", " }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-1 text-end">
+                            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-chapa" title="Remover">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {# ============================ Resumo ============================ #}
+        <div class="card mb-3 shadow-sm border-primary">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-calculator"></i> Resumo (calculado em tempo real)
+            </div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td>Total distribuído entre chapas (vai para Operacional)</td>
+                            <td class="text-end fw-bold" id="resumo-chapas">R$ 0,00</td>
+                        </tr>
+                        <tr>
+                            <td>Margem Estelar (= cobrado − chapas)</td>
+                            <td class="text-end fw-bold" id="resumo-margem">R$ 0,00</td>
+                        </tr>
+                        <tr class="table-secondary">
+                            <td><strong>Total cobrado</strong></td>
+                            <td class="text-end fw-bold" id="resumo-cobrado">R$ 0,00</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div id="resumo-aviso" class="text-danger small mt-2 d-none">
+                    <i class="fas fa-exclamation-triangle"></i> Total das chapas é maior que o valor cobrado.
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between mb-4">
+            <a href="{% url 'financeiro_v2:painel' %}" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Registrar Descarga
+            </button>
+        </div>
+
+    </form>
+
+</div>
+
+{# ============================ Template invisível p/ nova linha ============================ #}
+<template id="template-linha-chapa">
+    <div class="row g-2 align-items-center mb-2 linha-chapa">
+        <div class="col-md-7">
+            <select name="chapas-__INDEX__-chapa" class="form-select form-select-sm chapa-select">
+                <option value="">---------</option>
+                {% for chapa in formset.empty_form.fields.chapa.queryset %}
+                    <option value="{{ chapa.pk }}">{{ chapa.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text">R$</span>
+                <input type="number" name="chapas-__INDEX__-valor" step="0.01" min="0"
+                       class="form-control form-control-sm chapa-valor" placeholder="0,00">
+            </div>
+        </div>
+        <div class="col-md-1 text-end">
+            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-chapa" title="Remover">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+</template>
+
+<script>
+(function () {
+    const container = document.getElementById('formset-chapas');
+    const totalForms = document.querySelector('input[name="chapas-TOTAL_FORMS"]');
+    const btnAdd = document.getElementById('btn-add-chapa');
+    const template = document.getElementById('template-linha-chapa');
+    const valorCobradoInput = document.getElementById('id_valor_cobrado');
+    const resumoChapas = document.getElementById('resumo-chapas');
+    const resumoMargem = document.getElementById('resumo-margem');
+    const resumoCobrado = document.getElementById('resumo-cobrado');
+    const aviso = document.getElementById('resumo-aviso');
+
+    function fmt(v) {
+        return 'R$ ' + v.toFixed(2).replace('.', ',');
+    }
+
+    function recalcular() {
+        let total = 0;
+        document.querySelectorAll('.chapa-valor').forEach(function (i) {
+            const v = parseFloat(i.value);
+            if (!isNaN(v)) total += v;
+        });
+        const cobrado = parseFloat(valorCobradoInput.value) || 0;
+        const margem = cobrado - total;
+        resumoChapas.textContent = fmt(total);
+        resumoMargem.textContent = fmt(margem);
+        resumoCobrado.textContent = fmt(cobrado);
+        if (margem < 0) {
+            aviso.classList.remove('d-none');
+            resumoMargem.classList.add('text-danger');
+        } else {
+            aviso.classList.add('d-none');
+            resumoMargem.classList.remove('text-danger');
+        }
+    }
+
+    function attachListeners() {
+        document.querySelectorAll('.chapa-valor').forEach(function (i) {
+            i.removeEventListener('input', recalcular);
+            i.addEventListener('input', recalcular);
+        });
+        document.querySelectorAll('.btn-remove-chapa').forEach(function (b) {
+            b.onclick = function () {
+                const linha = b.closest('.linha-chapa');
+                if (container.querySelectorAll('.linha-chapa').length > 1) {
+                    linha.remove();
+                } else {
+                    linha.querySelectorAll('input,select').forEach(function (i) {
+                        if (i.tagName === 'SELECT') i.selectedIndex = 0;
+                        else i.value = '';
+                    });
+                }
+                recalcular();
+            };
+        });
+    }
+
+    btnAdd.addEventListener('click', function () {
+        const idx = parseInt(totalForms.value, 10);
+        const html = template.innerHTML.replace(/__INDEX__/g, idx);
+        container.insertAdjacentHTML('beforeend', html);
+        totalForms.value = idx + 1;
+        attachListeners();
+    });
+
+    valorCobradoInput.addEventListener('input', recalcular);
+
+    attachListeners();
+    recalcular();
+})();
+</script>
+{% endblock %}

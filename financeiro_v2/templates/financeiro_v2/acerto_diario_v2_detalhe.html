@@ -1,0 +1,611 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Acerto {{ acerto.data|date:"d/m/Y" }} - Financeiro V2{% endblock %}
+
+{% block extra_css %}
+<style>
+    .acerto-resumo .resumo-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 12px;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.92rem;
+    }
+    .acerto-resumo .resumo-item:last-child { border-bottom: none; }
+    .acerto-resumo .resumo-label { color: var(--text-muted); }
+    .acerto-resumo .resumo-value { font-weight: 600; }
+    .acerto-resumo .resumo-total {
+        background-color: var(--card-header-bg);
+        font-size: 1rem;
+    }
+    .badge-tipo-pgto {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    .lista-vazia {
+        padding: 18px;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+    }
+    .acerto-table th {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        color: var(--text-muted);
+    }
+    .alert-aplicado {
+        font-size: 0.88rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+
+    {# ============================ Cabeçalho ============================ #}
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+            <h2 class="mb-0">
+                <i class="fas fa-calculator"></i>
+                Acerto de {{ acerto.data|date:"d/m/Y" }}
+            </h2>
+            <small class="text-muted">
+                Criado em {{ acerto.criado_em|date:"d/m/Y H:i" }}
+                {% if acerto.usuario_criacao %}por {{ acerto.usuario_criacao.username }}{% endif %}
+            </small>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'financeiro_v2:acerto_diario_v2_lista' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+            <button type="button" class="btn btn-outline-danger btn-sm" id="btnExcluir">
+                <i class="fas fa-trash"></i> Excluir Acerto
+            </button>
+        </div>
+    </div>
+
+    {% if ja_aplicado_v2 %}
+    <div class="alert alert-success py-2 alert-aplicado mb-3">
+        <span class="alert-text-left">
+            <i class="fas fa-check-circle"></i>
+            Este acerto já foi aplicado no Financeiro V2 ({{ qtd_lancamentos_v2 }}
+            lançamento{{ qtd_lancamentos_v2|pluralize }}). Salvar novamente <strong>regenera</strong>
+            os lançamentos a partir das linhas atuais (idempotente).
+        </span>
+    </div>
+    {% else %}
+    <div class="alert alert-info py-2 alert-aplicado mb-3">
+        <span class="alert-text-left">
+            <i class="fas fa-info-circle"></i>
+            Adicione carregamentos, descargas e distribuições. Quando estiver pronto,
+            clique em <strong>Salvar e Aplicar</strong> para gerar os lançamentos no V2 e
+            atualizar o acumulado dos chapas.
+        </span>
+    </div>
+    {% endif %}
+
+    <div class="row g-3">
+        {# ===================== Coluna esquerda - Operações ===================== #}
+        <div class="col-lg-8">
+            {# ----- Carregamentos & descargas ----- #}
+            <div class="card mb-3 shadow-sm">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-truck-loading"></i> Carregamentos & Descargas</span>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalCobranca">
+                            <i class="fas fa-link"></i> Cobrança pendente
+                        </button>
+                        <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalDescarga">
+                            <i class="fas fa-plus"></i> Descarga avulsa
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if carregamentos %}
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 align-middle acerto-table" id="tabelaCarregamentos">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Cliente / Descrição</th>
+                                    <th>Pagamento</th>
+                                    <th class="text-end">Valor</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for c in carregamentos %}
+                                <tr data-id="{{ c.pk }}">
+                                    <td>
+                                        {% if c.cliente %}
+                                        <span class="badge bg-primary">Carregamento</span>
+                                        {% else %}
+                                        <span class="badge bg-success">Descarga</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ c.nome_display }}</strong>
+                                        {% if c.cobranca_carregamento %}
+                                        <small class="text-muted d-block">Cobrança #{{ c.cobranca_carregamento.id }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if c.cliente %}
+                                        <span class="text-muted small">A receber</span>
+                                        {% else %}
+                                        <span class="badge badge-tipo-pgto bg-secondary">{{ c.tipo_pagamento|default:"Dinheiro" }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">R$ {{ c.valor|floatformat:2 }}</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-outline-danger btn-sm py-0 btn-remove-carregamento"
+                                                data-pk="{{ c.pk }}"
+                                                title="Remover">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Total</strong></td>
+                                    <td class="text-end"><strong id="totalCarregamentos">R$ {{ acerto.total_carregamentos|floatformat:2 }}</strong></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="lista-vazia">
+                        <i class="fas fa-inbox fa-2x d-block mb-2"></i>
+                        Nenhum carregamento ou descarga adicionado.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# ----- Distribuições aos chapas ----- #}
+            <div class="card mb-3 shadow-sm">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-people-carry"></i> Distribuição aos Chapas</span>
+                    <button class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#modalDistribuicao">
+                        <i class="fas fa-plus"></i> Adicionar
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    {% if distribuicoes %}
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 align-middle acerto-table" id="tabelaDistribuicoes">
+                            <thead>
+                                <tr>
+                                    <th>Chapa</th>
+                                    <th class="text-end">Valor</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for d in distribuicoes %}
+                                <tr data-id="{{ d.pk }}">
+                                    <td><strong>{{ d.funcionario.nome }}</strong></td>
+                                    <td class="text-end">R$ {{ d.valor|floatformat:2 }}</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-outline-danger btn-sm py-0 btn-remove-distribuicao"
+                                                data-pk="{{ d.pk }}"
+                                                title="Remover">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td class="text-end"><strong>Total chapas</strong></td>
+                                    <td class="text-end"><strong id="totalChapas">R$ {{ acerto.total_funcionarios|floatformat:2 }}</strong></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="lista-vazia">
+                        <i class="fas fa-user-friends fa-2x d-block mb-2"></i>
+                        Nenhuma distribuição adicionada.
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer py-2">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i>
+                        Os valores aqui distribuídos vão para o <strong>Acumulado dos Chapas</strong>
+                        e ficam pendentes na tela de <strong>A Pagar</strong>. O lançamento de saída
+                        do dinheiro acontece quando o admin paga o chapa lá.
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        {# ===================== Coluna direita - Resumo & Salvar ===================== #}
+        <div class="col-lg-4">
+            <div class="card shadow-sm position-sticky" style="top: 1rem;">
+                <div class="card-header py-2">
+                    <i class="fas fa-clipboard-list"></i> Resumo do Dia
+                </div>
+                <div class="card-body p-0 acerto-resumo">
+                    <div class="resumo-item">
+                        <span class="resumo-label">Carregamentos (clientes + descargas)</span>
+                        <span class="resumo-value text-primary" id="resumoCarregamentos">
+                            R$ {{ acerto.total_carregamentos|floatformat:2 }}
+                        </span>
+                    </div>
+                    <div class="resumo-item">
+                        <span class="resumo-label">Distribuído aos chapas</span>
+                        <span class="resumo-value text-warning" id="resumoChapas">
+                            R$ {{ acerto.total_funcionarios|floatformat:2 }}
+                        </span>
+                    </div>
+                    <div class="resumo-item">
+                        <span class="resumo-label">Margem Estelar</span>
+                        <span class="resumo-value text-success" id="resumoEstelar">
+                            R$ {{ acerto.valor_estelar|floatformat:2 }}
+                        </span>
+                    </div>
+                    <div class="resumo-item resumo-total">
+                        <span><strong>Diferença</strong></span>
+                        <span class="resumo-value {% if diferenca == 0 %}text-success{% else %}text-danger{% endif %}" id="resumoDiferenca">
+                            R$ {{ diferenca|floatformat:2 }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body border-top">
+                    <form id="formSalvar">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label small mb-1">Valor Estelar (R$)</label>
+                            <input type="number"
+                                   step="0.01"
+                                   min="0"
+                                   class="form-control"
+                                   name="valor_estelar"
+                                   id="inputValorEstelar"
+                                   value="{{ acerto.valor_estelar|stringformat:'.2f' }}">
+                            <small class="text-muted">Margem da empresa no dia (vai para o bolso Estelar).</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small mb-1">Observações</label>
+                            <textarea name="observacoes" rows="2" class="form-control" placeholder="Opcional">{{ acerto.observacoes|default:'' }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fas fa-save"></i> Salvar e Aplicar no V2
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ============================ Modal: cobrança pendente ============================ #}
+<div class="modal fade" id="modalCobranca" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-link"></i> Vincular Cobrança Pendente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {% if cobrancas_pendentes %}
+                <div class="mb-2">
+                    <input type="text" id="filtroCobranca" class="form-control form-control-sm"
+                           placeholder="Filtrar por cliente...">
+                </div>
+                <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
+                    <table class="table table-sm table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Cliente</th>
+                                <th class="text-end">Carregamento</th>
+                                <th class="text-end">Distrib. trab.</th>
+                                <th class="text-end">Margem</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in cobrancas_pendentes %}
+                            <tr class="linha-cobranca" data-busca="{{ c.cliente.razao_social|lower }}">
+                                <td>
+                                    <strong>{{ c.cliente.razao_social }}</strong>
+                                    <small class="text-muted d-block">#{{ c.id }} · {{ c.criado_em|date:"d/m/Y" }}</small>
+                                </td>
+                                <td class="text-end">R$ {{ c.valor_carregamento|default_if_none:0|floatformat:2 }}</td>
+                                <td class="text-end">
+                                    {% if c.valor_distribuicao_trabalhadores %}
+                                        R$ {{ c.valor_distribuicao_trabalhadores|floatformat:2 }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">R$ {{ c.margem_carregamento|floatformat:2 }}</td>
+                                <td class="text-end">
+                                    <button class="btn btn-outline-primary btn-sm py-0 btn-add-cobranca"
+                                            data-pk="{{ c.pk }}">
+                                        <i class="fas fa-plus"></i> Adicionar
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-check-circle fa-2x d-block mb-2"></i>
+                    Nenhuma cobrança pendente disponível.
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ============================ Modal: descarga ============================ #}
+<div class="modal fade" id="modalDescarga" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" id="formDescarga">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-truck"></i> Adicionar Descarga</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Descrição</label>
+                    <input type="text" name="descricao" class="form-control" placeholder="Ex.: 4 toneladas - Fornecedor X" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Valor (R$)</label>
+                    <input type="number" step="0.01" min="0.01" name="valor" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Tipo de pagamento</label>
+                    <select name="tipo_pagamento" class="form-select">
+                        <option value="Dinheiro">Dinheiro (entra no caixa físico)</option>
+                        <option value="Deposito">Depósito (entra no banco)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Adicionar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# ============================ Modal: distribuição ============================ #}
+<div class="modal fade" id="modalDistribuicao" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" id="formDistribuicao">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user-plus"></i> Distribuir para Chapa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {% if funcionarios %}
+                <div class="mb-3">
+                    <label class="form-label">Chapa</label>
+                    <select name="funcionario_id" class="form-select" required>
+                        <option value="">Selecione...</option>
+                        {% for f in funcionarios %}
+                        <option value="{{ f.pk }}">{{ f.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Valor (R$)</label>
+                    <input type="number" step="0.01" min="0.01" name="valor" class="form-control" required>
+                </div>
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i>
+                    Se a chapa já estiver na lista, o valor será substituído.
+                </small>
+                {% else %}
+                <div class="text-center text-muted py-3">
+                    Nenhum chapa cadastrado. Cadastre em
+                    <strong>Funcionários (Fluxo de Caixa)</strong>.
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                {% if funcionarios %}
+                <button type="submit" class="btn btn-warning">
+                    <i class="fas fa-plus"></i> Salvar
+                </button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    'use strict';
+
+    const ACERTO_PK = {{ acerto.pk }};
+    const URL_ADD_COBRANCA = "{% url 'financeiro_v2:acerto_v2_add_carregamento' pk=acerto.pk %}";
+    const URL_ADD_DESCARGA = "{% url 'financeiro_v2:acerto_v2_add_descarga' pk=acerto.pk %}";
+    const URL_ADD_DISTRIB = "{% url 'financeiro_v2:acerto_v2_add_distribuicao' pk=acerto.pk %}";
+    const URL_SALVAR = "{% url 'financeiro_v2:acerto_diario_v2_salvar' pk=acerto.pk %}";
+    const URL_EXCLUIR = "{% url 'financeiro_v2:acerto_diario_v2_excluir' pk=acerto.pk %}";
+    const URL_LISTA = "{% url 'financeiro_v2:acerto_diario_v2_lista' %}";
+
+    function csrf() {
+        const el = document.querySelector('[name=csrfmiddlewaretoken]');
+        return el ? el.value : '';
+    }
+
+    function fmt(valor) {
+        const n = Number(valor || 0);
+        return 'R$ ' + n.toFixed(2).replace('.', ',');
+    }
+
+    function showError(msg) { alert(msg || 'Erro'); }
+
+    async function postJson(url, formData) {
+        const resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrf(), 'X-Requested-With': 'XMLHttpRequest' },
+            body: formData,
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || data.success === false) {
+            throw new Error(data.error || ('HTTP ' + resp.status));
+        }
+        return data;
+    }
+
+    function reloadPage() { window.location.reload(); }
+
+    document.addEventListener('click', async function(ev) {
+        // Adicionar cobrança ao acerto
+        const btnAdd = ev.target.closest('.btn-add-cobranca');
+        if (btnAdd) {
+            ev.preventDefault();
+            const fd = new FormData();
+            fd.append('cobranca_id', btnAdd.dataset.pk);
+            try {
+                await postJson(URL_ADD_COBRANCA, fd);
+                reloadPage();
+            } catch (e) { showError(e.message); }
+            return;
+        }
+        // Remover carregamento
+        const btnRemC = ev.target.closest('.btn-remove-carregamento');
+        if (btnRemC) {
+            ev.preventDefault();
+            if (!confirm('Remover este item?')) return;
+            const url = `/financeiro-v2/acerto-diario/${ACERTO_PK}/remove-carregamento/${btnRemC.dataset.pk}/`;
+            try {
+                await postJson(url, new FormData());
+                reloadPage();
+            } catch (e) { showError(e.message); }
+            return;
+        }
+        // Remover distribuição
+        const btnRemD = ev.target.closest('.btn-remove-distribuicao');
+        if (btnRemD) {
+            ev.preventDefault();
+            if (!confirm('Remover esta distribuição?')) return;
+            const url = `/financeiro-v2/acerto-diario/${ACERTO_PK}/remove-distribuicao/${btnRemD.dataset.pk}/`;
+            try {
+                await postJson(url, new FormData());
+                reloadPage();
+            } catch (e) { showError(e.message); }
+            return;
+        }
+    });
+
+    // Filtro do modal de cobrança
+    const filtroCob = document.getElementById('filtroCobranca');
+    if (filtroCob) {
+        filtroCob.addEventListener('input', function() {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll('.linha-cobranca').forEach(tr => {
+                tr.style.display = (!q || (tr.dataset.busca || '').includes(q)) ? '' : 'none';
+            });
+        });
+    }
+
+    // Form descarga
+    const formDescarga = document.getElementById('formDescarga');
+    if (formDescarga) {
+        formDescarga.addEventListener('submit', async function(ev) {
+            ev.preventDefault();
+            const fd = new FormData(formDescarga);
+            try {
+                await postJson(URL_ADD_DESCARGA, fd);
+                reloadPage();
+            } catch (e) { showError(e.message); }
+        });
+    }
+
+    // Form distribuição
+    const formDistribuicao = document.getElementById('formDistribuicao');
+    if (formDistribuicao) {
+        formDistribuicao.addEventListener('submit', async function(ev) {
+            ev.preventDefault();
+            const fd = new FormData(formDistribuicao);
+            try {
+                await postJson(URL_ADD_DISTRIB, fd);
+                reloadPage();
+            } catch (e) { showError(e.message); }
+        });
+    }
+
+    // Form salvar
+    const formSalvar = document.getElementById('formSalvar');
+    if (formSalvar) {
+        formSalvar.addEventListener('submit', async function(ev) {
+            ev.preventDefault();
+            const fd = new FormData(formSalvar);
+            const btn = formSalvar.querySelector('button[type=submit]');
+            const original = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+            try {
+                const data = await postJson(URL_SALVAR, fd);
+                btn.innerHTML = '<i class="fas fa-check"></i> Salvo!';
+                setTimeout(reloadPage, 600);
+            } catch (e) {
+                showError(e.message);
+                btn.disabled = false;
+                btn.innerHTML = original;
+            }
+        });
+    }
+
+    // Excluir acerto
+    const btnExcluir = document.getElementById('btnExcluir');
+    if (btnExcluir) {
+        btnExcluir.addEventListener('click', async function() {
+            if (!confirm('Excluir este acerto? Os lançamentos V2 vinculados também serão removidos.')) return;
+            try {
+                await postJson(URL_EXCLUIR, new FormData());
+                window.location.href = URL_LISTA;
+            } catch (e) { showError(e.message); }
+        });
+    }
+
+    // Recalcula resumo "Estelar/Diferença" enquanto o usuário digita
+    const inputEstelar = document.getElementById('inputValorEstelar');
+    const resumoEstelar = document.getElementById('resumoEstelar');
+    const resumoDiferenca = document.getElementById('resumoDiferenca');
+    const totalCarreg = parseFloat(("{{ acerto.total_carregamentos|stringformat:'.2f' }}").replace(',', '.')) || 0;
+    const totalChapas = parseFloat(("{{ acerto.total_funcionarios|stringformat:'.2f' }}").replace(',', '.')) || 0;
+
+    if (inputEstelar && resumoEstelar && resumoDiferenca) {
+        inputEstelar.addEventListener('input', function() {
+            const v = parseFloat(this.value || '0') || 0;
+            resumoEstelar.textContent = fmt(v);
+            const diff = totalCarreg - (totalChapas + v);
+            resumoDiferenca.textContent = fmt(diff);
+            resumoDiferenca.classList.toggle('text-success', Math.abs(diff) < 0.005);
+            resumoDiferenca.classList.toggle('text-danger', Math.abs(diff) >= 0.005);
+        });
+    }
+})();
+</script>
+{% endblock %}
