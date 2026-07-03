@@ -241,10 +241,10 @@
                                 <i class="fas fa-user-clock"></i> A Pagar
                             </a></li>
                             <li><hr class="dropdown-divider my-1"></li>
-                            <li><a href="{% url 'financeiro_v2:cobranca_carregamento_lista' %}">
+                            <li><a href="{% url 'notas:cobranca_carregamento' %}">
                                 <i class="fas fa-truck-loading"></i> Cobrança de Carregamento
                             </a></li>
-                            <li><a href="{% url 'financeiro_v2:relatorio_cobranca_cliente' %}">
+                            <li><a href="{% url 'notas:relatorio_cobranca_cliente' %}">
                                 <i class="fas fa-file-invoice"></i> Relatório de Cobrança
                             </a></li>
                             <li><hr class="dropdown-divider my-1"></li>
@@ -254,58 +254,6 @@
                             <li><a href="{% url 'financeiro:pesquisar_periodo_movimento_caixa' %}">
                                 <i class="fas fa-search"></i> Pesquisar Período
                             </a></li>
-                        </ul>
-                    </li>
-                    {% endif %}
-
-                    <!-- Financeiro V2 (novo, em construção) -->
-                    {% if user.is_admin %}
-                    <li class="nav-group">
-                        <div class="nav-group-header">
-                            <i class="fas fa-chart-line"></i>
-                            <span>Financeiro V2 <span class="badge bg-primary ms-1" style="font-size: 0.6rem;">novo</span></span>
-                        </div>
-                        <ul class="nav-submenu">
-                            {# Operação principal #}
-                            <li><a href="{% url 'financeiro_v2:painel' %}">
-                                <i class="fas fa-chart-line"></i> Painel
-                            </a></li>
-                            <li><a href="{% url 'financeiro_v2:caixa_do_dia' %}">
-                                <i class="fas fa-cash-register"></i> Caixa do Dia
-                            </a></li>
-                            <li><a href="{% url 'financeiro_v2:acerto_diario_v2_lista' %}">
-                                <i class="fas fa-calculator"></i> Acerto Diário
-                            </a></li>
-                            <li><hr class="dropdown-divider my-1"></li>
-                            {# Faturamento e cobranças #}
-                            <li><a href="{% url 'financeiro_v2:cobranca_carregamento_lista' %}">
-                                <i class="fas fa-truck-loading"></i> Cobrança de Carregamento
-                            </a></li>
-                            <li><a href="{% url 'financeiro_v2:relatorio_cobranca_cliente' %}">
-                                <i class="fas fa-file-invoice"></i> Relatório de Cobrança
-                            </a></li>
-                            <li><a href="{% url 'financeiro_v2:a_receber_lista' %}">
-                                <i class="fas fa-hand-holding-usd"></i> A Receber
-                            </a></li>
-                            <li><a href="{% url 'financeiro_v2:a_pagar_lista' %}">
-                                <i class="fas fa-money-check-alt"></i> A Pagar
-                            </a></li>
-                            <li><hr class="dropdown-divider my-1"></li>
-                            {# Análise / consulta #}
-                            <li><a href="{% url 'financeiro_v2:historico_lancamentos' %}">
-                                <i class="fas fa-history"></i> Histórico / Relatórios
-                            </a></li>
-                            <li><a href="{% url 'financeiro_v2:dre_periodo' %}">
-                                <i class="fas fa-balance-scale"></i> DRE Simplificado
-                            </a></li>
-                            <li><a href="{% url 'financeiro_v2:inadimplencia_lista' %}">
-                                <i class="fas fa-exclamation-triangle"></i> Inadimplência
-                            </a></li>
-                            {% comment %}
-                            Operações rápidas (Lançamento, Despesa, Xerox, Descarga, Doc. Avulsa,
-                            Distribuir Gerentes, Fundo Gás) ficam acessíveis via Painel
-                            através de modais — menu mais enxuto por design.
-                            {% endcomment %}
                         </ul>
                     </li>
                     {% endif %}

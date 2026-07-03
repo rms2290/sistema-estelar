@@ -1,4 +1,4 @@
-"""Testes do relatório provisório de cobrança ao cliente."""
+﻿"""Testes do relatório provisório de cobrança ao cliente."""
 import pytest
 from django.urls import reverse
 
@@ -21,7 +21,7 @@ class TestRelatorioCobrancaCliente:
         return romaneio
 
     def test_get_formulario(self, authenticated_client):
-        response = authenticated_client.get(reverse('financeiro_v2:relatorio_cobranca_cliente'))
+        response = authenticated_client.get(reverse('notas:relatorio_cobranca_cliente'))
         assert response.status_code == 200
         assert b'Relat\xc3\xb3rio de Cobran\xc3\xa7a' in response.content
 
@@ -30,7 +30,7 @@ class TestRelatorioCobrancaCliente:
         antes = CobrancaCarregamento.objects.count()
 
         response = authenticated_client.post(
-            reverse('financeiro_v2:relatorio_cobranca_cliente'),
+            reverse('notas:relatorio_cobranca_cliente'),
             {
                 'acao': 'gerar_relatorio',
                 'cliente': cliente.pk,
@@ -52,7 +52,7 @@ class TestRelatorioCobrancaCliente:
         romaneio = self._criar_romaneio_emitido(cliente, motorista, veiculo)
 
         response = authenticated_client.post(
-            reverse('financeiro_v2:relatorio_cobranca_cliente'),
+            reverse('notas:relatorio_cobranca_cliente'),
             {
                 'acao': 'gerar_relatorio',
                 'cliente': cliente.pk,

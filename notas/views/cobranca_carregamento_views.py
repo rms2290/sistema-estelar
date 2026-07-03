@@ -29,7 +29,7 @@ def criar_cobranca_carregamento(request):
         if form.is_valid():
             cobranca = form.save()
             messages.success(request, f'Cobrança #{cobranca.id} criada com sucesso!')
-            return redirect('financeiro_v2:cobranca_carregamento_lista')
+            return redirect('notas:cobranca_carregamento')
         else:
             error_messages = []
             for field, errors in form.errors.items():
@@ -103,7 +103,7 @@ def editar_cobranca_carregamento(request, cobranca_id):
         if form.is_valid():
             cobranca = form.save()
             messages.success(request, f'Cobrança #{cobranca.id} atualizada com sucesso!')
-            return redirect('financeiro_v2:cobranca_carregamento_lista')
+            return redirect('notas:cobranca_carregamento')
         else:
             error_messages = []
             for field, errors in form.errors.items():
@@ -179,7 +179,7 @@ def excluir_cobranca_carregamento(request, cobranca_id):
         cobranca_id_temp = cobranca.id
         cobranca.delete()
         messages.success(request, f'Cobrança #{cobranca_id_temp} excluída com sucesso!')
-        return redirect('financeiro_v2:cobranca_carregamento_lista')
+        return redirect('notas:cobranca_carregamento')
     
     context = {
         'cobranca': cobranca,
@@ -196,7 +196,7 @@ def baixar_cobranca_carregamento(request, cobranca_id):
     if request.method == 'POST':
         cobranca.baixar()
         messages.success(request, f'Cobrança #{cobranca.id} baixada com sucesso!')
-        return redirect('financeiro_v2:cobranca_carregamento_lista')
+        return redirect('notas:cobranca_carregamento')
     
     context = {
         'cobranca': cobranca,

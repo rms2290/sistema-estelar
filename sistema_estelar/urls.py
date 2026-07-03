@@ -18,8 +18,6 @@ urlpatterns = [
     path('notas/', include('notas.urls')),
     # Fluxo de caixa: namespace 'financeiro' registrado na raiz para {% url 'financeiro:...' %}
     path('notas/fluxo-caixa/', include('financeiro.urls')),
-    # Financeiro V2 (novo módulo paralelo - ver docs/PROPOSTA_FINANCEIRO_V2.md)
-    path('financeiro-v2/', include('financeiro_v2.urls')),
     # API REST (Fase 6): /api/v1/ + documentação em /api/schema/
     path('api/', include('api.urls')),
 ]

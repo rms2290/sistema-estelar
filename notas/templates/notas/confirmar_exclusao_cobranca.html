@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}Confirmar Exclusão de Cobrança - Sistema Estelar{% endblock %}
 
@@ -116,7 +116,7 @@
                     <button type="submit" class="btn btn-danger">
                         <i class="fas fa-trash"></i> Sim, Excluir Cobrança
                     </button>
-                    <a href="{% url 'financeiro_v2:cobranca_carregamento_lista' %}" class="btn btn-secondary">
+                    <a href="{% url 'notas:cobranca_carregamento' %}" class="btn btn-secondary">
                         <i class="fas fa-times"></i> Cancelar
                     </a>
                 </div>

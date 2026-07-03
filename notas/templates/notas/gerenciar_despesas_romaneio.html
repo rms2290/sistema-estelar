@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load static %}
 
 {% block title %}Gerenciar Despesas - {{ romaneio.codigo }} - Sistema Estelar{% endblock %}
@@ -401,7 +401,7 @@
 
             <!-- Botão Voltar -->
             <div class="mt-3">
-                <a href="{% url 'financeiro_v2:cobranca_carregamento_lista' %}" class="btn btn-secondary">
+                <a href="{% url 'notas:cobranca_carregamento' %}" class="btn btn-secondary">
                     <i class="fas fa-arrow-left"></i> Voltar para Cobrança Carregamento
                 </a>
                 <a href="{% url 'notas:detalhes_romaneio' romaneio.id %}" class="btn btn-info">

@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load static %}
 {% load format_filters %}
 
@@ -88,7 +88,7 @@
                             <span class="report-desc">Relatório mensal de cobrança</span>
                         </div>
                     </a>
-                    <a href="{% url 'financeiro_v2:cobranca_carregamento_lista' %}" class="report-item btn-danger">
+                    <a href="{% url 'notas:cobranca_carregamento' %}" class="report-item btn-danger">
                         <div class="report-icon">
                             <i class="fas fa-truck-loading"></i>
                         </div>
@@ -144,7 +144,7 @@
                             <span class="report-desc">Lançamentos a pagar</span>
                         </div>
                     </a>
-                    <a href="{% url 'financeiro_v2:cobranca_carregamento_lista' %}" class="report-item btn-warning">
+                    <a href="{% url 'notas:cobranca_carregamento' %}" class="report-item btn-warning">
                         <div class="report-icon">
                             <i class="fas fa-truck-loading"></i>
                         </div>

@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load static %}
 {% load l10n %}
 
@@ -204,12 +204,12 @@
 
                 <!-- Botões -->
                 <div class="d-flex justify-content-between">
-                    <a href="{% url 'financeiro_v2:cobranca_carregamento_lista' %}" class="btn btn-secondary">
+                    <a href="{% url 'notas:cobranca_carregamento' %}" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Voltar
                     </a>
                     <div>
                         {% if cobranca.status == 'Pendente' %}
-                        <a href="{% url 'financeiro_v2:baixar_cobranca_carregamento' cobranca.id %}" class="btn btn-success">
+                        <a href="{% url 'notas:baixar_cobranca_carregamento' cobranca.id %}" class="btn btn-success">
                             <i class="fas fa-check"></i> Baixar Cobrança
                         </a>
                         {% endif %}
